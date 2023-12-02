@@ -1,0 +1,13 @@
+[gd_resource type="ShaderMaterial" load_steps=4 format=3 uid="uid://camq6phc8wqsh"]
+
+[ext_resource type="Shader" path="res://Assets/Shaders/surface_shader.gdshader" id="1_gvuw3"]
+[ext_resource type="Texture2D" uid="uid://datqbo1p4qoca" path="res://Assets/Images/height_map.png" id="2_diqsy"]
+[ext_resource type="Texture2D" uid="uid://b2nhmchhhcaxy" path="res://Assets/Images/Map_Art_Board_15.png" id="2_k7fwu"]
+
+[resource]
+render_priority = 0
+shader = ExtResource("1_gvuw3")
+shader_parameter/radius = 900.0
+shader_parameter/height_scale = 60.0
+shader_parameter/albedo_map = ExtResource("2_k7fwu")
+shader_parameter/height_map = ExtResource("2_diqsy")

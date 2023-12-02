@@ -1,0 +1,50 @@
+[gd_scene load_steps=9 format=3 uid="uid://dm8yfsurm5yfe"]
+
+[ext_resource type="PackedScene" uid="uid://du0x2obs8mxcj" path="res://Assets/Scenes/Controllers/PlanetController.tscn" id="3_spubr"]
+[ext_resource type="PackedScene" uid="uid://vfkamkwnbmqi" path="res://Assets/Scenes/Components/CameraComponent.tscn" id="4_hrjaj"]
+[ext_resource type="Material" uid="uid://camq6phc8wqsh" path="res://Assets/Materials/MySurface.tres" id="4_xrjl4"]
+[ext_resource type="PackedScene" uid="uid://bor2upmks05ho" path="res://Assets/Scenes/Utilities/Axis.tscn" id="4_ye4mq"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_51kx1"]
+sky_horizon_color = Color(0.64625, 0.65575, 0.67075, 1)
+ground_horizon_color = Color(0.64625, 0.65575, 0.67075, 1)
+
+[sub_resource type="Sky" id="Sky_37rvx"]
+sky_material = SubResource("ProceduralSkyMaterial_51kx1")
+
+[sub_resource type="Environment" id="Environment_ihwar"]
+background_mode = 2
+sky = SubResource("Sky_37rvx")
+tonemap_mode = 2
+glow_enabled = true
+
+[sub_resource type="SphereMesh" id="SphereMesh_bcdg1"]
+
+[node name="Main" type="Node3D"]
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(-0.866024, -0.433016, 0.25, 0, 0.499998, 0.866027, -0.500003, 0.75, -0.43301, 0, 0, 0)
+light_energy = 0.5
+shadow_enabled = true
+sky_mode = 2
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_ihwar")
+
+[node name="Axis" parent="." instance=ExtResource("4_ye4mq")]
+visible = false
+
+[node name="CameraComponent" parent="." node_paths=PackedStringArray("focus") instance=ExtResource("4_hrjaj")]
+focus = NodePath("../Planet")
+zoomLevels = Vector2(0, 1000)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="CameraComponent/X-Gimbal/Y-Gimbal/Z-Gimbal/Camera3D" index="0"]
+mesh = SubResource("SphereMesh_bcdg1")
+
+[node name="Planet" parent="." node_paths=PackedStringArray("Target") instance=ExtResource("3_spubr")]
+Target = NodePath("../CameraComponent/X-Gimbal/Y-Gimbal/Z-Gimbal/Camera3D")
+Radius = 900.0
+Resolution = 100
+Material = ExtResource("4_xrjl4")
+
+[editable path="CameraComponent"]

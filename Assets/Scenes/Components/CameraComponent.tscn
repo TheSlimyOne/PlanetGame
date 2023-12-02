@@ -1,0 +1,14 @@
+[gd_scene load_steps=2 format=3 uid="uid://vfkamkwnbmqi"]
+
+[ext_resource type="Script" path="res://Assets/Scripts/Components/CameraComponent.cs" id="1_l6qxt"]
+
+[node name="CameraComponent" type="Node3D"]
+script = ExtResource("1_l6qxt")
+
+[node name="X-Gimbal" type="Node3D" parent="."]
+
+[node name="Y-Gimbal" type="Node3D" parent="X-Gimbal"]
+
+[node name="Z-Gimbal" type="Node3D" parent="X-Gimbal/Y-Gimbal"]
+
+[node name="Camera3D" type="Camera3D" parent="X-Gimbal/Y-Gimbal/Z-Gimbal"]
