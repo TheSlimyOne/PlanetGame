@@ -13,6 +13,13 @@ public partial class PlanetController : Node3D
 	}
 
 	[Export]
+	public SealevelController SealevelController
+	{
+		get => _sealevelController;
+		set { _sealevelController = value; }
+	}
+
+	[Export]
 	public Node3D Target 
 	{ 
 		get => _target;
@@ -45,6 +52,7 @@ public partial class PlanetController : Node3D
 	private Material _material = new PlaceholderMaterial();
 	private Node3D _target;
 	private SurfaceController _surfaceController;
+	private SealevelController _sealevelController;
 
 	public void UpdatePlanetData()
 	{
@@ -56,6 +64,7 @@ public partial class PlanetController : Node3D
 
 
 		_surfaceController?.GeneratePlanetSurfaces(_radius, _resolution, _material, _target);
+		//_sealevelController?.GeneratePlanetSea()
 	}
 
 	public override void _Ready()

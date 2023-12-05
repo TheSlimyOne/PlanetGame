@@ -1,13 +1,23 @@
 [gd_resource type="ShaderMaterial" load_steps=4 format=3 uid="uid://camq6phc8wqsh"]
 
 [ext_resource type="Shader" path="res://Assets/Shaders/surface_shader.gdshader" id="1_gvuw3"]
-[ext_resource type="Texture2D" uid="uid://datqbo1p4qoca" path="res://Assets/Images/height_map.png" id="2_diqsy"]
-[ext_resource type="Texture2D" uid="uid://b2nhmchhhcaxy" path="res://Assets/Images/Map_Art_Board_15.png" id="2_k7fwu"]
+[ext_resource type="Gradient" uid="uid://bneu5fk8dih6j" path="res://Assets/Resources/realistic_colors_map.tres" id="2_20hhg"]
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_7nif1"]
+gradient = ExtResource("2_20hhg")
 
 [resource]
 render_priority = 0
 shader = ExtResource("1_gvuw3")
-shader_parameter/radius = 900.0
-shader_parameter/height_scale = 60.0
-shader_parameter/albedo_map = ExtResource("2_k7fwu")
-shader_parameter/height_map = ExtResource("2_diqsy")
+shader_parameter/radius = 100.0
+shader_parameter/sea_level = 0.895
+shader_parameter/normal_strength = 1.6
+shader_parameter/height_scale = 12.245
+shader_parameter/seed = 1207.57
+shader_parameter/octaves = 11
+shader_parameter/persistence = -0.13
+shader_parameter/lacunarity = 5.395
+shader_parameter/scale = 45.56
+shader_parameter/exaggeration_factor = 1.0
+shader_parameter/offset = Vector3(10, 0, 0)
+shader_parameter/albedo_map = SubResource("GradientTexture1D_7nif1")
