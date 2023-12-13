@@ -13,13 +13,6 @@ public partial class PlanetController : Node3D
 	}
 
 	[Export]
-	public SealevelController SealevelController
-	{
-		get => _sealevelController;
-		set { _sealevelController = value; }
-	}
-
-	[Export]
 	public Node3D Target 
 	{ 
 		get => _target;
@@ -47,28 +40,36 @@ public partial class PlanetController : Node3D
 		set { _material = value; UpdatePlanetData(); }
 	}
 
+	[Export]
+	public float RotationAmount
+	{
+		get => _rotationAmount;
+		set { _rotationAmount = value; }
+	}
+
 	private float _radius = 1;
 	private int _resolution = 5;
 	private Material _material = new PlaceholderMaterial();
 	private Node3D _target;
 	private SurfaceController _surfaceController;
-	private SealevelController _sealevelController;
-
+	private float _rotationAmount = 0.1f;
+	
 	public void UpdatePlanetData()
 	{
-		
 		ShaderMaterial shaderMaterial = _material as ShaderMaterial;
-
 		if (shaderMaterial != null)
 			shaderMaterial.SetShaderParameter("radius", _radius);
-
-
 		_surfaceController?.GeneratePlanetSurfaces(_radius, _resolution, _material, _target);
-		//_sealevelController?.GeneratePlanetSea()
 	}
 
 	public override void _Ready()
 	{
 		UpdatePlanetData();
+	}
+	
+	
+	public override void _Process(double delta)
+	{
+		//Rotate(Vector3.Up, _rotationAmount * (float) delta);
 	}
 }

@@ -8,38 +8,38 @@ public partial class SurfaceComponent : MeshInstance3D
 	public Vector3 Normal
 	{
 		get => _normal;
-        set { _normal = value; }
+		set { _normal = value; }
 	}
 
-    public Node3D Target
-    {
-        get => _target;
-        set { _target = value; }
-    }
+	public Node3D Target
+	{
+		get => _target;
+		set { _target = value; }
+	}
 
-    public int Resolution
-    {
-        get => _resolution;
-        set { _resolution = value; }
-    }
+	public int Resolution
+	{
+		get => _resolution;
+		set { _resolution = value; }
+	}
 
-    public float Radius
-    {
-        get => _radius;
-        set { _radius = value; }
-    }
+	public float Radius
+	{
+		get => _radius;
+		set { _radius = value; }
+	}
 
-    public Material Material
-    {
-        get => _material;
-        set { _material = value; }
-    }
+	public Material Material
+	{
+		get => _material;
+		set { _material = value; }
+	}
 
-    public QuadTree QuadTree
-    {
-        get => _quadTree;
-        set { _quadTree = value; }
-    }
+	public QuadTree QuadTree
+	{
+		get => _quadTree;
+		set { _quadTree = value; }
+	}
 
 #nullable enable
 	private Node3D? _target;

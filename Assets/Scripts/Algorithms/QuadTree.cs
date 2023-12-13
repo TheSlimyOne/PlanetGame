@@ -209,9 +209,9 @@ public partial class QuadTree : GodotObject
 			int[] triangles = new int[(resolution - 1) * (resolution - 1) * 6];
 
 			int triIndex = 0;
-			for (int y = 0; y < resolution; y++)
+			for (int x = 0; x < resolution; x++)
 			{
-				for (int x = 0; x < resolution; x++)
+				for (int y = 0; y < resolution; y++)
 				{
 					int vertexIndex = x + y * resolution;
 

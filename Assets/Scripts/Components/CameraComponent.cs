@@ -12,8 +12,6 @@ public partial class CameraComponent : Node3D
 	[Export]
 	public Vector2 zoomLevels;
 
-
-
 	public float cameraSpeedX = 1f;
 	public float cameraSpeedY = 1f;
 	public float cameraRotationSpeed = 2f;
@@ -47,6 +45,7 @@ public partial class CameraComponent : Node3D
 		RenderingServer.SetDebugGenerateWireframes(true);
 
 		GlobalPosition = focus.GlobalPosition;
+		
 	}
 
 	public void LockMouse()

@@ -51,6 +51,7 @@ float noise(vec3 p) {
   vec3 i = floor(p);
   vec3 f = fract(p);
   vec3 u = f * f * (3.0 - 2.0 * f);
+	
 
   return mix(mix(mix(dot(hash(i + vec3(0.0, 0.0, 0.0)), f - vec3(0.0, 0.0, 0.0)),
                      dot(hash(i + vec3(1.0, 0.0, 0.0)), f - vec3(1.0, 0.0, 0.0)), u.x),
@@ -80,23 +81,20 @@ float param_noise(vec3 p) {
 		float sampleZ = p.z / scale * frequency + offset.z;
 		
 		float noiseValue = noise(vec3(sampleX, sampleY, sampleZ) * 5.0) * 0.5;
-		noiseValue += noise(vec3(sampleX, sampleY, sampleZ) * 10.0) * 0.25;
-		noiseValue += noise(vec3(sampleX, sampleY, sampleZ) * 20.0) * 0.125;
-		noiseValue += noise(vec3(sampleX, sampleY, sampleZ) * 40.0) * 0.0625;
+		noiseValue += noise(vec3(sampleX, sampleY, sampleZ) * 10.0) * 0.25/2.0;
+		noiseValue += noise(vec3(sampleX, sampleY, sampleZ) * 20.0) * 0.125/2.0;
+		noiseValue += noise(vec3(sampleX, sampleY, sampleZ) * 40.0) * 0.0625/2.0;
 
-        
-		
 		noiseHeight += noiseValue * amplitude;
 		
 		amplitude += persistence;
 		frequency += lacunarity;
 	}
-	
-	
-	noiseHeight = pow(max(noiseHeight, 0), exaggeration_factor);
 
+	noiseHeight = pow(max(noiseHeight, 0), exaggeration_factor);
 	return noiseHeight;
 }
+
 
 void vertex() {
 	object_space_pos = VERTEX;
@@ -130,7 +128,7 @@ void fragment() {
 	float latitude = asin(normalize(object_space_pos).y);
 	
 
-	ALBEDO = surface_texture;
+	ALBEDO = vec3(elevation);
 
 	NORMAL = heightToNormal(elevation * height_scale, normal_strength, VERTEX, NORMAL);
 
