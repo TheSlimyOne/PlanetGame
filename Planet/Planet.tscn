@@ -1,0 +1,39 @@
+[gd_scene load_steps=4 format=3 uid="uid://bhacuf2kejd2w"]
+
+[ext_resource type="Script" path="res://Planet/Planet.cs" id="1_g0u6q"]
+[ext_resource type="Script" path="res://Planet/Surface.cs" id="2_8y3tr"]
+
+[sub_resource type="PlaceholderMaterial" id="PlaceholderMaterial_vmdtb"]
+
+[node name="Planet" type="Node3D" node_paths=PackedStringArray("_surfaces")]
+script = ExtResource("1_g0u6q")
+_surfaces = [NodePath("Up"), NodePath("Down"), NodePath("Left"), NodePath("Right"), NodePath("Forward"), NodePath("Back")]
+Material = SubResource("PlaceholderMaterial_vmdtb")
+metadata/_access_modifiers = {
+"Surfaces": 2,
+"_surfaces": 2
+}
+
+[node name="Up" type="Node3D" parent="."]
+script = ExtResource("2_8y3tr")
+_normal = Vector3(0, 1, 0)
+
+[node name="Down" type="Node3D" parent="."]
+script = ExtResource("2_8y3tr")
+_normal = Vector3(0, -1, 0)
+
+[node name="Left" type="Node3D" parent="."]
+script = ExtResource("2_8y3tr")
+_normal = Vector3(-1, 0, 0)
+
+[node name="Right" type="Node3D" parent="."]
+script = ExtResource("2_8y3tr")
+_normal = Vector3(1, 0, 0)
+
+[node name="Forward" type="Node3D" parent="."]
+script = ExtResource("2_8y3tr")
+_normal = Vector3(0, 0, -1)
+
+[node name="Back" type="Node3D" parent="."]
+script = ExtResource("2_8y3tr")
+_normal = Vector3(0, 0, 1)

@@ -1,8 +1,0 @@
-[gd_scene load_steps=2 format=3 uid="uid://ca564wu0mh1ap"]
-
-[ext_resource type="Script" path="res://Assets/Scripts/Components/PhysicsComponent.cs" id="1_r48ey"]
-
-[node name="RigidBody3D" type="RigidBody3D"]
-script = ExtResource("1_r48ey")
-
-[node name="CollisionPolygon3D" type="CollisionPolygon3D" parent="."]

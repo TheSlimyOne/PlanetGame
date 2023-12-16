@@ -1,6 +1,0 @@
-[gd_scene load_steps=2 format=3 uid="uid://caavy00o5e521"]
-
-[ext_resource type="Script" path="res://Assets/Scripts/Components/RenderingComponent.cs" id="1_ejhku"]
-
-[node name="RenderingComponent" type="Node"]
-script = ExtResource("1_ejhku")

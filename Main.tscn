@@ -1,0 +1,50 @@
+[gd_scene load_steps=10 format=3 uid="uid://cvtyow0howd6j"]
+
+[ext_resource type="PackedScene" uid="uid://vfkamkwnbmqi" path="res://Player/Camera.tscn" id="2_rtq8k"]
+[ext_resource type="PackedScene" uid="uid://bhacuf2kejd2w" path="res://Planet/Planet.tscn" id="3_spubr"]
+[ext_resource type="Material" uid="uid://camq6phc8wqsh" path="res://Assets/Materials/RNGSurface.tres" id="4_l8l1s"]
+[ext_resource type="PackedScene" uid="uid://bor2upmks05ho" path="res://Utilities/Axis.tscn" id="4_ye4mq"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_i2r8u"]
+sky_horizon_color = Color(0.64625, 0.65575, 0.67075, 1)
+ground_horizon_color = Color(0.64625, 0.65575, 0.67075, 1)
+
+[sub_resource type="Sky" id="Sky_8g7y1"]
+sky_material = SubResource("ProceduralSkyMaterial_i2r8u")
+
+[sub_resource type="Environment" id="Environment_r0tf1"]
+background_mode = 2
+sky = SubResource("Sky_8g7y1")
+tonemap_mode = 2
+glow_enabled = true
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_t284y"]
+
+[sub_resource type="SphereMesh" id="SphereMesh_v028l"]
+material = SubResource("StandardMaterial3D_t284y")
+
+[node name="Main" type="Node3D"]
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(-0.866023, -0.433016, 0.250001, 0, 0.499998, 0.866027, -0.500003, 0.749999, -0.43301, 0, 0, 0)
+shadow_enabled = true
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_r0tf1")
+
+[node name="Axis" parent="." instance=ExtResource("4_ye4mq")]
+visible = false
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 49.9596)
+mesh = SubResource("SphereMesh_v028l")
+
+[node name="Camera" parent="." instance=ExtResource("2_rtq8k")]
+
+[node name="Planet" parent="." instance=ExtResource("3_spubr")]
+RotationAmount = 0.87
+Radius = 60.0
+Resolution = 50
+Material = ExtResource("4_l8l1s")
+
+[connection signal="CameraMovement" from="Camera" to="Planet" method="OnTargetMovement"]

@@ -11,20 +11,16 @@ config_version=5
 [application]
 
 config/name="Planet Game"
-run/main_scene="res://Assets/Scenes/Main.tscn"
+run/main_scene="res://Main.tscn"
 config/features=PackedStringArray("4.2", "C#", "Forward Plus")
 
 [autoload]
 
-DebugManager="*res://Assets/Scenes/Controllers/DebugManager.tscn"
+DebugManager="*res://Autoloads/DebugManager.tscn"
 
 [dotnet]
 
 project/assembly_name="Planet Game"
-
-[editor_plugins]
-
-enabled=PackedStringArray()
 
 [input]
 
