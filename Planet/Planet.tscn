@@ -3,12 +3,13 @@
 [ext_resource type="Script" path="res://Planet/Planet.cs" id="1_g0u6q"]
 [ext_resource type="Script" path="res://Planet/Surface.cs" id="2_8y3tr"]
 
-[sub_resource type="PlaceholderMaterial" id="PlaceholderMaterial_vmdtb"]
+[sub_resource type="PlaceholderMaterial" id="PlaceholderMaterial_87jn3"]
 
 [node name="Planet" type="Node3D" node_paths=PackedStringArray("_surfaces")]
 script = ExtResource("1_g0u6q")
 _surfaces = [NodePath("Up"), NodePath("Down"), NodePath("Left"), NodePath("Right"), NodePath("Forward"), NodePath("Back")]
-Material = SubResource("PlaceholderMaterial_vmdtb")
+RotationAmount = 0.0
+Material = SubResource("PlaceholderMaterial_87jn3")
 metadata/_access_modifiers = {
 "Surfaces": 2,
 "_surfaces": 2

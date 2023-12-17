@@ -51,7 +51,7 @@ public partial class QuadTree : GodotObject
 
 	public void SpawnChildNodes(Node3D spawnPoint)
 	{
-		if (_nodeBuffer.Count == 0)
+		if (_nodeBuffer.Count == 0 && Engine.IsEditorHint())
 		{
 			_nodeBuffer.Add(root);
 		}
@@ -118,7 +118,8 @@ public partial class QuadTree : GodotObject
 
 	private void UpdateTree(Vector3 target, QuadTreeNode node)
 	{
-		if (target.DistanceTo(_radius * node.position.Normalized()) < node.GetLength() * 2 * _radius * distanceScale )
+		
+		if (target.DistanceTo(_radius * node.position.Normalized()) < node.GetLength() * 2 * _radius * distanceScale)
 		{
 			if (node.subdivisionLevel < MaxSubdivisionLevel)
 			{
@@ -136,7 +137,7 @@ public partial class QuadTree : GodotObject
 				_nodeBuffer.Add(node);
 			}
 		}
-		else 
+		else if (target.Dot(node.position) >= -1)
 		{
 			_nodeBuffer.Add(node);
 		}
@@ -197,8 +198,10 @@ public partial class QuadTree : GodotObject
 			((ArrayMesh) Mesh).AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
 
 			StandardMaterial3D sm = new StandardMaterial3D();
-			sm.AlbedoColor = new Color((float) ran.NextDouble(), (float) ran.NextDouble(), (float) ran.NextDouble());
-
+			
+			Vector3 color_pos = (position + Vector3.One)/2;
+			color_pos = color_pos/(subdivisionLevel + 1);
+			sm.AlbedoColor = new Color(color_pos.X, color_pos.Y, color_pos.Z);
 			Mesh.SurfaceSetMaterial(0, sm);
 			
 			hasChildren = false;

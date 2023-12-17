@@ -22,6 +22,10 @@ DebugManager="*res://Autoloads/DebugManager.tscn"
 
 project/assembly_name="Planet Game"
 
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/private-exports/plugin.cfg")
+
 [input]
 
 move_forward={
