@@ -31,9 +31,6 @@ vec3 heightToNormal(float height, float strength, vec3 vertex, vec3 normal) {
 }
 
 
-
-
-
 vec2 pointOnSphereToUV(vec3 p) {
     p = normalize(p);
     float longitude = atan(p.x, p.z);

@@ -13,31 +13,39 @@ public partial class QuadTree : GodotObject
 {
 	private QuadTreeNode root;
 
-	public const int MaxSubdivisionLevel = 7;
+	private int _maxSubdivisionLevel;
 
 	private float _radius;
 	private int _resolution;
+	private Node3D _spawnPoint;
 	private Material _material;
 	private Vector3 _normal;
 	private Vector3 _position;
 	private Vector3 _axisA;
 	private Vector3 _axisB;
-	private static Random ran = new Random(1207);
-
+	private Vector3 _planetPosition;
 	private List<QuadTreeNode> _nodeBuffer = new List<QuadTreeNode>();
+	private Vector3 targetPosition = Vector3.Zero;
+	private Curve _distanceCurve;
+	// public int index = -1;
+
+	private static Random random = new Random(1207);
 
 	private float distanceScale = 2f;
 
 	private QuadTree() {}
 
-	public QuadTree(Vector3 normal, float radius, Material material, int resolution)
+	public QuadTree(Node3D spawnPoint, Vector3 normal, float radius, Material material, int resolution, int maxSubdivisionLevel, Curve distanceCurve)
 	{
+		_spawnPoint = spawnPoint;
 		_resolution = resolution;
+		_maxSubdivisionLevel = maxSubdivisionLevel;
 		_normal = normal;
+		_distanceCurve = distanceCurve;
+		_planetPosition = ((Node3D) spawnPoint.GetParent()).Position;
 		_material = material;
 		_radius = radius;
 		_position = normal;
-		
 		_axisA = new Vector3(normal.Y, normal.Z, normal.X);
 		_axisB = normal.Cross(_axisA);
 		root = new QuadTreeNode(this, null, _position, _axisA, _axisB, QuadTreeNode.Coordinate.Root, 0);
@@ -46,13 +54,20 @@ public partial class QuadTree : GodotObject
 	public void UpdateQuadTree(Vector3 target)
 	{
 		_nodeBuffer.Clear();
+		// if (index == -1) index = DebugManager.debugManager.GenerateNewContainer();
+	
+		targetPosition = target;
+		// DebugManager.debugManager.Clear(index);
+
+
 		UpdateTree(target, root);
 	}
+
 
 	public void SpawnChildNodes(Node3D spawnPoint)
 	{
 		if (_nodeBuffer.Count == 0 && Engine.IsEditorHint())
-		{
+		{	
 			_nodeBuffer.Add(root);
 		}
 
@@ -61,7 +76,6 @@ public partial class QuadTree : GodotObject
 			spawnPoint.AddChild(node);
 		}
 	}
-
 
 	private QuadTreeNode[] GetLeafNodes()
 	{
@@ -82,46 +96,40 @@ public partial class QuadTree : GodotObject
 			{
 				GetLeafNodes(child, leafNodes);
 			}
-
 		}
 	}
 
-	private void UpdateTree_new(Vector3 target, QuadTreeNode node)
+	public float Normalize(float value, float min, float max)
 	{
-		if (target.DistanceTo(_radius * node.position.Normalized()) < node.GetLength() * 2 * _radius * distanceScale )
-		{
-
-			
-			if (node.subdivisionLevel < MaxSubdivisionLevel)
-			{
-				Vector3[] sectors = node.GenerateCornerCoordinates(0.5f);
-				foreach (Vector3 sector in sectors)
-				{
-					if (target.DistanceTo(_radius * sector.Normalized()) < 1f / (1 << (node.subdivisionLevel - 1)) * 2 * _radius * distanceScale )
-					{
-
-					}
-				}
-				
-			}
-			else 
-			{
-
-			}
-		}
-		else 
-		{
-
-		}
+		return (value - min)/(max-min);
 	}
-	
 
+	Dictionary<int, float> detailLOD = new Dictionary<int, float>()
+	{
+		{0, Mathf.Inf}, 
+		{1, 60}, 
+		{2, 20},
+		{3, 10}, 
+		{4, 4}, 
+		{5, 1.5f},
+		{6, 0.7f}, 
+		{7, 0.3f}, 
+		{8, 0.1f},
+	};
 	private void UpdateTree(Vector3 target, QuadTreeNode node)
 	{
 		
-		if (target.DistanceTo(_radius * node.position.Normalized()) < node.GetLength() * 2 * _radius * distanceScale)
+		Vector3 nodeSphereLocation = QuadTreeNode.PointOnCubeToPointOnSphere(node.cubePosition) * _radius;
+		
+		
+		if (target.Normalized().Dot(nodeSphereLocation.Normalized()) <= -0.5f)
 		{
-			if (node.subdivisionLevel < MaxSubdivisionLevel)
+			return;
+		}
+
+		if (detailLOD[node.subdivisionLevel] > target.DistanceTo(nodeSphereLocation))
+		{	
+			if (node.subdivisionLevel < _maxSubdivisionLevel)
 			{
 				if (!node.hasChildren)
 				{
@@ -131,16 +139,18 @@ public partial class QuadTree : GodotObject
 				UpdateTree(target, node.children[1]);
 				UpdateTree(target, node.children[2]);
 				UpdateTree(target, node.children[3]);
-				}
+			}
 			else 
 			{
 				_nodeBuffer.Add(node);
 			}
-		}
-		else if (target.Dot(node.position) >= -1)
+		} 
+		else 
 		{
 			_nodeBuffer.Add(node);
 		}
+		
+		// _nodeBuffer.Add(node);
 	}
 
 
@@ -159,7 +169,7 @@ public partial class QuadTree : GodotObject
 		internal QuadTree quadTree;
 		internal QuadTreeNode parent;
 		internal QuadTreeNode[] children = new QuadTreeNode[4];
-		internal Vector3 position;
+		internal Vector3 cubePosition;
 		internal Coordinate coordinate;
 		internal bool hasChildren;
 		internal Vector3 axisA;
@@ -178,33 +188,70 @@ public partial class QuadTree : GodotObject
 
 		private QuadTreeNode() {}
 
-		internal QuadTreeNode(QuadTree quadTree, QuadTreeNode parent, Vector3 position, Vector3 axisA, Vector3 axisB, Coordinate coordinate, int subdivisionLevel)
+		internal QuadTreeNode(QuadTree quadTree, QuadTreeNode parent, Vector3 cubePosition, Vector3 axisA, Vector3 axisB, Coordinate coordinate, int subdivisionLevel)
 		{
 			this.quadTree = quadTree;
 			this.parent = parent;
-			this.position = position;
+			this.cubePosition = cubePosition;
 			this.coordinate = coordinate;
 			this.axisA = axisA;
 			this.axisB = axisB;
 			this.subdivisionLevel = subdivisionLevel;
 			Mesh = new ArrayMesh();
 
-            (Vector3[] vertices, int[] triangles) = GenerateMeshChunk(quadTree._resolution, quadTree._radius);
+            
+			SetMeshChunk();
+
+			StandardMaterial3D sm = new StandardMaterial3D();
+			
+			switch (subdivisionLevel)
+			{
+				case 0:
+				sm.AlbedoColor = new Color(1.0f, 0.32f, random.NextSingle());
+				break;
+				case 1:
+				sm.AlbedoColor = new Color(1.0f, 0.55f, random.NextSingle());
+				break;
+				case 2:
+				sm.AlbedoColor = new Color(1.0f, 0.82f, random.NextSingle());
+				break;
+				case 3:
+				sm.AlbedoColor = new Color(0.5f, 0.90f, random.NextSingle());
+				break;
+				case 4:
+				sm.AlbedoColor = new Color(0.0f, 0.82f, random.NextSingle());
+				break;
+				case 5:
+				sm.AlbedoColor = new Color(0.0f, 0.75f, random.NextSingle());
+				break;
+				case 6:
+				sm.AlbedoColor = new Color(0.5f, 0.28f, random.NextSingle());
+				break;
+				case 7:
+				sm.AlbedoColor = new Color(0.8f, 0.25f, random.NextSingle());
+				break;
+				case 8:
+				sm.AlbedoColor = new Color(1.0f, 0.27f, random.NextSingle());
+				break;
+				default:
+				sm.AlbedoColor = new Color("ffffff");
+				break;
+			}
+			
+			Mesh.SurfaceSetMaterial(0, sm);
+			
+			hasChildren = false;
+		}
+
+		internal void SetMeshChunk()
+		{
+			(Vector3[] vertices, int[] triangles) = GenerateMeshChunk(quadTree._resolution, quadTree._radius);
 			Godot.Collections.Array arrays = new Godot.Collections.Array();
 			arrays.Resize((int)Mesh.ArrayType.Max);
 			arrays[(int)Mesh.ArrayType.Vertex] = vertices;
 			arrays[(int)Mesh.ArrayType.Index] = triangles;
 			arrays[(int)Mesh.ArrayType.Normal] = vertices;
 			((ArrayMesh) Mesh).AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
-
-			StandardMaterial3D sm = new StandardMaterial3D();
-			
-			Vector3 color_pos = (position + Vector3.One)/2;
-			color_pos = color_pos/(subdivisionLevel + 1);
-			sm.AlbedoColor = new Color(color_pos.X, color_pos.Y, color_pos.Z);
-			Mesh.SurfaceSetMaterial(0, sm);
-			
-			hasChildren = false;
 		}
 
 	
@@ -230,10 +277,10 @@ public partial class QuadTree : GodotObject
 
 			Vector3[] coordinates = new Vector3[4];
 			// Direction is relative to axisA and axisB
-			coordinates[0] = position + scale * (-axisA + axisB);
-			coordinates[1] = position + scale * (axisA + axisB);
-			coordinates[2] = position + scale * (-axisA - axisB);
-			coordinates[3] = position + scale * (axisA - axisB);
+			coordinates[0] = cubePosition + scale * (-axisA + axisB);
+			coordinates[1] = cubePosition + scale * (axisA + axisB);
+			coordinates[2] = cubePosition + scale * (-axisA - axisB);
+			coordinates[3] = cubePosition + scale * (axisA - axisB);
 
 			return coordinates;
 		}
@@ -251,7 +298,7 @@ public partial class QuadTree : GodotObject
 					int vertexIndex = x + y * resolution;
 
 					Vector2 percentage = new Vector2(x, y) / (resolution - 1);
-					Vector3 point = position + axisA * (2 * percentage.X - 1) + axisB * (2 * percentage.Y - 1);
+					Vector3 point = cubePosition + axisA * (2 * percentage.X - 1) + axisB * (2 * percentage.Y - 1);
 					point = PointOnCubeToPointOnSphere(point);
 
 					point *= radius;
@@ -290,7 +337,7 @@ public partial class QuadTree : GodotObject
 		{
 			string s = "";
 			s += $"\n\"{coordinate}\": {{";
-			s += $"\n\"position\": [{position.X}, {position.Y}, {position.Z}],";
+			s += $"\n\"position\": [{cubePosition.X}, {cubePosition.Y}, {cubePosition.Z}],";
 			s += $"\n\"length\": {GetLength()},";
 			s += $"\n{(children[0] != null ? children[0] : $"\"{Coordinate.NorthWest}\": null")},";
 			s += $"\n{(children[1] != null ? children[1] : $"\"{Coordinate.NorthEast}\": null")},";

@@ -7,35 +7,40 @@ public partial class Surface : Node3D
 
 	[Export] private Vector3 _normal;
 	private QuadTree _quadTree;
+	[Export] private bool disabled = false;
 
 
-	public void InitializeQuadTree(float radius, Material material, int resolution)
+	public void InitializeQuadTree(float radius, Material material, int resolution, int maxSubdivisionLevel, Curve distanceCurve)
 	{
-		
-		_quadTree?.Free();
-		
-		foreach (var child in GetChildren())
+		if (!disabled)
 		{
-			child.QueueFree();
-		}
+			_quadTree?.Free();
 			
-		_quadTree = new QuadTree(_normal, radius, material, resolution);
-		_quadTree.SpawnChildNodes(this);
+			foreach (var child in GetChildren())
+			{
+				child.QueueFree();
+			}
+				
+			_quadTree = new QuadTree(this, _normal, radius, material, resolution, maxSubdivisionLevel, distanceCurve);
+			_quadTree.SpawnChildNodes(this);
+		}
 	}
-	int I = 0;
+
 	public void UpdateQuadTree(Vector3 position)
 	{
 		
-		
-		foreach (var child in GetChildren())
+		if (!disabled)
 		{
-			RemoveChild(child);
-		}
+			foreach (var child in GetChildren())
+			{
+				RemoveChild(child);
+			}
 
-		if (_quadTree != null)
-		{	
-			_quadTree.UpdateQuadTree(position);
-			_quadTree.SpawnChildNodes(this);
+			if (_quadTree != null)
+			{	
+				_quadTree.UpdateQuadTree(position);
+				_quadTree.SpawnChildNodes(this);
+			}
 		}
 
 	}

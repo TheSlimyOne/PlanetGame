@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3 uid="uid://vfkamkwnbmqi"]
+[gd_scene load_steps=10 format=3 uid="uid://vfkamkwnbmqi"]
 
 [ext_resource type="Script" path="res://Player/Camera.cs" id="1_rnbou"]
 
@@ -22,6 +22,13 @@ albedo_color = Color(0.345098, 0.607843, 0.890196, 1)
 [sub_resource type="TorusMesh" id="TorusMesh_s4a2r"]
 material = SubResource("StandardMaterial3D_qao3b")
 inner_radius = 0.9
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_w0uih"]
+albedo_color = Color(1, 0, 0, 1)
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_fwkkv"]
+material = SubResource("StandardMaterial3D_w0uih")
+height = 1.0
 
 [node name="Camera" type="Node3D" node_paths=PackedStringArray("xGimbal", "yGimbal", "zGimbal", "camera")]
 script = ExtResource("1_rnbou")
@@ -54,3 +61,8 @@ mesh = SubResource("TorusMesh_s4a2r")
 skeleton = NodePath("../../Y-Mesh")
 
 [node name="Camera3D" type="Camera3D" parent="X-Gimbal/Y-Gimbal/Z-Gimbal"]
+
+[node name="Player Icon" type="MeshInstance3D" parent="X-Gimbal/Y-Gimbal/Z-Gimbal"]
+transform = Transform3D(0.25, 0, 0, 0, -4.37114e-08, 0.25, 0, -1, -1.09278e-08, 0, 0, 0.5)
+mesh = SubResource("CylinderMesh_fwkkv")
+skeleton = NodePath("../Camera3D")

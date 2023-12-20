@@ -16,9 +16,14 @@ public partial class DebugManager : Node3D
         ((ImmediateMesh)container.Mesh).ClearSurfaces();
     }
 
-    public void DrawLine(int containerIndex, Vector3 start, Vector3 end, Color color)
+
+    public void DrawLine(int containerIndex, Vector3 start, Vector3 end, Color color, String name)
     {
+        
         MeshInstance3D container = (MeshInstance3D)containers[containerIndex];
+        
+        if (name != null)
+            container.Name = name;
 
         ((ImmediateMesh)container.Mesh).SurfaceBegin(Mesh.PrimitiveType.Lines);
         ((ImmediateMesh)container.Mesh).SurfaceSetColor(color);
@@ -40,7 +45,8 @@ public partial class DebugManager : Node3D
 
     public void DrawCube(int containerIndex, Vector3 lowerBounds, Vector3 upperBounds, Color color)
     {
-        Vector3[] points = new Vector3[]{
+        Vector3[] points = new Vector3[]
+        {
             lowerBounds,
             new Vector3(lowerBounds.X, lowerBounds.Y, upperBounds.Z),
             new Vector3(upperBounds.X, lowerBounds.Y, upperBounds.Z),
@@ -52,20 +58,20 @@ public partial class DebugManager : Node3D
 
         };
 
-        DrawLine(containerIndex, points[0], points[1], color);
-        DrawLine(containerIndex, points[1], points[2], color);
-        DrawLine(containerIndex, points[2], points[3], color);
-        DrawLine(containerIndex, points[3], points[0], color);
+        DrawLine(containerIndex, points[0], points[1], color, null);
+        DrawLine(containerIndex, points[1], points[2], color, null);
+        DrawLine(containerIndex, points[2], points[3], color, null);
+        DrawLine(containerIndex, points[3], points[0], color, null);
 
-        DrawLine(containerIndex, points[0], points[6], color);
-        DrawLine(containerIndex, points[1], points[7], color);
-        DrawLine(containerIndex, points[2], points[4], color);
-        DrawLine(containerIndex, points[3], points[5], color);
+        DrawLine(containerIndex, points[0], points[6], color, null);
+        DrawLine(containerIndex, points[1], points[7], color, null);
+        DrawLine(containerIndex, points[2], points[4], color, null);
+        DrawLine(containerIndex, points[3], points[5], color, null);
 
-        DrawLine(containerIndex, points[4], points[5], color);
-        DrawLine(containerIndex, points[5], points[6], color);
-        DrawLine(containerIndex, points[6], points[7], color);
-        DrawLine(containerIndex, points[7], points[4], color);
+        DrawLine(containerIndex, points[4], points[5], color, null);
+        DrawLine(containerIndex, points[5], points[6], color, null);
+        DrawLine(containerIndex, points[6], points[7], color, null);
+        DrawLine(containerIndex, points[7], points[4], color, null);
     }
 
     public void DrawSphere(int containerIndex, Vector3 at, float radius, Color color)

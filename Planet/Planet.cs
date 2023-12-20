@@ -8,10 +8,13 @@ public partial class Planet : Node3D
 	private float _radius = 1;
 	private int _resolution = 5;
 	private Material _material = new PlaceholderMaterial();
-	
+	private int _maxSubdivisionLevel = 7;
+
 	[Export] private Surface[] _surfaces = new Surface[6];
 
 	[Export] private float RotationAmount = 0.1f;
+
+	[Export] private Curve _distanceCurve;
 
 	[Export]
 	public float Radius
@@ -28,6 +31,13 @@ public partial class Planet : Node3D
 	}
 
 	[Export]
+	public int maxSubdivisionLevel
+	{
+		get => _maxSubdivisionLevel;
+		set { _maxSubdivisionLevel = value; UpdatePlanetData(); }
+	}
+
+	[Export]
 	public Material Material
 	{
 		get => _material;
@@ -40,7 +50,7 @@ public partial class Planet : Node3D
 		shaderMaterial?.SetShaderParameter("radius", _radius);
 	
 		for (int i = 0; i < _surfaces.Length; i++)
-			_surfaces[i]?.InitializeQuadTree(_radius, _material, _resolution);
+			_surfaces[i]?.InitializeQuadTree(_radius, _material, _resolution, _maxSubdivisionLevel, _distanceCurve);
 	}	
 
 	private void OnTargetMovement(Vector3 position)

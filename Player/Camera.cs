@@ -14,6 +14,7 @@ public partial class Camera : Node3D
 	[Export] private Node3D yGimbal;
 	[Export] private Node3D zGimbal;
 	[Export] private Camera3D camera;
+	[Export] private Vector2 cameraRange;
 
 	private float horizontalRotation = 0;
 	private float verticalRotation = 0;
@@ -25,6 +26,7 @@ public partial class Camera : Node3D
 	public override void _Ready()
 	{
 		RenderingServer.SetDebugGenerateWireframes(true);
+		zGimbal.Position = zGimbal.Position with { Z = cameraRange.Y };
 		
 	}
 
@@ -56,8 +58,11 @@ public partial class Camera : Node3D
 		yGimbal.RotateObjectLocal(Vector3.Forward, (float)delta * rotation.Y * cameraRotationSpeed);
 
 		zGimbal.Position = zGimbal.Position with { Z = zGimbal.Position.Z + direction.Y * zoomSpeed };
-		if (zGimbal.Position.Z < 0)
-			zGimbal.Position = zGimbal.Position with { Z = 0 };
+		if (zGimbal.Position.Z < cameraRange.X)
+			zGimbal.Position = zGimbal.Position with { Z = cameraRange.X };
+
+		else if (zGimbal.Position.Z > cameraRange.Y)
+			zGimbal.Position = zGimbal.Position with { Z = cameraRange.Y };
 
 		if (direction != Vector3.Zero)
 		{
@@ -79,7 +84,16 @@ public partial class Camera : Node3D
 				viewport.DebugDraw = Viewport.DebugDrawEnum.Wireframe;
 
 		}
-
+		if (Input.IsActionJustPressed("speed_up_cam"))
+		{
+			if (zoomSpeed <= 10)
+				zoomSpeed+=0.05f;
+		}
+		if (Input.IsActionJustPressed("speed_down_cam"))
+		{
+			if (zoomSpeed > 0.001f)
+				zoomSpeed-=0.05f;
+		}
 		if (Input.IsActionJustReleased("cam_exit"))
 		{
 			if (isLocked)
