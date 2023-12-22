@@ -2,45 +2,93 @@ using Godot;
 using System;
 using System.Collections;
 [Tool]
-public partial class Surface : Node3D
+public partial class Surface : MultiMeshInstance3D
 {
 
 	[Export] private Vector3 _normal;
+	[Export] private bool _disabled = false;
+	[Export] private Material _material;
 	private QuadTree _quadTree;
-	[Export] private bool disabled = false;
+    
+	
 
-
-	public void InitializeQuadTree(float radius, Material material, int resolution, int maxSubdivisionLevel, Curve distanceCurve)
+    public void InitializeQuadTree(Vector3 origin, float radius, int resolution)
 	{
-		if (!disabled)
+		if (!_disabled)
 		{
-			_quadTree?.Free();
-			
-			foreach (var child in GetChildren())
-			{
-				child.QueueFree();
-			}
-				
-			_quadTree = new QuadTree(this, _normal, radius, material, resolution, maxSubdivisionLevel, distanceCurve);
-			_quadTree.SpawnChildNodes(this);
+            Multimesh = new MultiMesh 
+			{ 
+				Mesh = InitializeMesh(resolution), 
+				TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
+				InstanceCount = 0,
+				UseCustomData = true
+			};
+
+			((ShaderMaterial) _material).SetShaderParameter("radius", radius);
+			((ShaderMaterial) _material).SetShaderParameter("resolution", resolution);
+			((ShaderMaterial) _material).SetShaderParameter("normal", _normal);
+
+
+			Multimesh.Mesh.SurfaceSetMaterial(0, _material);
+	
+            _quadTree = new QuadTree(origin, radius, _normal);
+			_quadTree.SetMeshPositions(this);
 		}
 	}
 
+	internal Mesh InitializeMesh(int resolution)
+	{
+		Vector3[] vertices = new Vector3[resolution * resolution];
+		Vector2[] percentages = new Vector2[resolution * resolution];
+		int[] triangles = new int[(resolution - 1) * (resolution - 1) * 6];
+
+		Vector3 axisA = new Vector3(_normal[1], _normal[2], _normal[0]);
+		Vector3 axisB = _normal.Cross(axisA);
+
+		int triIndex = 0;
+		for (int x = 0; x < resolution; x++)
+		{
+			for (int y = 0; y < resolution; y++)
+			{
+				int vertexIndex = x + y * resolution;
+
+				Vector2 percentage = new Vector2(x, y) / (resolution - 1);
+				Vector3 point = axisA * (2 * percentage.X - 1) + axisB * (2 * percentage.Y - 1);
+
+				vertices[vertexIndex] = point;
+				percentages[vertexIndex] = percentage;
+
+				// Calculates the triangles
+				if (x != resolution - 1 && y != resolution - 1)
+				{
+					triangles[triIndex++] = vertexIndex;
+					triangles[triIndex++] = vertexIndex + resolution;
+					triangles[triIndex++] = vertexIndex + 1;
+					triangles[triIndex++] = vertexIndex + resolution;
+					triangles[triIndex++] = vertexIndex + resolution + 1;
+					triangles[triIndex++] = vertexIndex + 1;
+				}
+			}
+		}
+		ArrayMesh mesh = new ArrayMesh();
+		Godot.Collections.Array arrays = new Godot.Collections.Array();
+		arrays.Resize((int)Mesh.ArrayType.Max);
+		arrays[(int)Mesh.ArrayType.Vertex] = vertices;
+		arrays[(int)Mesh.ArrayType.Index] = triangles;
+		arrays[(int)Mesh.ArrayType.Normal] = vertices;
+		arrays[(int)Mesh.ArrayType.TexUV] = percentages;
+		mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
+		
+		return mesh;
+	}
+
+
 	public void UpdateQuadTree(Vector3 position)
 	{
-		
-		if (!disabled)
+		if (!_disabled && _quadTree != null && Multimesh != null)
 		{
-			foreach (var child in GetChildren())
-			{
-				RemoveChild(child);
-			}
-
-			if (_quadTree != null)
-			{	
-				_quadTree.UpdateQuadTree(position);
-				_quadTree.SpawnChildNodes(this);
-			}
+			_quadTree.UpdateQuadTree(position);
+			_quadTree.SetMeshPositions(this);
 		}
 
 	}

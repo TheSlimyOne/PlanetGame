@@ -1,40 +1,85 @@
-[gd_scene load_steps=4 format=3 uid="uid://bhacuf2kejd2w"]
+[gd_scene load_steps=10 format=3 uid="uid://bhacuf2kejd2w"]
 
 [ext_resource type="Script" path="res://Planet/Planet.cs" id="1_g0u6q"]
 [ext_resource type="Script" path="res://Planet/Surface.cs" id="2_8y3tr"]
+[ext_resource type="Shader" path="res://Surface.gdshader" id="3_teupp"]
 
-[sub_resource type="PlaceholderMaterial" id="PlaceholderMaterial_87jn3"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_kfjmp"]
+render_priority = 0
+shader = ExtResource("3_teupp")
+shader_parameter/radius = null
+shader_parameter/resolution = 35
+shader_parameter/normal = Vector3(0, 1, 0)
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_1l7qs"]
+render_priority = 0
+shader = ExtResource("3_teupp")
+shader_parameter/radius = null
+shader_parameter/resolution = 35
+shader_parameter/normal = Vector3(0, -1, 0)
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_x32te"]
+render_priority = 0
+shader = ExtResource("3_teupp")
+shader_parameter/radius = null
+shader_parameter/resolution = 35
+shader_parameter/normal = Vector3(-1, 0, 0)
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_0hhgp"]
+render_priority = 0
+shader = ExtResource("3_teupp")
+shader_parameter/radius = null
+shader_parameter/resolution = 35
+shader_parameter/normal = Vector3(1, 0, 0)
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_nnbqp"]
+render_priority = 0
+shader = ExtResource("3_teupp")
+shader_parameter/radius = null
+shader_parameter/resolution = 35
+shader_parameter/normal = Vector3(0, 0, -1)
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_c0x61"]
+render_priority = 0
+shader = ExtResource("3_teupp")
+shader_parameter/radius = null
+shader_parameter/resolution = 35
+shader_parameter/normal = Vector3(0, 0, 1)
 
 [node name="Planet" type="Node3D" node_paths=PackedStringArray("_surfaces")]
 script = ExtResource("1_g0u6q")
 _surfaces = [NodePath("Up"), NodePath("Down"), NodePath("Left"), NodePath("Right"), NodePath("Forward"), NodePath("Back")]
-RotationAmount = 0.0
-Material = SubResource("PlaceholderMaterial_87jn3")
 metadata/_access_modifiers = {
 "Surfaces": 2,
 "_surfaces": 2
 }
 
-[node name="Up" type="Node3D" parent="."]
+[node name="Up" type="MultiMeshInstance3D" parent="."]
 script = ExtResource("2_8y3tr")
 _normal = Vector3(0, 1, 0)
+_material = SubResource("ShaderMaterial_kfjmp")
 
-[node name="Down" type="Node3D" parent="."]
+[node name="Down" type="MultiMeshInstance3D" parent="."]
 script = ExtResource("2_8y3tr")
 _normal = Vector3(0, -1, 0)
+_material = SubResource("ShaderMaterial_1l7qs")
 
-[node name="Left" type="Node3D" parent="."]
+[node name="Left" type="MultiMeshInstance3D" parent="."]
 script = ExtResource("2_8y3tr")
 _normal = Vector3(-1, 0, 0)
+_material = SubResource("ShaderMaterial_x32te")
 
-[node name="Right" type="Node3D" parent="."]
+[node name="Right" type="MultiMeshInstance3D" parent="."]
 script = ExtResource("2_8y3tr")
 _normal = Vector3(1, 0, 0)
+_material = SubResource("ShaderMaterial_0hhgp")
 
-[node name="Forward" type="Node3D" parent="."]
+[node name="Forward" type="MultiMeshInstance3D" parent="."]
 script = ExtResource("2_8y3tr")
 _normal = Vector3(0, 0, -1)
+_material = SubResource("ShaderMaterial_nnbqp")
 
-[node name="Back" type="Node3D" parent="."]
+[node name="Back" type="MultiMeshInstance3D" parent="."]
 script = ExtResource("2_8y3tr")
 _normal = Vector3(0, 0, 1)
+_material = SubResource("ShaderMaterial_c0x61")
