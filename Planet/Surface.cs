@@ -7,39 +7,33 @@ public partial class Surface : MultiMeshInstance3D
 
 	[Export] private Vector3 _normal;
 	[Export] private bool _disabled = false;
-	[Export] private Material _material;
 	private QuadTree _quadTree;
-    
-	
 
-    public void InitializeQuadTree(Vector3 origin, float radius, int resolution)
+    public void InitializeQuadTree(Vector3 origin, float radius, int resolution, ShaderMaterial material)
 	{
 		if (!_disabled)
 		{
             Multimesh = new MultiMesh 
 			{ 
-				Mesh = InitializeMesh(resolution), 
+				Mesh = InitializeMesh(resolution, radius), 
 				TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
 				InstanceCount = 0,
 				UseCustomData = true
-			};
-
-			((ShaderMaterial) _material).SetShaderParameter("radius", radius);
-			((ShaderMaterial) _material).SetShaderParameter("resolution", resolution);
-			((ShaderMaterial) _material).SetShaderParameter("normal", _normal);
-
-
-			Multimesh.Mesh.SurfaceSetMaterial(0, _material);
+			};			
+			
+			Multimesh.Mesh.SurfaceSetMaterial(0, material);
+			ExtraCullMargin = 2 * radius;
 	
             _quadTree = new QuadTree(origin, radius, _normal);
 			_quadTree.SetMeshPositions(this);
 		}
 	}
 
-	internal Mesh InitializeMesh(int resolution)
+	internal Mesh InitializeMesh(int resolution, float radius)
 	{
 		Vector3[] vertices = new Vector3[resolution * resolution];
-		Vector2[] percentages = new Vector2[resolution * resolution];
+		Vector3[] normals = new Vector3[resolution * resolution];
+		Vector2[] uvs = new Vector2[resolution * resolution];
 		int[] triangles = new int[(resolution - 1) * (resolution - 1) * 6];
 
 		Vector3 axisA = new Vector3(_normal[1], _normal[2], _normal[0]);
@@ -51,14 +45,13 @@ public partial class Surface : MultiMeshInstance3D
 			for (int y = 0; y < resolution; y++)
 			{
 				int vertexIndex = x + y * resolution;
-
 				Vector2 percentage = new Vector2(x, y) / (resolution - 1);
-				Vector3 point = axisA * (2 * percentage.X - 1) + axisB * (2 * percentage.Y - 1);
+				Vector3 point = _normal + axisA * (2 * percentage.X - 1) + axisB * (2 * percentage.Y - 1);
 
-				vertices[vertexIndex] = point;
-				percentages[vertexIndex] = percentage;
+				vertices[vertexIndex] = _normal;
+				normals[vertexIndex] = point;
+				uvs[vertexIndex] = percentage;
 
-				// Calculates the triangles
 				if (x != resolution - 1 && y != resolution - 1)
 				{
 					triangles[triIndex++] = vertexIndex;
@@ -75,8 +68,8 @@ public partial class Surface : MultiMeshInstance3D
 		arrays.Resize((int)Mesh.ArrayType.Max);
 		arrays[(int)Mesh.ArrayType.Vertex] = vertices;
 		arrays[(int)Mesh.ArrayType.Index] = triangles;
-		arrays[(int)Mesh.ArrayType.Normal] = vertices;
-		arrays[(int)Mesh.ArrayType.TexUV] = percentages;
+		arrays[(int)Mesh.ArrayType.Normal] = normals;
+		arrays[(int)Mesh.ArrayType.TexUV] = uvs;
 		mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
 		
 		return mesh;

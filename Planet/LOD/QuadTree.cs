@@ -11,7 +11,7 @@ using Godot;
 /// </summary>
 public partial class QuadTree
 {
-	private QuadTreeNode root;
+	private QuadTreeNode root { get; }
 
 	private Vector3 _origin;
 	private Vector3 _normal;
@@ -19,9 +19,8 @@ public partial class QuadTree
 
 	private Vector3 _axisA;
 	private Vector3 _axisB;
-	private List<QuadTreeNode> _nodeBuffer = new List<QuadTreeNode>();
+	private readonly List<QuadTreeNode> _nodeBuffer = new List<QuadTreeNode>();
 
-	private static Random random = new Random(1207);
 
 	private QuadTree() {}
 
@@ -41,7 +40,6 @@ public partial class QuadTree
 		UpdateTree(target, root);
 	}
 
-	int index = -1;
 	public void SetMeshPositions(MultiMeshInstance3D multiMeshInstance)
 	{
 		if (Engine.IsEditorHint())
@@ -64,10 +62,10 @@ public partial class QuadTree
 
 	public float Normalize(float value, float min, float max)
 	{
-		return (value - min)/(max - min);
+		return (value - min) / (max - min);
 	}
 
-	Dictionary<int, float> detailLOD = new Dictionary<int, float>()
+    readonly Dictionary<int, float> detailLOD = new Dictionary<int, float>()
 	{
 		{0, 100}, 
 		{1, 60}, 
@@ -194,7 +192,7 @@ public partial class QuadTree
 
 		
 
-		internal static Vector3 PointOnCubeToPointOnSphere(Vector3 point)
+		public static Vector3 PointOnCubeToPointOnSphere(Vector3 point)
 		{
 			float x2 = point.X * point.X;
 			float y2 = point.Y * point.Y;

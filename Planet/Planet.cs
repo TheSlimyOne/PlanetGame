@@ -5,14 +5,15 @@ using System;
 [Tool]
 public partial class Planet : Node3D
 {
-	private int _radius = 1;
+	private float _radius = 1;
 	private int _resolution = 5;
-	private int _maxSubdivisionLevel = 7;
 
-	[Export] private Surface[] _surfaces = new Surface[6];
+	private Node3D _surfaceContainer;
+	private ShaderMaterial _material;
+
 
 	[Export]
-	public int Radius
+	public float Radius
 	{
 		get => _radius;
 		set { _radius = value; UpdatePlanetData(); }
@@ -25,33 +26,53 @@ public partial class Planet : Node3D
 		set { _resolution = value; UpdatePlanetData(); }
 	}
 
+	[Export]
+	public ShaderMaterial Material
+	{
+		get => _material;
+		set { _material = value; UpdatePlanetData(); }
+	}
+
+
 
 	private void UpdatePlanetData()
 	{
-		for (int i = 0; i < _surfaces.Length; i++)
-			_surfaces[i]?.InitializeQuadTree(Position, _radius, _resolution);
+		if (_surfaceContainer != null)
+		{
+
+			_material.SetShaderParameter("radius", _radius);
+			_material.SetShaderParameter("resolution", _resolution);
+			foreach (Surface surface in _surfaceContainer.GetChildren())
+			{
+				surface?.InitializeQuadTree(Position, _radius, _resolution, _material);
+			}
+		}
+			
 	}	
 
 	private Vector3 previousPosition = Vector3.Inf;
 	private float movementThreshold = 10;
 	private void OnTargetMovement(Vector3 position)
 	{
-		// if (position.DistanceTo(previousPosition) >= movementThreshold)
+		if (_surfaceContainer != null)
 		{
-			for (int i = 0; i < _surfaces.Length; i++)
-				_surfaces[i].UpdateQuadTree(position);
-			// previousPosition = position;
+			foreach (Surface surface in _surfaceContainer.GetChildren())
+			{
+				surface?.UpdateQuadTree(position);
+			}
 		}
 
 	}
 
 	public override void _Ready()
 	{
+		_surfaceContainer = GetChild<Node3D>(0);
 		UpdatePlanetData();
 	}
 
 	public override void _Process(double delta)
 	{
+
 		// Rotate(Vector3.Up, _rotationAmount * (float) delta);
 	}
 }

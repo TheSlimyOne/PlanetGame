@@ -74,11 +74,15 @@ public partial class Camera : Node3D
 
 	public override void _UnhandledInput(InputEvent @event)
 	{
+		
+
 		if (Input.IsKeyPressed(Key.P))
 		{
 			Viewport viewport = GetViewport();
 
 			if (viewport.DebugDraw == Viewport.DebugDrawEnum.Wireframe)
+				viewport.DebugDraw = Viewport.DebugDrawEnum.NormalBuffer;
+			else if (viewport.DebugDraw == Viewport.DebugDrawEnum.NormalBuffer)
 				viewport.DebugDraw = Viewport.DebugDrawEnum.Disabled;
 			else if (viewport.DebugDraw == Viewport.DebugDrawEnum.Disabled)
 				viewport.DebugDraw = Viewport.DebugDrawEnum.Wireframe;
@@ -87,12 +91,12 @@ public partial class Camera : Node3D
 		if (Input.IsActionJustPressed("speed_up_cam"))
 		{
 			if (zoomSpeed <= 10)
-				zoomSpeed+=0.05f;
+				zoomSpeed += 0.05f;
 		}
 		if (Input.IsActionJustPressed("speed_down_cam"))
 		{
 			if (zoomSpeed > 0.001f)
-				zoomSpeed-=0.05f;
+				zoomSpeed -= 0.05f;
 		}
 		if (Input.IsActionJustReleased("cam_exit"))
 		{
