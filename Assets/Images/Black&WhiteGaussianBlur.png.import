@@ -2,26 +2,27 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://c0dpyuehro71o"
-path="res://.godot/imported/earth2.jpg-fd0fc4220759ec01d7d0319c0884aa63.ctex"
+uid="uid://421xpqat73f7"
+path.s3tc="res://.godot/imported/Black&WhiteGaussianBlur.png-7544913f8968ef30ab0cc8b32172a81d.s3tc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc"],
+"vram_texture": true
 }
 
 [deps]
 
-source_file="res://Assets/Images/earth2.jpg"
-dest_files=["res://.godot/imported/earth2.jpg-fd0fc4220759ec01d7d0319c0884aa63.ctex"]
+source_file="res://Assets/Images/Black&WhiteGaussianBlur.png"
+dest_files=["res://.godot/imported/Black&WhiteGaussianBlur.png-7544913f8968ef30ab0cc8b32172a81d.s3tc.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=false
+mipmaps/generate=true
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""

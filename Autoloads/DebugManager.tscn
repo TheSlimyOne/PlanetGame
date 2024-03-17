@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://c4g61gulh65hu"]
+
+[ext_resource type="Script" path="res://Autoloads/DebugManager.cs" id="1_fx11n"]
+
+[node name="DebugManager" type="Node3D"]
+script = ExtResource("1_fx11n")

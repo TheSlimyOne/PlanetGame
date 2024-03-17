@@ -6,27 +6,28 @@ uniform float sea_level;
 uniform float normal_strength: hint_range(0.0, 5.0, 0.01) = 0.01;
 uniform float height_scale = 10;
 
-
 varying vec3 object_space_pos;
 varying float elevation;
 
 
-vec3 heightToNormal(float height, float strength, vec3 vertex, vec3 normal)  {
-	vec3 worldDerivativeX = dFdx(vertex);
-	vec3 worldDerivativeY = dFdy(vertex);
-	
-	vec3 crossX = cross(normal, worldDerivativeX);
-	vec3 crossY = cross(worldDerivativeY, normal);
-	float d = dot(worldDerivativeX, crossY);
-	float sgn = d < 0.0 ? (-1.0) : 1.0;
-	float surface = sgn / max(0.000000000000001192093, abs(d));
-	
-	float dHdx = dFdx(height);
-	float dHdy = dFdy(height);
-	vec3 surfGrad = surface * (dHdx * crossY + dHdy * crossX);
-	return normalize(normal - (strength * surfGrad)); 
-}
+vec3 heightToNormal(float height, float strength, vec3 vertex, vec3 normal) {
+    vec3 dX = dFdx(vertex);
+    vec3 dY = dFdy(vertex);
 
+    vec3 crossX = cross(normal, dX);
+    vec3 crossY = cross(dY, normal);
+    
+    float dt = dot(dX, crossY);
+    float sign = dt < 0.0 ? -1.0 : 1.0;
+    float surface = sign / max(1.192093e-12, abs(dt));
+
+    float dHdx = dFdx(height);
+    float dHdy = dFdy(height);
+
+    vec3 surfGrad = surface * (dHdx * crossY + dHdy * crossX);
+
+    return normalize(normal - strength * surfGrad);
+}
 
 
 vec2 pointOnSphereToUV(vec3 p) {
@@ -128,8 +129,8 @@ void fragment() {
 	float latitude = asin(normalize(object_space_pos).y);
 	
 
-	ALBEDO = vec3(elevation);
+	ALBEDO = surface_texture;
 
-	NORMAL = heightToNormal(elevation * height_scale, normal_strength, VERTEX, NORMAL);
+	//NORMAL = heightToNormal(elevation * height_scale, normal_strength, VERTEX, NORMAL);
 
 }
