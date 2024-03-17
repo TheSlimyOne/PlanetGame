@@ -6,7 +6,6 @@ uniform float sea_level;
 uniform float normal_strength: hint_range(0.0, 5.0, 0.01) = 0.01;
 uniform float height_scale = 10;
 
-
 varying vec3 object_space_pos;
 varying float elevation;
 
@@ -132,6 +131,6 @@ void fragment() {
 
 	ALBEDO = surface_texture;
 
-	NORMAL = heightToNormal(elevation * height_scale, normal_strength, VERTEX, NORMAL);
+	//NORMAL = heightToNormal(elevation * height_scale, normal_strength, VERTEX, NORMAL);
 
 }

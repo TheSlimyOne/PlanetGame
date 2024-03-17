@@ -36,6 +36,7 @@ xGimbal = NodePath("X-Gimbal")
 yGimbal = NodePath("X-Gimbal/Y-Gimbal")
 zGimbal = NodePath("X-Gimbal/Y-Gimbal/Z-Gimbal")
 camera = NodePath("X-Gimbal/Y-Gimbal/Z-Gimbal/Camera3D")
+EmitSignal = true
 
 [node name="X-Gimbal" type="Node3D" parent="."]
 

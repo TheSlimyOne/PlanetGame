@@ -1,16 +1,20 @@
 using Godot;
 using System;
 using System.Collections;
+using System.Collections.Generic;
 [Tool]
 public partial class DebugManager : Node3D
 {
     public static DebugManager debugManager {get; private set;}
     StandardMaterial3D material = new StandardMaterial3D();
-    ArrayList containers = new();
+
+    private bool isReady = false;
+    
+    private Dictionary<int, MeshInstance3D> _containers = new Dictionary<int, MeshInstance3D>();
 
     public void Clear(int containerIndex)
     {
-        MeshInstance3D container = (MeshInstance3D)containers[containerIndex];
+        MeshInstance3D container = _containers[containerIndex];
         container.Mesh = new ImmediateMesh();
 
         ((ImmediateMesh)container.Mesh).ClearSurfaces();
@@ -20,7 +24,7 @@ public partial class DebugManager : Node3D
     public void DrawLine(int containerIndex, Vector3 start, Vector3 end, Color color, String name)
     {
         
-        MeshInstance3D container = (MeshInstance3D)containers[containerIndex];
+        MeshInstance3D container = _containers[containerIndex];
         
         if (name != null)
             container.Name = name;
@@ -33,14 +37,18 @@ public partial class DebugManager : Node3D
         container.MaterialOverride = material;
     }
 
-    public int GenerateNewContainer()
+    public void GenerateNewContainer(int hash)
     {
-        MeshInstance3D container = new MeshInstance3D();
-        container.Mesh = new ImmediateMesh();
-        containers.Add(container);
-        AddChild(container);
-
-        return containers.Count - 1;
+        if (isReady)
+        {
+            MeshInstance3D container = new MeshInstance3D();
+            container.Mesh = new ImmediateMesh();
+            if (!_containers.ContainsKey(hash))
+            {
+                _containers.Add(hash, container);
+            }
+            AddChild(container);
+        }
     }
 
     public void DrawCube(int containerIndex, Vector3 lowerBounds, Vector3 upperBounds, Color color)
@@ -76,7 +84,7 @@ public partial class DebugManager : Node3D
 
     public void DrawSphere(int containerIndex, Vector3 at, float radius, Color color)
     {
-        MeshInstance3D container = (MeshInstance3D)containers[containerIndex];
+        MeshInstance3D container = _containers[containerIndex];
 
         int step = 15;
         float sppi = 2 * Mathf.Pi / step;
@@ -97,6 +105,7 @@ public partial class DebugManager : Node3D
     }
     public override void _Ready()
     {
+        isReady = true;
         // material.NoDepthTest = true;
         material.ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded;
         material.VertexColorUseAsAlbedo = true;

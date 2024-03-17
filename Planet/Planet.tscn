@@ -1,40 +1,454 @@
-[gd_scene load_steps=4 format=3 uid="uid://bhacuf2kejd2w"]
+[gd_scene load_steps=38 format=3 uid="uid://bhacuf2kejd2w"]
 
 [ext_resource type="Script" path="res://Planet/Planet.cs" id="1_g0u6q"]
-[ext_resource type="Script" path="res://Planet/Surface.cs" id="2_8y3tr"]
+[ext_resource type="Script" path="res://Planet/Surface.cs" id="2_jccxa"]
+[ext_resource type="Shader" path="res://Assets/Shaders/SurfaceMeshRenderer.gdshader" id="2_m33sa"]
+[ext_resource type="Script" path="res://Planet/LOD/QuadTree.cs" id="3_4it1o"]
 
-[sub_resource type="PlaceholderMaterial" id="PlaceholderMaterial_87jn3"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_cmluj"]
+resource_local_to_scene = true
+render_priority = 0
+shader = ExtResource("2_m33sa")
+shader_parameter/radius = 1.0
+shader_parameter/height_scale = null
+shader_parameter/normal_strength = null
+shader_parameter/octaves = 5
+shader_parameter/persistence = 0.5
+shader_parameter/lacunarity = 2.0
+shader_parameter/noise_scale = 1.0
+shader_parameter/exaggeration_factor = 1.0
+shader_parameter/offset = Vector3(0, 0, 0)
+shader_parameter/seed = 1207.01
+shader_parameter/amount = null
+shader_parameter/isCube = false
 
-[node name="Planet" type="Node3D" node_paths=PackedStringArray("_surfaces")]
+[sub_resource type="ArrayMesh" id="ArrayMesh_8q2rw"]
+_surfaces = [{
+"aabb": AABB(0, 0, 0, 1e-05, 1e-05, 1e-05),
+"attribute_data": PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 63, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 63, 0, 0, 0, 63, 0, 0, 0, 63, 0, 0, 128, 63, 0, 0, 0, 63, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 63, 0, 0, 128, 63, 0, 0, 128, 63, 0, 0, 128, 63),
+"format": 34359742481,
+"index_count": 24,
+"index_data": PackedByteArray(3, 0, 6, 0, 4, 0, 4, 0, 0, 0, 3, 0, 1, 0, 0, 0, 4, 0, 4, 0, 2, 0, 1, 0, 7, 0, 4, 0, 6, 0, 8, 0, 4, 0, 7, 0, 5, 0, 2, 0, 4, 0, 4, 0, 8, 0, 5, 0),
+"material": SubResource("ShaderMaterial_cmluj"),
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 9,
+"vertex_data": PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+}]
+
+[sub_resource type="MultiMesh" id="MultiMesh_nok2s"]
+transform_format = 1
+use_colors = true
+use_custom_data = true
+instance_count = 6
+mesh = SubResource("ArrayMesh_8q2rw")
+buffer = PackedFloat32Array(1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0, -1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 2, 0, 1, 0, 0, -1, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 3, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 4, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, -1, 0, 0, 0, 1, 0, 0, 5, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 6, 0)
+
+[sub_resource type="ArrayMesh" id="ArrayMesh_06bip"]
+_surfaces = [{
+"aabb": AABB(0, 0, 0, 1e-05, 1e-05, 1e-05),
+"attribute_data": PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 63, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 63, 0, 0, 0, 63, 0, 0, 0, 63, 0, 0, 128, 63, 0, 0, 0, 63, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 63, 0, 0, 128, 63, 0, 0, 128, 63, 0, 0, 128, 63),
+"format": 34359742481,
+"index_count": 24,
+"index_data": PackedByteArray(3, 0, 6, 0, 4, 0, 4, 0, 0, 0, 3, 0, 1, 0, 0, 0, 4, 0, 4, 0, 2, 0, 1, 0, 7, 0, 4, 0, 6, 0, 8, 0, 4, 0, 7, 0, 2, 0, 4, 0, 8, 0, 0, 0, 0, 0, 0, 0),
+"material": SubResource("ShaderMaterial_cmluj"),
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 9,
+"vertex_data": PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+}]
+
+[sub_resource type="MultiMesh" id="MultiMesh_7yxa4"]
+transform_format = 1
+use_colors = true
+use_custom_data = true
+mesh = SubResource("ArrayMesh_06bip")
+
+[sub_resource type="ArrayMesh" id="ArrayMesh_disyc"]
+_surfaces = [{
+"aabb": AABB(0, 0, 0, 1e-05, 1e-05, 1e-05),
+"attribute_data": PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 63, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 63, 0, 0, 0, 63, 0, 0, 0, 63, 0, 0, 128, 63, 0, 0, 0, 63, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 63, 0, 0, 128, 63, 0, 0, 128, 63, 0, 0, 128, 63),
+"format": 34359742481,
+"index_count": 24,
+"index_data": PackedByteArray(6, 0, 4, 0, 0, 0, 1, 0, 0, 0, 4, 0, 4, 0, 2, 0, 1, 0, 7, 0, 4, 0, 6, 0, 8, 0, 4, 0, 7, 0, 5, 0, 2, 0, 4, 0, 4, 0, 8, 0, 5, 0, 0, 0, 0, 0, 0, 0),
+"material": SubResource("ShaderMaterial_cmluj"),
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 9,
+"vertex_data": PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+}]
+
+[sub_resource type="MultiMesh" id="MultiMesh_hsbix"]
+transform_format = 1
+use_colors = true
+use_custom_data = true
+mesh = SubResource("ArrayMesh_disyc")
+
+[sub_resource type="ArrayMesh" id="ArrayMesh_7wdg4"]
+_surfaces = [{
+"aabb": AABB(0, 0, 0, 1e-05, 1e-05, 1e-05),
+"attribute_data": PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 63, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 63, 0, 0, 0, 63, 0, 0, 0, 63, 0, 0, 128, 63, 0, 0, 0, 63, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 63, 0, 0, 128, 63, 0, 0, 128, 63, 0, 0, 128, 63),
+"format": 34359742481,
+"index_count": 24,
+"index_data": PackedByteArray(6, 0, 4, 0, 0, 0, 1, 0, 0, 0, 4, 0, 4, 0, 2, 0, 1, 0, 7, 0, 4, 0, 6, 0, 8, 0, 4, 0, 7, 0, 2, 0, 4, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+"material": SubResource("ShaderMaterial_cmluj"),
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 9,
+"vertex_data": PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+}]
+
+[sub_resource type="MultiMesh" id="MultiMesh_nshhy"]
+transform_format = 1
+use_colors = true
+use_custom_data = true
+mesh = SubResource("ArrayMesh_7wdg4")
+
+[sub_resource type="ArrayMesh" id="ArrayMesh_gwdgr"]
+_surfaces = [{
+"aabb": AABB(0, 0, 0, 1e-05, 1e-05, 1e-05),
+"attribute_data": PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 63, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 63, 0, 0, 0, 63, 0, 0, 0, 63, 0, 0, 128, 63, 0, 0, 0, 63, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 63, 0, 0, 128, 63, 0, 0, 128, 63, 0, 0, 128, 63),
+"format": 34359742481,
+"index_count": 24,
+"index_data": PackedByteArray(3, 0, 6, 0, 4, 0, 4, 0, 0, 0, 3, 0, 1, 0, 0, 0, 4, 0, 4, 0, 2, 0, 1, 0, 6, 0, 8, 0, 4, 0, 5, 0, 2, 0, 4, 0, 4, 0, 8, 0, 5, 0, 0, 0, 0, 0, 0, 0),
+"material": SubResource("ShaderMaterial_cmluj"),
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 9,
+"vertex_data": PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+}]
+
+[sub_resource type="MultiMesh" id="MultiMesh_78vb3"]
+transform_format = 1
+use_colors = true
+use_custom_data = true
+mesh = SubResource("ArrayMesh_gwdgr")
+
+[sub_resource type="ArrayMesh" id="ArrayMesh_4k4xv"]
+_surfaces = [{
+"aabb": AABB(0, 0, 0, 1e-05, 1e-05, 1e-05),
+"attribute_data": PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 63, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 63, 0, 0, 0, 63, 0, 0, 0, 63, 0, 0, 128, 63, 0, 0, 0, 63, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 63, 0, 0, 128, 63, 0, 0, 128, 63, 0, 0, 128, 63),
+"format": 34359742481,
+"index_count": 24,
+"index_data": PackedByteArray(3, 0, 6, 0, 4, 0, 4, 0, 0, 0, 3, 0, 1, 0, 0, 0, 4, 0, 4, 0, 2, 0, 1, 0, 6, 0, 8, 0, 4, 0, 2, 0, 4, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+"material": SubResource("ShaderMaterial_cmluj"),
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 9,
+"vertex_data": PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+}]
+
+[sub_resource type="MultiMesh" id="MultiMesh_bioc6"]
+transform_format = 1
+use_colors = true
+use_custom_data = true
+mesh = SubResource("ArrayMesh_4k4xv")
+
+[sub_resource type="ArrayMesh" id="ArrayMesh_k5vob"]
+_surfaces = [{
+"aabb": AABB(0, 0, 0, 1e-05, 1e-05, 1e-05),
+"attribute_data": PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 63, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 63, 0, 0, 0, 63, 0, 0, 0, 63, 0, 0, 128, 63, 0, 0, 0, 63, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 63, 0, 0, 128, 63, 0, 0, 128, 63, 0, 0, 128, 63),
+"format": 34359742481,
+"index_count": 24,
+"index_data": PackedByteArray(6, 0, 4, 0, 0, 0, 1, 0, 0, 0, 4, 0, 4, 0, 2, 0, 1, 0, 6, 0, 8, 0, 4, 0, 5, 0, 2, 0, 4, 0, 4, 0, 8, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+"material": SubResource("ShaderMaterial_cmluj"),
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 9,
+"vertex_data": PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+}]
+
+[sub_resource type="MultiMesh" id="MultiMesh_jyid5"]
+transform_format = 1
+use_colors = true
+use_custom_data = true
+mesh = SubResource("ArrayMesh_k5vob")
+
+[sub_resource type="ArrayMesh" id="ArrayMesh_0gug4"]
+_surfaces = [{
+"aabb": AABB(0, 0, 0, 1e-05, 1e-05, 1e-05),
+"attribute_data": PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 63, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 63, 0, 0, 0, 63, 0, 0, 0, 63, 0, 0, 128, 63, 0, 0, 0, 63, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 63, 0, 0, 128, 63, 0, 0, 128, 63, 0, 0, 128, 63),
+"format": 34359742481,
+"index_count": 24,
+"index_data": PackedByteArray(6, 0, 4, 0, 0, 0, 1, 0, 0, 0, 4, 0, 4, 0, 2, 0, 1, 0, 6, 0, 8, 0, 4, 0, 2, 0, 4, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+"material": SubResource("ShaderMaterial_cmluj"),
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 9,
+"vertex_data": PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+}]
+
+[sub_resource type="MultiMesh" id="MultiMesh_v6yxh"]
+transform_format = 1
+use_colors = true
+use_custom_data = true
+mesh = SubResource("ArrayMesh_0gug4")
+
+[sub_resource type="ArrayMesh" id="ArrayMesh_3g3vg"]
+_surfaces = [{
+"aabb": AABB(0, 0, 0, 1e-05, 1e-05, 1e-05),
+"attribute_data": PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 63, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 63, 0, 0, 0, 63, 0, 0, 0, 63, 0, 0, 128, 63, 0, 0, 0, 63, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 63, 0, 0, 128, 63, 0, 0, 128, 63, 0, 0, 128, 63),
+"format": 34359742481,
+"index_count": 24,
+"index_data": PackedByteArray(3, 0, 6, 0, 4, 0, 4, 0, 0, 0, 3, 0, 0, 0, 4, 0, 2, 0, 7, 0, 4, 0, 6, 0, 8, 0, 4, 0, 7, 0, 5, 0, 2, 0, 4, 0, 4, 0, 8, 0, 5, 0, 0, 0, 0, 0, 0, 0),
+"material": SubResource("ShaderMaterial_cmluj"),
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 9,
+"vertex_data": PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+}]
+
+[sub_resource type="MultiMesh" id="MultiMesh_4d0b6"]
+transform_format = 1
+use_colors = true
+use_custom_data = true
+mesh = SubResource("ArrayMesh_3g3vg")
+
+[sub_resource type="ArrayMesh" id="ArrayMesh_0m3gw"]
+_surfaces = [{
+"aabb": AABB(0, 0, 0, 1e-05, 1e-05, 1e-05),
+"attribute_data": PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 63, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 63, 0, 0, 0, 63, 0, 0, 0, 63, 0, 0, 128, 63, 0, 0, 0, 63, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 63, 0, 0, 128, 63, 0, 0, 128, 63, 0, 0, 128, 63),
+"format": 34359742481,
+"index_count": 24,
+"index_data": PackedByteArray(3, 0, 6, 0, 4, 0, 4, 0, 0, 0, 3, 0, 0, 0, 4, 0, 2, 0, 7, 0, 4, 0, 6, 0, 8, 0, 4, 0, 7, 0, 2, 0, 4, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+"material": SubResource("ShaderMaterial_cmluj"),
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 9,
+"vertex_data": PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+}]
+
+[sub_resource type="MultiMesh" id="MultiMesh_ufgkq"]
+transform_format = 1
+use_colors = true
+use_custom_data = true
+mesh = SubResource("ArrayMesh_0m3gw")
+
+[sub_resource type="ArrayMesh" id="ArrayMesh_2v23g"]
+_surfaces = [{
+"aabb": AABB(0, 0, 0, 1e-05, 1e-05, 1e-05),
+"attribute_data": PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 63, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 63, 0, 0, 0, 63, 0, 0, 0, 63, 0, 0, 128, 63, 0, 0, 0, 63, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 63, 0, 0, 128, 63, 0, 0, 128, 63, 0, 0, 128, 63),
+"format": 34359742481,
+"index_count": 24,
+"index_data": PackedByteArray(6, 0, 4, 0, 0, 0, 0, 0, 4, 0, 2, 0, 7, 0, 4, 0, 6, 0, 8, 0, 4, 0, 7, 0, 5, 0, 2, 0, 4, 0, 4, 0, 8, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+"material": SubResource("ShaderMaterial_cmluj"),
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 9,
+"vertex_data": PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+}]
+
+[sub_resource type="MultiMesh" id="MultiMesh_mh080"]
+transform_format = 1
+use_colors = true
+use_custom_data = true
+mesh = SubResource("ArrayMesh_2v23g")
+
+[sub_resource type="ArrayMesh" id="ArrayMesh_rfu0o"]
+_surfaces = [{
+"aabb": AABB(0, 0, 0, 1e-05, 1e-05, 1e-05),
+"attribute_data": PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 63, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 63, 0, 0, 0, 63, 0, 0, 0, 63, 0, 0, 128, 63, 0, 0, 0, 63, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 63, 0, 0, 128, 63, 0, 0, 128, 63, 0, 0, 128, 63),
+"format": 34359742481,
+"index_count": 24,
+"index_data": PackedByteArray(6, 0, 4, 0, 0, 0, 0, 0, 4, 0, 2, 0, 7, 0, 4, 0, 6, 0, 8, 0, 4, 0, 7, 0, 2, 0, 4, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+"material": SubResource("ShaderMaterial_cmluj"),
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 9,
+"vertex_data": PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+}]
+
+[sub_resource type="MultiMesh" id="MultiMesh_4aed4"]
+transform_format = 1
+use_colors = true
+use_custom_data = true
+mesh = SubResource("ArrayMesh_rfu0o")
+
+[sub_resource type="ArrayMesh" id="ArrayMesh_f5oh1"]
+_surfaces = [{
+"aabb": AABB(0, 0, 0, 1e-05, 1e-05, 1e-05),
+"attribute_data": PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 63, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 63, 0, 0, 0, 63, 0, 0, 0, 63, 0, 0, 128, 63, 0, 0, 0, 63, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 63, 0, 0, 128, 63, 0, 0, 128, 63, 0, 0, 128, 63),
+"format": 34359742481,
+"index_count": 24,
+"index_data": PackedByteArray(3, 0, 6, 0, 4, 0, 4, 0, 0, 0, 3, 0, 0, 0, 4, 0, 2, 0, 6, 0, 8, 0, 4, 0, 5, 0, 2, 0, 4, 0, 4, 0, 8, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+"material": SubResource("ShaderMaterial_cmluj"),
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 9,
+"vertex_data": PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+}]
+
+[sub_resource type="MultiMesh" id="MultiMesh_cw625"]
+transform_format = 1
+use_colors = true
+use_custom_data = true
+mesh = SubResource("ArrayMesh_f5oh1")
+
+[sub_resource type="ArrayMesh" id="ArrayMesh_cuj7c"]
+_surfaces = [{
+"aabb": AABB(0, 0, 0, 1e-05, 1e-05, 1e-05),
+"attribute_data": PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 63, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 63, 0, 0, 0, 63, 0, 0, 0, 63, 0, 0, 128, 63, 0, 0, 0, 63, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 63, 0, 0, 128, 63, 0, 0, 128, 63, 0, 0, 128, 63),
+"format": 34359742481,
+"index_count": 24,
+"index_data": PackedByteArray(3, 0, 6, 0, 4, 0, 4, 0, 0, 0, 3, 0, 0, 0, 4, 0, 2, 0, 6, 0, 8, 0, 4, 0, 2, 0, 4, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+"material": SubResource("ShaderMaterial_cmluj"),
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 9,
+"vertex_data": PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+}]
+
+[sub_resource type="MultiMesh" id="MultiMesh_ptrtc"]
+transform_format = 1
+use_colors = true
+use_custom_data = true
+mesh = SubResource("ArrayMesh_cuj7c")
+
+[sub_resource type="ArrayMesh" id="ArrayMesh_sol2y"]
+_surfaces = [{
+"aabb": AABB(0, 0, 0, 1e-05, 1e-05, 1e-05),
+"attribute_data": PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 63, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 63, 0, 0, 0, 63, 0, 0, 0, 63, 0, 0, 128, 63, 0, 0, 0, 63, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 63, 0, 0, 128, 63, 0, 0, 128, 63, 0, 0, 128, 63),
+"format": 34359742481,
+"index_count": 24,
+"index_data": PackedByteArray(6, 0, 4, 0, 0, 0, 0, 0, 4, 0, 2, 0, 6, 0, 8, 0, 4, 0, 5, 0, 2, 0, 4, 0, 4, 0, 8, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+"material": SubResource("ShaderMaterial_cmluj"),
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 9,
+"vertex_data": PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+}]
+
+[sub_resource type="MultiMesh" id="MultiMesh_77474"]
+transform_format = 1
+use_colors = true
+use_custom_data = true
+mesh = SubResource("ArrayMesh_sol2y")
+
+[sub_resource type="ArrayMesh" id="ArrayMesh_wwovf"]
+_surfaces = [{
+"aabb": AABB(0, 0, 0, 1e-05, 1e-05, 1e-05),
+"attribute_data": PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 63, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 63, 0, 0, 0, 63, 0, 0, 0, 63, 0, 0, 128, 63, 0, 0, 0, 63, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 63, 0, 0, 128, 63, 0, 0, 128, 63, 0, 0, 128, 63),
+"format": 34359742481,
+"index_count": 24,
+"index_data": PackedByteArray(6, 0, 4, 0, 0, 0, 0, 0, 4, 0, 2, 0, 6, 0, 8, 0, 4, 0, 2, 0, 4, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+"material": SubResource("ShaderMaterial_cmluj"),
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 9,
+"vertex_data": PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+}]
+
+[sub_resource type="MultiMesh" id="MultiMesh_2ql4u"]
+transform_format = 1
+use_colors = true
+use_custom_data = true
+mesh = SubResource("ArrayMesh_wwovf")
+
+[node name="Planet" type="Node3D" node_paths=PackedStringArray("Surface", "QuadTreesContainer")]
 script = ExtResource("1_g0u6q")
-_surfaces = [NodePath("Up"), NodePath("Down"), NodePath("Left"), NodePath("Right"), NodePath("Forward"), NodePath("Back")]
-RotationAmount = 0.0
-Material = SubResource("PlaceholderMaterial_87jn3")
+Surface = NodePath("Surface")
+QuadTreesContainer = NodePath("QuadTrees")
+Resolution = 3
+Material = SubResource("ShaderMaterial_cmluj")
 metadata/_access_modifiers = {
+"QuadTreesContainer": 2,
+"Surface": 2,
 "Surfaces": 2,
-"_surfaces": 2
+"_surface": 2,
+"_surfaceContainer": 0,
+"_surfaces": 2,
+"surfaceContainer": 2
 }
 
-[node name="Up" type="Node3D" parent="."]
-script = ExtResource("2_8y3tr")
-_normal = Vector3(0, 1, 0)
+[node name="Surface" type="Node3D" parent="."]
+script = ExtResource("2_jccxa")
 
-[node name="Down" type="Node3D" parent="."]
-script = ExtResource("2_8y3tr")
-_normal = Vector3(0, -1, 0)
+[node name="Mesh-Type-0" type="MultiMeshInstance3D" parent="Surface"]
+extra_cull_margin = 2.0
+multimesh = SubResource("MultiMesh_nok2s")
 
-[node name="Left" type="Node3D" parent="."]
-script = ExtResource("2_8y3tr")
-_normal = Vector3(-1, 0, 0)
+[node name="Mesh-Type-1" type="MultiMeshInstance3D" parent="Surface"]
+extra_cull_margin = 2.0
+multimesh = SubResource("MultiMesh_7yxa4")
 
-[node name="Right" type="Node3D" parent="."]
-script = ExtResource("2_8y3tr")
-_normal = Vector3(1, 0, 0)
+[node name="Mesh-Type-2" type="MultiMeshInstance3D" parent="Surface"]
+extra_cull_margin = 2.0
+multimesh = SubResource("MultiMesh_hsbix")
 
-[node name="Forward" type="Node3D" parent="."]
-script = ExtResource("2_8y3tr")
-_normal = Vector3(0, 0, -1)
+[node name="Mesh-Type-3" type="MultiMeshInstance3D" parent="Surface"]
+extra_cull_margin = 2.0
+multimesh = SubResource("MultiMesh_nshhy")
 
-[node name="Back" type="Node3D" parent="."]
-script = ExtResource("2_8y3tr")
-_normal = Vector3(0, 0, 1)
+[node name="Mesh-Type-4" type="MultiMeshInstance3D" parent="Surface"]
+extra_cull_margin = 2.0
+multimesh = SubResource("MultiMesh_78vb3")
+
+[node name="Mesh-Type-5" type="MultiMeshInstance3D" parent="Surface"]
+extra_cull_margin = 2.0
+multimesh = SubResource("MultiMesh_bioc6")
+
+[node name="Mesh-Type-6" type="MultiMeshInstance3D" parent="Surface"]
+extra_cull_margin = 2.0
+multimesh = SubResource("MultiMesh_jyid5")
+
+[node name="Mesh-Type-7" type="MultiMeshInstance3D" parent="Surface"]
+extra_cull_margin = 2.0
+multimesh = SubResource("MultiMesh_v6yxh")
+
+[node name="Mesh-Type-8" type="MultiMeshInstance3D" parent="Surface"]
+extra_cull_margin = 2.0
+multimesh = SubResource("MultiMesh_4d0b6")
+
+[node name="Mesh-Type-9" type="MultiMeshInstance3D" parent="Surface"]
+extra_cull_margin = 2.0
+multimesh = SubResource("MultiMesh_ufgkq")
+
+[node name="Mesh-Type-10" type="MultiMeshInstance3D" parent="Surface"]
+extra_cull_margin = 2.0
+multimesh = SubResource("MultiMesh_mh080")
+
+[node name="Mesh-Type-11" type="MultiMeshInstance3D" parent="Surface"]
+extra_cull_margin = 2.0
+multimesh = SubResource("MultiMesh_4aed4")
+
+[node name="Mesh-Type-12" type="MultiMeshInstance3D" parent="Surface"]
+extra_cull_margin = 2.0
+multimesh = SubResource("MultiMesh_cw625")
+
+[node name="Mesh-Type-13" type="MultiMeshInstance3D" parent="Surface"]
+extra_cull_margin = 2.0
+multimesh = SubResource("MultiMesh_ptrtc")
+
+[node name="Mesh-Type-14" type="MultiMeshInstance3D" parent="Surface"]
+extra_cull_margin = 2.0
+multimesh = SubResource("MultiMesh_77474")
+
+[node name="Mesh-Type-15" type="MultiMeshInstance3D" parent="Surface"]
+extra_cull_margin = 2.0
+multimesh = SubResource("MultiMesh_2ql4u")
+
+[node name="QuadTrees" type="Node" parent="."]
+
+[node name="QuadTrees-Up" type="Node" parent="QuadTrees"]
+script = ExtResource("3_4it1o")
+Normal = Vector3(0, 1, 0)
+
+[node name="QuadTrees-Down" type="Node" parent="QuadTrees"]
+script = ExtResource("3_4it1o")
+Normal = Vector3(0, -1, 0)
+
+[node name="QuadTrees-Left" type="Node" parent="QuadTrees"]
+script = ExtResource("3_4it1o")
+Normal = Vector3(-1, 0, 0)
+
+[node name="QuadTrees-Right" type="Node" parent="QuadTrees"]
+script = ExtResource("3_4it1o")
+Normal = Vector3(1, 0, 0)
+
+[node name="QuadTrees-Forward" type="Node" parent="QuadTrees"]
+script = ExtResource("3_4it1o")
+Normal = Vector3(0, 0, -1)
+
+[node name="QuadTrees-Back" type="Node" parent="QuadTrees"]
+script = ExtResource("3_4it1o")
+Normal = Vector3(0, 0, 1)

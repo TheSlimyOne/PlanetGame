@@ -1,7 +1,7 @@
-using System;
-using System.Collections;
-using System.Collections.Generic;
 using Godot;
+using System;
+using System.Collections.Generic;
+
 
 [Tool]
 /// <summary>
@@ -9,342 +9,459 @@ using Godot;
 /// QuadTree
 /// 
 /// </summary>
-public partial class QuadTree : GodotObject
+public partial class QuadTree : Node
 {
-	private QuadTreeNode root;
+    [Export] public Vector3 Normal { get => _normal; set { _normal = value; } }
+    [Export] public bool IsDisabled { get => _isDisabled; set { _isDisabled = value; } }
+    public Vector3 AxisA { get => _axisA; }
+    public Vector3 AxisB { get => _axisB; }
+    public Vector3 Mask { get => _mask; }
 
-	private int _maxSubdivisionLevel;
+    private Vector3 _normal;
+    private bool _isDisabled = false;
+    private QuadTreeNode _root;
+    private Vector3 _mask;
+    private float _radius;
+    private Transform3D _planetPosition;
+    private Vector3 _axisA; // axisA is the same as localRight
+    private Vector3 _axisB; // axisB is the same as localForward
 
-	private float _radius;
-	private int _resolution;
-	private Node3D _spawnPoint;
-	private Material _material;
-	private Vector3 _normal;
-	private Vector3 _position;
-	private Vector3 _axisA;
-	private Vector3 _axisB;
-	private Vector3 _planetPosition;
-	private List<QuadTreeNode> _nodeBuffer = new List<QuadTreeNode>();
-	private Vector3 targetPosition = Vector3.Zero;
-	private Curve _distanceCurve;
-	// public int index = -1;
+    private readonly List<QuadTreeNode> _nodeBuffer = new List<QuadTreeNode>();
+    private QuadTree() { }
 
-	private static Random random = new Random(1207);
+    private Dictionary<int, Vector3> _localCardinalDirections;
 
-	private float distanceScale = 2f;
+    private Surface _surface;
 
-	private QuadTree() {}
+    public void Initialize(Transform3D planetPosition, float radius, Surface surface)
+    {
+        _radius = radius;
+        _planetPosition = planetPosition;
 
-	public QuadTree(Node3D spawnPoint, Vector3 normal, float radius, Material material, int resolution, int maxSubdivisionLevel, Curve distanceCurve)
-	{
-		_spawnPoint = spawnPoint;
-		_resolution = resolution;
-		_maxSubdivisionLevel = maxSubdivisionLevel;
-		_normal = normal;
-		_distanceCurve = distanceCurve;
-		_planetPosition = ((Node3D) spawnPoint.GetParent()).Position;
-		_material = material;
-		_radius = radius;
-		_position = normal;
-		_axisA = new Vector3(normal.Y, normal.Z, normal.X);
-		_axisB = normal.Cross(_axisA);
-		root = new QuadTreeNode(this, null, _position, _axisA, _axisB, QuadTreeNode.Coordinate.Root, 0);
-	}
+        _axisA = new Vector3(_normal.Y, _normal.Z, _normal.X);
+        _axisB = _normal.Cross(_axisA);
+        _surface = surface;
+        _localCardinalDirections = new Dictionary<int, Vector3>
+        {
+            {0, _axisA},
+            {1, -_axisA},
+            {2, _axisB},
+            {3, -_axisB},
 
-	public void UpdateQuadTree(Vector3 target)
-	{
-		_nodeBuffer.Clear();
-		// if (index == -1) index = DebugManager.debugManager.GenerateNewContainer();
-	
-		targetPosition = target;
-		// DebugManager.debugManager.Clear(index);
+        };
+        _mask = Vector3Utils.GenerateVectorMaskFrom(_normal);
+    }
 
 
-		UpdateTree(target, root);
-	}
+    public void UpdateQuadTree(Vector3 target)
+    {
+        if (IsDisabled) return;
+
+        _root = new QuadTreeNode(this, null, _normal, _axisA, _axisB, QuadTreeNode.Coordinate.Root, 0);
+        _nodeBuffer.Clear();
+        UpdateQuadTree(target, _root);
+    }
+
+    public QuadTreeNode Traverse(uint hashPath)
+    {
+        
+        string stringIterator = Convert.ToString(hashPath, 2)[1..];
+        return Traverse(hashPath, stringIterator, _root);
+    }
+
+    private QuadTreeNode Traverse(uint originalHash, string stringIterator, QuadTreeNode node)
+    {
+
+        if (originalHash == node.hashValue || node.hasChildren == false || stringIterator.Length == 0)
+        {
+            return node;
+        }
+
+        string encoding = stringIterator[..2];
+        int index = Convert.ToInt32(encoding, 2);
+        QuadTreeNode childNode = node.GetChild((QuadTreeNode.Coordinate)index);
+
+        return Traverse(originalHash, stringIterator[2..], childNode);
+    }
+
+    public QuadTreeNode Traverse(uint hashPath, int subdivisionLevel)
+    {
+        return Traverse(hashPath, subdivisionLevel, _root);
+    }
+
+    private QuadTreeNode Traverse(uint originalHash, int subdivisionLevel, QuadTreeNode node)
+    {
+
+        if (originalHash == node.hashValue || node.hasChildren == false || subdivisionLevel == 0)
+        {
+            return node;
+        }
+
+        // Commonly used value
+        uint operationInt = (uint)Mathf.Pow(4, subdivisionLevel - 1);
+        
+        // Make a mask that excludes all but the 2nd and 3rd to last digit in the hashPath
+        // 0b11100 -> 0b01100
+        uint leadingMask = 3 * operationInt;
+        // uint remainingMask = operationInt - 1;
+        
+        uint leading = (leadingMask & originalHash) >> (2 * (subdivisionLevel - 1));
+        // uint remaining = (remainingHash & remainingMask) + operationInt;
+
+        
+
+        QuadTreeNode childNode = node.GetChild((QuadTreeNode.Coordinate)leading);
+
+        return Traverse(originalHash, subdivisionLevel-1, childNode);
+    }
+
+    public enum Direction
+    {
+        UP,
+        DOWN,
+        LEFT,
+        Right
+    }
+
+    public void SetVisibleNodes(Dictionary<int, List<QuadTreeNode>> nodeMeshType)
+    {
+        if (IsDisabled) return;
+
+        if (_nodeBuffer.Count == 0)
+        {
+            _nodeBuffer.Add(_root);
+        }
+
+        for (int i = 0; i < _nodeBuffer.Count; i++)
+        {
+            QuadTreeNode node = _nodeBuffer[i];
+
+            byte[] neighbors = node.GetNeighborLODs();
+
+            if (neighbors[0] == 1 || neighbors[1] == 1 || neighbors[2] == 1 || neighbors[3] == 1)
+            {
+                node.isFan = true;
+            }
+            else
+            {
+                node.isFan = false;
+            }
+
+            int index = 1 * neighbors[0] + 2 * neighbors[1] + 4 * neighbors[2] + 8 * neighbors[3];
+
+            nodeMeshType[index].Add(node);
+
+        }
+    }
 
 
-	public void SpawnChildNodes(Node3D spawnPoint)
-	{
-		if (_nodeBuffer.Count == 0 && Engine.IsEditorHint())
-		{	
-			_nodeBuffer.Add(root);
-		}
+    public float Normalize(float value, float min, float max)
+    {
+        return (value - min) / (max - min);
+    }
 
-		foreach (QuadTreeNode node in _nodeBuffer)
-		{
-			spawnPoint.AddChild(node);
-		}
-	}
+    readonly Dictionary<int, float> renderDistanceLOD = new Dictionary<int, float>()
+    {
+        {0, 350},
+        {1, 250},
+        {2, 150},
+        {3, 100},
+        {4, 90},
+        {5, 80},
+        {6, 70},
+        {7, 60},
+        {8, 50},
+        {9, 50},
+    };
 
-	private QuadTreeNode[] GetLeafNodes()
-	{
-		List<QuadTreeNode> leafNodes = new List<QuadTreeNode>();
-		GetLeafNodes(root, leafNodes);
-		return leafNodes.ToArray();
-	}
-
-	private void GetLeafNodes(QuadTreeNode node, List<QuadTreeNode> leafNodes)
-	{
-		if (!node.hasChildren)
-		{
-			leafNodes.Add(node);
-		}
-		else
-		{
-			foreach (QuadTreeNode child in node.children)
-			{
-				GetLeafNodes(child, leafNodes);
-			}
-		}
-	}
-
-	public float Normalize(float value, float min, float max)
-	{
-		return (value - min)/(max-min);
-	}
-
-	Dictionary<int, float> detailLOD = new Dictionary<int, float>()
-	{
-		{0, Mathf.Inf}, 
-		{1, 60}, 
-		{2, 20},
-		{3, 10}, 
-		{4, 4}, 
-		{5, 1.5f},
-		{6, 0.7f}, 
-		{7, 0.3f}, 
-		{8, 0.1f},
-	};
-	private void UpdateTree(Vector3 target, QuadTreeNode node)
-	{
-		
-		Vector3 nodeSphereLocation = QuadTreeNode.PointOnCubeToPointOnSphere(node.cubePosition) * _radius;
-		
-		
-		if (target.Normalized().Dot(nodeSphereLocation.Normalized()) <= -0.5f)
-		{
-			return;
-		}
-
-		if (detailLOD[node.subdivisionLevel] > target.DistanceTo(nodeSphereLocation))
-		{	
-			if (node.subdivisionLevel < _maxSubdivisionLevel)
-			{
-				if (!node.hasChildren)
-				{
-					node.GenerateChildren();
-				}
-				UpdateTree(target, node.children[0]);
-				UpdateTree(target, node.children[1]);
-				UpdateTree(target, node.children[2]);
-				UpdateTree(target, node.children[3]);
-			}
-			else 
-			{
-				_nodeBuffer.Add(node);
-			}
-		} 
-		else 
-		{
-			_nodeBuffer.Add(node);
-		}
-		
-		// _nodeBuffer.Add(node);
-	}
+    readonly Dictionary<int, float> renderAngleLOD = new Dictionary<int, float>()
+    {
+        {0, 180},
+        {1, 128},
+        {2, 64},
+        {3, 32},
+        {4, 16},
+        {5, 8},
+        {6, 4},
+        {7, 2},
+        // {8, 1},
+        // {9, 0.5f},
+    };
 
 
-	public override string ToString()
-	{
-		return $"{{\n{root}\n}}";
-	}
+    private void UpdateQuadTree(Vector3 target, QuadTreeNode node)
+    {
+        float renderAngle = node.spherePosition.AngleTo(target);
+        float renderDistance = target.DistanceTo(_planetPosition.Origin);
 
-	/// <summary>
-	/// 
-	/// QuadTreeNode
-	/// 
-	/// </summary>
-	public partial class QuadTreeNode : MeshInstance3D
-	{
-		internal QuadTree quadTree;
-		internal QuadTreeNode parent;
-		internal QuadTreeNode[] children = new QuadTreeNode[4];
-		internal Vector3 cubePosition;
-		internal Coordinate coordinate;
-		internal bool hasChildren;
-		internal Vector3 axisA;
-		internal Vector3 axisB;
-		internal int subdivisionLevel;
+        if (Mathf.DegToRad(renderAngleLOD[node.subdivisionLevel]) >= renderAngle)
+        {
+            if (node.subdivisionLevel < renderAngleLOD.Count - 1)
+            {
+                if (!node.hasChildren)
+                {
+                    node.GenerateChildren();
+                }
+
+                foreach (QuadTreeNode child in node.children)
+                {
+                    UpdateQuadTree(target, child);
+                }
+            }
+            else
+            {
+                _nodeBuffer.Add(node);
+            }
+        }
+        else
+        {
+            if (node.subdivisionLevel > 1)
+            {
+                _nodeBuffer.Add(node);
+            }
+        }
+    }
+
+    public override int GetHashCode()
+    {
+        return _normal.GetHashCode() + _planetPosition.GetHashCode();
+    }
 
 
-		internal enum Coordinate
-		{
-			Root,
-			NorthWest,
-			NorthEast,
-			SouthWest,
-			SouthEast
-		}
+    public override string ToString()
+    {
+        return $"{{\n{_root}\n}}";
+    }
 
-		private QuadTreeNode() {}
+    /// <summary>
+    /// 
+    /// QuadTreeNode
+    /// 
+    /// </summary>
+    public partial class QuadTreeNode
+    {
+        internal QuadTree quadTree;
+        internal QuadTreeNode parent;
+        internal QuadTreeNode[] children = new QuadTreeNode[4];
+        internal Vector3 cubePosition;
+        internal Vector3 spherePosition;
+        internal Coordinate coordinate;
+        internal bool hasChildren;
+        internal Vector3 axisA;
+        internal Vector3 axisB;
+        internal int subdivisionLevel;
+        internal uint hashValue;
+        internal bool isFan;
+        internal bool[] isEdge = new bool[4];
 
-		internal QuadTreeNode(QuadTree quadTree, QuadTreeNode parent, Vector3 cubePosition, Vector3 axisA, Vector3 axisB, Coordinate coordinate, int subdivisionLevel)
-		{
-			this.quadTree = quadTree;
-			this.parent = parent;
-			this.cubePosition = cubePosition;
-			this.coordinate = coordinate;
-			this.axisA = axisA;
-			this.axisB = axisB;
-			this.subdivisionLevel = subdivisionLevel;
-			Mesh = new ArrayMesh();
+        public bool[] cornerType = new bool[4];
 
+        internal enum Coordinate
+        {
+            Root = 4,
+            NorthWest = 0,
+            NorthEast = 1,
+            SouthEast = 2,
+            SouthWest = 3
+        }
+
+        private QuadTreeNode() { }
+
+        internal QuadTreeNode(QuadTree quadTree, QuadTreeNode parent, Vector3 cubePosition, Vector3 axisA, Vector3 axisB, Coordinate coordinate, int subdivisionLevel)
+        {
+            this.quadTree = quadTree;
+            this.parent = parent;
+
+            hashValue = coordinate == Coordinate.Root ? 1 : parent.hashValue * 4 + (uint)coordinate;
+
+            if (coordinate == Coordinate.NorthWest && subdivisionLevel == 5)
+                cornerType[0] = true;
+            else if (coordinate == Coordinate.NorthEast && subdivisionLevel == 5)
+                cornerType[1] = true;
+            else if (coordinate == Coordinate.SouthEast && subdivisionLevel == 5)
+                cornerType[2] = true;
+            else if (coordinate == Coordinate.SouthWest && subdivisionLevel == 5)
+                cornerType[3] = true;
+
+            // GD.PrintS(coordinate, Convert.ToString(hashValue, 2));
+
+            this.cubePosition = cubePosition;
+            this.coordinate = coordinate;
+            this.axisA = axisA;
+            this.axisB = axisB;
+
+
+            this.subdivisionLevel = subdivisionLevel;
+            spherePosition = PointOnCubeToPointOnSphere(cubePosition);
+            hasChildren = false;
+        }
+
+        internal void GenerateChildren()
+        {
+            Vector3[] coordinates = GenerateCornerCoordinates(0.5f);
+            children[(int)Coordinate.NorthWest] = new QuadTreeNode(quadTree, this, coordinates[0], axisA / 2, axisB / 2, Coordinate.NorthWest, subdivisionLevel + 1);
+            children[(int)Coordinate.NorthEast] = new QuadTreeNode(quadTree, this, coordinates[1], axisA / 2, axisB / 2, Coordinate.NorthEast, subdivisionLevel + 1);
+            children[(int)Coordinate.SouthEast] = new QuadTreeNode(quadTree, this, coordinates[2], axisA / 2, axisB / 2, Coordinate.SouthEast, subdivisionLevel + 1);
+            children[(int)Coordinate.SouthWest] = new QuadTreeNode(quadTree, this, coordinates[3], axisA / 2, axisB / 2, Coordinate.SouthWest, subdivisionLevel + 1);
+
+            hasChildren = true;
+        }
+
+        internal Vector3[] GenerateCornerCoordinates(float scale)
+        {
+
+
+            Vector3[] coordinates = new Vector3[4];
+            // Direction is relative to axisA and axisB
+            coordinates[0] = cubePosition + scale * (-axisA + axisB);
+            coordinates[1] = cubePosition + scale * (axisA + axisB);
+            coordinates[2] = cubePosition + scale * (axisA - axisB);
+            coordinates[3] = cubePosition + scale * (-axisA - axisB);
+
+            return coordinates;
+        }
+
+        internal QuadTreeNode GetChild(Coordinate coordinate)
+        {
+            return children[(int)coordinate];
+        }
+
+
+        public static Vector3 PointOnCubeToPointOnSphere(Vector3 point)
+        {
+            float x2 = point.X * point.X;
+            float y2 = point.Y * point.Y;
+            float z2 = point.Z * point.Z;
+
+            float x = point.X * Mathf.Sqrt(1 - (y2 + z2) / 2 + y2 * z2 / 3);
+            float y = point.Y * Mathf.Sqrt(1 - (z2 + x2) / 2 + z2 * x2 / 3);
+            float z = point.Z * Mathf.Sqrt(1 - (x2 + y2) / 2 + x2 * y2 / 3);
+
+            return new Vector3(x, y, z);
+        }
+
+        public override string ToString()
+        {
+            string s = "";
+            s += $"\n\"{coordinate}\": {{";
+            s += $"\n\"position\": [{cubePosition.X}, {cubePosition.Y}, {cubePosition.Z}],";
+            s += $"\n{(children[0] != null ? children[0] : $"\"{Coordinate.NorthWest}\": null")},";
+            s += $"\n{(children[1] != null ? children[1] : $"\"{Coordinate.NorthEast}\": null")},";
+            s += $"\n{(children[2] != null ? children[2] : $"\"{Coordinate.SouthWest}\": null")},";
+            s += $"\n{(children[3] != null ? children[3] : $"\"{Coordinate.SouthEast}\": null")}";
+            s += $"\n}}";
+            return s;
+        }
+
+        internal byte[] GetNeighborLODs()
+        {
+            byte[] neighbors = new byte[4];
+
+            Vector3[] corners = GenerateCornerCoordinates(1);
+            for (int i = 0; i < 4; i++)
+            {
+                isEdge[i] = Vector3Utils.ContainsValue(corners[i], -1, quadTree._mask) || Vector3Utils.ContainsValue(corners[i], 1, quadTree._mask);
+            }
+
+            // 0 = east, 1 = west, 2 = north, 3 = south
+
+            if (coordinate == Coordinate.NorthWest)
+            {
+                neighbors[1] = CheckNeighborLOD(1);
+                neighbors[2] = CheckNeighborLOD(2);
+            }
+            else if (coordinate == Coordinate.NorthEast)
+            {
+                neighbors[0] = CheckNeighborLOD(0);
+                neighbors[2] = CheckNeighborLOD(2);
+            }
+            else if (coordinate == Coordinate.SouthEast)
+            {
+                neighbors[0] = CheckNeighborLOD(0);
+                neighbors[3] = CheckNeighborLOD(3);
+            }
+            else if (coordinate == Coordinate.SouthWest)
+            {
+                neighbors[1] = CheckNeighborLOD(1);
+                neighbors[3] = CheckNeighborLOD(3);
+            }
+
+            return neighbors;
+        }
+
+        internal byte CheckNeighborLOD(byte side)
+        {
+            uint bitmask = 0;
+
+            uint twoLast;
+            uint hashValue = this.hashValue;
+
+            for (int i = 0; i < subdivisionLevel; i++)
+            {
+
+                twoLast = hashValue & 3;
+                bitmask *= 4;
+
+                bitmask += (uint)((side == 2 || side == 3) ? 3 : 1);
+
+                if ((side == 0 && (twoLast == 0 || twoLast == 3)) ||
+                    (side == 1 && (twoLast == 1 || twoLast == 2)) ||
+                    (side == 2 && (twoLast == 3 || twoLast == 2)) ||
+                    (side == 3 && (twoLast == 0 || twoLast == 1)))
+                {
+                    break;
+                }
+
+                hashValue >>= 2;
+            }
+
+
+
+
+            int checkIndex = side == 1 || side == 2 ? 0 : 2;
+            QuadTree selectedQuadTree = quadTree;
+            uint traversePath = this.hashValue ^ bitmask;
+
+
+
+
+            if (isEdge[checkIndex])
+            {
+                selectedQuadTree = quadTree._surface.GetQuadTree(quadTree._localCardinalDirections[side]);
+                string stringTraversePath = Convert.ToString(traversePath, 2)[1..];
+
+                if (quadTree.Normal == Vector3.Up || quadTree.Normal == Vector3.Right || quadTree.Normal == Vector3.Up)
+
+                for (int i = 0; i < stringTraversePath.Length; i+=2)
+                {
+
+                    int pathSegment = Convert.ToInt32(stringTraversePath[i..(i+2)]);
+
+                    
+                }
+
+
+                
+
+
+
+
+            }
+
+
+
+            QuadTreeNode neighborNode = quadTree.Traverse(traversePath, subdivisionLevel);
             
-			SetMeshChunk();
+            return (byte)(neighborNode.subdivisionLevel < subdivisionLevel ? 1 : 0);
 
-			StandardMaterial3D sm = new StandardMaterial3D();
-			
-			switch (subdivisionLevel)
-			{
-				case 0:
-				sm.AlbedoColor = new Color(1.0f, 0.32f, random.NextSingle());
-				break;
-				case 1:
-				sm.AlbedoColor = new Color(1.0f, 0.55f, random.NextSingle());
-				break;
-				case 2:
-				sm.AlbedoColor = new Color(1.0f, 0.82f, random.NextSingle());
-				break;
-				case 3:
-				sm.AlbedoColor = new Color(0.5f, 0.90f, random.NextSingle());
-				break;
-				case 4:
-				sm.AlbedoColor = new Color(0.0f, 0.82f, random.NextSingle());
-				break;
-				case 5:
-				sm.AlbedoColor = new Color(0.0f, 0.75f, random.NextSingle());
-				break;
-				case 6:
-				sm.AlbedoColor = new Color(0.5f, 0.28f, random.NextSingle());
-				break;
-				case 7:
-				sm.AlbedoColor = new Color(0.8f, 0.25f, random.NextSingle());
-				break;
-				case 8:
-				sm.AlbedoColor = new Color(1.0f, 0.27f, random.NextSingle());
-				break;
-				default:
-				sm.AlbedoColor = new Color("ffffff");
-				break;
-			}
-			
-			Mesh.SurfaceSetMaterial(0, sm);
-			
-			hasChildren = false;
-		}
 
-		internal void SetMeshChunk()
-		{
-			(Vector3[] vertices, int[] triangles) = GenerateMeshChunk(quadTree._resolution, quadTree._radius);
-			Godot.Collections.Array arrays = new Godot.Collections.Array();
-			arrays.Resize((int)Mesh.ArrayType.Max);
-			arrays[(int)Mesh.ArrayType.Vertex] = vertices;
-			arrays[(int)Mesh.ArrayType.Index] = triangles;
-			arrays[(int)Mesh.ArrayType.Normal] = vertices;
-			((ArrayMesh) Mesh).AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
-		}
+        }
+    }
 
-	
-		internal void GenerateChildren()
-		{
-			Vector3[] coordinates = GenerateCornerCoordinates(0.5f);
-			
-			children[0] = new QuadTreeNode(quadTree, this, coordinates[0], axisA / 2, axisB / 2, Coordinate.NorthWest, subdivisionLevel + 1);
-			children[1] = new QuadTreeNode(quadTree, this, coordinates[1], axisA / 2, axisB / 2, Coordinate.NorthEast, subdivisionLevel + 1);
-			children[2] = new QuadTreeNode(quadTree, this, coordinates[2], axisA / 2, axisB / 2, Coordinate.SouthWest, subdivisionLevel + 1);
-			children[3] = new QuadTreeNode(quadTree, this, coordinates[3], axisA / 2, axisB / 2, Coordinate.SouthEast, subdivisionLevel + 1);
+    internal uint TranslateHash(uint hash)
+    {
 
-			hasChildren = true;
-		}
 
-		internal float GetLength()
-		{
-			return 1f / (1 << subdivisionLevel);
-		}
-
-		internal Vector3[] GenerateCornerCoordinates(float scale)
-		{
-
-			Vector3[] coordinates = new Vector3[4];
-			// Direction is relative to axisA and axisB
-			coordinates[0] = cubePosition + scale * (-axisA + axisB);
-			coordinates[1] = cubePosition + scale * (axisA + axisB);
-			coordinates[2] = cubePosition + scale * (-axisA - axisB);
-			coordinates[3] = cubePosition + scale * (axisA - axisB);
-
-			return coordinates;
-		}
-
-		internal (Vector3[], int[]) GenerateMeshChunk(int resolution, float radius)
-		{
-			Vector3[] vertices = new Vector3[resolution * resolution];
-			int[] triangles = new int[(resolution - 1) * (resolution - 1) * 6];
-
-			int triIndex = 0;
-			for (int x = 0; x < resolution; x++)
-			{
-				for (int y = 0; y < resolution; y++)
-				{
-					int vertexIndex = x + y * resolution;
-
-					Vector2 percentage = new Vector2(x, y) / (resolution - 1);
-					Vector3 point = cubePosition + axisA * (2 * percentage.X - 1) + axisB * (2 * percentage.Y - 1);
-					point = PointOnCubeToPointOnSphere(point);
-
-					point *= radius;
-					vertices[vertexIndex] = point;
-
-					// Calculates the triangles
-					if (x != resolution - 1 && y != resolution - 1)
-					{
-						triangles[triIndex++] = vertexIndex;
-						triangles[triIndex++] = vertexIndex + resolution;
-						triangles[triIndex++] = vertexIndex + 1;
-						triangles[triIndex++] = vertexIndex + resolution;
-						triangles[triIndex++] = vertexIndex + resolution + 1;
-						triangles[triIndex++] = vertexIndex + 1;
-					}
-				}
-			}
-
-			return (vertices, triangles);
-		}
-
-		internal static Vector3 PointOnCubeToPointOnSphere(Vector3 point)
-		{
-			float x2 = point.X * point.X;
-			float y2 = point.Y * point.Y;
-			float z2 = point.Z * point.Z;
-
-			float x = point.X * Mathf.Sqrt(1 - (y2 + z2) / 2 + y2 * z2 / 3);
-			float y = point.Y * Mathf.Sqrt(1 - (z2 + x2) / 2 + z2 * x2 / 3);
-			float z = point.Z * Mathf.Sqrt(1 - (x2 + y2) / 2 + x2 * y2 / 3);
-
-			return new Vector3(x, y, z);
-		}
-
-		public override string ToString()
-		{
-			string s = "";
-			s += $"\n\"{coordinate}\": {{";
-			s += $"\n\"position\": [{cubePosition.X}, {cubePosition.Y}, {cubePosition.Z}],";
-			s += $"\n\"length\": {GetLength()},";
-			s += $"\n{(children[0] != null ? children[0] : $"\"{Coordinate.NorthWest}\": null")},";
-			s += $"\n{(children[1] != null ? children[1] : $"\"{Coordinate.NorthEast}\": null")},";
-			s += $"\n{(children[2] != null ? children[2] : $"\"{Coordinate.SouthWest}\": null")},";
-			s += $"\n{(children[3] != null ? children[3] : $"\"{Coordinate.SouthEast}\": null")}";
-			s += $"\n}}";
-			return s;
-		}
-	}
+        return 0;
+    }
 }
