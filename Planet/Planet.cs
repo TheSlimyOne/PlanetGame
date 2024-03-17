@@ -11,7 +11,6 @@ public partial class Planet : Node3D
 	[Export] public Node QuadTreesContainer { get => _quadTreesContainer; set { _quadTreesContainer = value; } }
 	private Surface _surface;
 	private Node _quadTreesContainer;
-
 	private bool _isReady;
 
 
@@ -38,7 +37,6 @@ public partial class Planet : Node3D
 
 	private void Initialize()
 	{
-
 		if (_isReady)
 		{
 			if (_material == null) return;
@@ -59,6 +57,11 @@ public partial class Planet : Node3D
 	{
 		QuadTree quadTree = QuadTreesContainer.GetChild<QuadTree>(index);
 		quadTree.IsDisabled = selection;
+	}
+
+	private bool IsSurfaceFaceDisabled(int index)
+	{
+		return QuadTreesContainer.GetChild<QuadTree>(index).IsDisabled;
 	}
 
 	private bool IsSurfaceFaceDisabled(int index)

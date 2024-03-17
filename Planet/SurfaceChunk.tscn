@@ -1,0 +1,56 @@
+[gd_scene load_steps=2 format=3 uid="uid://bfp1nsbn6s5nb"]
+
+[ext_resource type="Script" path="res://Planet/SurfaceChunk.cs" id="1_hfw5l"]
+
+[node name="SurfaceChunk" type="Node3D"]
+script = ExtResource("1_hfw5l")
+
+[node name="Meshes" type="Node3D" parent="."]
+
+[node name="Mesh-Type-0" type="MultiMeshInstance3D" parent="Meshes"]
+extra_cull_margin = 0.81
+
+[node name="Mesh-Type-1" type="MultiMeshInstance3D" parent="Meshes"]
+extra_cull_margin = 0.81
+
+[node name="Mesh-Type-2" type="MultiMeshInstance3D" parent="Meshes"]
+extra_cull_margin = 0.81
+
+[node name="Mesh-Type-3" type="MultiMeshInstance3D" parent="Meshes"]
+extra_cull_margin = 0.81
+
+[node name="Mesh-Type-4" type="MultiMeshInstance3D" parent="Meshes"]
+extra_cull_margin = 0.81
+
+[node name="Mesh-Type-5" type="MultiMeshInstance3D" parent="Meshes"]
+extra_cull_margin = 0.81
+
+[node name="Mesh-Type-6" type="MultiMeshInstance3D" parent="Meshes"]
+extra_cull_margin = 0.81
+
+[node name="Mesh-Type-7" type="MultiMeshInstance3D" parent="Meshes"]
+extra_cull_margin = 0.81
+
+[node name="Mesh-Type-8" type="MultiMeshInstance3D" parent="Meshes"]
+extra_cull_margin = 0.81
+
+[node name="Mesh-Type-9" type="MultiMeshInstance3D" parent="Meshes"]
+extra_cull_margin = 0.81
+
+[node name="Mesh-Type-10" type="MultiMeshInstance3D" parent="Meshes"]
+extra_cull_margin = 0.81
+
+[node name="Mesh-Type-11" type="MultiMeshInstance3D" parent="Meshes"]
+extra_cull_margin = 0.81
+
+[node name="Mesh-Type-12" type="MultiMeshInstance3D" parent="Meshes"]
+extra_cull_margin = 0.81
+
+[node name="Mesh-Type-13" type="MultiMeshInstance3D" parent="Meshes"]
+extra_cull_margin = 0.81
+
+[node name="Mesh-Type-14" type="MultiMeshInstance3D" parent="Meshes"]
+extra_cull_margin = 0.81
+
+[node name="Mesh-Type-15" type="MultiMeshInstance3D" parent="Meshes"]
+extra_cull_margin = 0.81
