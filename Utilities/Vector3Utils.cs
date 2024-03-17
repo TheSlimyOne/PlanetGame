@@ -2,29 +2,29 @@ using Godot;
 
 public static class Vector3Utils
 {
-    public static bool IsGreaterVector3(Vector3 a, Vector3 b)
+    public static bool IsGreaterVector3(Vector3 vectorA, Vector3 vectorB)
     {
-        return a.X > b.X && a.Y > b.Y && a.Z > b.Z;
+        return vectorA.X > vectorB.X && vectorA.Y > vectorB.Y && vectorA.Z > vectorB.Z;
     }
 
-    public static bool IsLesserVector3(Vector3 a, Vector3 b)
+    public static bool IsLesserVector3(Vector3 vectorA, Vector3 vectorB)
     {
-        return a.X < b.X && a.Y < b.Y && a.Z < b.Z;
+        return vectorA.X < vectorB.X && vectorA.Y < vectorB.Y && vectorA.Z < vectorB.Z;
     }
 
-    public static bool IsEqualVector3(Vector3 a, Vector3 b)
+    public static bool IsEqualVector3(Vector3 vectorA, Vector3 vectorB)
     {
-        return a.X == b.X && a.Y == b.Y && a.Z == b.Z;
+        return vectorA.X == vectorB.X && vectorA.Y == vectorB.Y && vectorA.Z == vectorB.Z;
     }
 
-    public static bool IsGreaterEqualVector3(Vector3 a, Vector3 b)
+    public static bool IsGreaterEqualVector3(Vector3 vectorA, Vector3 vectorB)
     {
-        return a.X >= b.X && a.Y >= b.Y && a.Z >= b.Z;
+        return vectorA.X >= vectorB.X && vectorA.Y >= vectorB.Y && vectorA.Z >= vectorB.Z;
     }
 
-    public static bool IsLesserEqualVector3(Vector3 a, Vector3 b)
+    public static bool IsLesserEqualVector3(Vector3 vectorA, Vector3 vectorB)
     {
-        return a.X <= b.X && a.Y <= b.Y && a.Z <= b.Z;
+        return vectorA.X <= vectorB.X && vectorA.Y <= vectorB.Y && vectorA.Z <= vectorB.Z;
     }
 
     public static Vector3 GetCentroid(Vector3[] vectors)
@@ -36,13 +36,13 @@ public static class Vector3Utils
         return centroid / vectors.Length;
     }
 
-    public static float CondenseVector3(Vector3 a)
+    public static float CondenseVector3(Vector3 vectorA)
     {
         for (int i = 0; i < 3; i++)
         {
-            if (a[i] != 0)
+            if (vectorA[i] != 0)
             {
-                return a[i];
+                return vectorA[i];
             }
         }
         return -1;
@@ -54,6 +54,30 @@ public static class Vector3Utils
         Vector3 edge2 = vertices[2] - vertices[0];
 
         return edge1.Cross(edge2).Normalized();
+    }
+
+    public static Vector3 GenerateVectorMaskFrom(Vector3 vector)
+    {
+        Vector3 mask = Vector3.Zero;
+
+        for (int i = 0; i < 3; i++)
+        {
+            mask[i] = vector[i] == 0 ? 1 : 0;
+        }
+
+        return mask;
+    }
+
+    public static bool ContainsValue(Vector3 vector, float value, Vector3 mask)
+    {
+        for (int i = 0; i < 3; i++)
+        {
+            if (mask[i] == 1 && vector[i] == value)
+            {
+                return true;
+            }
+        }
+        return false;
     }
 }
 
