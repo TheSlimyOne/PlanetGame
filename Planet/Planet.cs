@@ -64,12 +64,6 @@ public partial class Planet : Node3D
 		return QuadTreesContainer.GetChild<QuadTree>(index).IsDisabled;
 	}
 
-	private bool IsSurfaceFaceDisabled(int index)
-	{
-		return QuadTreesContainer.GetChild<QuadTree>(index).IsDisabled;
-	}
-
-
 	private Vector3 previousPosition = Vector3.Inf;
 	private float movementThreshold = 10;
 	private void OnTargetMovement(Vector3 position)
