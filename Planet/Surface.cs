@@ -1,88 +1,127 @@
 using Godot;
 using System;
-using System.Collections;
+using System.Collections.Generic;
 [Tool]
-public partial class Surface : MultiMeshInstance3D
+public partial class Surface : Node3D
 {
+	private QuadTreeMeshes _quadTreeMeshes;
 
-	[Export] private Vector3 _normal;
-	[Export] private bool _disabled = false;
-	private QuadTree _quadTree;
-
-    public void InitializeQuadTree(Vector3 origin, float radius, int resolution, ShaderMaterial material)
+	private QuadTree[] _quadTrees = new QuadTree[6];
+	public Dictionary<Vector3, int> normalToIndex = new Dictionary<Vector3, int>()
 	{
-		if (!_disabled)
-		{
-            Multimesh = new MultiMesh 
-			{ 
-				Mesh = InitializeMesh(resolution, radius), 
-				TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
-				InstanceCount = 0,
-				UseCustomData = true
-			};			
-			
-			Multimesh.Mesh.SurfaceSetMaterial(0, material);
-			ExtraCullMargin = 2 * radius;
-	
-            _quadTree = new QuadTree(origin, radius, _normal);
-			_quadTree.SetMeshPositions(this);
-		}
-	}
+		{Vector3.Up,      0},
+		{Vector3.Down,    1},
+		{Vector3.Left,    2},
+		{Vector3.Right,   3},
+		{Vector3.Forward, 4},
+		{Vector3.Back,    5},
+	};
+	private MultiMeshInstance3D[] _multiMeshInstances = new MultiMeshInstance3D[16];
 
-	internal Mesh InitializeMesh(int resolution, float radius)
+	public void Initialize(float radius, int resolution, ShaderMaterial material)
 	{
-		Vector3[] vertices = new Vector3[resolution * resolution];
-		Vector3[] normals = new Vector3[resolution * resolution];
-		Vector2[] uvs = new Vector2[resolution * resolution];
-		int[] triangles = new int[(resolution - 1) * (resolution - 1) * 6];
-
-		Vector3 axisA = new Vector3(_normal[1], _normal[2], _normal[0]);
-		Vector3 axisB = _normal.Cross(axisA);
-
-		int triIndex = 0;
-		for (int x = 0; x < resolution; x++)
-		{
-			for (int y = 0; y < resolution; y++)
-			{
-				int vertexIndex = x + y * resolution;
-				Vector2 percentage = new Vector2(x, y) / (resolution - 1);
-				Vector3 point = _normal + axisA * (2 * percentage.X - 1) + axisB * (2 * percentage.Y - 1);
-
-				vertices[vertexIndex] = _normal;
-				normals[vertexIndex] = point;
-				uvs[vertexIndex] = percentage;
-
-				if (x != resolution - 1 && y != resolution - 1)
-				{
-					triangles[triIndex++] = vertexIndex;
-					triangles[triIndex++] = vertexIndex + resolution;
-					triangles[triIndex++] = vertexIndex + 1;
-					triangles[triIndex++] = vertexIndex + resolution;
-					triangles[triIndex++] = vertexIndex + resolution + 1;
-					triangles[triIndex++] = vertexIndex + 1;
-				}
-			}
-		}
-		ArrayMesh mesh = new ArrayMesh();
-		Godot.Collections.Array arrays = new Godot.Collections.Array();
-		arrays.Resize((int)Mesh.ArrayType.Max);
-		arrays[(int)Mesh.ArrayType.Vertex] = vertices;
-		arrays[(int)Mesh.ArrayType.Index] = triangles;
-		arrays[(int)Mesh.ArrayType.Normal] = normals;
-		arrays[(int)Mesh.ArrayType.TexUV] = uvs;
-		mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
 		
-		return mesh;
+		_quadTreeMeshes = new QuadTreeMeshes(resolution);
+		_quadTreeMeshes.Initialize();
+
+		for (int i = 0; i < 16; i++)
+		{
+			_multiMeshInstances[i] = GetChild<MultiMeshInstance3D>(i);
+			_multiMeshInstances[i].Multimesh = _quadTreeMeshes.Meshes[i];
+			_multiMeshInstances[i].Multimesh.Mesh.SurfaceSetMaterial(0, material);
+			_multiMeshInstances[i].ExtraCullMargin = 2 * radius;
+		}
+
+		for (int i = 0; i < 6; i++)
+		{
+			_quadTrees[i] = ((Planet) GetParent()).QuadTreesContainer.GetChild<QuadTree>(i);
+			_quadTrees[i].Initialize(((Planet)GetParent()).Transform , radius, this);
+			// GD.PrintS(_quadTrees[i].AxisA, _quadTrees[i].AxisB, _quadTrees[i].Normal);
+		}
+	}
+
+	public QuadTree GetQuadTree(Vector3 normal)
+	{
+		return _quadTrees[normalToIndex[normal]];
 	}
 
 
-	public void UpdateQuadTree(Vector3 position)
-	{
-		if (!_disabled && _quadTree != null && Multimesh != null)
+	public void UpdateQuadTrees(Vector3 position)
+	{	
+		
+		Dictionary<int, List<QuadTree.QuadTreeNode>> nodeMeshType = new Dictionary<int, List<QuadTree.QuadTreeNode>>
 		{
-			_quadTree.UpdateQuadTree(position);
-			_quadTree.SetMeshPositions(this);
+			{0,  new List<QuadTree.QuadTreeNode>()},
+			{1,  new List<QuadTree.QuadTreeNode>()},
+			{2,  new List<QuadTree.QuadTreeNode>()},
+			{3,  new List<QuadTree.QuadTreeNode>()},
+			{4,  new List<QuadTree.QuadTreeNode>()},
+			{5,  new List<QuadTree.QuadTreeNode>()},
+			{6,  new List<QuadTree.QuadTreeNode>()},
+			{7,  new List<QuadTree.QuadTreeNode>()},
+			{8,  new List<QuadTree.QuadTreeNode>()},
+			{9,  new List<QuadTree.QuadTreeNode>()},
+			{10, new List<QuadTree.QuadTreeNode>()},
+			{11, new List<QuadTree.QuadTreeNode>()},
+			{12, new List<QuadTree.QuadTreeNode>()},
+			{13, new List<QuadTree.QuadTreeNode>()},
+			{14, new List<QuadTree.QuadTreeNode>()},
+			{15, new List<QuadTree.QuadTreeNode>()},
+		};
+
+		for (int i = 0; i < 6; i++)
+		{
+			_quadTrees[i]?.UpdateQuadTree(position);
+			_quadTrees[i]?.SetVisibleNodes(nodeMeshType);
+			
 		}
 
+		for (int i = 0; i < 16; i++)
+		{
+			_multiMeshInstances[i].Multimesh.InstanceCount = nodeMeshType[i].Count;
+
+			List<QuadTree.QuadTreeNode> nodes = nodeMeshType[i];
+
+			for (int j = 0; j < nodes.Count; j++)
+			{
+				QuadTree.QuadTreeNode node = nodes[j];
+				
+				Vector3 nodeNormal = node.quadTree.Normal;
+				int normalFlag = 0; 
+				if (nodeNormal == Vector3.Up)
+					normalFlag = 1;
+				else if (nodeNormal == Vector3.Down)
+					normalFlag = 2;
+				else if (nodeNormal == Vector3.Left)
+					normalFlag = 3;
+				else if (nodeNormal == Vector3.Right)
+					normalFlag = 4;
+				else if (nodeNormal == Vector3.Forward)
+					normalFlag = 5;
+				else if (nodeNormal == Vector3.Back)
+					normalFlag = 6;
+
+
+				Transform3D transform = new Transform3D(Basis.Identity, node.cubePosition);
+
+				Color pointData = new Color(0, 0, normalFlag, node.subdivisionLevel);
+				uint subdivisionLevel = (uint)node.subdivisionLevel;
+
+				// int a = (subdivisionLevel & 0b00000001) != 0 ? 1 : 0;
+				// int b = (subdivisionLevel & 0b00000010) != 0 ? 1 : 0;
+				// int c = (subdivisionLevel & 0b00000100) != 0 ? 1 : 0;
+
+				// int a = node.cornerType[0] || node.cornerType[3] ? 1 : 0;
+				// int b = node.cornerType[1] || node.cornerType[3] ? 1 : 0;
+				// int c = node.cornerType[2] || node.cornerType[3] ? 1 : 0;
+
+				int a = node.isFan ? 1: 0;
+
+				_multiMeshInstances[i].Multimesh.SetInstanceColor(j, new Color(a, 0, 0));
+				_multiMeshInstances[i].Multimesh.SetInstanceCustomData(j, pointData);
+				_multiMeshInstances[i].Multimesh.SetInstanceTransform(j, transform);
+			}
+
+		}
 	}
 }
