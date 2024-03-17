@@ -1,0 +1,20 @@
+[gd_scene load_steps=2 format=3 uid="uid://djbm886fr02gs"]
+
+[ext_resource type="Script" path="res://Planet/Voronoi/MeshVisualizer.cs" id="1_b3v2q"]
+
+[node name="Node3D" type="Node3D"]
+
+[node name="Node3" type="Node3D" parent="."]
+visible = false
+script = ExtResource("1_b3v2q")
+Radius = 50.0
+Amount = 80
+
+[node name="Node4" type="Node3D" parent="."]
+script = ExtResource("1_b3v2q")
+Radius = 50.0
+Amount = 80
+isVoronoi = true
+ShowIndex = 21
+
+[node name="Camera3D" type="Camera3D" parent="."]

@@ -11,12 +11,8 @@ public partial class Planet : Node3D
 	[Export] public Node QuadTreesContainer { get => _quadTreesContainer; set { _quadTreesContainer = value; } }
 	private Surface _surface;
 	private Node _quadTreesContainer;
-
 	private bool _isReady;
 
-	[Export] private float RotationAmount = 0.1f;
-
-	[Export] private Curve _distanceCurve;
 
 	[Export]
 	public float Radius
@@ -33,14 +29,7 @@ public partial class Planet : Node3D
 	}
 
 	[Export]
-	public int maxSubdivisionLevel
-	{
-		get => _maxSubdivisionLevel;
-		set { _maxSubdivisionLevel = value; UpdatePlanetData(); }
-	}
-
-	[Export]
-	public Material Material
+	public ShaderMaterial Material
 	{
 		get => _material;
 		set { _material = value; Initialize(); }
@@ -48,7 +37,6 @@ public partial class Planet : Node3D
 
 	private void Initialize()
 	{
-
 		if (_isReady)
 		{
 			if (_material == null) return;
@@ -76,7 +64,14 @@ public partial class Planet : Node3D
 		return QuadTreesContainer.GetChild<QuadTree>(index).IsDisabled;
 	}
 
+	private bool IsSurfaceFaceDisabled(int index)
+	{
+		return QuadTreesContainer.GetChild<QuadTree>(index).IsDisabled;
+	}
 
+
+	private Vector3 previousPosition = Vector3.Inf;
+	private float movementThreshold = 10;
 	private void OnTargetMovement(Vector3 position)
 	{
 		_surface.UpdateQuadTrees(position);
@@ -93,6 +88,7 @@ public partial class Planet : Node3D
 
 	public override void _Process(double delta)
 	{
-		//Rotate(Vector3.Up, _rotationAmount * (float) delta);
+
+		// Rotate(Vector3.Up, _rotationAmount * (float) delta);
 	}
 }
