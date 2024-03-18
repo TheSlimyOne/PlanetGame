@@ -11,7 +11,57 @@ using System.Collections.Generic;
 /// </summary>
 public partial class QuadTree : Node
 {
-    [Export] public Vector3 Normal { get => _normal; set { _normal = value; } }
+
+    public enum NormalDirection
+    {
+        None = 0b000,
+        Up = 0b010,
+        Down = 0b101,
+        Left = 0b011,
+        Right = 0b100,
+        Forward = 0b110,
+        Backward = 0b001
+    }
+
+
+    [Export]
+    public NormalDirection Normal
+    {
+        get
+        {
+
+            if (_normal == Vector3.Zero)
+            {
+                return NormalDirection.None;
+            }
+
+            bool isNegative = _normal.X == -1 || _normal.Y == -1 || _normal.Z == -1;
+            int index = (int)_normal.X * 4 + (int)_normal.Y * 2 + (int)_normal.Z;
+            return (NormalDirection)(isNegative ? ((-1 * index) ^ 0b111) & 0b111 : index);
+        }
+        set
+        {
+            uint intValue = (uint)value;
+
+            if (intValue == 0)
+            {
+                _normal = Vector3.Zero;
+                return;
+            }
+
+            int negative = intValue == 1 || intValue == 2 || intValue == 4 ? 1 : -1;
+            uint x = (intValue & 0b100) >> 2;
+            uint y = (intValue & 0b010) >> 1;
+            uint z =  intValue & 0b001;
+
+            x = negative == 1 ? x : x^1;
+            y = negative == 1 ? y : y^1;
+            z = negative == 1 ? z : z^1;
+            _normal = new Vector3(x, y, z) * negative;
+
+        }
+    }
+
     [Export] public bool IsDisabled { get => _isDisabled; set { _isDisabled = value; } }
     public Vector3 AxisA { get => _axisA; }
     public Vector3 AxisB { get => _axisB; }
@@ -64,7 +114,7 @@ public partial class QuadTree : Node
 
     public QuadTreeNode Traverse(uint hashPath)
     {
-        
+
         string stringIterator = Convert.ToString(hashPath, 2)[1..];
         return Traverse(hashPath, stringIterator, _root);
     }
@@ -99,28 +149,16 @@ public partial class QuadTree : Node
 
         // Commonly used value
         uint operationInt = (uint)Mathf.Pow(4, subdivisionLevel - 1);
-        
+
         // Make a mask that excludes all but the 2nd and 3rd to last digit in the hashPath
         // 0b11100 -> 0b01100
         uint leadingMask = 3 * operationInt;
-        // uint remainingMask = operationInt - 1;
-        
-        uint leading = (leadingMask & originalHash) >> (2 * (subdivisionLevel - 1));
-        // uint remaining = (remainingHash & remainingMask) + operationInt;
 
-        
+        uint leading = (leadingMask & originalHash) >> (2 * (subdivisionLevel - 1));
 
         QuadTreeNode childNode = node.GetChild((QuadTreeNode.Coordinate)leading);
 
-        return Traverse(originalHash, subdivisionLevel-1, childNode);
-    }
-
-    public enum Direction
-    {
-        UP,
-        DOWN,
-        LEFT,
-        Right
+        return Traverse(originalHash, subdivisionLevel - 1, childNode);
     }
 
     public void SetVisibleNodes(Dictionary<int, List<QuadTreeNode>> nodeMeshType)
@@ -427,31 +465,37 @@ public partial class QuadTree : Node
 
             if (isEdge[checkIndex])
             {
+
+                
+                string path = "1";
                 selectedQuadTree = quadTree._surface.GetQuadTree(quadTree._localCardinalDirections[side]);
                 string stringTraversePath = Convert.ToString(traversePath, 2)[1..];
 
-                if (quadTree.Normal == Vector3.Up || quadTree.Normal == Vector3.Right || quadTree.Normal == Vector3.Up)
+                uint majority = 1;
+                uint minority = 3;
 
-                for (int i = 0; i < stringTraversePath.Length; i+=2)
+                if (quadTree._normal.X == -1 || quadTree._normal.Y == -1 || quadTree._normal.Z == -1)
                 {
-
-                    int pathSegment = Convert.ToInt32(stringTraversePath[i..(i+2)]);
-
-                    
+                    majority = 3;
+                    minority = 1;
                 }
 
+                bool isAxisA = selectedQuadTree._normal == quadTree.AxisA;
 
-                
+                for (int i = 0; i < stringTraversePath.Length; i += 2)
+                {
+                    uint pathSegment = Convert.ToUInt32(stringTraversePath[i..(i + 2)]);
+                    pathSegment = (isAxisA ? (pathSegment + minority) : (pathSegment + majority)) % 4;
+                    path += Convert.ToString(pathSegment, 2).PadLeft(2,'0');
+                }
 
-
-
-
+                GD.PrintS("START: ", Convert.ToString(traversePath, 2));
+                GD.PrintS("  END: ", path);
             }
 
-
-
+           
             QuadTreeNode neighborNode = quadTree.Traverse(traversePath, subdivisionLevel);
-            
+
             return (byte)(neighborNode.subdivisionLevel < subdivisionLevel ? 1 : 0);
 
 

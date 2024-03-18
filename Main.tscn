@@ -46,8 +46,7 @@ shadow_enabled = true
 visible = false
 
 [node name="Planet" parent="." instance=ExtResource("3_spubr")]
-Radius = 50.0
-Resolution = 5
+Resolution = 35
 Material = SubResource("ShaderMaterial_uqkua")
 
 [node name="Camera" parent="." instance=ExtResource("2_rtq8k")]

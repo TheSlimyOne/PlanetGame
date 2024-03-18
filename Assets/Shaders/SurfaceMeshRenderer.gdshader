@@ -110,14 +110,19 @@ float param_noise(vec3 p) {
 void vertex() {
 	float scaleFactor = pow(2.0, INSTANCE_CUSTOM.a);
 	
-	switch (int(INSTANCE_CUSTOM.z)) {
-        case 1:  NORMAL = vec3(0.0, 1.0, 0.0);  break;
-        case 2:  NORMAL = vec3(0.0, -1.0, 0.0); break;
-        case 3:  NORMAL = vec3(-1.0, 0.0, 0.0); break;
-        case 4:  NORMAL = vec3(1.0, 0.0, 0.0);  break;
-        case 5:  NORMAL =  vec3(0.0, 0.0, -1.0); break;
-        case 6:  NORMAL = vec3(0.0, 0.0, 1.0); break;
-    }
+
+	uint intValue = uint(INSTANCE_CUSTOM.z);
+	int normSign = (intValue == 1u || intValue == 2u || intValue == 4u) ? 1 : -1;
+	uint x = (intValue & 4u) >> 2u;
+	uint y = (intValue & 2u) >> 1u;
+	uint z =  intValue & 1u;
+
+	x = normSign == 1 ? x : x^1u;
+	y = normSign == 1 ? y : y^1u;
+	z = normSign == 1 ? z : z^1u;
+
+	
+	NORMAL = float(normSign) * vec3(float(x),float(y),float(z));
 	
 	
 	vec3 axisA = vec3(NORMAL.y, NORMAL.z, NORMAL.x);

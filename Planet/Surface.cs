@@ -86,25 +86,10 @@ public partial class Surface : Node3D
 			{
 				QuadTree.QuadTreeNode node = nodes[j];
 				
-				Vector3 nodeNormal = node.quadTree.Normal;
-				int normalFlag = 0; 
-				if (nodeNormal == Vector3.Up)
-					normalFlag = 1;
-				else if (nodeNormal == Vector3.Down)
-					normalFlag = 2;
-				else if (nodeNormal == Vector3.Left)
-					normalFlag = 3;
-				else if (nodeNormal == Vector3.Right)
-					normalFlag = 4;
-				else if (nodeNormal == Vector3.Forward)
-					normalFlag = 5;
-				else if (nodeNormal == Vector3.Back)
-					normalFlag = 6;
-
-
+	
 				Transform3D transform = new Transform3D(Basis.Identity, node.cubePosition);
 
-				Color pointData = new Color(0, 0, normalFlag, node.subdivisionLevel);
+				Color pointData = new Color(0, 0, (int)node.quadTree.Normal, node.subdivisionLevel);
 				uint subdivisionLevel = (uint)node.subdivisionLevel;
 
 				// int a = (subdivisionLevel & 0b00000001) != 0 ? 1 : 0;
