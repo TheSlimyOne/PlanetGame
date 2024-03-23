@@ -1,6 +1,6 @@
 [gd_resource type="GradientTexture1D" load_steps=2 format=3 uid="uid://33pdx4k51q2h"]
 
-[sub_resource type="Gradient" id="Gradient_i4t7i"]
+[ext_resource type="Gradient" uid="uid://bneu5fk8dih6j" path="res://Assets/Resources/realistic_colors_map.tres" id="1_yajn1"]
 
 [resource]
-gradient = SubResource("Gradient_i4t7i")
+gradient = ExtResource("1_yajn1")

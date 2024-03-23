@@ -2,19 +2,30 @@ using Godot;
 
 
 [Tool]
-public partial class Planet : Node3D
+public partial class Planet : StaticBody3D
 {
+
+	private bool _isReady;
 	private float _radius = 1;
 	private int _resolution = 5;
 	private ShaderMaterial _material;
-	[Export] public Surface Surface { get => _surface; set { _surface = value; } }
-	[Export] public Node QuadTreesContainer { get => _quadTreesContainer; set { _quadTreesContainer = value; } }
 	private Surface _surface;
 	private Node _quadTreesContainer;
-	private bool _isReady;
+	private CollisionShape3D _gravityCollision;
+	private CollisionShape3D _planetCollision;
+	private float _gravityRadius;
+	private float[] _subdivision;
+	private float[] _distance;
 
-
+	// Properties
 	[Export]
+	public float GravityRadius
+	{
+		get => _gravityRadius;
+		set { _gravityRadius = value; Initialize(); }
+	}
+
+	[Export (PropertyHint.Range, "1,1000")]
 	public float Radius
 	{
 		get => _radius;
@@ -35,6 +46,34 @@ public partial class Planet : Node3D
 		set { _material = value; Initialize(); }
 	}
 
+	[Export]
+	public Surface Surface
+	{
+		get => _surface;
+		private set { _surface = value; }
+	}
+
+	[Export]
+	public Node QuadTreesContainer
+	{
+		get => _quadTreesContainer;
+		set { _quadTreesContainer = value; }
+	}
+
+	[Export]
+	public float[] Subdivision
+	{
+		get => _subdivision;
+		set => _subdivision = value;
+	}
+
+	[Export]
+	public float[] Distance
+	{
+		get => _distance;
+		set => _distance = value;
+	}
+
 	private void Initialize()
 	{
 		if (_isReady)
@@ -44,8 +83,17 @@ public partial class Planet : Node3D
 			_material.SetShaderParameter("radius", _radius);
 
 
-			_surface = GetChild<Surface>(0);
-			QuadTreesContainer = GetChild<Node>(1);
+			_surface = GetNode<Surface>("Surface");
+			QuadTreesContainer = GetNode<Node>("QuadTrees");
+
+			_planetCollision = GetNode<CollisionShape3D>("PlanetCollisionShape");
+			_planetCollision.Shape = new SphereShape3D();
+			((SphereShape3D)_planetCollision.Shape).Radius = _radius;
+
+			
+			_gravityCollision = GetNode<CollisionShape3D>("GravityArea/GravityCollisionShape");
+			_gravityCollision.Shape = new SphereShape3D();
+			((SphereShape3D)_gravityCollision.Shape).Radius = _radius + _gravityRadius;
 
 			_surface.Initialize(_radius, _resolution, _material);
 			_surface.UpdateQuadTrees(Vector3.Inf);
@@ -68,6 +116,7 @@ public partial class Planet : Node3D
 	private float movementThreshold = 10;
 	private void OnTargetMovement(Vector3 position)
 	{
+		// GD.Print(position);
 		_surface.UpdateQuadTrees(position);
 	}
 

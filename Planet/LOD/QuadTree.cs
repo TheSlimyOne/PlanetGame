@@ -1,6 +1,7 @@
 using Godot;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 
 [Tool]
@@ -71,43 +72,42 @@ public partial class QuadTree : Node
     private bool _isDisabled = false;
     private QuadTreeNode _root;
     private Vector3 _mask;
-    private float _radius;
-    private Transform3D _planetPosition;
+
+    private Planet _planet;
     private Vector3 _axisA; // axisA is the same as localRight
     private Vector3 _axisB; // axisB is the same as localForward
+
+    int _indexOfX = -1;
+    int _indexOfY = -1;
 
     private readonly List<QuadTreeNode> _nodeBuffer = new List<QuadTreeNode>();
     private QuadTree() { }
 
     private Dictionary<int, Vector3> _localCardinalDirections;
 
-    private Surface _surface;
-
-    public void Initialize(Transform3D planetPosition, float radius, Surface surface)
+    public void Initialize(Planet planet)
     {
-        _radius = radius;
-        _planetPosition = planetPosition;
+        _planet = planet;
 
         _axisA = new Vector3(_normal.Y, _normal.Z, _normal.X);
         _axisB = _normal.Cross(_axisA);
-        _surface = surface;
         _localCardinalDirections = new Dictionary<int, Vector3>
         {
             {0, _axisA},
             {1, -_axisA},
             {2, _axisB},
-            {3, -_axisB},
-
+            {3, -_axisB}
         };
-        _mask = Vector3Utils.GenerateVectorMaskFrom(_normal);
+        _indexOfX = Vector3Utils.GetIndexOfNormalComponent(_axisA);
+        _indexOfY = Vector3Utils.GetIndexOfNormalComponent(_axisB);
+        _mask = Vector3Utils.GenerateVectorExclusionMaskFrom(_normal);
     }
 
 
     public void UpdateQuadTree(Vector3 target)
     {
-        if (IsDisabled) return;
-
         _root = new QuadTreeNode(this, null, _normal, _axisA, _axisB, QuadTreeNode.Coordinate.Root, 0);
+        if (IsDisabled) return;
         _nodeBuffer.Clear();
         UpdateQuadTree(target, _root);
     }
@@ -136,6 +136,7 @@ public partial class QuadTree : Node
 
     public QuadTreeNode Traverse(uint hashPath, int subdivisionLevel)
     {
+        if (IsDisabled) return _root;
         return Traverse(hashPath, subdivisionLevel, _root);
     }
 
@@ -165,7 +166,7 @@ public partial class QuadTree : Node
     {
         if (IsDisabled) return;
 
-        if (_nodeBuffer.Count == 0)
+        if (_nodeBuffer.Count == 0 && Engine.IsEditorHint())
         {
             _nodeBuffer.Add(_root);
         }
@@ -230,11 +231,11 @@ public partial class QuadTree : Node
     private void UpdateQuadTree(Vector3 target, QuadTreeNode node)
     {
         float renderAngle = node.spherePosition.AngleTo(target);
-        float renderDistance = target.DistanceTo(_planetPosition.Origin);
+        float renderDistance = target.DistanceTo(_planet.Transform.Origin);
 
-        if (Mathf.DegToRad(renderAngleLOD[node.subdivisionLevel]) >= renderAngle)
+        if (Mathf.DegToRad(_planet.Subdivision[node.subdivisionLevel]) >= renderAngle)
         {
-            if (node.subdivisionLevel < renderAngleLOD.Count - 1)
+            if (node.subdivisionLevel < _planet.Subdivision.Length - 1)
             {
                 if (!node.hasChildren)
                 {
@@ -253,16 +254,13 @@ public partial class QuadTree : Node
         }
         else
         {
-            if (node.subdivisionLevel > 1)
-            {
-                _nodeBuffer.Add(node);
-            }
+            _nodeBuffer.Add(node);   
         }
     }
 
     public override int GetHashCode()
     {
-        return _normal.GetHashCode() + _planetPosition.GetHashCode();
+        return _normal.GetHashCode() + _planet.GetHashCode();
     }
 
 
@@ -394,13 +392,18 @@ public partial class QuadTree : Node
         internal byte[] GetNeighborLODs()
         {
             byte[] neighbors = new byte[4];
+            
+            
 
             Vector3[] corners = GenerateCornerCoordinates(1);
-            for (int i = 0; i < 4; i++)
-            {
-                isEdge[i] = Vector3Utils.ContainsValue(corners[i], -1, quadTree._mask) || Vector3Utils.ContainsValue(corners[i], 1, quadTree._mask);
-            }
 
+            // To see if a node is at an edge we must check if any of its corner coordinates is equal to axisA or axisB 
+            // since every tree is relative only to itself
+            isEdge[0] = corners[1][quadTree._indexOfX] == quadTree._axisA[quadTree._indexOfX]; 
+            isEdge[1] = corners[0][quadTree._indexOfX] == -quadTree._axisA[quadTree._indexOfX];
+            isEdge[2] = corners[0][quadTree._indexOfY] == quadTree._axisB[quadTree._indexOfY];
+            isEdge[3] = corners[2][quadTree._indexOfY] == -quadTree._axisB[quadTree._indexOfY];
+        
             // 0 = east, 1 = west, 2 = north, 3 = south
 
             if (coordinate == Coordinate.NorthWest)
@@ -453,23 +456,21 @@ public partial class QuadTree : Node
                 hashValue >>= 2;
             }
 
-
-
-
-            int checkIndex = side == 1 || side == 2 ? 0 : 2;
+    
             QuadTree selectedQuadTree = quadTree;
-            uint traversePath = this.hashValue ^ bitmask;
+            string traversePath = Convert.ToString(this.hashValue ^ bitmask, 2);
 
 
 
 
-            if (isEdge[checkIndex])
+            if (isEdge[side])
             {
+
 
                 
                 string path = "1";
-                selectedQuadTree = quadTree._surface.GetQuadTree(quadTree._localCardinalDirections[side]);
-                string stringTraversePath = Convert.ToString(traversePath, 2)[1..];
+                selectedQuadTree = quadTree._planet.Surface.GetQuadTree(quadTree._localCardinalDirections[side]);
+                string stringTraversePath = traversePath[1..];
 
                 uint majority = 1;
                 uint minority = 3;
@@ -489,12 +490,10 @@ public partial class QuadTree : Node
                     path += Convert.ToString(pathSegment, 2).PadLeft(2,'0');
                 }
 
-                GD.PrintS("START: ", Convert.ToString(traversePath, 2));
-                GD.PrintS("  END: ", path);
+                traversePath = path;
             }
 
-           
-            QuadTreeNode neighborNode = quadTree.Traverse(traversePath, subdivisionLevel);
+            QuadTreeNode neighborNode = selectedQuadTree.Traverse(Convert.ToUInt32(traversePath, 2), subdivisionLevel);
 
             return (byte)(neighborNode.subdivisionLevel < subdivisionLevel ? 1 : 0);
 

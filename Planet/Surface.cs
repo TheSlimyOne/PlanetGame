@@ -7,7 +7,7 @@ public partial class Surface : Node3D
 	private QuadTreeMeshes _quadTreeMeshes;
 
 	private QuadTree[] _quadTrees = new QuadTree[6];
-	public Dictionary<Vector3, int> normalToIndex = new Dictionary<Vector3, int>()
+	public static Dictionary<Vector3, int> normalToIndex = new Dictionary<Vector3, int>()
 	{
 		{Vector3.Up,      0},
 		{Vector3.Down,    1},
@@ -35,7 +35,7 @@ public partial class Surface : Node3D
 		for (int i = 0; i < 6; i++)
 		{
 			_quadTrees[i] = ((Planet) GetParent()).QuadTreesContainer.GetChild<QuadTree>(i);
-			_quadTrees[i].Initialize(((Planet)GetParent()).Transform , radius, this);
+			_quadTrees[i].Initialize((Planet)GetParent());
 			// GD.PrintS(_quadTrees[i].AxisA, _quadTrees[i].AxisB, _quadTrees[i].Normal);
 		}
 	}
@@ -72,8 +72,10 @@ public partial class Surface : Node3D
 		for (int i = 0; i < 6; i++)
 		{
 			_quadTrees[i]?.UpdateQuadTree(position);
+		}
+		for (int i = 0; i < 6; i++)
+		{
 			_quadTrees[i]?.SetVisibleNodes(nodeMeshType);
-			
 		}
 
 		for (int i = 0; i < 16; i++)
@@ -92,17 +94,18 @@ public partial class Surface : Node3D
 				Color pointData = new Color(0, 0, (int)node.quadTree.Normal, node.subdivisionLevel);
 				uint subdivisionLevel = (uint)node.subdivisionLevel;
 
-				// int a = (subdivisionLevel & 0b00000001) != 0 ? 1 : 0;
-				// int b = (subdivisionLevel & 0b00000010) != 0 ? 1 : 0;
-				// int c = (subdivisionLevel & 0b00000100) != 0 ? 1 : 0;
+				int a = (subdivisionLevel & 0b00000001) != 0 ? 1 : 0;
+				int b = (subdivisionLevel & 0b00000010) != 0 ? 1 : 0;
+				int c = (subdivisionLevel & 0b00000100) != 0 ? 1 : 0;
 
 				// int a = node.cornerType[0] || node.cornerType[3] ? 1 : 0;
 				// int b = node.cornerType[1] || node.cornerType[3] ? 1 : 0;
 				// int c = node.cornerType[2] || node.cornerType[3] ? 1 : 0;
 
-				int a = node.isFan ? 1: 0;
+				// int a = node.isFan ? 1: 0;
+				// int b = node.isEdge[0] || node.isEdge[1] || node.isEdge[2] || node.isEdge[3] ? 1 : 0;
 
-				_multiMeshInstances[i].Multimesh.SetInstanceColor(j, new Color(a, 0, 0));
+				_multiMeshInstances[i].Multimesh.SetInstanceColor(j, new Color(a, b, c));
 				_multiMeshInstances[i].Multimesh.SetInstanceCustomData(j, pointData);
 				_multiMeshInstances[i].Multimesh.SetInstanceTransform(j, transform);
 			}

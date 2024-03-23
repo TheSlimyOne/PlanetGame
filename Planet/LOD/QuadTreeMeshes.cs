@@ -22,9 +22,6 @@ public partial class QuadTreeMeshes
             Vector3[] vertices = new Vector3[_resolution * _resolution];
             Vector2[] uvs = new Vector2[_resolution * _resolution];
             int[] triangles = new int[(_resolution - 1) * (_resolution - 1) * 6];
-            int[] corners = { 0, 0, 0, 0 };
-
-
 
             bool isRightFan = i % 2 == 1;
             bool isLeftFan = i % 4 == 2 || i % 4 == 3;

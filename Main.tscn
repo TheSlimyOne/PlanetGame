@@ -1,55 +1,62 @@
-[gd_scene load_steps=10 format=3 uid="uid://cvtyow0howd6j"]
+[gd_scene load_steps=12 format=3 uid="uid://cvtyow0howd6j"]
 
-[ext_resource type="PackedScene" uid="uid://vfkamkwnbmqi" path="res://Player/Camera.tscn" id="2_rtq8k"]
-[ext_resource type="PackedScene" uid="uid://bhacuf2kejd2w" path="res://Planet/Planet.tscn" id="3_spubr"]
-[ext_resource type="Shader" path="res://Assets/Shaders/SurfaceMeshRenderer.gdshader" id="4_sc2xq"]
+[ext_resource type="Shader" path="res://Planet/Shaders/SurfaceMeshRenderer.gdshader" id="3_a3ili"]
+[ext_resource type="PackedScene" uid="uid://bhacuf2kejd2w" path="res://Planet/Planet.tscn" id="3_f7ht6"]
+[ext_resource type="Gradient" uid="uid://bneu5fk8dih6j" path="res://Assets/Resources/realistic_colors_map.tres" id="4_fmwq0"]
 [ext_resource type="PackedScene" uid="uid://bor2upmks05ho" path="res://Utilities/Axis.tscn" id="4_ye4mq"]
-[ext_resource type="Texture2D" uid="uid://vbdrct2jhx86" path="res://Assets/Images/Map Art Board.png" id="5_d56gl"]
-[ext_resource type="Gradient" uid="uid://bneu5fk8dih6j" path="res://Assets/Resources/realistic_colors_map.tres" id="5_sx77k"]
+[ext_resource type="Texture2D" uid="uid://b0oxsf31oawiw" path="res://Assets/Images/worldbuillding_test_2.png" id="5_daisa"]
+[ext_resource type="PackedScene" uid="uid://vfkamkwnbmqi" path="res://Player/Camera.tscn" id="6_sp4st"]
 
-[sub_resource type="Environment" id="Environment_p8d7q"]
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_6qh8i"]
+sky_top_color = Color(1, 1, 1, 1)
+sky_horizon_color = Color(0.75, 0.75, 0.75, 1)
+sky_energy_multiplier = 2.1
+ground_bottom_color = Color(0, 0, 0, 1)
+ground_horizon_color = Color(0.75, 0.75, 0.75, 1)
+
+[sub_resource type="Sky" id="Sky_dv6hi"]
+sky_material = SubResource("ProceduralSkyMaterial_6qh8i")
+
+[sub_resource type="Environment" id="Environment_lkftk"]
 background_mode = 1
-background_color = Color(0.670588, 0.670588, 0.670588, 1)
+background_color = Color(0.243137, 0, 0.364706, 1)
+sky = SubResource("Sky_dv6hi")
+tonemap_mode = 2
+glow_enabled = true
 
-[sub_resource type="GradientTexture1D" id="GradientTexture1D_hx53u"]
-gradient = ExtResource("5_sx77k")
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_eep6i"]
+gradient = ExtResource("4_fmwq0")
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_uqkua"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_pgmah"]
 resource_local_to_scene = true
 render_priority = 0
-shader = ExtResource("4_sc2xq")
-shader_parameter/radius = 50.0
-shader_parameter/height_scale = 4.155
-shader_parameter/normal_strength = 3.64
-shader_parameter/octaves = 5
-shader_parameter/persistence = 0.5
-shader_parameter/lacunarity = 2.0
-shader_parameter/noise_scale = 1.0
-shader_parameter/exaggeration_factor = 1.0
-shader_parameter/offset = Vector3(0, 0, 0)
-shader_parameter/seed = 1207.01
-shader_parameter/amount = null
-shader_parameter/isCube = false
-shader_parameter/albedo_map = SubResource("GradientTexture1D_hx53u")
-shader_parameter/image_texture = ExtResource("5_d56gl")
+shader = ExtResource("3_a3ili")
+shader_parameter/radius = 20.0
+shader_parameter/height_scale = 5.0
+shader_parameter/normal_strength = 5.0
+shader_parameter/isCube = null
+shader_parameter/albedo_map = SubResource("GradientTexture1D_eep6i")
+shader_parameter/image_texture = ExtResource("5_daisa")
 
 [node name="Main" type="Node3D"]
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
-environment = SubResource("Environment_p8d7q")
+environment = SubResource("Environment_lkftk")
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
-transform = Transform3D(-0.605988, 0.760309, -0.233901, 0, 0.29404, 0.955793, 0.795474, 0.579199, -0.178185, 0, 0, 0)
+transform = Transform3D(-0.866023, -0.433016, 0.250001, 0, 0.499998, 0.866027, -0.500003, 0.749999, -0.43301, 0, 0, 0)
 shadow_enabled = true
 
 [node name="Axis" parent="." instance=ExtResource("4_ye4mq")]
 visible = false
 
-[node name="Planet" parent="." instance=ExtResource("3_spubr")]
-Resolution = 35
-Material = SubResource("ShaderMaterial_uqkua")
+[node name="Planet" parent="." instance=ExtResource("3_f7ht6")]
+Radius = 20.0
+Material = SubResource("ShaderMaterial_pgmah")
 
-[node name="Camera" parent="." instance=ExtResource("2_rtq8k")]
-cameraRange = Vector2(55, 300)
+[node name="Camera" parent="." instance=ExtResource("6_sp4st")]
+cameraRange = Vector2(0, 100)
 
 [connection signal="CameraMovement" from="Camera" to="Planet" method="OnTargetMovement"]
+
+[editable path="Camera"]

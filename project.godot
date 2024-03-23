@@ -17,6 +17,7 @@ config/features=PackedStringArray("4.2", "C#", "Forward Plus")
 [autoload]
 
 DebugManager="*res://Autoloads/DebugManager.tscn"
+DebugManagerScript="*res://Autoloads/DebugManager.cs"
 
 [dotnet]
 

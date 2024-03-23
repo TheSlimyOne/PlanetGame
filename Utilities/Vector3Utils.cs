@@ -56,7 +56,7 @@ public static class Vector3Utils
         return edge1.Cross(edge2).Normalized();
     }
 
-    public static Vector3 GenerateVectorMaskFrom(Vector3 vector)
+    public static Vector3 GenerateVectorExclusionMaskFrom(Vector3 vector)
     {
         Vector3 mask = Vector3.Zero;
 
@@ -66,6 +66,16 @@ public static class Vector3Utils
         }
 
         return mask;
+    }
+
+    public static int GetIndexOfNormalComponent(Vector3 vector)
+    {
+        for (int i = 0; i < 3; i++)
+        {
+            if (vector[i] != 0)
+                return i;
+        }
+        return -1;
     }
 
     public static bool ContainsValue(Vector3 vector, float value, Vector3 mask)
@@ -78,6 +88,14 @@ public static class Vector3Utils
             }
         }
         return false;
+    }
+
+    public static int SignOfNormal(Vector3 vector)
+    {
+        int index = GetIndexOfNormalComponent(vector);
+        
+        return (int)vector[index];
+
     }
 }
 

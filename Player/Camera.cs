@@ -6,8 +6,8 @@ public partial class Camera : Node3D
 {
 
 
-	private float cameraSpeedX = 1f;
-	private float cameraSpeedY = 1f;
+	[Export] public float cameraSpeedX = 1f;
+	[Export] public float cameraSpeedY = 1f;
 	private float cameraRotationSpeed = 2f;
 	private float zoomSpeed = 1f;
 
