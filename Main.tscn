@@ -1,62 +1,79 @@
 [gd_scene load_steps=12 format=3 uid="uid://cvtyow0howd6j"]
 
+[ext_resource type="Sky" uid="uid://c068d837dl7kg" path="res://Assets/Resources/Sky/greenSpace.tres" id="1_jq5qe"]
 [ext_resource type="Shader" path="res://Planet/Shaders/SurfaceMeshRenderer.gdshader" id="3_a3ili"]
 [ext_resource type="PackedScene" uid="uid://bhacuf2kejd2w" path="res://Planet/Planet.tscn" id="3_f7ht6"]
 [ext_resource type="Gradient" uid="uid://bneu5fk8dih6j" path="res://Assets/Resources/realistic_colors_map.tres" id="4_fmwq0"]
 [ext_resource type="PackedScene" uid="uid://bor2upmks05ho" path="res://Utilities/Axis.tscn" id="4_ye4mq"]
-[ext_resource type="Texture2D" uid="uid://b0oxsf31oawiw" path="res://Assets/Images/worldbuillding_test_2.png" id="5_daisa"]
-[ext_resource type="PackedScene" uid="uid://vfkamkwnbmqi" path="res://Player/Camera.tscn" id="6_sp4st"]
+[ext_resource type="PackedScene" uid="uid://vfkamkwnbmqi" path="res://Player/PlayerController.tscn" id="6_sp4st"]
+[ext_resource type="Texture2D" uid="uid://c4e0b4biysbp" path="res://Assets/Images/gebco_08_rev_elev_21600x10800.png" id="7_32vdt"]
 
-[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_6qh8i"]
-sky_top_color = Color(1, 1, 1, 1)
-sky_horizon_color = Color(0.75, 0.75, 0.75, 1)
-sky_energy_multiplier = 2.1
-ground_bottom_color = Color(0, 0, 0, 1)
-ground_horizon_color = Color(0.75, 0.75, 0.75, 1)
-
-[sub_resource type="Sky" id="Sky_dv6hi"]
-sky_material = SubResource("ProceduralSkyMaterial_6qh8i")
-
-[sub_resource type="Environment" id="Environment_lkftk"]
-background_mode = 1
-background_color = Color(0.243137, 0, 0.364706, 1)
-sky = SubResource("Sky_dv6hi")
+[sub_resource type="Environment" id="Environment_py3kf"]
+background_mode = 2
+background_color = Color(1, 1, 1, 1)
+sky = ExtResource("1_jq5qe")
+ambient_light_source = 2
+ambient_light_color = Color(0.388235, 0.388235, 0.388235, 1)
+ambient_light_energy = 0.76
 tonemap_mode = 2
 glow_enabled = true
 
 [sub_resource type="GradientTexture1D" id="GradientTexture1D_eep6i"]
 gradient = ExtResource("4_fmwq0")
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_pgmah"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_36vqu"]
 resource_local_to_scene = true
 render_priority = 0
 shader = ExtResource("3_a3ili")
-shader_parameter/radius = 20.0
-shader_parameter/height_scale = 5.0
-shader_parameter/normal_strength = 5.0
-shader_parameter/isCube = null
+shader_parameter/radius = 30.0
+shader_parameter/height_scale = 1.38
+shader_parameter/normal_strength = 15.02
+shader_parameter/isCube = false
 shader_parameter/albedo_map = SubResource("GradientTexture1D_eep6i")
-shader_parameter/image_texture = ExtResource("5_daisa")
+shader_parameter/image_texture = ExtResource("7_32vdt")
+
+[sub_resource type="ConvexPolygonShape3D" id="ConvexPolygonShape3D_n0gjl"]
+points = PackedVector3Array(1.22, 4.63, -1.875, 6.73, 2.425, 1.81, 1.29, 0.16, 4.64, -4.025, 0, 0)
 
 [node name="Main" type="Node3D"]
 
-[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
-environment = SubResource("Environment_lkftk")
-
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
-transform = Transform3D(-0.866023, -0.433016, 0.250001, 0, 0.499998, 0.866027, -0.500003, 0.749999, -0.43301, 0, 0, 0)
 shadow_enabled = true
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_py3kf")
 
 [node name="Axis" parent="." instance=ExtResource("4_ye4mq")]
 visible = false
 
+[node name="PlayerController" parent="." instance=ExtResource("6_sp4st")]
+CameraRotationSpeed = 2.0
+CameraZoomSpeed = 2.0
+zoomChangeRate = 0.01
+cameraRange = Vector2(30, 70)
+
 [node name="Planet" parent="." instance=ExtResource("3_f7ht6")]
-Radius = 20.0
-Material = SubResource("ShaderMaterial_pgmah")
+GravityRadius = 9.955
+Radius = 30.0
+Resolution = 35
+HeightScale = 0.046
+Material = SubResource("ShaderMaterial_36vqu")
+HeightMap = ExtResource("7_32vdt")
+metadata/_access_modifiers = {
+"Material": 2,
+"QuadTreesContainer": 2,
+"Surface": 2,
+"Surfaces": 2,
+"_subdivisionCurves": 2,
+"_surface": 2,
+"_surfaceContainer": 0,
+"_surfaces": 2,
+"surfaceContainer": 2
+}
 
-[node name="Camera" parent="." instance=ExtResource("6_sp4st")]
-cameraRange = Vector2(0, 100)
+[node name="RigidBody3D-Test" type="RigidBody3D" parent="."]
 
-[connection signal="CameraMovement" from="Camera" to="Planet" method="OnTargetMovement"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="RigidBody3D-Test"]
+shape = SubResource("ConvexPolygonShape3D_n0gjl")
 
-[editable path="Camera"]
+[connection signal="CameraMovement" from="PlayerController" to="Planet" method="OnTargetMovement"]

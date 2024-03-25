@@ -13,7 +13,7 @@ using System.Linq;
 public partial class QuadTree : Node
 {
 
-    public enum NormalDirection
+    public enum NormalDirectionType
     {
         None = 0b000,
         Up = 0b010,
@@ -26,19 +26,19 @@ public partial class QuadTree : Node
 
 
     [Export]
-    public NormalDirection Normal
+    public NormalDirectionType NormalDirection
     {
         get
         {
 
             if (_normal == Vector3.Zero)
             {
-                return NormalDirection.None;
+                return NormalDirectionType.None;
             }
 
             bool isNegative = _normal.X == -1 || _normal.Y == -1 || _normal.Z == -1;
             int index = (int)_normal.X * 4 + (int)_normal.Y * 2 + (int)_normal.Z;
-            return (NormalDirection)(isNegative ? ((-1 * index) ^ 0b111) & 0b111 : index);
+            return (NormalDirectionType)(isNegative ? ((-1 * index) ^ 0b111) & 0b111 : index);
         }
         set
         {
@@ -84,6 +84,11 @@ public partial class QuadTree : Node
     private QuadTree() { }
 
     private Dictionary<int, Vector3> _localCardinalDirections;
+
+    public Vector3 GetNormal()
+    {
+        return _normal;
+    }
 
     public void Initialize(Planet planet)
     {
@@ -460,16 +465,11 @@ public partial class QuadTree : Node
             QuadTree selectedQuadTree = quadTree;
             string traversePath = Convert.ToString(this.hashValue ^ bitmask, 2);
 
-
-
-
             if (isEdge[side])
             {
-
-
+                selectedQuadTree = quadTree._planet.Surface.GetQuadTree(quadTree._localCardinalDirections[side]);
                 
                 string path = "1";
-                selectedQuadTree = quadTree._planet.Surface.GetQuadTree(quadTree._localCardinalDirections[side]);
                 string stringTraversePath = traversePath[1..];
 
                 uint majority = 1;
@@ -499,12 +499,5 @@ public partial class QuadTree : Node
 
 
         }
-    }
-
-    internal uint TranslateHash(uint hash)
-    {
-
-
-        return 0;
     }
 }

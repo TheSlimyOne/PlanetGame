@@ -1,3 +1,4 @@
+using System;
 using Godot;
 
 public partial class QuadTreeMeshes
@@ -9,7 +10,8 @@ public partial class QuadTreeMeshes
         get => _meshes;
     }
 
-    private int _resolution;
+    public readonly int _resolution;
+
     public QuadTreeMeshes(int resolution)
     {
         _resolution = resolution;
@@ -45,8 +47,8 @@ public partial class QuadTreeMeshes
                     {
                         triangles[triIndex++] = vertexIndex;
                         triangles[triIndex++] = vertexIndex + _resolution;
-                        triangles[triIndex++] = vertexIndex + 1;
-                        triangles[triIndex++] = vertexIndex + _resolution;
+                        triangles[triIndex++] = (x % 2 == 1 && y % 2 == 1) || (x % 2 == 0 & y % 2 == 0) ? vertexIndex + _resolution + 1 : vertexIndex + 1;
+                        triangles[triIndex++] = (x % 2 == 1 && y % 2 == 1) || (x % 2 == 0 & y % 2 == 0) ? vertexIndex :  vertexIndex + _resolution;
                         triangles[triIndex++] = vertexIndex + _resolution + 1;
                         triangles[triIndex++] = vertexIndex + 1;
                     }
@@ -199,6 +201,8 @@ public partial class QuadTreeMeshes
         }
 
     }
+
+
 
     public MultiMeshInstance3D[] SpawnDemoMeshes()
     {

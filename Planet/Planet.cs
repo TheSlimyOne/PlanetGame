@@ -7,15 +7,17 @@ public partial class Planet : StaticBody3D
 
 	private bool _isReady;
 	private float _radius = 1;
+	private float _heightScale = 1;
 	private int _resolution = 5;
 	private ShaderMaterial _material;
 	private Surface _surface;
 	private Node _quadTreesContainer;
 	private CollisionShape3D _gravityCollision;
-	private CollisionShape3D _planetCollision;
+	private PlanetCollision _planetCollision;
 	private float _gravityRadius;
 	private float[] _subdivision;
 	private float[] _distance;
+	private CompressedTexture2D _heightMap;
 
 	// Properties
 	[Export]
@@ -25,7 +27,7 @@ public partial class Planet : StaticBody3D
 		set { _gravityRadius = value; Initialize(); }
 	}
 
-	[Export (PropertyHint.Range, "1,1000")]
+	[Export(PropertyHint.Range, "1,1000")]
 	public float Radius
 	{
 		get => _radius;
@@ -37,6 +39,13 @@ public partial class Planet : StaticBody3D
 	{
 		get => _resolution;
 		set { _resolution = value; Initialize(); }
+	}
+
+	[Export(PropertyHint.Range, "0,1")]
+	public float HeightScale
+	{
+		get => _heightScale;
+		set { _heightScale = value; Initialize(); }
 	}
 
 	[Export]
@@ -74,6 +83,13 @@ public partial class Planet : StaticBody3D
 		set => _distance = value;
 	}
 
+	[Export]
+	public CompressedTexture2D HeightMap
+	{
+		get => _heightMap;
+		set { _heightMap = value; Initialize(); }
+	}
+
 	private void Initialize()
 	{
 		if (_isReady)
@@ -81,21 +97,20 @@ public partial class Planet : StaticBody3D
 			if (_material == null) return;
 
 			_material.SetShaderParameter("radius", _radius);
+			_material.SetShaderParameter("image_texture", _heightMap);
+			_material.SetShaderParameter("height_scale", _radius * _heightScale);
 
 
 			_surface = GetNode<Surface>("Surface");
 			QuadTreesContainer = GetNode<Node>("QuadTrees");
 
-			_planetCollision = GetNode<CollisionShape3D>("PlanetCollisionShape");
-			_planetCollision.Shape = new SphereShape3D();
-			((SphereShape3D)_planetCollision.Shape).Radius = _radius;
+			_planetCollision = GetNode<PlanetCollision>("PlanetCollisionShape");
 
-			
 			_gravityCollision = GetNode<CollisionShape3D>("GravityArea/GravityCollisionShape");
 			_gravityCollision.Shape = new SphereShape3D();
 			((SphereShape3D)_gravityCollision.Shape).Radius = _radius + _gravityRadius;
 
-			_surface.Initialize(_radius, _resolution, _material);
+			_surface.Initialize(_radius, _resolution, _material, _planetCollision, _heightMap);
 			_surface.UpdateQuadTrees(Vector3.Inf);
 
 		}

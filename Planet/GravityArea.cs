@@ -16,9 +16,9 @@ public partial class GravityArea : Area3D
 
 	public void OnEnterGravityField(Node3D node)
 	{	
-		if (node is PlayerController playerController)
+		if (node is PlayerControllerBody character)
 		{
-			playerController.Focus = planet;
+			character.Gimbal.Focus = planet;
 			GD.PrintRich("[color=green] Character Entered Gravity");
 		}
 		

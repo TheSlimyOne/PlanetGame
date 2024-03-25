@@ -1,3 +1,4 @@
+using System;
 using Godot;
 
 public static class Vector3Utils
@@ -97,5 +98,21 @@ public static class Vector3Utils
         return (int)vector[index];
 
     }
+    
+
+    public static byte[] ToByteArray(Vector3[] array)
+	{
+
+		byte[] byteArray = new byte[array.Length * 12];
+        Buffer.BlockCopy(array, 0, byteArray, 0, byteArray.Length);
+        return byteArray;
+	}
+
+    public static float[] ByteToFloatToArray(byte[] byteArray)
+	{
+		float[] floatArray = new float[byteArray.Length / 4];
+        Buffer.BlockCopy(byteArray, 0, floatArray, 0, byteArray.Length);
+        return floatArray;
+	}
 }
 
