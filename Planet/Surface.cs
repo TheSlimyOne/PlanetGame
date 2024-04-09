@@ -5,7 +5,6 @@ using System.Collections.Generic;
 public partial class Surface : Node3D
 {
 	private QuadTreeMeshes _quadTreeMeshes;
-	private PlanetCollision _collision;
 
 	private QuadTree[] _quadTrees = new QuadTree[6];
 	public static Dictionary<Vector3, int> normalToIndex = new Dictionary<Vector3, int>()
@@ -19,13 +18,11 @@ public partial class Surface : Node3D
 	};
 	private MultiMeshInstance3D[] _multiMeshInstances = new MultiMeshInstance3D[16];
 
-	public void Initialize(float radius, int resolution, ShaderMaterial material, PlanetCollision collision, CompressedTexture2D heightMap)
+	public void Initialize(float radius, int resolution, ShaderMaterial material, CompressedTexture2D heightMap)
 	{
 
 		_quadTreeMeshes = new QuadTreeMeshes(resolution);
 		_quadTreeMeshes.Initialize();
-		_collision = collision;
-		_collision.Initalize(resolution, heightMap);
 
 		for (int i = 0; i < 16; i++)
 		{
@@ -49,9 +46,8 @@ public partial class Surface : Node3D
 	}
 
 
-	public void UpdateQuadTrees(Vector3 position)
+	public void UpdateQuadTrees(Camera3D camera)
 	{
-
 		Dictionary<int, List<QuadTree.QuadTreeNode>> nodeMeshType = new Dictionary<int, List<QuadTree.QuadTreeNode>>
 		{
 			{0,  new List<QuadTree.QuadTreeNode>()},
@@ -74,7 +70,7 @@ public partial class Surface : Node3D
 
 		for (int i = 0; i < 6; i++)
 		{
-			_quadTrees[i]?.UpdateQuadTree(position);
+			_quadTrees[i]?.UpdateQuadTree(camera);
 		}
 		for (int i = 0; i < 6; i++)
 		{

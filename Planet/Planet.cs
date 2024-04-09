@@ -13,11 +13,13 @@ public partial class Planet : StaticBody3D
 	private Surface _surface;
 	private Node _quadTreesContainer;
 	private CollisionShape3D _gravityCollision;
-	private PlanetCollision _planetCollision;
 	private float _gravityRadius;
 	private float[] _subdivision;
-	private float[] _distance;
+	private float _distanceFactor = 0.001f;
 	private CompressedTexture2D _heightMap;
+	private CompressedTexture2D _albedoMap;
+	private bool _isDebug;
+	private bool _isCube;
 
 	// Properties
 	[Export]
@@ -76,11 +78,11 @@ public partial class Planet : StaticBody3D
 		set => _subdivision = value;
 	}
 
-	[Export]
-	public float[] Distance
+	[Export(PropertyHint.Range, "0,1,0.001")]
+	public float DistanceFactor
 	{
-		get => _distance;
-		set => _distance = value;
+		get => _distanceFactor;
+		set => _distanceFactor = value;
 	}
 
 	[Export]
@@ -90,6 +92,27 @@ public partial class Planet : StaticBody3D
 		set { _heightMap = value; Initialize(); }
 	}
 
+	[Export]
+	public CompressedTexture2D AlbedoMap
+	{
+		get => _albedoMap;
+		set { _albedoMap = value; Initialize(); }
+	}
+
+	[Export]
+	public bool IsDebug
+	{
+		get => _isDebug;
+		set { _isDebug = value; Initialize(); }
+	}
+
+	[Export]
+	public bool IsCube
+	{
+		get => _isCube;
+		set { _isCube = value; Initialize(); }
+	}
+
 	private void Initialize()
 	{
 		if (_isReady)
@@ -97,21 +120,22 @@ public partial class Planet : StaticBody3D
 			if (_material == null) return;
 
 			_material.SetShaderParameter("radius", _radius);
+			_material.SetShaderParameter("albedo_map", _albedoMap);
 			_material.SetShaderParameter("image_texture", _heightMap);
 			_material.SetShaderParameter("height_scale", _radius * _heightScale);
+			_material.SetShaderParameter("is_debug", _isDebug);
+			_material.SetShaderParameter("is_cube", _isCube);
 
 
 			_surface = GetNode<Surface>("Surface");
 			QuadTreesContainer = GetNode<Node>("QuadTrees");
 
-			_planetCollision = GetNode<PlanetCollision>("PlanetCollisionShape");
-
 			_gravityCollision = GetNode<CollisionShape3D>("GravityArea/GravityCollisionShape");
 			_gravityCollision.Shape = new SphereShape3D();
 			((SphereShape3D)_gravityCollision.Shape).Radius = _radius + _gravityRadius;
 
-			_surface.Initialize(_radius, _resolution, _material, _planetCollision, _heightMap);
-			_surface.UpdateQuadTrees(Vector3.Inf);
+			_surface.Initialize(_radius, _resolution, _material, _heightMap);
+			_surface.UpdateQuadTrees(null);
 
 		}
 	}
@@ -129,10 +153,10 @@ public partial class Planet : StaticBody3D
 
 	private Vector3 previousPosition = Vector3.Inf;
 	private float movementThreshold = 10;
-	private void OnTargetMovement(Vector3 position)
+	private void OnTargetMovement(Camera3D camera)
 	{
-		// GD.Print(position);
-		_surface.UpdateQuadTrees(position);
+	
+		_surface.UpdateQuadTrees(camera);
 	}
 
 	public override void _Ready()

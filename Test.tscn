@@ -1,0 +1,7 @@
+[gd_scene load_steps=2 format=3 uid="uid://b5l25svw75led"]
+
+[ext_resource type="Script" path="res://Dispatcher.cs" id="1_mw8jn"]
+
+[node name="Node" type="Node"]
+script = ExtResource("1_mw8jn")
+_computeShader = "res://Planet/Shaders/QuadTree.glsl"

@@ -1,5 +1,6 @@
 using Godot;
 using System;
+using System.Linq;
 
 public partial class PlayerController : Node3D
 {
@@ -7,12 +8,16 @@ public partial class PlayerController : Node3D
 	[Export] public float CameraZoomSpeed = 1f;
 	[Export] public Vector2 MouseSensitivity = new Vector2(0.09f, 0.09f);
 	[Export] public DirectionalLight3D LightSource;
-
-	[Export] private float zoomChangeRate;
+	[Export] public float ZoomFactor;
 	[Export] private Node3D orbitGimbal;
 	[Export] private Node3D rotationGimbal;
-	[Export] private Camera3D camera;
-	[Export] private Vector2 cameraRange = new Vector2(1, 100);
+	[Export] public Camera3D Camera;
+	[Export] public float MinViewDistance;
+	[Export] public float MaxViewDistance;
+	[Export] public Vector2 CameraRange = new Vector2(1, 100);
+	[Export] public float ViewDistanceFactor = 1;
+
+	[Export] public Vector3 LightSourceOffset;
 
 	public Node3D Focus;
 	Vector2 mouseRotation = Vector2.Zero;
@@ -23,12 +28,14 @@ public partial class PlayerController : Node3D
 	private bool isLocked = false;
 	private bool isReady = false;
 
-	[Signal] public delegate void CameraMovementEventHandler(Vector3 position);
+	[Signal] public delegate void CameraMovementEventHandler(Camera3D camera);
 
 	public override void _Ready()
 	{
 		RenderingServer.SetDebugGenerateWireframes(true);
-		rotationGimbal.Position = rotationGimbal.Position with { Y = cameraRange.Y };
+		rotationGimbal.Position = rotationGimbal.Position with { Y = CameraRange.Y };
+		Plane[] frustum = Camera.GetFrustum().ToArray();
+		// camera.SetFrustum()
 
 		isReady = true;
 	}
@@ -63,46 +70,51 @@ public partial class PlayerController : Node3D
 
 		orbitGimbal.RotateObjectLocal(Vector3.Up, by * (keyRotation.X + mouseRotation.X));
 
-		camera.RotateObjectLocal(Vector3.Right, by * (keyRotation.Y + mouseRotation.Y));
-		camera.RotationDegrees = camera.RotationDegrees with { X = Mathf.Clamp(camera.RotationDegrees.X, -90, 90) };
+		Camera.RotateObjectLocal(Vector3.Right, by * (keyRotation.Y + mouseRotation.Y));
+		Camera.RotationDegrees = Camera.RotationDegrees with { X = Mathf.Clamp(Camera.RotationDegrees.X, -90, 90) };
 
 		orbitGimbal.RotateObjectLocal(Vector3.Right, by * direction.Z * CameraRotationSpeed);
 		orbitGimbal.RotateObjectLocal(Vector3.Forward, by * direction.X * CameraRotationSpeed);
 
-		mouseRotation = Vector2.Zero;
 		rotationGimbal.Position = rotationGimbal.Position with { Y = rotationGimbal.Position.Y + direction.Y * CameraZoomSpeed };
+		rotationGimbal.Position = rotationGimbal.Position with { Y = Mathf.Clamp(rotationGimbal.Position.Y, CameraRange.X, CameraRange.Y) };
 
-
-		rotationGimbal.Position = rotationGimbal.Position with { Y = Mathf.Clamp(rotationGimbal.Position.Y, cameraRange.X, cameraRange.Y) };
-		
-
-		ResizeGimbalMesh();
-		if (direction != Vector3.Zero)
+		if (direction != Vector3.Zero || keyRotation != Vector2.Zero)
 		{
-			EmitSignal("CameraMovement", camera.GlobalPosition);
+			EmitSignal("CameraMovement", Camera);
 
-			// if (Focus != null)
-			// {
-			// 	Vector3 normal = (Focus.GlobalPosition - camera.GlobalPosition).Normalized();
-			// 	LightSource.LookAt(normal);
-			// }
+			Vector3 normal = (Focus.GlobalPosition - Camera.GlobalPosition).Normalized();
+			if (Focus != null && LightSource != null)
+			{
+				LightSource.LookAt(Focus.Transform.Origin);
+				
+			}
 		}
-
+		mouseRotation = Vector2.Zero;
 	}
 
 	private void ResizeGimbalMesh()
 	{
 		MeshInstance3D xMesh = orbitGimbal.GetChild<MeshInstance3D>(0);
-		((TorusMesh)xMesh.Mesh).InnerRadius = rotationGimbal.Position.Length() - 0.5f;
-		((TorusMesh)xMesh.Mesh).OuterRadius = rotationGimbal.Position.Length();
+		if (((TorusMesh)xMesh.Mesh).InnerRadius - 0.5 > 0)
+		{
+			((TorusMesh)xMesh.Mesh).InnerRadius = rotationGimbal.Position.Length() - 0.5f;
+			((TorusMesh)xMesh.Mesh).OuterRadius = rotationGimbal.Position.Length();
+		}
 
 		MeshInstance3D yMesh = orbitGimbal.GetChild<MeshInstance3D>(1);
-		((TorusMesh)yMesh.Mesh).InnerRadius = rotationGimbal.Position.Length() - 0.5f;
-		((TorusMesh)yMesh.Mesh).OuterRadius = rotationGimbal.Position.Length();
+		if (((TorusMesh)yMesh.Mesh).InnerRadius - 0.5 > 0)
+		{
+			((TorusMesh)yMesh.Mesh).InnerRadius = rotationGimbal.Position.Length() - 0.5f;
+			((TorusMesh)yMesh.Mesh).OuterRadius = rotationGimbal.Position.Length();
+		}
 
 		MeshInstance3D zMesh = orbitGimbal.GetChild<MeshInstance3D>(2);
-		((TorusMesh)zMesh.Mesh).InnerRadius = rotationGimbal.Position.Length() - 0.5f;
-		((TorusMesh)zMesh.Mesh).OuterRadius = rotationGimbal.Position.Length();
+		if (((TorusMesh)zMesh.Mesh).InnerRadius - 0.5 > 0)
+		{
+			((TorusMesh)zMesh.Mesh).InnerRadius = rotationGimbal.Position.Length() - 0.5f;
+			((TorusMesh)zMesh.Mesh).OuterRadius = rotationGimbal.Position.Length();
+		}
 	}
 
 
@@ -120,18 +132,18 @@ public partial class PlayerController : Node3D
 		{
 			if (mouseButtonEvent.ButtonIndex == MouseButton.WheelUp)
 			{
-				CameraRotationSpeed += zoomChangeRate;
-				CameraZoomSpeed += zoomChangeRate;
+				CameraRotationSpeed += ZoomFactor;
+				CameraZoomSpeed += ZoomFactor;
 			}
 			else if (mouseButtonEvent.ButtonIndex == MouseButton.WheelDown)
 			{
-				CameraRotationSpeed -= zoomChangeRate;
-				CameraZoomSpeed -= zoomChangeRate;
+				CameraRotationSpeed -= ZoomFactor;
+				CameraZoomSpeed -= ZoomFactor;
+
 			}
 
-			CameraRotationSpeed = Mathf.Clamp(CameraRotationSpeed, 0.01f, 2);
-			CameraZoomSpeed = Mathf.Clamp(CameraRotationSpeed, 0.01f, 2);
-
+			CameraRotationSpeed = Mathf.Clamp(CameraRotationSpeed, 0.01f, 5);
+			CameraZoomSpeed = Mathf.Clamp(CameraZoomSpeed, 0.01f, 5);
 		}
 
 		if (Input.IsActionJustPressed("change_view"))
@@ -148,7 +160,7 @@ public partial class PlayerController : Node3D
 		}
 		if (Input.IsActionJustPressed("step"))
 		{
-			PlanetCollision.CreateCollisionChunk(1,Vector3.Zero);
+		
 		}
 		if (Input.IsActionJustReleased("cam_exit"))
 		{
@@ -158,6 +170,11 @@ public partial class PlayerController : Node3D
 				LockMouse();
 
 		}
-		
+
+	}
+
+	float easeOutQuart(float number)
+	{
+		return 1 - Mathf.Pow(1 - number, 4);
 	}
 }

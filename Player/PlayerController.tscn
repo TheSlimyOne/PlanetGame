@@ -1,4 +1,4 @@
-[gd_scene load_steps=16 format=3 uid="uid://vfkamkwnbmqi"]
+[gd_scene load_steps=14 format=3 uid="uid://vfkamkwnbmqi"]
 
 [ext_resource type="Script" path="res://Player/PlayerController.cs" id="1_rnbou"]
 [ext_resource type="Script" path="res://Player/PlayerControllerBody.cs" id="2_tyhda"]
@@ -38,22 +38,15 @@ albedo_color = Color(0.697581, 0.584132, 0.0880889, 1)
 material = SubResource("StandardMaterial3D_heq6c")
 inner_radius = 0.9
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_g4qcv"]
-albedo_color = Color(0.937255, 0.0705882, 0, 1)
-
-[sub_resource type="CapsuleMesh" id="CapsuleMesh_7ke2k"]
-material = SubResource("StandardMaterial3D_g4qcv")
-radius = 0.25
-height = 1.0
-
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_6ukee"]
 
-[node name="PlayerController" type="Node3D" node_paths=PackedStringArray("orbitGimbal", "rotationGimbal", "camera")]
+[node name="PlayerController" type="Node3D" node_paths=PackedStringArray("orbitGimbal", "rotationGimbal", "Camera")]
 script = ExtResource("1_rnbou")
 orbitGimbal = NodePath("OrbitGimbal")
 rotationGimbal = NodePath("OrbitGimbal/RotationGimbal")
-camera = NodePath("OrbitGimbal/RotationGimbal/Character/Player Camera")
+Camera = NodePath("OrbitGimbal/RotationGimbal/Character/Player Camera")
 metadata/_access_modifiers = {
+"LightSource": 2,
 "camera": 2,
 "orbitGimbal": 2,
 "rotationGimbal": 2
@@ -97,12 +90,10 @@ motion_mode = 1
 script = ExtResource("2_tyhda")
 
 [node name="Player Camera" type="Camera3D" parent="OrbitGimbal/RotationGimbal/Character"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.4, 0)
-
-[node name="Player Icon" type="MeshInstance3D" parent="OrbitGimbal/RotationGimbal/Character"]
-visible = false
-mesh = SubResource("CapsuleMesh_7ke2k")
-skeleton = NodePath("")
+current = true
+size = 0.257
+near = 0.001
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="OrbitGimbal/RotationGimbal/Character"]
+visible = false
 shape = SubResource("CapsuleShape3D_6ukee")

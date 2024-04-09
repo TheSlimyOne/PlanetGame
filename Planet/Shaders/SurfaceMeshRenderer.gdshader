@@ -3,7 +3,8 @@ uniform float radius;
 uniform float height_scale;
 uniform float normal_strength;
 
-uniform bool isCube;
+uniform bool is_debug;
+uniform bool is_cube;
 
 uniform sampler2D albedo_map : repeat_disable;
 uniform sampler2D image_texture : repeat_disable;
@@ -55,7 +56,6 @@ vec2 point_on_sphere_to_UV(vec3 p) {
 void vertex() {
 	float scaleFactor = pow(2.0, INSTANCE_CUSTOM.a);
 	
-
 	uint intValue = uint(INSTANCE_CUSTOM.z);
 	int normSign = (intValue == 1u || intValue == 2u || intValue == 4u) ? 1 : -1;
 	uint x = (intValue & 4u) >> 2u;
@@ -76,7 +76,7 @@ void vertex() {
 
 	vec3 point = NODE_POSITION_WORLD + axisA * (2.0 * UV.x - 1.0) + axisB * (2.0 * UV.y - 1.0);
 
-	VERTEX = isCube ? point : point_on_cube_to_point_on_sphere(point);
+	VERTEX = is_cube ? point : point_on_cube_to_point_on_sphere(point);
 	
 	NORMAL = VERTEX;
 	object_space_pos = VERTEX;
@@ -85,15 +85,17 @@ void vertex() {
 	UV = point_on_sphere_to_UV(object_space_pos);
 
 	elevation = textureLod(image_texture, point_on_sphere_to_UV(object_space_pos), 0).r;
-	VERTEX += NORMAL * height_scale * elevation;
+	elevation = tanh(elevation);
+	VERTEX += NORMAL * height_scale * pow(elevation,4);
 }
 
 
 void fragment() {
 	
 	NORMAL = height_to_normal(elevation, normal_strength, VERTEX, NORMAL);
-    //vec3 surface_texture = textureLod(image_texture, point_on_sphere_to_UV(object_space_pos), 0).rgb;
-	vec3 surface_texture = textureLod(albedo_map, vec2(elevation, 0.0), 0).rgb;
+    vec3 surface_texture = textureLod(albedo_map, point_on_sphere_to_UV(object_space_pos), 0).rgb;
+	//vec3 surface_texture = textureLod(albedo_map, vec2(elevation, 0.0), 0).rgb;
+	ALBEDO = is_debug ? COLOR.xyz : surface_texture;
 
-	ALBEDO = surface_texture;
+
 }

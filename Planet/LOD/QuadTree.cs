@@ -53,11 +53,11 @@ public partial class QuadTree : Node
             int negative = intValue == 1 || intValue == 2 || intValue == 4 ? 1 : -1;
             uint x = (intValue & 0b100) >> 2;
             uint y = (intValue & 0b010) >> 1;
-            uint z =  intValue & 0b001;
+            uint z = intValue & 0b001;
 
-            x = negative == 1 ? x : x^1;
-            y = negative == 1 ? y : y^1;
-            z = negative == 1 ? z : z^1;
+            x = negative == 1 ? x : x ^ 1;
+            y = negative == 1 ? y : y ^ 1;
+            z = negative == 1 ? z : z ^ 1;
             _normal = new Vector3(x, y, z) * negative;
 
         }
@@ -106,15 +106,6 @@ public partial class QuadTree : Node
         _indexOfX = Vector3Utils.GetIndexOfNormalComponent(_axisA);
         _indexOfY = Vector3Utils.GetIndexOfNormalComponent(_axisB);
         _mask = Vector3Utils.GenerateVectorExclusionMaskFrom(_normal);
-    }
-
-
-    public void UpdateQuadTree(Vector3 target)
-    {
-        _root = new QuadTreeNode(this, null, _normal, _axisA, _axisB, QuadTreeNode.Coordinate.Root, 0);
-        if (IsDisabled) return;
-        _nodeBuffer.Clear();
-        UpdateQuadTree(target, _root);
     }
 
     public QuadTreeNode Traverse(uint hashPath)
@@ -232,13 +223,23 @@ public partial class QuadTree : Node
         // {9, 0.5f},
     };
 
-
-    private void UpdateQuadTree(Vector3 target, QuadTreeNode node)
+    public void UpdateQuadTree(Camera3D camera)
     {
-        float renderAngle = node.spherePosition.AngleTo(target);
-        float renderDistance = target.DistanceTo(_planet.Transform.Origin);
+        _root = new QuadTreeNode(this, null, _normal, _axisA, _axisB, QuadTreeNode.Coordinate.Root, 0);
+        if (IsDisabled || camera == null) return;
+        _nodeBuffer.Clear();
+        UpdateQuadTree(camera, _root);
+    }
 
-        if (Mathf.DegToRad(_planet.Subdivision[node.subdivisionLevel]) >= renderAngle)
+    private void UpdateQuadTree(Camera3D camera, QuadTreeNode node)
+    {
+        Vector3 position = camera.GlobalPosition;
+        float renderAngle = node.spherePosition.AngleTo(position);
+        float distanceToPlanet = position.DistanceTo(_planet.GlobalPosition) - _planet.Radius;
+
+        bool isNodeInFustrum = node.CornerInFustrum(camera);
+
+        if (Mathf.DegToRad(_planet.Subdivision[node.subdivisionLevel]) - _planet.DistanceFactor * Mathf.Pow(distanceToPlanet, 1f / 3f) >= renderAngle)
         {
             if (node.subdivisionLevel < _planet.Subdivision.Length - 1)
             {
@@ -249,17 +250,18 @@ public partial class QuadTree : Node
 
                 foreach (QuadTreeNode child in node.children)
                 {
-                    UpdateQuadTree(target, child);
+                    UpdateQuadTree(camera, child);
                 }
             }
-            else
+            else if (isNodeInFustrum || (node.spherePosition.Normalized().Dot(position.Normalized()) > 0.99 && !isNodeInFustrum))
             {
                 _nodeBuffer.Add(node);
             }
         }
-        else
+        // Check if the node is within the camera frustum or is "close enough"
+        else if (isNodeInFustrum || (node.spherePosition.Normalized().Dot(position.Normalized()) > 0.99 && !isNodeInFustrum))
         {
-            _nodeBuffer.Add(node);   
+            _nodeBuffer.Add(node);
         }
     }
 
@@ -350,8 +352,6 @@ public partial class QuadTree : Node
 
         internal Vector3[] GenerateCornerCoordinates(float scale)
         {
-
-
             Vector3[] coordinates = new Vector3[4];
             // Direction is relative to axisA and axisB
             coordinates[0] = cubePosition + scale * (-axisA + axisB);
@@ -361,6 +361,7 @@ public partial class QuadTree : Node
 
             return coordinates;
         }
+
 
         internal QuadTreeNode GetChild(Coordinate coordinate)
         {
@@ -381,6 +382,22 @@ public partial class QuadTree : Node
             return new Vector3(x, y, z);
         }
 
+        internal bool CornerInFustrum(Camera3D camera)
+        {
+            float radius = quadTree._planet.Radius;
+            Vector3[] coordinates = GenerateCornerCoordinates(1);
+            coordinates[0] = PointOnCubeToPointOnSphere(coordinates[0]) * radius;
+            coordinates[1] = PointOnCubeToPointOnSphere(coordinates[1]) * radius;
+            coordinates[2] = PointOnCubeToPointOnSphere(coordinates[2]) * radius;
+            coordinates[3] = PointOnCubeToPointOnSphere(coordinates[3]) * radius;
+
+            return camera.IsPositionInFrustum(spherePosition * radius) ||
+            camera.IsPositionInFrustum(coordinates[0]) ||
+            camera.IsPositionInFrustum(coordinates[1]) ||
+            camera.IsPositionInFrustum(coordinates[2]) ||
+            camera.IsPositionInFrustum(coordinates[3]);
+        }
+
         public override string ToString()
         {
             string s = "";
@@ -397,18 +414,16 @@ public partial class QuadTree : Node
         internal byte[] GetNeighborLODs()
         {
             byte[] neighbors = new byte[4];
-            
-            
 
             Vector3[] corners = GenerateCornerCoordinates(1);
 
             // To see if a node is at an edge we must check if any of its corner coordinates is equal to axisA or axisB 
             // since every tree is relative only to itself
-            isEdge[0] = corners[1][quadTree._indexOfX] == quadTree._axisA[quadTree._indexOfX]; 
+            isEdge[0] = corners[1][quadTree._indexOfX] == quadTree._axisA[quadTree._indexOfX];
             isEdge[1] = corners[0][quadTree._indexOfX] == -quadTree._axisA[quadTree._indexOfX];
             isEdge[2] = corners[0][quadTree._indexOfY] == quadTree._axisB[quadTree._indexOfY];
             isEdge[3] = corners[2][quadTree._indexOfY] == -quadTree._axisB[quadTree._indexOfY];
-        
+
             // 0 = east, 1 = west, 2 = north, 3 = south
 
             if (coordinate == Coordinate.NorthWest)
@@ -461,14 +476,14 @@ public partial class QuadTree : Node
                 hashValue >>= 2;
             }
 
-    
+
             QuadTree selectedQuadTree = quadTree;
             string traversePath = Convert.ToString(this.hashValue ^ bitmask, 2);
 
             if (isEdge[side])
             {
                 selectedQuadTree = quadTree._planet.Surface.GetQuadTree(quadTree._localCardinalDirections[side]);
-                
+
                 string path = "1";
                 string stringTraversePath = traversePath[1..];
 
@@ -487,7 +502,7 @@ public partial class QuadTree : Node
                 {
                     uint pathSegment = Convert.ToUInt32(stringTraversePath[i..(i + 2)]);
                     pathSegment = (isAxisA ? (pathSegment + minority) : (pathSegment + majority)) % 4;
-                    path += Convert.ToString(pathSegment, 2).PadLeft(2,'0');
+                    path += Convert.ToString(pathSegment, 2).PadLeft(2, '0');
                 }
 
                 traversePath = path;
