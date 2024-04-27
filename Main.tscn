@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3 uid="uid://cvtyow0howd6j"]
+[gd_scene load_steps=11 format=3 uid="uid://cvtyow0howd6j"]
 
 [ext_resource type="Sky" uid="uid://c068d837dl7kg" path="res://Assets/Resources/Sky/greenSpace.tres" id="1_jq5qe"]
 [ext_resource type="Shader" path="res://Planet/Shaders/SurfaceMeshRenderer.gdshader" id="3_a3ili"]
@@ -7,6 +7,7 @@
 [ext_resource type="Texture2D" uid="uid://c0er1lvuywuk5" path="res://Assets/Images/4_no_ice_clouds_mts_16k.jpg" id="6_ipn77"]
 [ext_resource type="PackedScene" uid="uid://vfkamkwnbmqi" path="res://Player/PlayerController.tscn" id="6_sp4st"]
 [ext_resource type="Texture2D" uid="uid://c4e0b4biysbp" path="res://Assets/Images/gebco_08_rev_elev_21600x10800.png" id="7_kgn7l"]
+[ext_resource type="Script" path="res://Dispatcher.cs" id="8_0qe3n"]
 
 [sub_resource type="Environment" id="Environment_py3kf"]
 background_mode = 2
@@ -22,9 +23,9 @@ glow_enabled = true
 resource_local_to_scene = true
 render_priority = 0
 shader = ExtResource("3_a3ili")
-shader_parameter/radius = 250.0
-shader_parameter/height_scale = 5.5
-shader_parameter/normal_strength = 15.02
+shader_parameter/radius = 100.0
+shader_parameter/height_scale = 2.2
+shader_parameter/normal_strength = 1.15
 shader_parameter/is_debug = false
 shader_parameter/is_cube = false
 shader_parameter/albedo_map = ExtResource("6_ipn77")
@@ -42,9 +43,8 @@ visible = false
 CameraRotationSpeed = 2.0
 CameraZoomSpeed = 2.0
 ZoomFactor = 0.075
-MinViewDistance = 500.0
 MaxViewDistance = 4500.0
-CameraRange = Vector2(249, 2000)
+CameraRange = Vector2(101, 150)
 LightSourceOffset = Vector3(250, 23, 3)
 metadata/_access_modifiers = {
 "camera": 2,
@@ -54,7 +54,7 @@ metadata/_access_modifiers = {
 
 [node name="Planet" parent="." instance=ExtResource("3_f7ht6")]
 GravityRadius = 100.0
-Radius = 250.0
+Radius = 100.0
 Resolution = 35
 HeightScale = 0.022
 Material = SubResource("ShaderMaterial_36vqu")
@@ -77,4 +77,12 @@ metadata/_access_modifiers = {
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
 transform = Transform3D(0.563858, 0, 0.825872, 0, 1, 0, -0.825872, 0, 0.563858, 0, 0, 0)
 
+[node name="Node" type="Node" parent="." node_paths=PackedStringArray("_camera")]
+script = ExtResource("8_0qe3n")
+_updateFrequency = 1
+_computeShader = "res://Planet/Shaders/QuadTree.glsl"
+_camera = NodePath("../PlayerController/OrbitGimbal/RotationGimbal/Character/Player Camera")
+
 [connection signal="CameraMovement" from="PlayerController" to="Planet" method="OnTargetMovement"]
+
+[editable path="PlayerController"]

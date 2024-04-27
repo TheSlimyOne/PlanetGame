@@ -11,7 +11,7 @@ normal = np.cross(A, B)
 
 magnitude = normal[0] ** 2 + normal[1] ** 2 + normal[2] ** 2
 
-
+dwa[21]
 print(normal," " , magnitude)
 
 # v1 = [20/math.sqrt(16736),-44/math.sqrt(16736),-120/math.sqrt(16736)]

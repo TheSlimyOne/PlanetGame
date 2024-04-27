@@ -8,7 +8,6 @@ public class Triangle
     public Edge[] Edges { get; private set; }
     readonly public bool HasReversed;
 
-
     public Triangle(Vector3[] vertices, Vector3 centroid)
     {
         Vector3 CentroidToVertex = (vertices[0] - centroid).Normalized();

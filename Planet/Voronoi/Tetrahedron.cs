@@ -6,7 +6,7 @@ using System.Text;
 
 public class Tetrahedron
 {
-    public HashSet<Triangle> Triangles { get; }
+    public HashSet<Triangle> Triangles { get; private set; }
     private Random random = new Random(1207);
 
     public Tetrahedron(Vector3[] initialVertices)

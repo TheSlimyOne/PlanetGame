@@ -1,4 +1,3 @@
-from sympy import Point3D, Plane
 
 # o = (0, 0, 0)
 
@@ -21,3 +20,11 @@ from sympy import Point3D, Plane
 #     p2 = Plane(x[i+1][0], x[i+1][1], x[i+1][2])
 #     isCoplanar = p1.is_coplanar(p2)
 #     print(isCoplanar)
+import math
+pA = [0, 0, 0]
+pB = [2, 4, 1]
+factor = 1
+d = math.sqrt( math.pow(pB[0]-pA[0], 2) + math.pow(pB[1]-pA[1], 2) + math.pow(pB[2]-pA[2], 2) )
+
+lod = max(0, min(d * factor, 1) )
+print(lod)

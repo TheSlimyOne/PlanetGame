@@ -126,7 +126,6 @@ public partial class Planet : StaticBody3D
 			_material.SetShaderParameter("is_debug", _isDebug);
 			_material.SetShaderParameter("is_cube", _isCube);
 
-
 			_surface = GetNode<Surface>("Surface");
 			QuadTreesContainer = GetNode<Node>("QuadTrees");
 

@@ -115,44 +115,45 @@ def normalize(vector):
     return normalized_vector
 
 
-def plot_xyz_points_with_sphere(points, radius=1.0):
+# def plot_xyz_points_with_sphere(points, radius=1.0):
 
-    initial_vertices = (points[0], points[1], points[2], points[3])
+#     initial_vertices = (points[0], points[1], points[2], points[3])
 
     
 
-    triangle_edges = [
-        {'vertices': (initial_vertices[0], initial_vertices[2])},
-        {'vertices': (initial_vertices[2], initial_vertices[1])},
-        {'vertices': (initial_vertices[1], initial_vertices[0])},
+#     triangle_edges = [
+#         {'vertices': (initial_vertices[0], initial_vertices[2])},
+#         {'vertices': (initial_vertices[2], initial_vertices[1])},
+#         {'vertices': (initial_vertices[1], initial_vertices[0])},
 
-        {'vertices': (initial_vertices[2], initial_vertices[3])},
-        {'vertices': (initial_vertices[3], initial_vertices[1])},
-        {'vertices': (initial_vertices[1], initial_vertices[2])},
+#         {'vertices': (initial_vertices[2], initial_vertices[3])},
+#         {'vertices': (initial_vertices[3], initial_vertices[1])},
+#         {'vertices': (initial_vertices[1], initial_vertices[2])},
 
-        {'vertices': (initial_vertices[0], initial_vertices[3])},
-        {'vertices': (initial_vertices[3], initial_vertices[2])},
-        {'vertices': (initial_vertices[2], initial_vertices[0])},
+#         {'vertices': (initial_vertices[0], initial_vertices[3])},
+#         {'vertices': (initial_vertices[3], initial_vertices[2])},
+#         {'vertices': (initial_vertices[2], initial_vertices[0])},
 
-        {'vertices': (initial_vertices[1], initial_vertices[3])},     
-        {'vertices': (initial_vertices[3], initial_vertices[2])},
-        {'vertices': (initial_vertices[2], initial_vertices[1])},     
-    ]
+#         {'vertices': (initial_vertices[1], initial_vertices[3])},     
+#         {'vertices': (initial_vertices[3], initial_vertices[2])},
+#         {'vertices': (initial_vertices[2], initial_vertices[1])},     
+#     ]
 
-    for i in range(0, len(triangle_edges), 3):
+#     for i in range(0, len(triangle_edges), 3):
         
 
     
-    fig = go.Figure(data=[draw_edges(triangle_edges, color='red'), draw_points(points, color='blue'), *draw_triangles(triangle_edges)])
+#     fig = go.Figure(data=[draw_edges(triangle_edges, color='red'), draw_points(points, color='blue'), *draw_triangles(triangle_edges)])
     
 
-    fig.update_layout(scene=dict(
-        xaxis_title='X-axis',
-        yaxis_title='Y-axis',
-        zaxis_title='Z-axis',
-    ))
+#     fig.update_layout(scene=dict(
+#         xaxis_title='X-axis',
+#         yaxis_title='Y-axis',
+#         zaxis_title='Z-axis',
+#     ))
 
-    fig.show()
+#     fig.show()
 
 if __name__ == '__main__':
-    plot_xyz_points_with_sphere(generate_random_sphere_points(50, 1))
+    # plot_xyz_points_with_sphere(generate_random_sphere_points(50, 1))
+    pass

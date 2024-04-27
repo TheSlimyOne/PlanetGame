@@ -445,7 +445,7 @@ public partial class QuadTree : Node
             {
                 neighbors[1] = CheckNeighborLOD(1);
                 neighbors[3] = CheckNeighborLOD(3);
-            }
+            }   
 
             return neighbors;
         }

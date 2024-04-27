@@ -5,7 +5,6 @@ using System;
 public class Edge : IComparable<Edge>
 {
     public readonly Triangle ParentTriangle;
-
     public readonly Vector3 VertexA;
     public readonly Vector3 VertexB;
     public Edge ReverseEdge { get; private set; }
