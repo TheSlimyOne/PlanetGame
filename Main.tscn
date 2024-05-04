@@ -23,8 +23,8 @@ glow_enabled = true
 resource_local_to_scene = true
 render_priority = 0
 shader = ExtResource("3_a3ili")
-shader_parameter/radius = 100.0
-shader_parameter/height_scale = 2.2
+shader_parameter/radius = 1.0
+shader_parameter/height_scale = 0.031
 shader_parameter/normal_strength = 1.15
 shader_parameter/is_debug = false
 shader_parameter/is_cube = false
@@ -44,7 +44,7 @@ CameraRotationSpeed = 2.0
 CameraZoomSpeed = 2.0
 ZoomFactor = 0.075
 MaxViewDistance = 4500.0
-CameraRange = Vector2(101, 150)
+CameraRange = Vector2(0, 10)
 LightSourceOffset = Vector3(250, 23, 3)
 metadata/_access_modifiers = {
 "camera": 2,
@@ -54,9 +54,8 @@ metadata/_access_modifiers = {
 
 [node name="Planet" parent="." instance=ExtResource("3_f7ht6")]
 GravityRadius = 100.0
-Radius = 100.0
 Resolution = 35
-HeightScale = 0.022
+HeightScale = 0.031
 Material = SubResource("ShaderMaterial_36vqu")
 Subdivision = PackedFloat32Array(180, 128, 64, 32, 16, 8, 4, 2)
 DistanceFactor = 0.02

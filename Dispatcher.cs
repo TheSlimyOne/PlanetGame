@@ -1,6 +1,7 @@
 using Godot;
 using Godot.Collections;
 using System;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
@@ -15,7 +16,7 @@ public partial class Dispatcher : Node
 	[Export(PropertyHint.File)] private string _computeShader;
 
 	// At the very least must be 24
-	public uint MaximumNodes = 30;
+	public uint MaximumNodes = 96;
 
 	private RenderingDevice _rd;
 
@@ -31,7 +32,8 @@ public partial class Dispatcher : Node
 	private Rid _indicesBlockBuffer;
 
 	private Rid _readList;
-	private Rid _writeList;
+	private Rid _writeFullList;
+	private Rid _writeCulledList;
 	private Rid _positions;
 	private Rid _data;
 	private Rid _cameraData;
@@ -134,7 +136,7 @@ public partial class Dispatcher : Node
 		// Generate cube
 
 		// key = uvec4(nodeID_MSB, nodeID_LSB, meshPolygonID, rootID)
-		for (int i = 0; i < 6; i++)
+		for (int i = 0; i < 1; i++)
 		{
 			readList[4 * i + 0] = new Vector4I(0, 1, i, 0);
 			readList[4 * i + 1] = new Vector4I(0, 1, i, 1);
@@ -160,7 +162,7 @@ public partial class Dispatcher : Node
 
 	private Rid CreatePositionList(int binding)
 	{
-		Vector4[] positions = new Vector4[30];
+		Vector4[] positions = new Vector4[5];
 		Vector3[] normals = new Vector3[]
 		{
 			Vector3.Up,
@@ -172,7 +174,7 @@ public partial class Dispatcher : Node
 		};
 
 
-		for (int i = 0; i < 6; i++)
+		for (int i = 0; i < 1; i++)
 		{
 			Vector3 normal = normals[i];
 			Vector3 axisA = new Vector3(normal.Y, normal.Z, normal.X);
@@ -184,8 +186,8 @@ public partial class Dispatcher : Node
 			positions[5 * i + 3] = Vector3Utils.toVector4(axisA - axisB + normal, 1);
 			positions[5 * i + 4] = Vector3Utils.toVector4(axisA + axisB + normal, 1);
 		}
-		GD.Print("T\\left(a,b,c,A,B,C\\right)=\\operatorname{triangle}\\left(P_{obj}\\left(a.x,a.y,A,B,C\\right),P_{obj}\\left(b.x,b.y,A,B,C\\right),P_{obj}\\left(c.x,c.y,A,B,C\\right)\\right)");
-		GD.Print("P_{obj}\\left(p_{x},p_{y},A,B,C\\right)=Ap_{x}+Bp_{y}+C\\left(1-p_{x}-p_{y}\\right)");
+		// GD.Print("T\\left(a,b,c,A,B,C\\right)=\\operatorname{triangle}\\left(P_{obj}\\left(a.x,a.y,A,B,C\\right),P_{obj}\\left(b.x,b.y,A,B,C\\right),P_{obj}\\left(c.x,c.y,A,B,C\\right)\\right)");
+		// GD.Print("P_{obj}\\left(p_{x},p_{y},A,B,C\\right)=Ap_{x}+Bp_{y}+C\\left(1-p_{x}-p_{y}\\right)");
 
 		byte[] data = ToBytes<Vector4>(positions).ToArray();
 
@@ -202,7 +204,7 @@ public partial class Dispatcher : Node
 		return buffer;
 	}
 
-	private Rid CreateWriteList(int binding)
+	private Rid CreateWriteFullList(int binding)
 	{
 		Vector4I[] writeList = new Vector4I[MaximumNodes];
 
@@ -220,7 +222,25 @@ public partial class Dispatcher : Node
 
 		return buffer;
 	}
+	
+	private Rid CreateWriteCulledList(int binding)
+	{
+		Vector4I[] writeList = new Vector4I[MaximumNodes];
 
+		byte[] data = ToBytes<Vector4I>(writeList).ToArray();
+
+		Rid buffer = _rd.StorageBufferCreate((uint)data.Length, data);
+		RDUniform uniform = new()
+		{
+			UniformType = RenderingDevice.UniformType.StorageBuffer,
+			Binding = binding
+		};
+
+		uniform.AddId(buffer);
+		_bindings.Add(uniform);
+
+		return buffer;
+	}
 
 	private Rid CreateDataList(int binding)
 	{
@@ -295,20 +315,48 @@ public partial class Dispatcher : Node
 		_bindings[binding] = uniform;
 	}
 
+	private void UpdateReadList(int binding)
+	{
+		byte[] data = _rd.BufferGetData(_writeFullList).ToArray();
+
+		Rid buffer = _rd.StorageBufferCreate((uint)data.Length, data);
+		RDUniform uniform = new()
+		{
+			UniformType = RenderingDevice.UniformType.StorageBuffer,
+			Binding = binding
+		};
+		uniform.AddId(buffer);
+		
+		_bindings[binding] = uniform;
+	}
+	private void UpdateWriteFullList(int binding)
+	{
+
+	}
+	private void UpdateWriteCulledList(int binding)
+	{
+
+	}
+
 	private void CreateUniforms()
 	{
 		_atomicCounterBuffer = CreateAtomicCounter(0);
 		_indicesBlockBuffer = CreateIndicesBlock(1);
 		_readList = CreateReadList(2);
-		_writeList = CreateWriteList(3);
-		_positions = CreatePositionList(4);
-		_data = CreateDataList(5);
+		_writeFullList = CreateWriteFullList(3);
+		_writeCulledList = CreateWriteCulledList(4);
+		_positions = CreatePositionList(5);
 		_cameraData = CreateCameraData(6);
+		_data = CreateDataList(7);
 		_uniformSet = _rd.UniformSetCreate(_bindings, _shader, 0);
 	}
+	
 	private void UpdateUniforms()
 	{
 		UpdateCameraData(6);
+		UpdateReadList(2);
+		UpdateWriteFullList(3);
+		UpdateWriteCulledList(4);
 		_uniformSet = _rd.UniformSetCreate(_bindings, _shader, 0);
 	}
 
@@ -351,7 +399,7 @@ public partial class Dispatcher : Node
 	{
 		_rd.Sync();
 
-		Vector4[] data = FromBytes<Vector4>(_rd.BufferGetData(_data)).ToArray();
+		Vector4I[] data = FromBytes<Vector4I>(_rd.BufferGetData(_writeFullList)).ToArray();
 		uint[] indices = FromBytes<uint>(_rd.BufferGetData(_indicesBlockBuffer)).ToArray();
 		
 		// CreateCameraData(6);
@@ -360,9 +408,11 @@ public partial class Dispatcher : Node
 		// GD.Print($"({data[1].X}, {data[1].Y}, {data[1].Z}), ({data[2].X}, {data[2].Y}, {data[2].Z}), ({data[3].X}, {data[3].Y}, {data[3].Z})");
 		// GD.Print($"\n {data[4]}");
 		// GD.Print($"\n {data[5]}");
-		for (int i = 0; i< data.Length; i++) {
-			GD.Print(data[i]);
+		for (int i = 0; i < data.Length; i++) {
+			// if (data[i].X != 0 || data[i].Y != 0)
+			GD.Print(Convert.ToString(data[i].X, 2), Convert.ToString(data[i].Y, 2));
 		}
+		GD.Print("=============================");
 	}
 
 	private void CleanupGPU()

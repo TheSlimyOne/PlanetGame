@@ -21,16 +21,16 @@ layout(set = 0, binding = 2, std430) buffer restrict readonly ReadList {
     uvec4 read_list[];
 };
 
-layout(set = 0, binding = 3, std430) buffer restrict writeonly WriteList {
-    uvec4 write_list[];
+layout(set = 0, binding = 3, std430) buffer restrict writeonly WriteFullList {
+    uvec4 write_full_list[];
 };
 
-layout(set = 0, binding = 4, std430) buffer restrict readonly Positions {
+layout(set = 0, binding = 4, std430) buffer restrict writeonly WriteCulledList {
+    uvec4 write_culled_list[];
+};
+
+layout(set = 0, binding = 5, std430) buffer restrict readonly Positions {
     vec4 position_list[];
-};
-
-layout(set = 0, binding = 5, std430) buffer restrict dummyData {
-    vec4 data_list[];
 };
 
 layout(set = 0, binding = 6, std430) buffer restrict CameraData {
@@ -40,11 +40,20 @@ layout(set = 0, binding = 6, std430) buffer restrict CameraData {
     float CameraFarPlane;
     float CameraNearPlane;
 };
+layout(set = 0, binding = 7, std430) buffer restrict dummyData {
+    vec4 data_list[];
+};
 
 struct Triangle {
     vec3 v0; // (0, 0)
     vec3 v1; // (0, 1)
     vec3 v2; // (1, 0)
+};
+
+struct Key {
+    uvec2 nodeID;
+    uint meshPolygonID;
+    uint rootID;
 };
 
 vec2 getTranslation(uint b1) {
@@ -132,6 +141,26 @@ int findMSB64(uvec2 key) {
     return (key.x == 0) ? findMSB(key.y) : (findMSB(key.x) + 32);
 }
 
+uvec2 leftShift64(uvec2 nodeID, uint shift)
+{
+    uvec2 result = nodeID;
+    //Extract the "shift" first bits of y and append them at the end of x
+    result.x = result.x << shift;
+    result.x |= result.y >> (32u - shift);
+    result.y  = result.y << shift;
+    return result;
+}
+uvec2 rightShift64(uvec2 nodeID, uint shift)
+{
+    uvec2 result = nodeID;
+    //Extract the "shift" last bits of x and prepend them to y
+    result.y = result.y >> shift;
+    result.y |= result.x << (32u - shift);
+    result.x = result.x >> shift;
+    return result;
+}
+
+
 vec3 localPointToWorldPoint(vec2 point, vec3 vertexA, vec3 vertexB, vec3 vertexC) {
     return vertexA * point.x + vertexB * point.y + vertexC * (1 - point.x - point.y);
 }
@@ -140,8 +169,7 @@ vec3 calculateCentroid(Triangle t) {
     return (t.v0 + t.v1 + t.v2) / 3;
 }
 
-float calulateDistance(vec3 a, vec3 b)
-{
+float calulateDistance(vec3 a, vec3 b) {
     return distance(a, b);
 }
 
@@ -236,10 +264,29 @@ float calculateLOD(float dist, float fovy, float factor) {
     return -log2(num/dom);
 }
 
-// float getLevelInKey(uvec2 key)
-// {
+int getLevelInKey(uvec2 key) {
+    return findMSB64(key);
+}
 
-// }
+uvec4 getParentKey(uvec4 key) {
+    return uvec4(key.xy, rightShift64(key.wz, 2u));
+}
+
+uvec4[4] getChildKeys(uvec4 key) {
+    uvec2 baseKey = leftShift64(key.wz, 2u);
+    uvec4[] keys = {
+        uvec4(key.xy, baseKey[0], baseKey[1] + 0),
+        uvec4(key.xy, baseKey[0], baseKey[1] + 1),
+        uvec4(key.xy, baseKey[0], baseKey[1] + 2),
+        uvec4(key.xy, baseKey[0], baseKey[1] + 3)
+    };
+    return keys;
+
+}
+
+bool isUpperLeftChild(uvec2 key) {
+    return (3 & key[1]) == 0;
+}
 
 void main() {
     uint leaf_count = uint(atomicExchange(primCount_full[read_index], primCount_full[read_index]));
@@ -250,12 +297,34 @@ void main() {
     
     uvec4 key = read_list[invocationID];
     Triangle t = leafSpaceToWorldSpace(key);
-    
-    // data_list[invocationID].x = calculateLOD (
-    //     calulateDistance(calculateCentroid(t), cameraToWorld[3].xyz),
-    //     CameraFOV, // Must be in radians
-    //     100.0
-    // );
+    int current_LOD = getLevelInKey(key.xy);
+    float target_LOD = calculateLOD (
+        calulateDistance(calculateCentroid(t), cameraToWorld[3].xyz),
+        CameraFOV, // Must be in radians
+        1000000.0
+    );
+
+    // if (target_LOD < current_LOD - 1) {
+    //     if (isUpperLeftChild(key.xy)) {
+    //         uint idx = atomicAdd(primCount_full[write_index], 1);
+    //         write_full_list[idx] = getParentKey(key);
+    //     }
+    //     else {
+    //         return;
+    //     }
+    // } else 
+    if (target_LOD > current_LOD) {
+        uvec4 children[4] = getChildKeys(key);
+        for (int i = 0; i < 3; ++i) {
+            uint idx = atomicAdd(primCount_full[write_index], 1);
+            write_full_list[idx] = children[i];
+        }
+    } else {
+        uint idx = atomicAdd(primCount_full[write_index], 1);
+        write_full_list[idx] = key;
+    }
+
+
 
     // float current_LOD = getLevelInKey();
 
@@ -269,7 +338,7 @@ void main() {
     //     data_list[5].xyz = cameraToWorld[3].xyz;
     // }
 
-    data_list[invocationID].x = findMSB64(key.xy);
+    
     // data_list[invocationID].x = read_list.length();
 
     // atomicAdd(write_list[invocationID].w, position_list[key.z].x);
