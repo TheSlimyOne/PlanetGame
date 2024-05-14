@@ -25,7 +25,17 @@ public class Tetrahedron
         Edge.GlueEdges(triangleA.GetEdge(2), triangleB.GetEdge(0)); Edge.GlueEdges(triangleC.GetEdge(1), triangleD.GetEdge(1));
     }
 
-    
+    public Tetrahedron()
+    {
+        Triangles = new HashSet<Triangle>();
+    }
+
+    public void AddTriangle(Triangle triangle)
+    {
+        Triangles.Add(triangle);
+    }
+
+
     public void GetMesh(int showIndex, Node3D node, float radius, ShaderMaterial material, bool isVoronoi, bool isCentroid)
     {
         foreach (var child in node.GetChildren()) { child.QueueFree(); }
@@ -33,7 +43,7 @@ public class Tetrahedron
         foreach (Triangle triangle in Triangles)
         {
             if (isVoronoi)
-            {   
+            {
                 itter++;
                 // if (itter == showIndex)
                 GenerateVoronoi(node, radius, triangle, isCentroid);
@@ -51,13 +61,13 @@ public class Tetrahedron
         Vector3[] triangleVertices = triangle.GetVertices();
         vertices = new Vector3[]
         {
-        triangleVertices[2].Normalized() * radius,
-        triangleVertices[1].Normalized() * radius,
-        triangleVertices[0].Normalized() * radius,
+            triangleVertices[2].Normalized() * radius,
+            triangleVertices[1].Normalized() * radius,
+            triangleVertices[0].Normalized() * radius,
         };
         indices = new int[] { 0, 1, 2 };
         normals = new Vector3[] { triangle.GetNormal(), triangle.GetNormal(), triangle.GetNormal() };
-        
+
         Instance(node, vertices, indices, normals, material);
     }
 
@@ -87,9 +97,7 @@ public class Tetrahedron
         while (!startingEdge.Equals(otherEdge));
         vertices[0] = (vertices[0] / amount).Normalized() * radius;
         indices[indices.Count - 2] = 1;
-        Instance(node, vertices.ToArray(), indices.ToArray(), normal.ToArray(), new StandardMaterial3D(){ AlbedoColor = new Color(random.NextSingle(), random.NextSingle(), random.NextSingle()) });
-
-        
+        Instance(node, vertices.ToArray(), indices.ToArray(), normal.ToArray(), new StandardMaterial3D() { AlbedoColor = new Color(random.NextSingle(), random.NextSingle(), random.NextSingle()) });
     }
 
     public void Instance(Node3D node, Vector3[] vertices, int[] indices, Vector3[] normals, Material material)
@@ -106,7 +114,21 @@ public class Tetrahedron
         node.AddChild(meshInstance3D);
     }
 
-    public MeshInstance3D CreatePoint(Vector3 position, Color color)
+    public void InstanceAllTriangles(Node3D spawnPoint)
+    {
+        foreach (Triangle triangle in Triangles)
+        {
+            Vector3[] vertices = triangle.GetVertices();
+            Instance(spawnPoint, 
+                vertices,
+                triangle.GetIndices(),
+                new Vector3[]{triangle.GetNormal(), triangle.GetNormal(), triangle.GetNormal()},
+                new StandardMaterial3D() { AlbedoColor = new Color(random.NextSingle(), random.NextSingle(), random.NextSingle()) }
+            );
+        }
+    }
+
+    public static MeshInstance3D CreatePoint(Vector3 position, Color color)
     {
         MeshInstance3D sphere = new MeshInstance3D();
         sphere.Mesh = new SphereMesh();

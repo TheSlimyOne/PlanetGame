@@ -5,16 +5,18 @@
 #define PI      3.141592653
 
 //Jad Khoury https://jadkhoury.github.io/files/MasterThesisFinal.pdf
-layout(local_size_x = 8, local_size_y = 1, local_size_z = 1) in;
+layout(local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
 
 layout(set = 0, binding = 0, std430) buffer restrict AtomicCounterBuffer {
     uint primCount_full[16];
     uint primCount_culled[16];
 };
 
-layout(set = 0, binding = 1, std430) buffer restrict IndicesBlock {
+layout(set = 0, binding = 1, std430) buffer restrict readonly IndicesBlock {
     uint read_index;
     uint write_index;
+    uint delete_index;
+    uint maximum_nodes;
 };
 
 layout(set = 0, binding = 2, std430) buffer restrict readonly ReadList {
@@ -39,15 +41,23 @@ layout(set = 0, binding = 6, std430) buffer restrict CameraData {
     float CameraFOV;
     float CameraFarPlane;
     float CameraNearPlane;
+    float radius;
+    float subFactor;
 };
+
 layout(set = 0, binding = 7, std430) buffer restrict dummyData {
-    vec4 data_list[];
+    mat4 data_list[];
+};
+
+layout(set = 0, binding = 8, std430) buffer restrict DistanceValues {
+    float distance_values[];
 };
 
 struct Triangle {
     vec3 v0; // (0, 0)
     vec3 v1; // (0, 1)
     vec3 v2; // (1, 0)
+    vec3 origin;
 };
 
 struct Key {
@@ -55,6 +65,19 @@ struct Key {
     uint meshPolygonID;
     uint rootID;
 };
+
+vec3 point_on_cube_to_point_on_sphere(vec3 p) {
+	float x2 = p.x * p.x;
+	float y2 = p.y * p.y;
+	float z2 = p.z * p.z;
+	
+	float x = p.x * sqrt(1.0 - (y2 + z2) / 2.0 + y2 * z2 / 3.0);
+	float y = p.y * sqrt(1.0 - (z2 + x2) / 2.0 + z2 * x2 / 3.0);
+	float z = p.z * sqrt(1.0 - (x2 + y2) / 2.0 + x2 * y2 / 3.0);
+
+	return vec3(x, y, z);
+}
+
 
 vec2 getTranslation(uint b1) {
     vec2 translation;
@@ -91,7 +114,7 @@ ivec2 quickPI_2(uint a) {
 }
 /*
     +--+-------------+------------+-------------------+------------+--------------------------------+--------------------------------+
-    |b |b >> 1 => b1 |b & 1 => b2 |(b1 ^ b2) ^ 1 => c |b1 ^ 1 => s |sqrt2_2 * (-1 + 2 * c)) => cos_ |sqrt2_2 * (-1 + 2 * s)) => sin_ |
+    |b |b >> 1 => b1 |b & 1 => b2 |(b1 ^ b2) ^ 1 => c |b1 ^ 1 => s |sqrt2_2 * (-1 + 2 * c)  => cos_ |sqrt2_2 * (-1 + 2 * s)  => sin_ |
     +--+-------------+------------+-------------------+------------+--------------------------------+--------------------------------+
     |0 |0            |0           |0                  |1           |sqrt2_2                         |sqrt2_2                         |
     |1 |0            |1           |1                  |1           |-sqrt2_2                        |sqrt2_2                         |
@@ -160,9 +183,8 @@ uvec2 rightShift64(uvec2 nodeID, uint shift)
     return result;
 }
 
-
 vec3 localPointToWorldPoint(vec2 point, vec3 vertexA, vec3 vertexB, vec3 vertexC) {
-    return vertexA * point.x + vertexB * point.y + vertexC * (1 - point.x - point.y);
+    return radius * point_on_cube_to_point_on_sphere(vertexA * point.x + vertexB * point.y + vertexC * (1 - point.x - point.y));
 }
 
 vec3 calculateCentroid(Triangle t) {
@@ -173,40 +195,42 @@ float calulateDistance(vec3 a, vec3 b) {
     return distance(a, b);
 }
 
-
-Triangle createTriangle(mat3 transform_matrix, uint meshPolygonID, uint rootID) {
-    Triangle t;
-    vec2 point_a = (vec3(0, 0, 1) * transform_matrix).xy;
-    vec2 point_b = (vec3(0, 1, 1) * transform_matrix).xy;
-    vec2 point_c = (vec3(1, 0, 1) * transform_matrix).xy;
+/*
+    +-------+-------+
+    | Key A | Key B |
+    +-------+-------+
+    |     0 |     1 |
+    |     1 |     3 |
+    |     2 |     0 |
+    |     3 |     2 |
+    +-------+-------+
+*/
+vec3 createTriangle(mat3 transform_matrix, uint meshPolygonID, uint rootID) {
+    vec2 point = (vec3(0.5, 0.5, 1) * transform_matrix).xy;
 
     uint vertexBaseIndex = meshPolygonID * 5;
-    uint vertexKeyA = meshPolygonID;
+    uint vertexKeyA = rootID;
     uint vertexKeyB = ((rootID >> 1) ^ 1) + ((rootID & 1) << 1);
 
     vec3 base_Triangle_a = (position_list[vertexBaseIndex + vertexKeyA + 1]).xyz;
     vec3 base_Triangle_b = (position_list[vertexBaseIndex + vertexKeyB + 1]).xyz;
     vec3 base_Triangle_c = (position_list[vertexBaseIndex]).xyz;
 
-    t.v0 = localPointToWorldPoint(point_a, base_Triangle_a, base_Triangle_b, base_Triangle_c);
-    t.v1 = localPointToWorldPoint(point_b, base_Triangle_a, base_Triangle_b, base_Triangle_c);
-    t.v2 = localPointToWorldPoint(point_c, base_Triangle_a, base_Triangle_b, base_Triangle_c);
-
-    return t;
+    return localPointToWorldPoint(point, base_Triangle_a, base_Triangle_b, base_Triangle_c);
 }
 
-Triangle leafSpaceToWorldSpace(uvec4 key) { 
+vec3 leafSpaceToWorldSpace(uvec4 key) { 
     int msb = findMSB64(key.xy);
     vec2 translation = vec2(0,0);
-    vec2 temp = vec2(0,0);
+    vec2 temp;
     uint theta = 0;
     float scale = 1.0;
 
     for (int i = 0; i < msb / 2; i++) {
         uint b1b2 = getBranching(key.xy, i, msb - 2);
         uint b1 = b1b2 >> 1;
-        uint b2 = b1b2 & 0x01;
-        temp.xy = scale * getTranslation(b1);
+        uint b2 = b1b2 & 1;
+        temp = scale * getTranslation(b1);
 
         translation += rotate(theta, temp.xy);
         theta += getRotation(b1b2, b1, b2);
@@ -226,14 +250,14 @@ Triangle leafSpaceToWorldSpace(uvec4 key) {
 vec4 getTransformation(uvec4 key) {
     int msb = findMSB64(key.xy);
     vec2 translation = vec2(0,0);
-    vec2 temp = vec2(0,0);
+    vec2 temp;
     uint theta = 0;
     float scale = 1.0;
 
     for (int i = 0; i < msb / 2; i++) {
         uint b1b2 = getBranching(key.xy, i, msb - 2);
         uint b1 = b1b2 >> 1;
-        uint b2 = b1b2 & 0x01;
+        uint b2 = b1b2 & 1;
         temp.xy = scale * getTranslation(b1);
 
         translation += rotate(theta, temp.xy);
@@ -265,82 +289,141 @@ float calculateLOD(float dist, float fovy, float factor) {
 }
 
 int getLevelInKey(uvec2 key) {
-    return findMSB64(key);
+    return findMSB64(key) / 2;
 }
 
 uvec4 getParentKey(uvec4 key) {
-    return uvec4(key.xy, rightShift64(key.wz, 2u));
+    return uvec4(rightShift64(key.xy, 2u), key.zw);
 }
 
 uvec4[4] getChildKeys(uvec4 key) {
-    uvec2 baseKey = leftShift64(key.wz, 2u);
+    uvec2 baseKey = leftShift64(key.xy, 2u);
     uvec4[] keys = {
-        uvec4(key.xy, baseKey[0], baseKey[1] + 0),
-        uvec4(key.xy, baseKey[0], baseKey[1] + 1),
-        uvec4(key.xy, baseKey[0], baseKey[1] + 2),
-        uvec4(key.xy, baseKey[0], baseKey[1] + 3)
+        uvec4(baseKey.x, baseKey.y | 0, key.zw),
+        uvec4(baseKey.x, baseKey.y | 1, key.zw),
+        uvec4(baseKey.x, baseKey.y | 2, key.zw),
+        uvec4(baseKey.x, baseKey.y | 3, key.zw)
     };
     return keys;
-
 }
 
 bool isUpperLeftChild(uvec2 key) {
     return (3 & key[1]) == 0;
 }
 
+float f_angle(vec3 from, vec3 to)
+{
+    return atan(cross(from, to).length(), dot(from, to));
+}
+
+void calculateFrustumPlanes(out vec4 frustumPlanes[6]) {
+    float tanHalfFOV = tan(CameraFOV * 0.5);
+
+    vec3 forward = vec3(cameraToWorld[2]);
+    vec3 up = vec3(cameraToWorld[1]);
+    vec3 right = cross(up, forward);
+
+    vec3 nearCenter = vec3(cameraToWorld[3]) + forward * CameraNearPlane;
+    vec3 farCenter = vec3(cameraToWorld[3]) + forward * CameraFarPlane;
+
+    // Calculate the normals pointing inside the frustum
+    frustumPlanes[0] = vec4(normalize(cross(up, farCenter + right * tanHalfFOV * CameraFarPlane)), 0.0); // Right plane
+    frustumPlanes[1] = vec4(normalize(cross(farCenter - right * tanHalfFOV * CameraFarPlane, up)), 0.0); // Left plane
+    frustumPlanes[2] = vec4(normalize(cross(right, farCenter + up * tanHalfFOV * CameraFarPlane)), 0.0); // Top plane
+    frustumPlanes[3] = vec4(normalize(cross(farCenter - up * tanHalfFOV * CameraFarPlane, right)), 0.0); // Bottom plane
+    frustumPlanes[4] = vec4(forward, dot(nearCenter, forward)); // Near plane
+    frustumPlanes[5] = vec4(-forward, -dot(farCenter, forward)); // Far plane
+}
+
+bool isInFrustum(Triangle t) {
+    vec4 frustumPlanes[6];
+    calculateFrustumPlanes(frustumPlanes);
+
+    bool inFrustum = true;
+    for (int i = 0; i < 6; i++) {
+        if (dot(vec4(t.v0, 1), frustumPlanes[i]) < 0.0 || dot(vec4(t.v1, 1), frustumPlanes[i]) < 0.0 || dot(vec4(t.v2, 1), frustumPlanes[i]) < 0.0) {
+            inFrustum = false;
+            break;
+        }
+    }
+
+    return inFrustum;
+}
+
+float angleBetweenVectors(vec3 u, vec3 v) {
+    // Compute the dot product of u and v
+    float dotProduct = dot(u, v);
+
+    // Compute the magnitudes of u and v
+    float magnitudeU = length(u);
+    float magnitudeV = length(v);
+
+    // Calculate the cosine of the angle
+    float cosTheta = dotProduct / (magnitudeU * magnitudeV);
+
+    // Clamp the cosine value to the range [-1, 1] to avoid any numerical issues
+    cosTheta = clamp(cosTheta, -1.0, 1.0);
+
+    // Return the angle in radians using the arccosine function
+    return acos(cosTheta);
+}
+
+float sphericalDistance(vec3 a, vec3 b, float radius) {
+    float dot_product = dot(normalize(a), normalize(b));
+    dot_product = clamp(dot_product, -1.0, 1.0); // Clamp value to avoid any potential numerical issues.
+    float angle = acos(dot_product);
+    float arcLength = radius * angle; // Calculate the arc length by multiplying the angle by the sphere's radius.
+    return arcLength;
+}
+
 void main() {
     uint leaf_count = uint(atomicExchange(primCount_full[read_index], primCount_full[read_index]));
-    
     uint invocationID = gl_GlobalInvocationID.x;
-    if (invocationID > leaf_count)
+    if (invocationID >= leaf_count)
         return;
     
     uvec4 key = read_list[invocationID];
-    Triangle t = leafSpaceToWorldSpace(key);
-    int current_LOD = getLevelInKey(key.xy);
-    float target_LOD = calculateLOD (
-        calulateDistance(calculateCentroid(t), cameraToWorld[3].xyz),
+    vec3 p_object_space = leafSpaceToWorldSpace(getParentKey(key));
+    vec3 k_object_space = leafSpaceToWorldSpace(key);
+
+    float current_LOD = getLevelInKey(key.xy);
+
+    float p_target_LOD = calculateLOD (
+        calulateDistance(p_object_space, cameraToWorld[3].xyz),
         CameraFOV, // Must be in radians
-        1000000.0
+        subFactor
     );
 
-    // if (target_LOD < current_LOD - 1) {
-    //     if (isUpperLeftChild(key.xy)) {
-    //         uint idx = atomicAdd(primCount_full[write_index], 1);
-    //         write_full_list[idx] = getParentKey(key);
-    //     }
-    //     else {
-    //         return;
-    //     }
-    // } else 
-    if (target_LOD > current_LOD) {
+    float k_target_LOD = calculateLOD (
+        calulateDistance(k_object_space, cameraToWorld[3].xyz),
+        CameraFOV, // Must be in radians
+        subFactor
+    );
+
+    if (k_target_LOD > current_LOD && key.xy != uvec2(0x7FFFFFFF, 0xFFFFFFFF)) { // subdivide
         uvec4 children[4] = getChildKeys(key);
-        for (int i = 0; i < 3; ++i) {
+        for (int i = 0; i < 4; i++) {
             uint idx = atomicAdd(primCount_full[write_index], 1);
             write_full_list[idx] = children[i];
+            distance_values[idx] = k_target_LOD;
+        }    
+    } 
+
+    else if (p_target_LOD < current_LOD - 1 && key.xy != uvec2(0, 1)) { // merging
+        if (isUpperLeftChild(key.xy)) {
+            uint idx = atomicAdd(primCount_full[write_index], 1);
+            write_full_list[idx] = getParentKey(key);
+            distance_values[idx] = p_target_LOD;
         }
-    } else {
+        else {
+            return;
+        }
+    }  
+    else {
         uint idx = atomicAdd(primCount_full[write_index], 1);
         write_full_list[idx] = key;
+        distance_values[idx] = k_target_LOD;
     }
 
-
-
-    // float current_LOD = getLevelInKey();
-
-    // uvec4 debug_key = uvec4(base4ToHex(0), base4ToHex(13333), 0, 0) ;
-    // if (invocationID == 0) {
-    //     Triangle t = leafSpaceToWorldSpace(debug_key);
-    //     data_list[1].xyz = t.v0;
-    //     data_list[2].xyz = t.v1;
-    //     data_list[3].xyz = t.v2;
-    //     data_list[4].xyz = vec3(CameraFOV, CameraFarPlane, CameraNearPlane);
-    //     data_list[5].xyz = cameraToWorld[3].xyz;
-    // }
-
     
-    // data_list[invocationID].x = read_list.length();
-
-    // atomicAdd(write_list[invocationID].w, position_list[key.z].x);
-
 }

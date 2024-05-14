@@ -1,50 +1,43 @@
-[gd_scene load_steps=11 format=3 uid="uid://cvtyow0howd6j"]
+[gd_scene load_steps=10 format=3 uid="uid://cvtyow0howd6j"]
 
-[ext_resource type="Sky" uid="uid://c068d837dl7kg" path="res://Assets/Resources/Sky/greenSpace.tres" id="1_jq5qe"]
-[ext_resource type="Shader" path="res://Planet/Shaders/SurfaceMeshRenderer.gdshader" id="3_a3ili"]
 [ext_resource type="PackedScene" uid="uid://bhacuf2kejd2w" path="res://Planet/Planet.tscn" id="3_f7ht6"]
 [ext_resource type="PackedScene" uid="uid://bor2upmks05ho" path="res://Utilities/Axis.tscn" id="4_ye4mq"]
-[ext_resource type="Texture2D" uid="uid://c0er1lvuywuk5" path="res://Assets/Images/4_no_ice_clouds_mts_16k.jpg" id="6_ipn77"]
+[ext_resource type="Texture2D" uid="uid://c4e0b4biysbp" path="res://Assets/Images/gebco_08_rev_elev_21600x10800.png" id="5_rvoav"]
+[ext_resource type="Texture2D" uid="uid://33pdx4k51q2h" path="res://Assets/Resources/height_map_gradient.tres" id="6_2tnbn"]
+[ext_resource type="Texture2D" uid="uid://dmd133ifvrkkb" path="res://Assets/Images/panorama_image.png" id="6_cvyko"]
 [ext_resource type="PackedScene" uid="uid://vfkamkwnbmqi" path="res://Player/PlayerController.tscn" id="6_sp4st"]
-[ext_resource type="Texture2D" uid="uid://c4e0b4biysbp" path="res://Assets/Images/gebco_08_rev_elev_21600x10800.png" id="7_kgn7l"]
-[ext_resource type="Script" path="res://Dispatcher.cs" id="8_0qe3n"]
 
-[sub_resource type="Environment" id="Environment_py3kf"]
+[sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_ku8uu"]
+panorama = ExtResource("6_cvyko")
+
+[sub_resource type="Sky" id="Sky_bl3xg"]
+sky_material = SubResource("PanoramaSkyMaterial_ku8uu")
+
+[sub_resource type="Environment" id="Environment_vkjmd"]
 background_mode = 2
-background_color = Color(1, 1, 1, 1)
-sky = ExtResource("1_jq5qe")
-ambient_light_source = 2
-ambient_light_color = Color(0.388235, 0.388235, 0.388235, 1)
-ambient_light_energy = 0.76
+background_color = Color(0.632883, 0.731215, 0.81324, 1)
+sky = SubResource("Sky_bl3xg")
 tonemap_mode = 2
 glow_enabled = true
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_36vqu"]
-resource_local_to_scene = true
-render_priority = 0
-shader = ExtResource("3_a3ili")
-shader_parameter/radius = 1.0
-shader_parameter/height_scale = 0.031
-shader_parameter/normal_strength = 1.15
-shader_parameter/is_debug = false
-shader_parameter/is_cube = false
-shader_parameter/albedo_map = ExtResource("6_ipn77")
-shader_parameter/image_texture = ExtResource("7_kgn7l")
 
 [node name="Main" type="Node3D"]
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
-environment = SubResource("Environment_py3kf")
+environment = SubResource("Environment_vkjmd")
 
 [node name="Axis" parent="." instance=ExtResource("4_ye4mq")]
 visible = false
 
-[node name="PlayerController" parent="." instance=ExtResource("6_sp4st")]
+[node name="PlayerController" parent="." node_paths=PackedStringArray("orbitGimbal", "rotationGimbal", "Camera") instance=ExtResource("6_sp4st")]
+visible = false
 CameraRotationSpeed = 2.0
 CameraZoomSpeed = 2.0
 ZoomFactor = 0.075
+orbitGimbal = NodePath("OrbitGimbal")
+rotationGimbal = NodePath("OrbitGimbal/RotationGimbal")
+Camera = NodePath("OrbitGimbal/RotationGimbal/Character/Player Camera")
 MaxViewDistance = 4500.0
-CameraRange = Vector2(0, 10)
+CameraRange = Vector2(0, 300)
 LightSourceOffset = Vector3(250, 23, 3)
 metadata/_access_modifiers = {
 "camera": 2,
@@ -52,15 +45,16 @@ metadata/_access_modifiers = {
 "rotationGimbal": 2
 }
 
-[node name="Planet" parent="." instance=ExtResource("3_f7ht6")]
-GravityRadius = 100.0
+[node name="Planet" parent="." node_paths=PackedStringArray("Surface", "QuadTreesContainer") instance=ExtResource("3_f7ht6")]
+GravityRadius = 0.0
+Radius = 208.714
 Resolution = 35
-HeightScale = 0.031
-Material = SubResource("ShaderMaterial_36vqu")
-Subdivision = PackedFloat32Array(180, 128, 64, 32, 16, 8, 4, 2)
-DistanceFactor = 0.02
-HeightMap = ExtResource("7_kgn7l")
-AlbedoMap = ExtResource("6_ipn77")
+HeightScale = 0.274
+Surface = NodePath("Surface")
+QuadTreesContainer = NodePath("QuadTrees")
+DistanceFactor = 0.029
+HeightMap = ExtResource("5_rvoav")
+AlbedoMap = ExtResource("6_2tnbn")
 metadata/_access_modifiers = {
 "Material": 2,
 "QuadTreesContainer": 2,
@@ -74,13 +68,7 @@ metadata/_access_modifiers = {
 }
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
-transform = Transform3D(0.563858, 0, 0.825872, 0, 1, 0, -0.825872, 0, 0.563858, 0, 0, 0)
-
-[node name="Node" type="Node" parent="." node_paths=PackedStringArray("_camera")]
-script = ExtResource("8_0qe3n")
-_updateFrequency = 1
-_computeShader = "res://Planet/Shaders/QuadTree.glsl"
-_camera = NodePath("../PlayerController/OrbitGimbal/RotationGimbal/Character/Player Camera")
+transform = Transform3D(-0.145937, -0.965925, -0.213751, 0.544645, -0.258819, 0.797731, -0.825872, 0, 0.563858, 0, 0, 0)
 
 [connection signal="CameraMovement" from="PlayerController" to="Planet" method="OnTargetMovement"]
 

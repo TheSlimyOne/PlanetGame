@@ -1,7 +1,105 @@
-[gd_scene load_steps=2 format=3 uid="uid://b5l25svw75led"]
+[gd_scene load_steps=14 format=3 uid="uid://b5l25svw75led"]
 
 [ext_resource type="Script" path="res://Dispatcher.cs" id="1_mw8jn"]
+[ext_resource type="PackedScene" uid="uid://vfkamkwnbmqi" path="res://Player/PlayerController.tscn" id="1_nlqm3"]
+[ext_resource type="Shader" path="res://Test.gdshader" id="3_85k2k"]
+[ext_resource type="Texture2D" uid="uid://c0er1lvuywuk5" path="res://Assets/Images/4_no_ice_clouds_mts_16k.jpg" id="4_65i54"]
+[ext_resource type="Texture2D" uid="uid://c4e0b4biysbp" path="res://Assets/Images/gebco_08_rev_elev_21600x10800.png" id="5_knkg4"]
+[ext_resource type="PackedScene" uid="uid://bor2upmks05ho" path="res://Utilities/Axis.tscn" id="6_ywgwv"]
 
-[node name="Node" type="Node"]
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_ndwfv"]
+sky_horizon_color = Color(0.64625, 0.65575, 0.67075, 1)
+ground_horizon_color = Color(0.64625, 0.65575, 0.67075, 1)
+
+[sub_resource type="Sky" id="Sky_4x3wj"]
+sky_material = SubResource("ProceduralSkyMaterial_ndwfv")
+
+[sub_resource type="Environment" id="Environment_124q5"]
+background_mode = 2
+background_color = Color(1, 1, 1, 1)
+sky = SubResource("Sky_4x3wj")
+tonemap_mode = 2
+glow_enabled = true
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_mx2ja"]
+render_priority = 0
+shader = ExtResource("3_85k2k")
+shader_parameter/position_list = null
+shader_parameter/radius = 100.0
+shader_parameter/is_debug = false
+shader_parameter/is_cube = false
+shader_parameter/height_scale = 10.41
+shader_parameter/normal_strength = 1.575
+shader_parameter/albedo_map = ExtResource("4_65i54")
+shader_parameter/image_texture = ExtResource("5_knkg4")
+
+[sub_resource type="ArrayMesh" id="ArrayMesh_b1wme"]
+_surfaces = [{
+"aabb": AABB(0, 0, 1, 1, 1, 1.00136e-05),
+"format": 34359742465,
+"index_count": 3,
+"index_data": PackedByteArray(2, 0, 0, 0, 1, 0),
+"material": SubResource("ShaderMaterial_mx2ja"),
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 3,
+"vertex_data": PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 128, 63, 0, 0, 128, 63, 0, 0, 0, 0, 0, 0, 128, 63)
+}]
+
+[sub_resource type="MultiMesh" id="MultiMesh_l2x3o"]
+transform_format = 1
+use_custom_data = true
+mesh = SubResource("ArrayMesh_b1wme")
+
+[sub_resource type="BoxMesh" id="BoxMesh_wknw1"]
+size = Vector3(600, 600, 600)
+
+[node name="Test Scene" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_124q5")
+
+[node name="PlayerController" parent="." node_paths=PackedStringArray("orbitGimbal", "rotationGimbal", "Camera", "Focus") instance=ExtResource("1_nlqm3")]
+CameraRotationSpeed = 2.0
+CameraZoomSpeed = 2.0
+ZoomFactor = 0.075
+orbitGimbal = NodePath("OrbitGimbal")
+rotationGimbal = NodePath("OrbitGimbal/RotationGimbal")
+Camera = NodePath("OrbitGimbal/RotationGimbal/Character/Player Camera")
+CameraRange = Vector2(100, 500)
+LightSourceOffset = Vector3(250, 23, 3)
+Focus = NodePath("../Node")
+metadata/_access_modifiers = {
+"camera": 2,
+"orbitGimbal": 2,
+"rotationGimbal": 2
+}
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.563858, 0, 0.825872, 0, 1, 0, -0.825872, 0, 0.563858, 0, 0, 0)
+
+[node name="Node" type="Node3D" parent="." node_paths=PackedStringArray("_multimesh", "_camera")]
 script = ExtResource("1_mw8jn")
-_computeShader = "res://Planet/Shaders/QuadTree.glsl"
+_updateFrequency = 1
+_computeCullShader = "res://Planet/Shaders/ComputeCull.glsl"
+_copyShader = "res://Planet/Shaders/Copy.glsl"
+_multimesh = NodePath("../MeshInstance3D")
+_material = SubResource("ShaderMaterial_mx2ja")
+_camera = NodePath("../PlayerController/OrbitGimbal/RotationGimbal/Character/Player Camera")
+_subFactor = 2.0
+_radius = 100.0
+
+[node name="Axis" parent="." instance=ExtResource("6_ywgwv")]
+visible = false
+
+[node name="MeshInstance3D" type="MultiMeshInstance3D" parent="."]
+extra_cull_margin = 200.0
+multimesh = SubResource("MultiMesh_l2x3o")
+
+[node name="MeshInstance3D2" type="MeshInstance3D" parent="."]
+visible = false
+mesh = SubResource("BoxMesh_wknw1")
+
+[connection signal="CameraMovement" from="PlayerController" to="Node" method="OnTargetMovement"]
+
+[editable path="PlayerController"]

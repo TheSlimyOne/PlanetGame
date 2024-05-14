@@ -88,29 +88,9 @@ public partial class Surface : Node3D
 			for (int j = 0; j < nodes.Count; j++)
 			{
 				QuadTree.QuadTreeNode node = nodes[j];
-
-
 				Transform3D transform = new Transform3D(Basis.Identity, node.cubePosition);
 
-				Color pointData = new Color(0, 0, (int)node.quadTree.NormalDirection, node.subdivisionLevel);
-				uint subdivisionLevel = (uint)node.subdivisionLevel;
-
-				int a = (subdivisionLevel & 0b00000001) != 0 ? 1 : 0;
-				int b = (subdivisionLevel & 0b00000010) != 0 ? 1 : 0;
-				int c = (subdivisionLevel & 0b00000100) != 0 ? 1 : 0;
-
-				// int a = node.cornerType[0] || node.cornerType[3] ? 1 : 0;
-				// int b = node.cornerType[1] || node.cornerType[3] ? 1 : 0;
-				// int c = node.cornerType[2] || node.cornerType[3] ? 1 : 0;
-
-				// int a = node.isFan ? 1: 0;
-				// int b = node.isEdge[0] || node.isEdge[1] || node.isEdge[2] || node.isEdge[3] ? 1 : 0;
-
-				// if (subdivisionLevel > 7) 
-				// 	_collision.CreateCollisionChunk(node.subdivisionLevel, node.quadTree.GetNormal());
-					
-
-				_multiMeshInstances[i].Multimesh.SetInstanceColor(j, new Color(a, b, c));
+				Color pointData = new Color(0, 0, (int)node.quadTree.NormalDirection, node.subdivisionLevel);	
 				_multiMeshInstances[i].Multimesh.SetInstanceCustomData(j, pointData);
 				_multiMeshInstances[i].Multimesh.SetInstanceTransform(j, transform);
 			}

@@ -194,8 +194,7 @@ public partial class QuadTreeMeshes
                 Mesh = mesh,
                 TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
                 InstanceCount = 0,
-                UseCustomData = true,
-                UseColors = true,
+                UseCustomData = true
             };
 
         }

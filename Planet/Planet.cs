@@ -17,7 +17,7 @@ public partial class Planet : StaticBody3D
 	private float[] _subdivision;
 	private float _distanceFactor = 0.001f;
 	private CompressedTexture2D _heightMap;
-	private CompressedTexture2D _albedoMap;
+	private Texture2D _albedoMap;
 	private bool _isDebug;
 	private bool _isCube;
 
@@ -57,6 +57,7 @@ public partial class Planet : StaticBody3D
 		set { _material = value; Initialize(); }
 	}
 
+
 	[Export]
 	public Surface Surface
 	{
@@ -93,7 +94,7 @@ public partial class Planet : StaticBody3D
 	}
 
 	[Export]
-	public CompressedTexture2D AlbedoMap
+	public Texture2D AlbedoMap
 	{
 		get => _albedoMap;
 		set { _albedoMap = value; Initialize(); }
@@ -135,7 +136,6 @@ public partial class Planet : StaticBody3D
 
 			_surface.Initialize(_radius, _resolution, _material, _heightMap);
 			_surface.UpdateQuadTrees(null);
-
 		}
 	}
 
@@ -169,7 +169,6 @@ public partial class Planet : StaticBody3D
 
 	public override void _Process(double delta)
 	{
-
 		// Rotate(Vector3.Up, _rotationAmount * (float) delta);
 	}
 }

@@ -10,6 +10,7 @@ uniform sampler2D albedo_map : repeat_disable;
 uniform sampler2D image_texture : repeat_disable;
 
 varying float elevation;
+varying flat int subdivision_level;
 varying vec3 object_space_pos;
 
 vec3 point_on_cube_to_point_on_sphere(vec3 p) {
@@ -52,10 +53,9 @@ vec2 point_on_sphere_to_UV(vec3 p) {
     return vec2(u, v);
 }
 
-
 void vertex() {
 	float scaleFactor = pow(2.0, INSTANCE_CUSTOM.a);
-	
+	subdivision_level = int(INSTANCE_CUSTOM.w);
 	uint intValue = uint(INSTANCE_CUSTOM.z);
 	int normSign = (intValue == 1u || intValue == 2u || intValue == 4u) ? 1 : -1;
 	uint x = (intValue & 4u) >> 2u;
@@ -93,9 +93,14 @@ void vertex() {
 void fragment() {
 	
 	NORMAL = height_to_normal(elevation, normal_strength, VERTEX, NORMAL);
-    vec3 surface_texture = textureLod(albedo_map, point_on_sphere_to_UV(object_space_pos), 0).rgb;
-	//vec3 surface_texture = textureLod(albedo_map, vec2(elevation, 0.0), 0).rgb;
-	ALBEDO = is_debug ? COLOR.xyz : surface_texture;
+    //vec3 surface_texture = textureLod(albedo_map, point_on_sphere_to_UV(object_space_pos), 0).rgb;
+	vec3 surface_texture = textureLod(albedo_map, vec2(elevation, 0.0), 0).rgb;
+
+	int a = (subdivision_level & 1) != 0 ? 1 : 0;
+	int b = (subdivision_level & 2) != 0 ? 1 : 0;
+	int c = (subdivision_level & 4) != 0 ? 1 : 0;
+	vec3 debug_color = vec3(float(a), float(b), float(c));
+	ALBEDO = is_debug ? debug_color : surface_texture;
 
 
 }

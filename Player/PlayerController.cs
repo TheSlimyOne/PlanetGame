@@ -19,7 +19,7 @@ public partial class PlayerController : Node3D
 
 	[Export] public Vector3 LightSourceOffset;
 
-	public Node3D Focus;
+	[Export] public Node3D Focus;
 	Vector2 mouseRotation = Vector2.Zero;
 
 	private float horizontalRotation = 0;
@@ -79,7 +79,7 @@ public partial class PlayerController : Node3D
 		rotationGimbal.Position = rotationGimbal.Position with { Y = rotationGimbal.Position.Y + direction.Y * CameraZoomSpeed };
 		rotationGimbal.Position = rotationGimbal.Position with { Y = Mathf.Clamp(rotationGimbal.Position.Y, CameraRange.X, CameraRange.Y) };
 
-		if (direction != Vector3.Zero || keyRotation != Vector2.Zero)
+		if (direction != Vector3.Zero || keyRotation != Vector2.Zero || mouseRotation != Vector2.Zero)
 		{
 			EmitSignal("CameraMovement", Camera);
 
@@ -123,7 +123,9 @@ public partial class PlayerController : Node3D
 		if (@event is InputEventMouseMotion mouseMotionEvent)
 		{
 			if (isLocked)
+			{
 				mouseRotation = new Vector2(-mouseMotionEvent.Relative.X * MouseSensitivity.X, -mouseMotionEvent.Relative.Y * MouseSensitivity.Y);
+			}
 
 
 		}

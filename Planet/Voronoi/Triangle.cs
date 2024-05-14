@@ -7,10 +7,32 @@ public class Triangle
 {
     public Edge[] Edges { get; private set; }
     readonly public bool HasReversed;
+    public Vector3 spawnPoint;
+    public Vector4I key;
 
     public Triangle(Vector3[] vertices, Vector3 centroid)
     {
         Vector3 CentroidToVertex = (vertices[0] - centroid).Normalized();
+        Vector3 normal = Vector3Utils.GetTriangularNormal(vertices);
+        if (normal.Dot(CentroidToVertex) < 0)
+        {
+            vertices = vertices.Reverse().ToArray();
+            HasReversed = true;
+        }
+        else
+            HasReversed = false;
+
+        Edges = new Edge[]
+        {
+            new Edge(vertices[0], vertices[1], this),
+            new Edge(vertices[1], vertices[2], this),
+            new Edge(vertices[2], vertices[0], this)
+        };
+    }
+
+    public Triangle(Vector3[] vertices)
+    {
+        Vector3 CentroidToVertex = (vertices[0] - Vector3.Zero).Normalized();
         Vector3 normal = Vector3Utils.GetTriangularNormal(vertices);
         if (normal.Dot(CentroidToVertex) < 0)
         {
@@ -117,6 +139,12 @@ public class Triangle
     {
         Vector3[] vertices = GetVertices();
         return (vertices[1] - vertices[0]).Cross(vertices[2] - vertices[0]).Normalized();
+    }
+
+    public int[] GetIndices()
+    {
+        
+        return new int[]{0, 2, 1};
     }
 
     public Vector3 GetCentroid()

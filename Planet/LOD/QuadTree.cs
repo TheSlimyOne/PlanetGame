@@ -118,7 +118,7 @@ public partial class QuadTree : Node
     private QuadTreeNode Traverse(uint originalHash, string stringIterator, QuadTreeNode node)
     {
 
-        if (originalHash == node.hashValue || node.hasChildren == false || stringIterator.Length == 0)
+        if (originalHash == node.hashValue || !node.hasChildren || stringIterator.Length == 0)
         {
             return node;
         }
@@ -139,7 +139,7 @@ public partial class QuadTree : Node
     private QuadTreeNode Traverse(uint originalHash, int subdivisionLevel, QuadTreeNode node)
     {
 
-        if (originalHash == node.hashValue || node.hasChildren == false || subdivisionLevel == 0)
+        if (originalHash == node.hashValue || !node.hasChildren || subdivisionLevel == 0)
         {
             return node;
         }
@@ -189,7 +189,6 @@ public partial class QuadTree : Node
         }
     }
 
-
     public float Normalize(float value, float min, float max)
     {
         return (value - min) / (max - min);
@@ -222,6 +221,14 @@ public partial class QuadTree : Node
         // {8, 1},
         // {9, 0.5f},
     };
+    // TODO!!!!
+    float calculateLOD(float dist, float fovy, float factor)
+    {
+        float num = dist * Mathf.Tan(fovy/2);
+        float dom = Mathf.Sqrt(2) * factor;
+        return Mathf.Log(num/dom) / Mathf.Log(2);
+ 
+    }
 
     public void UpdateQuadTree(Camera3D camera)
     {
@@ -253,13 +260,13 @@ public partial class QuadTree : Node
                     UpdateQuadTree(camera, child);
                 }
             }
-            else if (isNodeInFustrum || (node.spherePosition.Normalized().Dot(position.Normalized()) > 0.99 && !isNodeInFustrum))
+            else if (isNodeInFustrum)
             {
                 _nodeBuffer.Add(node);
             }
         }
         // Check if the node is within the camera frustum or is "close enough"
-        else if (isNodeInFustrum || (node.spherePosition.Normalized().Dot(position.Normalized()) > 0.99 && !isNodeInFustrum))
+        else if (isNodeInFustrum)
         {
             _nodeBuffer.Add(node);
         }

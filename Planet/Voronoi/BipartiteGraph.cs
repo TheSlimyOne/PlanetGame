@@ -13,7 +13,7 @@ public class BipartiteGraph<TFirst, TSecond>
 {
     readonly IDictionary<TFirst, List<TSecond>> firstToSecond = new Dictionary<TFirst, List<TSecond>>();
     readonly IDictionary<TSecond, List<TFirst>> secondToFirst = new Dictionary<TSecond, List<TFirst>>();
-
+    
     /// <summary>
     /// Tries to add the pair to the bipartite graph.
     /// </summary>

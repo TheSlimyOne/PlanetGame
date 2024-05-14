@@ -33,6 +33,6 @@ void fragment() {
 	vec2 uv = pointOnSphereToUV(world_pos);
 	vec3 height = textureLod(albedo_map, uv, 0.0).rgb;
 	ALBEDO = height;
-	
-	
+
+
 }
