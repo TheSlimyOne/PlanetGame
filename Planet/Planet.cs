@@ -1,6 +1,5 @@
 using Godot;
 
-
 [Tool]
 public partial class Planet : StaticBody3D
 {

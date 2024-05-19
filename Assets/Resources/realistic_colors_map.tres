@@ -3,5 +3,5 @@
 [resource]
 interpolation_mode = 1
 offsets = PackedFloat32Array(0, 0.001)
-colors = PackedColorArray(0.00392157, 0.00392157, 0.145098, 1, 0.0620098, 0.077411, 0.00887426, 1)
+colors = PackedColorArray(0.202851, 0.605363, 0.566178, 1, 0.106119, 0.197226, 0.0647139, 1)
 metadata/_snap_count = 12

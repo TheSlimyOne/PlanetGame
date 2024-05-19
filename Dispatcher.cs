@@ -20,10 +20,9 @@ public partial class Dispatcher : Node3D
     [Export(PropertyHint.File)] private string _copyShader;
 
     // At the very least must be 24
-    public uint MaximumNodes = 8192;
+    private uint MaximumNodes = 32768;
 
     private RenderingDevice _rd;
-    private Random Random = new Random(123);
 
     private Rid _uniformSet_CC;
     private Rid _shader_CC;
@@ -50,18 +49,29 @@ public partial class Dispatcher : Node3D
     private Rid _distanceValues;
 
     [Export] private MultiMeshInstance3D _multimesh;
+    [Export] private MultiMeshInstance3D _multimesh2;
     [Export] private ShaderMaterial _material;
+    [Export] private ShaderMaterial _OTHER;
     [Export] private Camera3D _camera;
-    [Export] private float _subFactor = 700;
+    [Export] private float _subFactor = 4;
 
+    [Export(PropertyHint.Range, "2,1000,")]
+    public int Resolution
+    {
+        get => _resolution;
+        set { _resolution = value; InitialMulitMesh(); }
+    }
 
+    bool _isReady;
     private bool _processing;
+    private int _resolution;
 
     [Export] private float _radius = 500;
 
     #region MAIN LOOP
     public override void _Ready()
     {
+        _isReady = true;
         Initialize();
     }
 
@@ -89,14 +99,14 @@ public partial class Dispatcher : Node3D
 
         if (@event.IsActionPressed("IncreaseFactor"))
         {
-            hideIndex = (hideIndex + 1) % 15;
+            hideIndex += (hideIndex + 1) < 16 ? 1 : 0;
             GD.Print(hideIndex);
         }
 
         if (@event.IsActionPressed("DecreaseFactor"))
         {
-            if (hideIndex - 1 >= 0)
-                hideIndex = (hideIndex - 1) % 15;
+
+            hideIndex -= (hideIndex - 1) >= 0 ? 1 : 0;
             GD.Print(hideIndex);
         }
     }
@@ -179,7 +189,7 @@ public partial class Dispatcher : Node3D
     {
         uint[] primCountFullAndCull = new uint[2 * 16];
         primCountFullAndCull[0] = 12 * 4;
-        byte[] data = ToBytes<uint>(primCountFullAndCull).ToArray();
+        byte[] data = Utilities.ToBytes<uint>(primCountFullAndCull).ToArray();
 
         (RDUniform uniform, Rid buffer) = CreateUniformFromData(data, binding);
         _bindings_C.Add(uniform);
@@ -191,7 +201,7 @@ public partial class Dispatcher : Node3D
     private Rid CreateIndicesBlock(int binding)
     {
         uint[] indices = new uint[] { 0, 1, 8, MaximumNodes };
-        byte[] data = ToBytes<uint>(indices).ToArray();
+        byte[] data = Utilities.ToBytes<uint>(indices).ToArray();
 
         (RDUniform uniform, Rid buffer) = CreateUniformFromData(data, binding);
         _bindings_C.Add(uniform);
@@ -215,7 +225,7 @@ public partial class Dispatcher : Node3D
             readList[4 * i + 3] = new Vector4I(0, 1, i, 3);
         }
 
-        byte[] data = ToBytes<Vector4I>(readList).ToArray();
+        byte[] data = Utilities.ToBytes<Vector4I>(readList).ToArray();
 
         (RDUniform uniform, Rid buffer) = CreateUniformFromData(data, binding);
         _bindings_CC.Add(uniform);
@@ -306,12 +316,9 @@ public partial class Dispatcher : Node3D
 
         };
 
-        ((ShaderMaterial)_material).SetShaderParameter("position_list", positions);
+        _material.SetShaderParameter("position_list", positions);
 
-        // GD.Print("T\\left(a,b,c,A,B,C\\right)=\\operatorname{triangle}\\left(P_{obj}\\left(a.x,a.y,A,B,C\\right),P_{obj}\\left(b.x,b.y,A,B,C\\right),P_{obj}\\left(c.x,c.y,A,B,C\\right)\\right)");
-        // GD.Print("P_{obj}\\left(p_{x},p_{y},A,B,C\\right)=Ap_{x}+Bp_{y}+C\\left(1-p_{x}-p_{y}\\right)");
-
-        byte[] data = ToBytes<Vector4>(positions).ToArray();
+        byte[] data = Utilities.ToBytes<Vector4>(positions).ToArray();
 
         (RDUniform uniform, Rid buffer) = CreateUniformFromData(data, binding);
         _bindings_CC.Add(uniform);
@@ -321,9 +328,9 @@ public partial class Dispatcher : Node3D
 
     private Rid CreateWriteFullList(int binding)
     {
-        Vector4I[] writeList = new Vector4I[MaximumNodes];
+        Key[] writeList = new Key[MaximumNodes];
 
-        byte[] data = ToBytes<Vector4I>(writeList).ToArray();
+        byte[] data = Utilities.ToBytes<Key>(writeList).ToArray();
 
         (RDUniform uniform, Rid buffer) = CreateUniformFromData(data, binding);
         _bindings_CC.Add(uniform);
@@ -335,7 +342,7 @@ public partial class Dispatcher : Node3D
     {
         Vector4I[] writeList = new Vector4I[MaximumNodes];
 
-        byte[] data = ToBytes<Vector4I>(writeList).ToArray();
+        byte[] data = Utilities.ToBytes<Vector4I>(writeList).ToArray();
 
         (RDUniform uniform, Rid buffer) = CreateUniformFromData(data, binding);
         _bindings_CC.Add(uniform);
@@ -347,7 +354,7 @@ public partial class Dispatcher : Node3D
     {
         Projection[] dataList = new Projection[MaximumNodes];
 
-        byte[] data = ToBytes<Projection>(dataList).ToArray();
+        byte[] data = Utilities.ToBytes<Projection>(dataList).ToArray();
 
         (RDUniform uniform, Rid buffer) = CreateUniformFromData(data, binding);
         _bindings_CC.Add(uniform);
@@ -357,9 +364,9 @@ public partial class Dispatcher : Node3D
 
     private Rid CreateDistanceValues(int binding)
     {
-        Vector4[] dataList = new Vector4[MaximumNodes];
+        float[] dataList = new float[MaximumNodes];
 
-        byte[] data = ToBytes<Vector4>(dataList).ToArray();
+        byte[] data = Utilities.ToBytes<float>(dataList).ToArray();
 
         (RDUniform uniform, Rid buffer) = CreateUniformFromData(data, binding);
         _bindings_CC.Add(uniform);
@@ -372,13 +379,20 @@ public partial class Dispatcher : Node3D
         Transform3D transform = _camera.GlobalTransform;
         Basis basis = transform.Basis;
         Vector3 origin = transform.Origin;
+        Projection projectionMatrix =  _camera.GetCameraProjection();
 
-        byte[] data = ToBytes<float>(new float[]
+        byte[] data = Utilities.ToBytes<float>(new float[]
         {
             basis.X.X, basis.X.Y, basis.X.Z, 1.0f,
             basis.Y.X, basis.Y.Y, basis.Y.Z, 1.0f,
             basis.Z.X, basis.Z.Y, basis.Z.Z, 1.0f,
             origin.X,  origin.Y,  origin.Z,  1.0f,
+
+            projectionMatrix[0].X, projectionMatrix[0].Y, projectionMatrix[0].Z, projectionMatrix[0].W,
+            projectionMatrix[1].X, projectionMatrix[1].Y, projectionMatrix[1].Z, projectionMatrix[1].W,
+            projectionMatrix[2].X, projectionMatrix[2].Y, projectionMatrix[2].Z, projectionMatrix[2].W,
+            projectionMatrix[3].X, projectionMatrix[3].Y, projectionMatrix[3].Z, projectionMatrix[3].W,
+
             Mathf.DegToRad(_camera.Fov), _camera.Far, _camera.Near, _radius, _subFactor * _radius
         }).ToArray();
 
@@ -392,7 +406,7 @@ public partial class Dispatcher : Node3D
     {
         uint[] workgroups = new uint[] { 1, 1, 1 };
 
-        (RDUniform uniform, Rid buffer) = CreateUniformFromData(ToBytes<uint>(workgroups).ToArray(), binding, 1);
+        (RDUniform uniform, Rid buffer) = CreateUniformFromData(Utilities.ToBytes<uint>(workgroups).ToArray(), binding, 1);
         _bindings_C.Add(uniform);
 
         return buffer;
@@ -405,13 +419,20 @@ public partial class Dispatcher : Node3D
         Transform3D transform = _camera.GlobalTransform;
         Basis basis = transform.Basis;
         Vector3 origin = transform.Origin;
+        Projection projectionMatrix =  _camera.GetCameraProjection();
 
-        byte[] data = ToBytes<float>(new float[]
+        byte[] data = Utilities.ToBytes<float>(new float[]
         {
-            basis.X.X, basis.X.Y, basis.X.Z, 1.0f,
-            basis.Y.X, basis.Y.Y, basis.Y.Z, 1.0f,
-            basis.Z.X, basis.Z.Y, basis.Z.Z, 1.0f,
+            basis.X.X, basis.X.Y, basis.X.Z, 0.0f,
+            basis.Y.X, basis.Y.Y, basis.Y.Z, 0.0f,
+            basis.Z.X, basis.Z.Y, basis.Z.Z, 0.0f,
             origin.X,  origin.Y,  origin.Z,  1.0f,
+
+            projectionMatrix[0].X, projectionMatrix[0].Y, projectionMatrix[0].Z, projectionMatrix[0].W,
+            projectionMatrix[1].X, projectionMatrix[1].Y, projectionMatrix[1].Z, projectionMatrix[1].W,
+            projectionMatrix[2].X, projectionMatrix[2].Y, projectionMatrix[2].Z, projectionMatrix[2].W,
+            projectionMatrix[3].X, projectionMatrix[3].Y, projectionMatrix[3].Z, projectionMatrix[3].W,
+
             Mathf.DegToRad(_camera.Fov), _camera.Far, _camera.Near, _radius, _subFactor * _radius
         }).ToArray();
 
@@ -426,30 +447,30 @@ public partial class Dispatcher : Node3D
 
     private void UpdateWriteFullList()
     {
-        byte[] data = ToBytes<Vector4I>(new Vector4I[MaximumNodes]).ToArray();
+        byte[] data = Utilities.ToBytes<Vector4I>(new Vector4I[MaximumNodes]).ToArray();
         _rd.BufferUpdate(_writeFullList, 0, (uint)data.Length, data);
     }
 
     private void UpdateWriteCulledList()
     {
-        byte[] data = ToBytes<Vector4I>(new Vector4I[MaximumNodes]).ToArray();
+        byte[] data = Utilities.ToBytes<Vector4I>(new Vector4I[MaximumNodes]).ToArray();
         _rd.BufferUpdate(_writeCulledList, 0, (uint)data.Length, data);
     }
 
     private void UpdateDistanceValues()
     {
-        byte[] data = ToBytes<Vector4I>(new Vector4I[MaximumNodes]).ToArray();
+        byte[] data = Utilities.ToBytes<float>(new float[MaximumNodes]).ToArray();
         _rd.BufferUpdate(_distanceValues, 0, (uint)data.Length, data);
     }
 
     private void UpdateIndicesBlock()
     {
-        uint[] indices = FromBytes<uint>(_rd.BufferGetData(_indicesBlockBuffer)).ToArray();
+        uint[] indices = Utilities.FromBytes<uint>(_rd.BufferGetData(_indicesBlockBuffer)).ToArray();
         indices[0] = (indices[0] + 1) % 16; // Read Index
         indices[1] = (indices[1] + 1) % 16; // Write Index
         indices[2] = (indices[2] + 1) % 16; // Delete Index
         indices[3] = MaximumNodes;
-        byte[] data = ToBytes<uint>(indices).ToArray();
+        byte[] data = Utilities.ToBytes<uint>(indices).ToArray();
 
         _rd.BufferUpdate(_indicesBlockBuffer, 0, (uint)data.Length, data);
     }
@@ -468,18 +489,92 @@ public partial class Dispatcher : Node3D
 
     #endregion
 
+
     private void InitialMulitMesh()
     {
+        if (!_isReady) return;
+
+        Vector3[] vertices = new Vector3[_resolution * (_resolution + 1) / 2];
+        Vector2[] uvs = new Vector2[_resolution * (_resolution + 1) / 2];
+        int[] triangles = new int[(_resolution - 1) * (_resolution - 1) * 6 / 2];
+        Vector3 normal = Vector3.Back;
+        Vector3 axisA = new Vector3(normal.Y, normal.Z, normal.X);
+        Vector3 axisB = normal.Cross(axisA).Abs();
+        int triIndex = 0;
+        int vertexIndex = 0;
+
+        for (int y = 0; y < _resolution; y++)
+        {
+            for (int x = 0; x < _resolution - y; x++)
+            {
+                int currentIndex = vertexIndex++;
+                Vector2 percentage = new Vector2(x, y) / (_resolution - 1);
+                vertices[currentIndex] = normal + (percentage.X * axisA + percentage.Y * axisB);
+                uvs[currentIndex] = percentage;
+
+                if (x != _resolution - y - 1)
+                {
+                    if (x == _resolution - y - 2)
+                    {
+                        triangles[triIndex++] = currentIndex;
+                        triangles[triIndex++] = currentIndex + 1;
+                        triangles[triIndex++] = currentIndex + _resolution - y;
+                    }
+                    else if (x % 2 == 0)
+                    {
+                        if (y % 2 == 0)
+                        {
+                            triangles[triIndex++] = currentIndex;
+                            triangles[triIndex++] = currentIndex + _resolution - y + 1;
+                            triangles[triIndex++] = currentIndex + _resolution - y;
+                            triangles[triIndex++] = currentIndex;
+                            triangles[triIndex++] = currentIndex + 1;
+                            triangles[triIndex++] = currentIndex + _resolution - y + 1;
+                        }
+                        else if (y % 2 == 1)
+                        {
+                            triangles[triIndex++] = currentIndex;
+                            triangles[triIndex++] = currentIndex + 1;
+                            triangles[triIndex++] = currentIndex + _resolution - y;
+                            triangles[triIndex++] = currentIndex + 1;
+                            triangles[triIndex++] = currentIndex + _resolution - y + 1;
+                            triangles[triIndex++] = currentIndex + _resolution - y;
+                        }
+                    }
+                    else if (x % 2 == 1)
+                    {
+                        if (y % 2 == 0)
+                        {
+                            triangles[triIndex++] = currentIndex;
+                            triangles[triIndex++] = currentIndex + 1;
+                            triangles[triIndex++] = currentIndex + _resolution - y;
+                            triangles[triIndex++] = currentIndex + 1;
+                            triangles[triIndex++] = currentIndex + _resolution - y + 1;
+                            triangles[triIndex++] = currentIndex + _resolution - y;
+                        }
+                        else if (y % 2 == 1)
+                        {
+                            triangles[triIndex++] = currentIndex;
+                            triangles[triIndex++] = currentIndex + _resolution - y + 1;
+                            triangles[triIndex++] = currentIndex + _resolution - y;
+                            triangles[triIndex++] = currentIndex;
+                            triangles[triIndex++] = currentIndex + 1;
+                            triangles[triIndex++] = currentIndex + _resolution - y + 1;
+                        }
+                    }
+                }
+            }
+        }
+
         ArrayMesh mesh = new ArrayMesh();
         Godot.Collections.Array arrays = new Godot.Collections.Array();
         arrays.Resize((int)Mesh.ArrayType.Max);
-        arrays[(int)Mesh.ArrayType.Vertex] = new Vector3[] { new Vector3(0, 0, 1), new Vector3(0, 1, 1), new Vector3(1, 0, 1) };
-        arrays[(int)Mesh.ArrayType.Index] = new int[] { 2, 0, 1 };
+        arrays[(int)Mesh.ArrayType.Vertex] = vertices;
+        arrays[(int)Mesh.ArrayType.Index] = triangles;
+        arrays[(int)Mesh.ArrayType.TexUV] = uvs;
         mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
         _material.SetShaderParameter("radius", _radius);
         mesh.SurfaceSetMaterial(0, _material);
-
-
 
         _multimesh.Multimesh = new MultiMesh()
         {
@@ -487,30 +582,9 @@ public partial class Dispatcher : Node3D
             TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
             InstanceCount = 0,
             UseCustomData = true,
+            UseColors = true
         };
         _multimesh.ExtraCullMargin = 2 * _radius;
-
-        // Transform3D transform = new Transform3D(Basis.Identity, Vector3.Zero);
-
-        // _multimesh.Multimesh.InstanceCount = 4;
-        // _multimesh.Multimesh.SetInstanceTransform(0, transform);
-        // _multimesh.Multimesh.SetInstanceCustomData(0, new Color(0, 33554431, 0, 2));
-
-
-        // _multimesh.Multimesh.SetInstanceTransform(1, transform);
-        // _multimesh.Multimesh.SetInstanceCustomData(1, new Color(0, 33554428, 0, 2));
-
-        // _multimesh.Multimesh.SetInstanceTransform(2, transform);
-        // _multimesh.Multimesh.SetInstanceCustomData(2, new Color(0, 33554429, 0, 2));
-
-        // _multimesh.Multimesh.SetInstanceTransform(3, transform);
-        // _multimesh.Multimesh.SetInstanceCustomData(3, new Color(0, 33554430, 0, 2));
-
-        // GD.Print(leafSpaceToWorldSpace(new Vector4I(0, 33554431, 0, 2)));
-        // GD.Print(leafSpaceToWorldSpace(new Vector4I(0, 33554428, 0, 2)));
-        // GD.Print(leafSpaceToWorldSpace(new Vector4I(0, 33554429, 0, 2)));
-        // GD.Print(leafSpaceToWorldSpace(new Vector4I(0, 33554430, 0, 2)));
-
     }
 
     #region PROCESSING
@@ -527,6 +601,8 @@ public partial class Dispatcher : Node3D
             Render();
             UpdateUniforms();
             await Task.Delay(_updateFrequency);
+            // break;
+
         }
     }
 
@@ -556,39 +632,29 @@ public partial class Dispatcher : Node3D
         _rd.Sync();
 
 
-        Vector4I[] keys = FromBytes<Vector4I>(_rd.BufferGetData(_writeFullList)).ToArray();
-        uint[] indices = FromBytes<uint>(_rd.BufferGetData(_indicesBlockBuffer)).ToArray();
-        uint[] primCounts = FromBytes<uint>(_rd.BufferGetData(_atomicCounterBuffer)).ToArray();
+        Key[] keys = Utilities.FromBytes<Key>(_rd.BufferGetData(_writeFullList)).ToArray();
+        uint[] indices = Utilities.FromBytes<uint>(_rd.BufferGetData(_indicesBlockBuffer)).ToArray();
+        uint[] primCounts = Utilities.FromBytes<uint>(_rd.BufferGetData(_atomicCounterBuffer)).ToArray();
+        float[] distanceValues = Utilities.FromBytes<float>(_rd.BufferGetData(_distanceValues)).ToArray();
 
 
 
-        InstanceAllTriangles(keys, (int)primCounts[indices[1]]);
+        InstanceAllTriangles(keys, distanceValues, (int)primCounts[indices[1]]);
     }
-    int hideIndex = 0;
-    int j = 0;
-    public void InstanceAllTriangles(Vector4I[] keys, int amount)
+    int hideIndex;
+    public void InstanceAllTriangles(Key[] keys, float[] distanceValues, int amount)
     {
         _multimesh.Multimesh.InstanceCount = amount;
-        Transform3D transform = new Transform3D(Basis.Identity, Vector3.Zero);
-        j = 0;
+
         for (int i = 0; i < amount; i++)
         {
-            if (getLevelInKey(new Vector2I(keys[i].X, keys[i].Y)) == hideIndex)
-            {
-                j++;
-                // Projection[] data = FromBytes<Projection>(_rd.BufferGetData(_data)).ToArray();
-                Vector4 keyTransform = getTransformation(keys[i]);
-                // GD.PrintS(j, keys[i]);
-                // GD.Print($"{j}, {keyTransform.X,-4}, {keyTransform.Y,-4}, {keyTransform.Z,-15}, {keyTransform.W,-15}");
-                // Vector2I keyA = new Vector2I((int)data[0].Y.X, (int)data[0].Y.Y);
-                // GD.PrintS(Convert.ToString(keyA.X, 2).PadZeros(32), Convert.ToString(keyA.Y, 2).PadZeros(32));
-                // GD.Print("================================================");
-            }
+            Transform3D transform = new Transform3D(Basis.Identity, Vector3.Zero);
             _multimesh.Multimesh.SetInstanceTransform(i, transform);
-            _multimesh.Multimesh.SetInstanceCustomData(i, new Color(keys[i].X, keys[i].Y, keys[i].Z, keys[i].W));
+            _multimesh.Multimesh.SetInstanceCustomData(i, keys[i].ToColor());
+            _multimesh.Multimesh.SetInstanceColor(i, new Color(distanceValues[i], 0, 0, 0));
         }
-
     }
+
 
     private void CleanupGPU()
     {
@@ -605,179 +671,8 @@ public partial class Dispatcher : Node3D
 
     #endregion
 
-    // Based discord user created these functions: idrmzit
-    Span<byte> ToBytes<T>(Span<T> data) where T : unmanaged
-    {
-        return MemoryMarshal.Cast<T, byte>(data);
-    }
 
-    Span<T> FromBytes<T>(Span<byte> data) where T : unmanaged
-    {
-        int length = data.Length - (data.Length % Unsafe.SizeOf<T>());
-        return MemoryMarshal.Cast<byte, T>(data[..length]);
-    }
 
-    public static int getLevelInKey(Vector2I key)
-    {
-        return findMSB64(key) / 2;
-    }
-
-    public static int findMSB64(Vector2I key)
-    {
-        return (key.X == 0) ? findMSB(key.Y) : (findMSB(key.X) + 32);
-    }
-
-    public static int findMSB(int n)
-    {
-        n |= n >> 1;
-        n |= n >> 2;
-        n |= n >> 4;
-        n |= n >> 8;
-        n |= n >> 16;
-        n = (n + 1) >> 1;
-        return (int)(Mathf.Log(n) / Mathf.Log(2));
-    }
-
-    Vector2 getTranslation(uint b1)
-    {
-        Vector2 translation = new Vector2(b1 & 0x1, b1 ^ 0x1);
-        return translation * 0.5f;
-    }
-
-    uint getBranching(Vector2I key, int level, int msb)
-    {
-        // Create the mask that will be shifted based on level
-        uint mask = (uint)((0x3 << (msb % 32)) >> (level * 2));
-
-        // Domain index is used to see if we are in X or Y
-        // the msb in the key or the lsb in the key
-        int domain_index = (msb % 32) / 2;
-
-        if (msb >= 32)
-        {
-            if (domain_index < level)
-            {
-                mask = (uint)((0x3 << 30) >> ((level - 1 - domain_index) * 2));
-                return (uint)((key.Y & mask) >> (msb - (2 * level)));
-            }
-            return (uint)((key.X & mask) >> ((msb % 32) - (2 * level)));
-        }
-
-        return (uint)((key.Y & mask) >> (msb - (2 * level)));
-    }
-
-    Vector2 rotate(uint rotationIndex, Vector2 translation)
-    {
-        Vector2I trig = quickPI_2(rotationIndex);
-        Vector2 r = new Vector2(
-            trig.X * translation.X - trig.Y * translation.Y,
-             trig.Y * translation.X + trig.X * translation.Y);
-
-        return r;
-    }
-
-    uint getRotation(uint b1b2, uint b1, uint b2)
-    {
-        uint a = (b1b2 ^ 0x2);
-        uint b = (a | 0x1);
-        uint c = (b1 ^ b2);
-        return (b * c);
-    }
-
-    Vector2I quickPI_2(uint a)
-    {
-        int b = (int)(a & 3);
-        int b1 = b >> 1;
-        int b2 = b & 1;
-        int bn2 = b2 ^ 1;
-        int c = bn2 - (2 * (b1 & bn2));
-        int s = b2 - (2 * (b1 & b2));
-        return new Vector2I(c, s);
-    }
-
-    Vector4 getTransformation(Vector4I key)
-    {
-        int msb = findMSB64(new Vector2I(key.X, key.Y));
-        Vector2 translation = new Vector2(0, 0);
-        Vector2 temp;
-        uint theta = 0;
-        float scale = 1.0f;
-
-        for (int i = 0; i < msb / 2; i++)
-        {
-            uint b1b2 = getBranching(new Vector2I(key.X, key.Y), i, msb - 2);
-            uint b1 = b1b2 >> 1;
-            uint b2 = b1b2 & 1;
-            temp = scale * getTranslation(b1);
-
-            translation += rotate(theta, temp);
-            theta += getRotation(b1b2, b1, b2);
-            scale *= 0.5f;
-        }
-
-        return new Vector4(theta, scale, translation.X, translation.Y);
-    }
-
-     private Triangle leafSpaceToWorldSpace(Vector4I key)
-    { 
-        int msb = findMSB64(new Vector2I(key.X, key.Y));
-        Vector2 translation = new Vector2(0, 0);
-        Vector2 temp;
-        uint theta = 0;
-        float scale = 1.0f;
-
-        for (int i = 0; i < msb / 2; i++)
-        {
-            uint b1b2 = getBranching(new Vector2I(key.X, key.Y), i, msb - 2);
-            uint b1 = b1b2 >> 1;
-            uint b2 = b1b2 & 0x01;
-            temp = scale * getTranslation(b1);
-
-            translation += rotate(theta, new Vector2(temp.X, temp.Y));
-            theta += getRotation(b1b2, b1, b2);
-            scale *= 0.5f;
-        }
-
-        Vector2I trig = quickPI_2(theta);
-        Basis transform_matrix = new Basis(
-            trig.X * scale, -trig.Y * scale, translation.X,
-            trig.Y * scale, trig.X * scale, translation.Y,
-            0.0f, 0.0f, 1.0f
-        );
-        return createTriangle(transform_matrix, (uint)key.Z, (uint)key.W);
-    }
-
-    Triangle createTriangle(Basis transform_matrix, uint meshPolygonID, uint rootID)
-    {
-        Vector4[] position_list = FromBytes<Vector4>(_rd.BufferGetData(_positions)).ToArray();
-
-        Vector2 point_a = new Vector2((transform_matrix * new Vector3(0, 0, 1)).X, (transform_matrix * new Vector3(0, 0, 1)).Y);
-        Vector2 point_b = new Vector2((transform_matrix * new Vector3(0, 1, 1)).X, (transform_matrix * new Vector3(0, 1, 1)).Y);
-        Vector2 point_c = new Vector2((transform_matrix * new Vector3(1, 0, 1)).X, (transform_matrix * new Vector3(1, 0, 1)).Y);
-        Vector2 point_d = new Vector2((transform_matrix * new Vector3(0.5f, 0.5f, 1)).X, (transform_matrix * new Vector3(0.5f, 0.5f, 1)).Y);
-
-        uint vertexBaseIndex = meshPolygonID * 5;
-        uint vertexKeyA = rootID;
-        uint vertexKeyB = ((rootID >> 1) ^ 1) + ((rootID & 1) << 1);
-
-        Vector3 base_Triangle_a = Vector3Utils.toVector3(position_list[vertexBaseIndex + vertexKeyA + 1]);
-        Vector3 base_Triangle_b = Vector3Utils.toVector3(position_list[vertexBaseIndex + vertexKeyB + 1]);
-        Vector3 base_Triangle_c = Vector3Utils.toVector3(position_list[vertexBaseIndex]);
-
-        Vector3 point_A = localPointToWorldPoint(point_a, base_Triangle_a, base_Triangle_b, base_Triangle_c);
-        Vector3 point_B = localPointToWorldPoint(point_b, base_Triangle_a, base_Triangle_b, base_Triangle_c);
-        Vector3 point_C = localPointToWorldPoint(point_c, base_Triangle_a, base_Triangle_b, base_Triangle_c);
-        Vector3 point_D = localPointToWorldPoint(point_d, base_Triangle_a, base_Triangle_b, base_Triangle_c);
-        
-		Triangle t = new Triangle(new Vector3[] { point_A, point_B, point_C });
-		t.spawnPoint = point_D;
-        return t;
-    }
-
-    Vector3 localPointToWorldPoint(Vector2 point, Vector3 vertexA, Vector3 vertexB, Vector3 vertexC)
-    {
-        return vertexA * point.X + vertexB * point.Y + vertexC * (1 - point.X - point.Y);
-    }
 
 
 }

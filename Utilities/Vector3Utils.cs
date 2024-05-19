@@ -109,6 +109,11 @@ public static class Vector3Utils
     {
         return new Vector3(vector.X, vector.Y, vector.Z);
     }
+    
+    public static Vector2 toVector2(Vector3 vector)
+    {
+        return new Vector2(vector.X, vector.Y);
+    }
 
 }
 

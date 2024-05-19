@@ -23,7 +23,7 @@ vec3 point_on_cube_to_point_on_sphere(vec3 p) {
 	float x2 = p.x * p.x;
 	float y2 = p.y * p.y;
 	float z2 = p.z * p.z;
-	
+
 	float x = p.x * sqrt(1.0 - (y2 + z2) / 2.0 + y2 * z2 / 3.0);
 	float y = p.y * sqrt(1.0 - (z2 + x2) / 2.0 + z2 * x2 / 3.0);
 	float z = p.z * sqrt(1.0 - (x2 + y2) / 2.0 + x2 * y2 / 3.0);
@@ -37,7 +37,7 @@ vec3 height_to_normal(float height, float strength, vec3 vertex, vec3 _normal) {
 
     vec3 crossX = cross(_normal, dX);
     vec3 crossY = cross(dY, _normal);
-    
+
     float dt = dot(dX, crossY);
     float sign = dt < 0.0 ? -1.0 : 1.0;
     float surface = sign / max(1.192093e-12, abs(dt));
@@ -85,31 +85,31 @@ float param_noise(vec3 p) {
 	float frequency = 1.0;
 	float amplitude = 1.0;
 	float noiseHeight = 0.0;
-	
+
 	for (int i = 0; i < octaves; i++) {
 		float sampleX = p.x / noise_scale * frequency + offset.x;
 		float sampleY = p.y / noise_scale * frequency + offset.y;
 		float sampleZ = p.z / noise_scale * frequency + offset.z;
-		
+
 		float noiseValue = noise(vec3(sampleX, sampleY, sampleZ) * 5.0) * 0.5;
 		noiseValue += noise(vec3(sampleX, sampleY, sampleZ) * 10.0) * 0.25/2.0;
 		noiseValue += noise(vec3(sampleX, sampleY, sampleZ) * 20.0) * 0.125/2.0;
 		noiseValue += noise(vec3(sampleX, sampleY, sampleZ) * 40.0) * 0.0625/2.0;
 
 		noiseHeight += noiseValue * amplitude;
-		
+
 		amplitude += persistence;
 		frequency += lacunarity;
 	}
 
 	noiseHeight = pow(max(noiseHeight, 0), exaggeration_factor);
-	
+
 	return noiseHeight;
 }
 
 void vertex() {
 	float scaleFactor = pow(2.0, INSTANCE_CUSTOM.a);
-	
+
 
 	uint intValue = uint(INSTANCE_CUSTOM.z);
 	int normSign = (intValue == 1u || intValue == 2u || intValue == 4u) ? 1 : -1;
@@ -121,10 +121,10 @@ void vertex() {
 	y = normSign == 1 ? y : y^1u;
 	z = normSign == 1 ? z : z^1u;
 
-	
+
 	NORMAL = float(normSign) * vec3(float(x),float(y),float(z));
-	
-	
+
+
 	vec3 axisA = vec3(NORMAL.y, NORMAL.z, NORMAL.x);
 	vec3 axisB = cross(NORMAL, axisA);
 	vec3 axicC = NORMAL * scaleFactor;
@@ -140,14 +140,14 @@ void vertex() {
 	{
 		VERTEX = point_on_cube_to_point_on_sphere(point);
 	}
-	
+
 	NORMAL = VERTEX;
 	object_space_pos = VERTEX;
 	VERTEX = radius * VERTEX - NODE_POSITION_WORLD;
-	
+
 
 	vec2 uv = point_on_sphere_to_UV(object_space_pos);
-	
+
 	float theta = uv.y * 3.14159;
 	float phi = uv.x * 3.14159 * 2.0;
 	vec3 unit = vec3(0.0);
@@ -155,7 +155,7 @@ void vertex() {
 	unit.x = sin(phi) * sin(theta);
 	unit.y = cos(theta) * -1.0;
 	unit.z = cos(phi) * sin(theta);
-	
+
 	unit = normalize(unit);
 
 	elevation = textureLod(image_texture, point_on_sphere_to_UV(object_space_pos), 0).r;
@@ -164,8 +164,8 @@ void vertex() {
 
 
 void fragment() {
-	
-	
+
+
 	NORMAL = height_to_normal(elevation, normal_strength, VERTEX, NORMAL);
     //vec3 surface_texture = textureLod(image_texture, point_on_sphere_to_UV(object_space_pos), 0).rgb;
 	vec3 surface_texture = textureLod(albedo_map, vec2(elevation, 0.0), 0).rgb;

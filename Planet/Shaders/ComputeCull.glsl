@@ -38,6 +38,7 @@ layout(set = 0, binding = 5, std430) buffer restrict readonly Positions {
 layout(set = 0, binding = 6, std430) buffer restrict CameraData {
     
     mat4 cameraToWorld;
+    mat4 projectionMatrix;
     float CameraFOV;
     float CameraFarPlane;
     float CameraNearPlane;
@@ -86,11 +87,11 @@ vec2 getTranslation(uint b1) {
     return translation * 0.5;
 }
 
-uint getRotation(uint b1b2, uint b1, uint b2) {
+int getRotation(uint b1b2, uint b1, uint b2) {
     uint a = (b1b2 ^ 0x2);
     uint b = (a | 0x1);
     uint c = (b1 ^ b2);
-    return (b * c);
+    return int(b * c);
 }
 
 /*
@@ -139,48 +140,56 @@ vec2 rotate(uint rotationIndex, vec2 translation) {
     return r;
 }
 
-uint getBranching(uvec2 key, int level, int msb) {
-    // Create the mask that will be shifted based on level
-    uint mask = (0x3 << (msb % 32)) >> (level * 2);
+uvec2 leftShift64(uvec2 nodeID, uint shift)
+{
+    uvec2 result;
+    if (shift == 0) return nodeID;
 
-    // Domain index is used to see if we are in 
-    // the msb in the key or the lsb in the key
-    int domain_index = (msb % 32) / 2; 
-
-    if (msb >= 32)
+    if (shift < 32)
     {
-        if (domain_index < level)
-        {
-            mask = (0x3 << 30) >> ((level - 1 - domain_index) * 2);
-            return (key.y & mask) >> (msb - (2 * level));
-        }
-        return (key.x & mask) >> ((msb % 32) - (2 * level));
-    }    
+        result.x = (nodeID.x << shift) | (nodeID.y >> (32 - shift));
+        result.y = nodeID.y << shift;
+    }
+    else
+    {
+        result.x = nodeID.y << (shift - 32);
+        result.y = 0u;
+    }
 
-    return (key.y & mask) >> (msb - (2 * level));
+    return result;
+}
+
+uvec2 rightShift64(uvec2 nodeID, uint shift)
+{
+    uvec2 result;
+    if (shift == 0) return nodeID;
+
+    if (shift < 32)
+    {
+        result.y = (nodeID.y >> shift) | (nodeID.x << (32 - shift));
+        result.x = nodeID.x >> shift;
+    }
+    else
+    {
+        result.y = nodeID.x >> (shift - 32);
+        result.x = 0u;
+    }
+
+    return result;
+}
+
+
+/*
+    msb - 2 => is the offset to ignore the leading 01
+    level * 2 => level is used as an index. Used to tell how much to shift over to get the bits in question. 
+    Multiplied by 2 so to shift over two each time.
+*/
+uint getBranching(uvec2 key, int level, int msb) {
+    return (rightShift64(key, (msb - 2) - (level * 2)).y & 0x3); 
 }
 
 int findMSB64(uvec2 key) {
     return (key.x == 0) ? findMSB(key.y) : (findMSB(key.x) + 32);
-}
-
-uvec2 leftShift64(uvec2 nodeID, uint shift)
-{
-    uvec2 result = nodeID;
-    //Extract the "shift" first bits of y and append them at the end of x
-    result.x = result.x << shift;
-    result.x |= result.y >> (32u - shift);
-    result.y  = result.y << shift;
-    return result;
-}
-uvec2 rightShift64(uvec2 nodeID, uint shift)
-{
-    uvec2 result = nodeID;
-    //Extract the "shift" last bits of x and prepend them to y
-    result.y = result.y >> shift;
-    result.y |= result.x << (32u - shift);
-    result.x = result.x >> shift;
-    return result;
 }
 
 vec3 localPointToWorldPoint(vec2 point, vec3 vertexA, vec3 vertexB, vec3 vertexC) {
@@ -205,8 +214,11 @@ float calulateDistance(vec3 a, vec3 b) {
     |     3 |     2 |
     +-------+-------+
 */
-vec3 createTriangle(mat3 transform_matrix, uint meshPolygonID, uint rootID) {
-    vec2 point = (vec3(0.5, 0.5, 1) * transform_matrix).xy;
+Triangle createTriangle(mat3 transform_matrix, uint meshPolygonID, uint rootID) {
+    vec2 point_a = (vec3(0, 0, 1) * transform_matrix).xy;
+    vec2 point_b = (vec3(0, 1, 1) * transform_matrix).xy;
+    vec2 point_c = (vec3(1, 0, 1) * transform_matrix).xy;
+    vec2 point_d = (vec3(0.5, 0.5, 1) * transform_matrix).xy;
 
     uint vertexBaseIndex = meshPolygonID * 5;
     uint vertexKeyA = rootID;
@@ -216,32 +228,39 @@ vec3 createTriangle(mat3 transform_matrix, uint meshPolygonID, uint rootID) {
     vec3 base_Triangle_b = (position_list[vertexBaseIndex + vertexKeyB + 1]).xyz;
     vec3 base_Triangle_c = (position_list[vertexBaseIndex]).xyz;
 
-    return localPointToWorldPoint(point, base_Triangle_a, base_Triangle_b, base_Triangle_c);
+    Triangle t;
+    t.v0 = localPointToWorldPoint(point_a, base_Triangle_a, base_Triangle_b, base_Triangle_c);
+    t.v1 = localPointToWorldPoint(point_b, base_Triangle_a, base_Triangle_b, base_Triangle_c);
+    t.v2 = localPointToWorldPoint(point_c, base_Triangle_a, base_Triangle_b, base_Triangle_c);
+    t.origin = localPointToWorldPoint(point_d, base_Triangle_a, base_Triangle_b, base_Triangle_c);
+
+    return t;
 }
 
-vec3 leafSpaceToWorldSpace(uvec4 key) { 
+
+Triangle leafSpaceToWorldSpace(uvec4 key) { 
     int msb = findMSB64(key.xy);
     vec2 translation = vec2(0,0);
     vec2 temp;
-    uint theta = 0;
+    int theta = 0;
     float scale = 1.0;
 
     for (int i = 0; i < msb / 2; i++) {
-        uint b1b2 = getBranching(key.xy, i, msb - 2);
+        uint b1b2 = getBranching(key.xy, i, msb);
         uint b1 = b1b2 >> 1;
         uint b2 = b1b2 & 1;
         temp = scale * getTranslation(b1);
 
-        translation += rotate(theta, temp.xy);
+        translation += rotate(theta, temp);
         theta += getRotation(b1b2, b1, b2);
         scale *= 0.5;
     }
     
     ivec2 trig = quickPI_2(theta);
     mat3 transform_matrix = mat3(
-        trig.x * scale, -trig.y * scale, translation.x,
-        trig.y * scale,  trig.x * scale, translation.y,
-        0.0,              0.0,           1.0
+        vec3(float(trig.x) * scale, float(-trig.y) * scale, translation.x),
+        vec3(float(trig.y) * scale, float(trig.x)  * scale, translation.y),
+        vec3(0.0,                   0.0,                    1.0)
     );
 
     return createTriangle(transform_matrix, key.z, key.w);   
@@ -255,7 +274,7 @@ vec4 getTransformation(uvec4 key) {
     float scale = 1.0;
 
     for (int i = 0; i < msb / 2; i++) {
-        uint b1b2 = getBranching(key.xy, i, msb - 2);
+        uint b1b2 = getBranching(key.xy, i, msb);
         uint b1 = b1b2 >> 1;
         uint b2 = b1b2 & 1;
         temp.xy = scale * getTranslation(b1);
@@ -383,24 +402,24 @@ void main() {
         return;
     
     uvec4 key = read_list[invocationID];
-    vec3 p_object_space = leafSpaceToWorldSpace(getParentKey(key));
-    vec3 k_object_space = leafSpaceToWorldSpace(key);
+    Triangle p_triangle = leafSpaceToWorldSpace(getParentKey(key));
+    Triangle b_triangle = leafSpaceToWorldSpace(key);
 
     float current_LOD = getLevelInKey(key.xy);
 
     float p_target_LOD = calculateLOD (
-        calulateDistance(p_object_space, cameraToWorld[3].xyz),
+        calulateDistance(p_triangle.origin, cameraToWorld[3].xyz),
         CameraFOV, // Must be in radians
         subFactor
     );
 
     float k_target_LOD = calculateLOD (
-        calulateDistance(k_object_space, cameraToWorld[3].xyz),
+        calulateDistance(b_triangle.origin, cameraToWorld[3].xyz),
         CameraFOV, // Must be in radians
         subFactor
     );
 
-    if (k_target_LOD > current_LOD && key.xy != uvec2(0x7FFFFFFF, 0xFFFFFFFF)) { // subdivide
+    if (k_target_LOD > current_LOD) { // subdivide
         uvec4 children[4] = getChildKeys(key);
         for (int i = 0; i < 4; i++) {
             uint idx = atomicAdd(primCount_full[write_index], 1);
@@ -414,16 +433,31 @@ void main() {
             uint idx = atomicAdd(primCount_full[write_index], 1);
             write_full_list[idx] = getParentKey(key);
             distance_values[idx] = p_target_LOD;
-        }
-        else {
+        } else 
             return;
-        }
-    }  
-    else {
+
+    } else {
         uint idx = atomicAdd(primCount_full[write_index], 1);
         write_full_list[idx] = key;
         distance_values[idx] = k_target_LOD;
     }
+
+    
+    // vec4 clip_space = projectionMatrix * (cameraToWorld * vec4(p_triangle.origin, 1.0));
+
+
+    // vec3 ndc = clip_space.xyz / clip_space.w;
+
+    // bool inFrustum = (ndc.x >= -1.0 && ndc.x <= 1.0 &&
+    //                   ndc.y >= -1.0 && ndc.y <= 1.0 &&
+    //                 //   ndc.z >= 0.0 && ndc.z <= 1.0);
+
+    // if (!inFrustum)
+    //     return;
+
+    // uint idx = atomicAdd(primCount_culled[write_index], 1);
+    // write_culled_list[idx] = key;
+    
 
     
 }

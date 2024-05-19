@@ -115,23 +115,23 @@ key_lsb = 0b0000_0000_0000_0000_0000_0000_0001_1111
 key = [key_msb, key_lsb]
 
 
-def leaf_space_to_quad_space(key):
-    msb = get_MSB(key)
-    transformation = [0, 0]
-    temp = [0, 0]
-    scale = 1.0
+# def leaf_space_to_quad_space(key):
+#     msb = get_MSB(key)
+#     transformation = [0, 0]
+#     temp = [0, 0]
+#     scale = 1.0
 
-    for i in range(msb // 2):
-        current_branching = get_branching(key, i, msb)
-        print(current_branching)
-        temp = get_translation(current_branching >> 1)
-        temp[0] *= scale
-        temp[1] *= scale
-        rotation_index = get_rotation(current_branching, current_branching >> 1, current_branching & 0b01)
-        r = rotate(rotation_index, temp)
-        transformation[0] = r[0]
-        transformation[1] = r[1]
-        scale *= 0.5
+#     for i in range(msb // 2):
+#         current_branching = get_branching(key, i, msb)
+#         print(current_branching)
+#         temp = get_translation(current_branching >> 1)
+#         temp[0] *= scale
+#         temp[1] *= scale
+#         rotation_index = get_rotation(current_branching, current_branching >> 1, current_branching & 0b01)
+#         r = rotate(rotation_index, temp)
+#         transformation[0] = r[0]
+#         transformation[1] = r[1]
+#         scale *= 0.5
     
     # print(transformation, scale, rotation_index)
 
@@ -151,15 +151,16 @@ def leaf_space_to_quad_space(key):
 # print(quick_sin(7), "=>", -1)
 # # print(a)
 
-def custom_transform(input_bits):
-    # Define the correct transformation using bitwise operations
-    output_bits = ((input_bits >> 1) & 0b1) | ((input_bits & 0b1) << 1)
+# def custom_transform(input_bits):
+#     # Define the correct transformation using bitwise operations
+#     output_bits = ((input_bits >> 1) & 0b1) | ((input_bits & 0b1) << 1)
     
-    return output_bits
+#     return output_bits
 
-# Test cases
-test_cases = [0b00, 0b01, 0b10, 0b11]
+# # Test cases
+# test_cases = [0b00, 0b01, 0b10, 0b11]
 
-for input_bits in test_cases:
-    output_bits = custom_transform(input_bits)
-    print(f"{input_bits:02b} -> {output_bits:02b}")
+# for input_bits in test_cases:
+#     output_bits = custom_transform(input_bits)
+#     print(f"{input_bits:02b} -> {output_bits:02b}")
+

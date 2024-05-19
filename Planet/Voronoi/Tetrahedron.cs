@@ -119,6 +119,8 @@ public class Tetrahedron
         foreach (Triangle triangle in Triangles)
         {
             Vector3[] vertices = triangle.GetVertices();
+         
+    
             Instance(spawnPoint, 
                 vertices,
                 triangle.GetIndices(),
@@ -232,16 +234,6 @@ public class Tetrahedron
                 sb.AppendLine($"                \"latex\": \"{triangle.GetVoronoiEdge(i, false).ToString()}\",");
                 sb.AppendLine("                \"lines\": true");
                 sb.AppendLine("            },");
-                // sb.AppendLine("            {");
-                // sb.AppendLine("                \"type\": \"expression\",");
-                // sb.AppendLine($"                \"id\": \"{++j}\",");
-                // sb.AppendLine($"                \"color\": \"#000fff\",");
-                // sb.AppendLine($"                \"latex\": \"{triangle.Edges[i].ToString()}\",");
-                // sb.AppendLine("                \"lines\": true");
-                // sb.AppendLine("            },");
-
-
-                // sb.AppendLine(triangle.Edges[i].VoronoiEdge.ToString());
             }
         }
 

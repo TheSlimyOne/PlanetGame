@@ -17,7 +17,7 @@ vec3 point_on_cube_to_point_on_sphere(vec3 p) {
 	float x2 = p.x * p.x;
 	float y2 = p.y * p.y;
 	float z2 = p.z * p.z;
-	
+
 	float x = p.x * sqrt(1.0 - (y2 + z2) / 2.0 + y2 * z2 / 3.0);
 	float y = p.y * sqrt(1.0 - (z2 + x2) / 2.0 + z2 * x2 / 3.0);
 	float z = p.z * sqrt(1.0 - (x2 + y2) / 2.0 + x2 * y2 / 3.0);
@@ -26,31 +26,31 @@ vec3 point_on_cube_to_point_on_sphere(vec3 p) {
 }
 
 vec3 height_to_normal(float height, float strength, vec3 vertex, vec3 _normal) {
-    vec3 dX = dFdx(vertex);
-    vec3 dY = dFdy(vertex);
+	vec3 dX = dFdx(vertex);
+	vec3 dY = dFdy(vertex);
 
-    vec3 crossX = cross(_normal, dX);
-    vec3 crossY = cross(dY, _normal);
-    
-    float dt = dot(dX, crossY);
-    float sign = dt < 0.0 ? -1.0 : 1.0;
-    float surface = sign / max(1.192093e-12, abs(dt));
+	vec3 crossX = cross(_normal, dX);
+	vec3 crossY = cross(dY, _normal);
 
-    float dHdx = dFdx(height);
-    float dHdy = dFdy(height);
+	float dt = dot(dX, crossY);
+	float sign = dt < 0.0 ? -1.0 : 1.0;
+	float surface = sign / max(1.192093e-12, abs(dt));
 
-    vec3 surfGrad = surface * (dHdx * crossY + dHdy * crossX);
+	float dHdx = dFdx(height);
+	float dHdy = dFdy(height);
 
-    return normalize(_normal - strength * surfGrad);
+	vec3 surfGrad = surface * (dHdx * crossY + dHdy * crossX);
+
+	return normalize(_normal - strength * surfGrad);
 }
 
 vec2 point_on_sphere_to_UV(vec3 p) {
-    p = normalize(p);
-    float longitude = atan(p.x, p.z);
-    float latitude = asin(-p.y);
-    float u = (longitude / (2.0 * PI) + 0.5);
-    float v = (latitude / PI) + 0.5;
-    return vec2(u, v);
+	p = normalize(p);
+	float longitude = atan(p.x, p.z);
+	float latitude = asin(-p.y);
+	float u = (longitude / (2.0 * PI) + 0.5);
+	float v = (latitude / PI) + 0.5;
+	return vec2(u, v);
 }
 
 void vertex() {

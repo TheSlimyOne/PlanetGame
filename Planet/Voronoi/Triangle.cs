@@ -29,26 +29,6 @@ public class Triangle
             new Edge(vertices[2], vertices[0], this)
         };
     }
-
-    public Triangle(Vector3[] vertices)
-    {
-        Vector3 CentroidToVertex = (vertices[0] - Vector3.Zero).Normalized();
-        Vector3 normal = Vector3Utils.GetTriangularNormal(vertices);
-        if (normal.Dot(CentroidToVertex) < 0)
-        {
-            vertices = vertices.Reverse().ToArray();
-            HasReversed = true;
-        }
-        else
-            HasReversed = false;
-
-        Edges = new Edge[]
-        {
-            new Edge(vertices[0], vertices[1], this),
-            new Edge(vertices[1], vertices[2], this),
-            new Edge(vertices[2], vertices[0], this)
-        };
-    }
     
     public Edge GetVoronoiEdge(int index, bool isCentroid)
     {
@@ -141,6 +121,12 @@ public class Triangle
         return (vertices[1] - vertices[0]).Cross(vertices[2] - vertices[0]).Normalized();
     }
 
+    public Vector3[] GetNormals()
+    {
+        Vector3 normal = GetNormal();
+        return new Vector3[]{normal, normal, normal};
+    }
+
     public int[] GetIndices()
     {
         
@@ -203,6 +189,23 @@ public class Triangle
             return true;
 
         return false;
+    }
+
+    public void Instance(Node3D node, Material material = null)
+    {
+        MeshInstance3D meshInstance3D = new MeshInstance3D { Mesh = new ArrayMesh() };
+        Godot.Collections.Array arrays = new Godot.Collections.Array();
+        arrays.Resize((int)Mesh.ArrayType.Max);
+
+        arrays[(int)Mesh.ArrayType.Vertex] = GetVertices();
+        arrays[(int)Mesh.ArrayType.Index] = GetIndices();
+        arrays[(int)Mesh.ArrayType.Normal] = GetNormals();
+        ((ArrayMesh)meshInstance3D.Mesh).AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
+        if (material != null)
+        {
+            meshInstance3D.Mesh.SurfaceSetMaterial(0, material);
+        }
+        node.AddChild(meshInstance3D);
     }
 
     public override bool Equals(object obj)

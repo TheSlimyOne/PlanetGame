@@ -194,42 +194,6 @@ public partial class QuadTree : Node
         return (value - min) / (max - min);
     }
 
-    readonly Dictionary<int, float> renderDistanceLOD = new Dictionary<int, float>()
-    {
-        {0, 350},
-        {1, 250},
-        {2, 150},
-        {3, 100},
-        {4, 90},
-        {5, 80},
-        {6, 70},
-        {7, 60},
-        {8, 50},
-        {9, 50},
-    };
-
-    readonly Dictionary<int, float> renderAngleLOD = new Dictionary<int, float>()
-    {
-        {0, 180},
-        {1, 128},
-        {2, 64},
-        {3, 32},
-        {4, 16},
-        {5, 8},
-        {6, 4},
-        {7, 2},
-        // {8, 1},
-        // {9, 0.5f},
-    };
-    // TODO!!!!
-    float calculateLOD(float dist, float fovy, float factor)
-    {
-        float num = dist * Mathf.Tan(fovy/2);
-        float dom = Mathf.Sqrt(2) * factor;
-        return Mathf.Log(num/dom) / Mathf.Log(2);
- 
-    }
-
     public void UpdateQuadTree(Camera3D camera)
     {
         _root = new QuadTreeNode(this, null, _normal, _axisA, _axisB, QuadTreeNode.Coordinate.Root, 0);
