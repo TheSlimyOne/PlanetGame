@@ -82,7 +82,7 @@ public partial class PlayerController : Node3D
 		if (direction != Vector3.Zero || keyCameraRotation != Vector2.Zero || mouseCameraRotation != Vector2.Zero)
 		{
 			EmitSignal("CameraMovement", Camera);
-			GD.Print(moveSpeed);
+			// GD.Print(moveSpeed);
 		}
 
 		mouseCameraRotation = Vector2.Zero;

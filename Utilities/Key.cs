@@ -242,6 +242,9 @@ public struct Key
 
         Vector2 point_d = Vector3Utils.toVector2(new Vector3(0.5f, 0.5f, 1) * transform_matrix);
 
+        Vector2 point_e = Vector3Utils.toVector2(new Vector3(-0.5f, 0.5f, 1) * transform_matrix);
+        Vector2 point_f = Vector3Utils.toVector2(new Vector3(0.5f, -0.5f, 1) * transform_matrix);
+
         uint vertexBaseIndex = MeshPolygonID * 5;
         uint vertexKeyA = RootID;
         uint vertexKeyB = ((RootID >> 1) ^ 1) + ((RootID & 1) << 1);
@@ -255,16 +258,22 @@ public struct Key
         Vector3 point_C = localPointToWorldPoint(point_c, base_Triangle_a, base_Triangle_b, base_Triangle_c);
         Vector3 point_D = localPointToWorldPoint(point_d, base_Triangle_a, base_Triangle_b, base_Triangle_c);
 
+        Vector3 point_E = localPointToWorldPoint(point_e, base_Triangle_a, base_Triangle_b, base_Triangle_c);
+        Vector3 point_F = localPointToWorldPoint(point_f, base_Triangle_a, base_Triangle_b, base_Triangle_c);
+
         Triangle t = new Triangle(new Vector3[] {
             (!isCube ? QuadTree.QuadTreeNode.PointOnCubeToPointOnSphere(point_A) : point_A) * radius,
             (!isCube ? QuadTree.QuadTreeNode.PointOnCubeToPointOnSphere(point_B) : point_B) * radius,
             (!isCube ? QuadTree.QuadTreeNode.PointOnCubeToPointOnSphere(point_C) : point_C) * radius
         }, origin
         );
-        t.spawnPoint = point_D * radius;
+        // t.spawnPoint = point_D * radius;
         // GD.Print(point_a);
         // GD.Print(point_b);
         // GD.Print(point_c);
+
+        // GD.PrintS(point_e, point_f);
+        // GD.PrintS(point_E * radius, point_F * radius);
         // GD.Print(this);
         // GD.Print();
         return t;

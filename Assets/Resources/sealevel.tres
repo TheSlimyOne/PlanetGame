@@ -1,0 +1,10 @@
+[gd_resource type="GradientTexture1D" load_steps=2 format=3 uid="uid://bny8pw7hbfsnp"]
+
+[sub_resource type="Gradient" id="Gradient_nyqlg"]
+interpolation_mode = 1
+offsets = PackedFloat32Array(0, 0.0288714, 0.0629921, 0.0918635, 0.128609, 0.152231, 0.21963)
+colors = PackedColorArray(0, 0.216667, 0.26, 1, 0, 0.216667, 0.26, 1, 0, 0.3, 0.36, 1, 0, 0.375, 0.45, 1, 0, 0.433333, 0.52, 1, 0, 0.541667, 0.65, 1, 0.149292, 0.352321, 0.145686, 1)
+
+[resource]
+gradient = SubResource("Gradient_nyqlg")
+width = 16384

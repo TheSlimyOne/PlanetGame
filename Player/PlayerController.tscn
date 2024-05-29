@@ -1,4 +1,4 @@
-[gd_scene load_steps=14 format=3 uid="uid://vfkamkwnbmqi"]
+[gd_scene load_steps=16 format=3 uid="uid://vfkamkwnbmqi"]
 
 [ext_resource type="Script" path="res://Player/PlayerController.cs" id="1_rnbou"]
 [ext_resource type="Script" path="res://Player/PlayerControllerBody.cs" id="2_tyhda"]
@@ -40,11 +40,17 @@ inner_radius = 0.9
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_6ukee"]
 
-[node name="PlayerController" type="Node3D" node_paths=PackedStringArray("orbitGimbal", "rotationGimbal", "Camera")]
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_sif28"]
+albedo_color = Color(1, 0.43, 0.43, 1)
+
+[sub_resource type="SphereMesh" id="SphereMesh_0ku5p"]
+material = SubResource("StandardMaterial3D_sif28")
+
+[node name="PlayerController" type="Node3D" node_paths=PackedStringArray("Camera", "orbitGimbal", "rotationGimbal")]
 script = ExtResource("1_rnbou")
+Camera = NodePath("OrbitGimbal/RotationGimbal/Character/Player Camera")
 orbitGimbal = NodePath("OrbitGimbal")
 rotationGimbal = NodePath("OrbitGimbal/RotationGimbal")
-Camera = NodePath("OrbitGimbal/RotationGimbal/Character/Player Camera")
 metadata/_access_modifiers = {
 "LightSource": 2,
 "camera": 2,
@@ -97,3 +103,6 @@ near = 0.001
 [node name="CollisionShape3D" type="CollisionShape3D" parent="OrbitGimbal/RotationGimbal/Character"]
 visible = false
 shape = SubResource("CapsuleShape3D_6ukee")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="OrbitGimbal/RotationGimbal/Character"]
+mesh = SubResource("SphereMesh_0ku5p")

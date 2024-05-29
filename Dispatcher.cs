@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Runtime.Intrinsics.Arm;
 using System.Text;
 using System.Threading.Tasks;
 [Tool]
@@ -13,6 +14,8 @@ public partial class Dispatcher : Node3D
 {
     [ExportGroup("Settings")]
     [Export(PropertyHint.Range, "1, 1000")] private int _updateFrequency = 60;
+    [Export(PropertyHint.Range, "1, 5")] private int _passAmount = 4;
+
     [Export] private bool _autoStart;
 
     [ExportGroup("Requirements")]
@@ -20,7 +23,7 @@ public partial class Dispatcher : Node3D
     [Export(PropertyHint.File)] private string _copyShader;
 
     // At the very least must be 24
-    private uint MaximumNodes = 32768;
+    private uint MaximumNodes = 30000;
 
     private RenderingDevice _rd;
 
@@ -43,42 +46,86 @@ public partial class Dispatcher : Node3D
     private Rid _writeFullList;
     private Rid _writeCulledList;
     private Rid _positions;
-    private Rid _data;
     private Rid _cameraData;
+    private Rid _debug;
     private Rid _dispatchIndirectBuffer;
-    private Rid _distanceValues;
+
+    [Export] private Curve _curve;
 
     [Export] private MultiMeshInstance3D _multimesh;
-    [Export] private MultiMeshInstance3D _multimesh2;
+
     [Export] private ShaderMaterial _material;
-    [Export] private ShaderMaterial _OTHER;
+
     [Export] private Camera3D _camera;
+
     [Export] private float _subFactor = 4;
 
-    [Export(PropertyHint.Range, "2,1000,")]
+    [Export(PropertyHint.Range, "3,1000,")]
     public int Resolution
     {
         get => _resolution;
-        set { _resolution = value; InitialMulitMesh(); }
+        set { _resolution = value; InitializeMulitMesh(); }
     }
-
     bool _isReady;
     private bool _processing;
     private int _resolution;
+    private Vector4[] _trianglePoints;
 
-    [Export] private float _radius = 500;
+    [Export(PropertyHint.Range, "1,1000")]
+    public float Radius
+    {
+        get => _radius;
+        set { _radius = value; InitializeMulitMesh(); }
+    }
+
+    private float _radius;
 
     #region MAIN LOOP
     public override void _Ready()
     {
         _isReady = true;
+
         Initialize();
+        if (_autoStart)
+        {
+            GD.Print("she go :) automatically");
+            StartProcessLoop();
+        }
     }
 
     public void Initialize()
     {
         SetupComputeShader();
-        InitialMulitMesh();
+        InitializeMulitMesh();
+    }
+
+    public GradientTexture1D BakeCurve()
+    {
+        int samples = _curve.BakeResolution;
+        GradientTexture1D gradient = new() { Gradient = new() };
+
+        Color[] colors = new Color[samples];
+        float[] colorValues = new float[samples];
+        for (int i = 0; i < samples; i++)
+        {
+            float colorSample = (float)i / (samples - 1);
+            colorValues[i] = _curve.Sample(colorSample);
+            colors[i] = new Color(colorValues[i], colorValues[i], colorValues[i]);
+        }
+
+        gradient.Gradient.Colors = colors;
+        gradient.Gradient.Offsets = colorValues;
+
+        return gradient;
+    }
+
+    public void SetMaterialParameters()
+    {
+        _material.SetShaderParameter("radius", _radius);
+        _material.SetShaderParameter("resolution", _resolution);
+        _material.SetShaderParameter("position_list", _trianglePoints);
+        _material.SetShaderParameter("height_gradient", BakeCurve());
+
     }
 
     public override void _Input(InputEvent @event)
@@ -87,27 +134,14 @@ public partial class Dispatcher : Node3D
         {
             if (_processing)
             {
-                _processing = false;
                 GD.Print("she stop :C");
+                _processing = false;
             }
             else
             {
-                StartProcessLoop();
                 GD.Print("she go :)");
+                StartProcessLoop();
             }
-        }
-
-        if (@event.IsActionPressed("IncreaseFactor"))
-        {
-            hideIndex += (hideIndex + 1) < 16 ? 1 : 0;
-            GD.Print(hideIndex);
-        }
-
-        if (@event.IsActionPressed("DecreaseFactor"))
-        {
-
-            hideIndex -= (hideIndex - 1) >= 0 ? 1 : 0;
-            GD.Print(hideIndex);
         }
     }
 
@@ -170,6 +204,7 @@ public partial class Dispatcher : Node3D
 
     private void CreateUniforms()
     {
+        if (_rd == null) return;
         _atomicCounterBuffer = CreateAtomicCounter(0);
         _indicesBlockBuffer = CreateIndicesBlock(1);
         _readList = CreateReadList(2);
@@ -177,9 +212,8 @@ public partial class Dispatcher : Node3D
         _writeCulledList = CreateWriteCulledList(4);
         _positions = CreatePositionList(5);
         _cameraData = CreateCameraData(6);
-        _data = CreateDataList(7);
+        _debug = CreateDebugList(7);
         _dispatchIndirectBuffer = CreateDispatchOutBuffer(2);
-        _distanceValues = CreateDistanceValues(8);
 
         _uniformSet_C = _rd.UniformSetCreate(_bindings_C, _shader_C, 0);
         _uniformSet_CC = _rd.UniformSetCreate(_bindings_CC, _shader_CC, 0);
@@ -235,90 +269,32 @@ public partial class Dispatcher : Node3D
 
     private Rid CreatePositionList(int binding)
     {
-        Vector3 normal = Vector3.Up;
-        Vector3 axisA = new Vector3(normal.Y, normal.Z, normal.X);
-        Vector3 axisB = normal.Cross(axisA);
-
-        Vector4[] positions = new Vector4[] {
-
-            Vector3Utils.toVector4(normal - axisB, 1),
-            Vector3Utils.toVector4(normal + axisA - axisB, 1),
-            Vector3Utils.toVector4(normal, 1),
-            Vector3Utils.toVector4(-axisB, 1),
-            Vector3Utils.toVector4(normal - axisA - axisB, 1),
-
-            Vector3Utils.toVector4(normal + axisA, 1),
-            Vector3Utils.toVector4(normal + axisA + axisB, 1),
-            Vector3Utils.toVector4(normal, 1),
-            Vector3Utils.toVector4(axisA, 1),
-            Vector3Utils.toVector4(normal + axisA - axisB, 1),
-
-            Vector3Utils.toVector4(normal - axisA, 1),
-            Vector3Utils.toVector4(normal - axisA - axisB, 1),
-            Vector3Utils.toVector4(normal, 1),
-            Vector3Utils.toVector4(-axisA, 1),
-            Vector3Utils.toVector4(normal - axisA + axisB, 1),
-
-            Vector3Utils.toVector4(normal + axisB, 1),
-            Vector3Utils.toVector4(normal - axisA + axisB, 1),
-            Vector3Utils.toVector4(normal, 1),
-            Vector3Utils.toVector4(axisB, 1),
-            Vector3Utils.toVector4(normal + axisA + axisB, 1),
-
-            Vector3Utils.toVector4(axisA + axisB, 1),
-            Vector3Utils.toVector4(-normal + axisA + axisB, 1),
-            Vector3Utils.toVector4(axisB, 1),
-            Vector3Utils.toVector4(axisA, 1),
-            Vector3Utils.toVector4(normal + axisA + axisB, 1),
-
-            Vector3Utils.toVector4(-axisA + axisB, 1),
-            Vector3Utils.toVector4(normal - axisA + axisB, 1),
-            Vector3Utils.toVector4(axisB, 1),
-            Vector3Utils.toVector4(-axisA, 1),
-            Vector3Utils.toVector4(-normal - axisA + axisB, 1),
-
-            Vector3Utils.toVector4(axisA - axisB, 1),
-            Vector3Utils.toVector4(-normal + axisA - axisB, 1),
-            Vector3Utils.toVector4(axisA, 1),
-            Vector3Utils.toVector4(-axisB, 1),
-            Vector3Utils.toVector4(normal + axisA - axisB, 1),
-
-            Vector3Utils.toVector4(-axisA - axisB, 1),
-            Vector3Utils.toVector4(normal - axisA - axisB, 1),
-            Vector3Utils.toVector4(-axisA, 1),
-            Vector3Utils.toVector4(-axisB, 1),
-            Vector3Utils.toVector4(-normal - axisA - axisB, 1),
-
-            Vector3Utils.toVector4(-normal + axisB, 1),
-            Vector3Utils.toVector4(-normal + axisA + axisB, 1),
-            Vector3Utils.toVector4(-normal, 1),
-            Vector3Utils.toVector4(axisB, 1),
-            Vector3Utils.toVector4(-normal - axisA + axisB, 1),
-
-            Vector3Utils.toVector4(-normal + axisA, 1),
-            Vector3Utils.toVector4(-normal + axisA + axisB, 1),
-            Vector3Utils.toVector4(axisA, 1),
-            Vector3Utils.toVector4(-normal, 1),
-            Vector3Utils.toVector4(-normal + axisA - axisB, 1),
-
-            Vector3Utils.toVector4(-normal - axisA, 1),
-            Vector3Utils.toVector4(-normal - axisA - axisB, 1),
-            Vector3Utils.toVector4(-axisA, 1),
-            Vector3Utils.toVector4(-normal, 1),
-            Vector3Utils.toVector4(-normal - axisA + axisB, 1),
-
-            Vector3Utils.toVector4(-normal - axisB, 1),
-            Vector3Utils.toVector4(-normal - axisA - axisB, 1),
-            Vector3Utils.toVector4(-normal, 1),
-            Vector3Utils.toVector4(-axisB, 1),
-            Vector3Utils.toVector4(-normal + axisA - axisB, 1),
-
-
+        _trianglePoints = new Vector4[30];
+        Vector3[] normals = new Vector3[]
+        {
+            Vector3.Up,
+            Vector3.Down,
+            Vector3.Right,
+            Vector3.Left,
+            Vector3.Forward,
+            Vector3.Back,
         };
 
-        _material.SetShaderParameter("position_list", positions);
 
-        byte[] data = Utilities.ToBytes<Vector4>(positions).ToArray();
+        for (int i = 0; i < 6; i++)
+        {
+            Vector3 normal = normals[i];
+            Vector3 axisA = new Vector3(normal.Y, normal.Z, normal.X);
+            Vector3 axisB = normal.Cross(axisA);
+
+            _trianglePoints[5 * i + 0] = Vector3Utils.toVector4(normal, 1);
+            _trianglePoints[5 * i + 1] = Vector3Utils.toVector4(-axisA + axisB + normal, 1);
+            _trianglePoints[5 * i + 2] = Vector3Utils.toVector4(-axisA - axisB + normal, 1);
+            _trianglePoints[5 * i + 3] = Vector3Utils.toVector4(axisA + axisB + normal, 1);
+            _trianglePoints[5 * i + 4] = Vector3Utils.toVector4(axisA - axisB + normal, 1);
+        }
+
+        byte[] data = Utilities.ToBytes<Vector4>(_trianglePoints).ToArray();
 
         (RDUniform uniform, Rid buffer) = CreateUniformFromData(data, binding);
         _bindings_CC.Add(uniform);
@@ -350,24 +326,9 @@ public partial class Dispatcher : Node3D
         return buffer;
     }
 
-    private Rid CreateDataList(int binding)
+    private Rid CreateDebugList(int binding)
     {
-        Projection[] dataList = new Projection[MaximumNodes];
-
-        byte[] data = Utilities.ToBytes<Projection>(dataList).ToArray();
-
-        (RDUniform uniform, Rid buffer) = CreateUniformFromData(data, binding);
-        _bindings_CC.Add(uniform);
-
-        return buffer;
-    }
-
-    private Rid CreateDistanceValues(int binding)
-    {
-        float[] dataList = new float[MaximumNodes];
-
-        byte[] data = Utilities.ToBytes<float>(dataList).ToArray();
-
+        byte[] data = Utilities.ToBytes<Vector4>(new Vector4[MaximumNodes]).ToArray();
         (RDUniform uniform, Rid buffer) = CreateUniformFromData(data, binding);
         _bindings_CC.Add(uniform);
 
@@ -379,7 +340,7 @@ public partial class Dispatcher : Node3D
         Transform3D transform = _camera.GlobalTransform;
         Basis basis = transform.Basis;
         Vector3 origin = transform.Origin;
-        Projection projectionMatrix =  _camera.GetCameraProjection();
+        Projection projectionMatrix = _camera.GetCameraProjection();
 
         byte[] data = Utilities.ToBytes<float>(new float[]
         {
@@ -419,7 +380,7 @@ public partial class Dispatcher : Node3D
         Transform3D transform = _camera.GlobalTransform;
         Basis basis = transform.Basis;
         Vector3 origin = transform.Origin;
-        Projection projectionMatrix =  _camera.GetCameraProjection();
+        Projection projectionMatrix = _camera.GetCameraProjection();
 
         byte[] data = Utilities.ToBytes<float>(new float[]
         {
@@ -457,12 +418,6 @@ public partial class Dispatcher : Node3D
         _rd.BufferUpdate(_writeCulledList, 0, (uint)data.Length, data);
     }
 
-    private void UpdateDistanceValues()
-    {
-        byte[] data = Utilities.ToBytes<float>(new float[MaximumNodes]).ToArray();
-        _rd.BufferUpdate(_distanceValues, 0, (uint)data.Length, data);
-    }
-
     private void UpdateIndicesBlock()
     {
         uint[] indices = Utilities.FromBytes<uint>(_rd.BufferGetData(_indicesBlockBuffer)).ToArray();
@@ -475,26 +430,35 @@ public partial class Dispatcher : Node3D
         _rd.BufferUpdate(_indicesBlockBuffer, 0, (uint)data.Length, data);
     }
 
+    private void UpdateDebug()
+    {
+        byte[] data = Utilities.ToBytes<Vector4>(new Vector4[MaximumNodes]).ToArray();
+        _rd.BufferUpdate(_writeFullList, 0, (uint)data.Length, data);
+    }
+
     private void UpdateUniforms()
     {
+        if (_rd == null) return;
         UpdateIndicesBlock();
         UpdateReadList();
         UpdateWriteFullList();
         UpdateWriteCulledList();
         UpdateCameraData();
-        UpdateDistanceValues();
+        UpdateDebug();
     }
 
-    #endregion
 
     #endregion
 
+    #endregion
 
-    private void InitialMulitMesh()
+
+    private void InitializeMulitMesh()
     {
         if (!_isReady) return;
 
         Vector3[] vertices = new Vector3[_resolution * (_resolution + 1) / 2];
+        Vector3[] normals = new Vector3[_resolution * (_resolution + 1) / 2];
         Vector2[] uvs = new Vector2[_resolution * (_resolution + 1) / 2];
         int[] triangles = new int[(_resolution - 1) * (_resolution - 1) * 6 / 2];
         Vector3 normal = Vector3.Back;
@@ -510,7 +474,8 @@ public partial class Dispatcher : Node3D
                 int currentIndex = vertexIndex++;
                 Vector2 percentage = new Vector2(x, y) / (_resolution - 1);
                 vertices[currentIndex] = normal + (percentage.X * axisA + percentage.Y * axisB);
-                uvs[currentIndex] = percentage;
+                uvs[currentIndex] = new Vector2(x, y);
+                normals[currentIndex] = normal;
 
                 if (x != _resolution - y - 1)
                 {
@@ -520,9 +485,12 @@ public partial class Dispatcher : Node3D
                         triangles[triIndex++] = currentIndex + 1;
                         triangles[triIndex++] = currentIndex + _resolution - y;
                     }
-                    else if (x % 2 == 0)
+                    else
                     {
-                        if (y % 2 == 0)
+                        bool isXEven = x % 2 == 0;
+                        bool isYEven = y % 2 == 0;
+
+                        if ((isXEven && isYEven) || (!isXEven && !isYEven))
                         {
                             triangles[triIndex++] = currentIndex;
                             triangles[triIndex++] = currentIndex + _resolution - y + 1;
@@ -531,7 +499,7 @@ public partial class Dispatcher : Node3D
                             triangles[triIndex++] = currentIndex + 1;
                             triangles[triIndex++] = currentIndex + _resolution - y + 1;
                         }
-                        else if (y % 2 == 1)
+                        else
                         {
                             triangles[triIndex++] = currentIndex;
                             triangles[triIndex++] = currentIndex + 1;
@@ -539,27 +507,6 @@ public partial class Dispatcher : Node3D
                             triangles[triIndex++] = currentIndex + 1;
                             triangles[triIndex++] = currentIndex + _resolution - y + 1;
                             triangles[triIndex++] = currentIndex + _resolution - y;
-                        }
-                    }
-                    else if (x % 2 == 1)
-                    {
-                        if (y % 2 == 0)
-                        {
-                            triangles[triIndex++] = currentIndex;
-                            triangles[triIndex++] = currentIndex + 1;
-                            triangles[triIndex++] = currentIndex + _resolution - y;
-                            triangles[triIndex++] = currentIndex + 1;
-                            triangles[triIndex++] = currentIndex + _resolution - y + 1;
-                            triangles[triIndex++] = currentIndex + _resolution - y;
-                        }
-                        else if (y % 2 == 1)
-                        {
-                            triangles[triIndex++] = currentIndex;
-                            triangles[triIndex++] = currentIndex + _resolution - y + 1;
-                            triangles[triIndex++] = currentIndex + _resolution - y;
-                            triangles[triIndex++] = currentIndex;
-                            triangles[triIndex++] = currentIndex + 1;
-                            triangles[triIndex++] = currentIndex + _resolution - y + 1;
                         }
                     }
                 }
@@ -571,9 +518,9 @@ public partial class Dispatcher : Node3D
         arrays.Resize((int)Mesh.ArrayType.Max);
         arrays[(int)Mesh.ArrayType.Vertex] = vertices;
         arrays[(int)Mesh.ArrayType.Index] = triangles;
+        arrays[(int)Mesh.ArrayType.Normal] = normals;
         arrays[(int)Mesh.ArrayType.TexUV] = uvs;
         mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
-        _material.SetShaderParameter("radius", _radius);
         mesh.SurfaceSetMaterial(0, _material);
 
         _multimesh.Multimesh = new MultiMesh()
@@ -585,13 +532,14 @@ public partial class Dispatcher : Node3D
             UseColors = true
         };
         _multimesh.ExtraCullMargin = 2 * _radius;
+        SetMaterialParameters();
     }
 
     #region PROCESSING
 
     async private void StartProcessLoop()
     {
-
+        if (_rd == null) return;
         _processing = true;
 
         while (_processing)
@@ -599,15 +547,21 @@ public partial class Dispatcher : Node3D
             UpdateCopy();
             UpdateComputeCull();
             Render();
-            UpdateUniforms();
-            await Task.Delay(_updateFrequency);
-            // break;
 
+            UpdateUniforms();
+
+            await Task.Delay(_updateFrequency);
+            if (Engine.IsEditorHint())
+            {
+                CleanupGPU();
+                _processing = false;
+            }
         }
     }
 
     private void UpdateCopy()
     {
+        if (_rd == null) return;
         long computeList = _rd.ComputeListBegin();
         _rd.ComputeListBindComputePipeline(computeList, _pipeline_C);
         _rd.ComputeListBindUniformSet(computeList, _uniformSet_C, 0);
@@ -619,6 +573,7 @@ public partial class Dispatcher : Node3D
 
     private void UpdateComputeCull()
     {
+        if (_rd == null) return;
         long computeList = _rd.ComputeListBegin();
         _rd.ComputeListBindComputePipeline(computeList, _pipeline_CC);
         _rd.ComputeListBindUniformSet(computeList, _uniformSet_CC, 0);
@@ -629,20 +584,20 @@ public partial class Dispatcher : Node3D
     int k;
     private void Render()
     {
+        if (_rd == null) return;
         _rd.Sync();
-
 
         Key[] keys = Utilities.FromBytes<Key>(_rd.BufferGetData(_writeFullList)).ToArray();
         uint[] indices = Utilities.FromBytes<uint>(_rd.BufferGetData(_indicesBlockBuffer)).ToArray();
         uint[] primCounts = Utilities.FromBytes<uint>(_rd.BufferGetData(_atomicCounterBuffer)).ToArray();
-        float[] distanceValues = Utilities.FromBytes<float>(_rd.BufferGetData(_distanceValues)).ToArray();
+        Vector4[] debugData = Utilities.FromBytes<Vector4>(_rd.BufferGetData(_debug)).ToArray();
 
 
 
-        InstanceAllTriangles(keys, distanceValues, (int)primCounts[indices[1]]);
+        InstanceAllTriangles(keys, (int)primCounts[indices[1]], debugData);
     }
-    int hideIndex;
-    public void InstanceAllTriangles(Key[] keys, float[] distanceValues, int amount)
+
+    public void InstanceAllTriangles(Key[] keys, int amount, Vector4[] debugData)
     {
         _multimesh.Multimesh.InstanceCount = amount;
 
@@ -651,7 +606,7 @@ public partial class Dispatcher : Node3D
             Transform3D transform = new Transform3D(Basis.Identity, Vector3.Zero);
             _multimesh.Multimesh.SetInstanceTransform(i, transform);
             _multimesh.Multimesh.SetInstanceCustomData(i, keys[i].ToColor());
-            _multimesh.Multimesh.SetInstanceColor(i, new Color(distanceValues[i], 0, 0, 0));
+            _multimesh.Multimesh.SetInstanceColor(i, new Color(debugData[i].X, debugData[i].Y, debugData[i].Z, 0));
         }
     }
 
@@ -659,20 +614,28 @@ public partial class Dispatcher : Node3D
     private void CleanupGPU()
     {
         if (_rd is null) return;
+
         _rd.FreeRid(_uniformSet_C);
         _rd.FreeRid(_pipeline_C);
         _rd.FreeRid(_shader_C);
         _rd.FreeRid(_uniformSet_CC);
         _rd.FreeRid(_pipeline_CC);
         _rd.FreeRid(_shader_CC);
+
+        _rd.FreeRid(_atomicCounterBuffer);
+        _rd.FreeRid(_indicesBlockBuffer);
+        _rd.FreeRid(_readList);
+        _rd.FreeRid(_writeFullList);
+        _rd.FreeRid(_writeCulledList);
+        _rd.FreeRid(_positions);
+        _rd.FreeRid(_cameraData);
+        _rd.FreeRid(_dispatchIndirectBuffer);
+        _rd.FreeRid(_debug);
+
         _rd.Free();
         _rd = null;
     }
 
     #endregion
-
-
-
-
 
 }

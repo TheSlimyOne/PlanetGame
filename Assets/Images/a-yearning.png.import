@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://banhn15brscdb"
-path="res://.godot/imported/World_elevation_map.png-46778074b7cb0a58efe128aa727b41ce.ctex"
+uid="uid://cr7ue350udxbh"
+path="res://.godot/imported/a-yearning.png-5fc07efee26f8b84f34959b23b79c3b4.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Images/World_elevation_map.png"
-dest_files=["res://.godot/imported/World_elevation_map.png-46778074b7cb0a58efe128aa727b41ce.ctex"]
+source_file="res://Assets/Images/a-yearning.png"
+dest_files=["res://.godot/imported/a-yearning.png-5fc07efee26f8b84f34959b23b79c3b4.ctex"]
 
 [params]
 

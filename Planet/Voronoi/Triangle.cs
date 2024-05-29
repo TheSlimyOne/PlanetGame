@@ -7,8 +7,6 @@ public class Triangle
 {
     public Edge[] Edges { get; private set; }
     readonly public bool HasReversed;
-    public Vector3 spawnPoint;
-    public Vector4I key;
 
     public Triangle(Vector3[] vertices, Vector3 centroid)
     {

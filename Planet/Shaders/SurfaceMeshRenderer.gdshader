@@ -2,6 +2,7 @@ shader_type spatial;
 uniform float radius;
 uniform float height_scale;
 uniform float normal_strength;
+render_mode unshaded;
 
 uniform bool is_debug;
 uniform bool is_cube;
@@ -65,9 +66,9 @@ void vertex() {
 	x = normSign == 1 ? x : x^1u;
 	y = normSign == 1 ? y : y^1u;
 	z = normSign == 1 ? z : z^1u;
-	
+
 	NORMAL = float(normSign) * vec3(float(x),float(y),float(z));
-	
+
 	vec3 axisA = vec3(NORMAL.y, NORMAL.z, NORMAL.x);
 	vec3 axisB = cross(NORMAL, axisA);
 	vec3 axicC = NORMAL * scaleFactor;
@@ -77,11 +78,11 @@ void vertex() {
 	vec3 point = NODE_POSITION_WORLD + axisA * (2.0 * UV.x - 1.0) + axisB * (2.0 * UV.y - 1.0);
 
 	VERTEX = is_cube ? point : point_on_cube_to_point_on_sphere(point);
-	
+
 	NORMAL = VERTEX;
 	object_space_pos = VERTEX;
 	VERTEX = radius * VERTEX - NODE_POSITION_WORLD;
-	
+
 	UV = point_on_sphere_to_UV(object_space_pos);
 
 	elevation = textureLod(image_texture, point_on_sphere_to_UV(object_space_pos), 0).r;
@@ -91,10 +92,10 @@ void vertex() {
 
 
 void fragment() {
-	
+
 	NORMAL = height_to_normal(elevation, normal_strength, VERTEX, NORMAL);
-    //vec3 surface_texture = textureLod(albedo_map, point_on_sphere_to_UV(object_space_pos), 0).rgb;
-	vec3 surface_texture = textureLod(albedo_map, vec2(elevation, 0.0), 0).rgb;
+    vec3 surface_texture = textureLod(albedo_map, point_on_sphere_to_UV(object_space_pos), 0).rgb;
+	//vec3 surface_texture = textureLod(albedo_map, vec2(elevation, 0.0), 0).rgb;
 
 	int a = (subdivision_level & 1) != 0 ? 1 : 0;
 	int b = (subdivision_level & 2) != 0 ? 1 : 0;
