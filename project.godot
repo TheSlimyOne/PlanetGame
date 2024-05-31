@@ -11,13 +11,8 @@ config_version=5
 [application]
 
 config/name="Planet Game"
-run/main_scene="res://Main.tscn"
+run/main_scene="res://Scenes/Main.tscn"
 config/features=PackedStringArray("4.3", "C#", "Forward Plus")
-
-[autoload]
-
-DebugManager="*res://Autoloads/DebugManager.tscn"
-DebugManagerScript="*res://Autoloads/DebugManager.cs"
 
 [dotnet]
 

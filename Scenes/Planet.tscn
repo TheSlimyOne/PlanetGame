@@ -1,0 +1,122 @@
+[gd_scene load_steps=17 format=3 uid="uid://bcima1jclqypi"]
+
+[ext_resource type="Script" path="res://Planet/Planet.cs" id="1_mnyts"]
+[ext_resource type="Script" path="res://Planet/PlanetData.cs" id="2_pap71"]
+[ext_resource type="Shader" path="res://Planet/LOD/PlanetTerrainShader.gdshader" id="4_6w24m"]
+[ext_resource type="Texture2D" uid="uid://c0er1lvuywuk5" path="res://Assets/Images/4_no_ice_clouds_mts_16k.jpg" id="4_45e13"]
+[ext_resource type="Texture2D" uid="uid://c4e0b4biysbp" path="res://Assets/Images/gebco_08_rev_elev_21600x10800.png" id="5_cml18"]
+[ext_resource type="Script" path="res://Planet/GravityField.cs" id="5_h71di"]
+[ext_resource type="PackedScene" uid="uid://vfkamkwnbmqi" path="res://Scenes/PlayerController.tscn" id="6_nspdd"]
+
+[sub_resource type="Curve" id="Curve_ul8fu"]
+_data = [Vector2(0, 0), 0.0, 0.0, 0, 0, Vector2(1, 1), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Resource" id="Resource_fp01a"]
+resource_local_to_scene = true
+script = ExtResource("2_pap71")
+Radius = 1.0
+HeightScale = 0.0
+Resolution = 2
+SubFactor = 0.0
+GravityRadius = 0.0
+HeightGradient = SubResource("Curve_ul8fu")
+NormalStrength = 0.0
+DebugMode = false
+CubeMode = false
+
+[sub_resource type="Gradient" id="Gradient_fdfre"]
+offsets = PackedFloat32Array(0, 0.010101, 0.020202, 0.030303, 0.040404, 0.050505, 0.0606061, 0.0707071, 0.0808081, 0.0909091, 0.10101, 0.111111, 0.121212, 0.131313, 0.141414, 0.151515, 0.161616, 0.171717, 0.181818, 0.191919, 0.20202, 0.212121, 0.222222, 0.232323, 0.242424, 0.252525, 0.262626, 0.272727, 0.282828, 0.292929, 0.30303, 0.313131, 0.323232, 0.333333, 0.343434, 0.353535, 0.363636, 0.373737, 0.383838, 0.393939, 0.40404, 0.414141, 0.424242, 0.434343, 0.444444, 0.454545, 0.464646, 0.474747, 0.484848, 0.494949, 0.50505, 0.515152, 0.525253, 0.535354, 0.545455, 0.555556, 0.565657, 0.575758, 0.585859, 0.59596, 0.606061, 0.616162, 0.626263, 0.636364, 0.646465, 0.656566, 0.666667, 0.676768, 0.686869, 0.69697, 0.707071, 0.717172, 0.727273, 0.737374, 0.747475, 0.757576, 0.767677, 0.777778, 0.787879, 0.79798, 0.808081, 0.818182, 0.828283, 0.838384, 0.848485, 0.858586, 0.868687, 0.878788, 0.888889, 0.89899, 0.909091, 0.919192, 0.929293, 0.939394, 0.949495, 0.959596, 0.969697, 0.979798, 0.989899, 1)
+colors = PackedColorArray(0, 0, 0, 1, 0.00030403, 0.00030403, 0.00030403, 1, 0.00120788, 0.00120788, 0.00120788, 1, 0.00269917, 0.00269917, 0.00269917, 1, 0.00476554, 0.00476554, 0.00476554, 1, 0.00739463, 0.00739463, 0.00739463, 1, 0.0105741, 0.0105741, 0.0105741, 1, 0.0142915, 0.0142915, 0.0142915, 1, 0.0185345, 0.0185345, 0.0185345, 1, 0.0232908, 0.0232908, 0.0232908, 1, 0.0285479, 0.0285479, 0.0285479, 1, 0.0342936, 0.0342936, 0.0342936, 1, 0.0405153, 0.0405153, 0.0405153, 1, 0.0472009, 0.0472009, 0.0472009, 1, 0.0543379, 0.0543379, 0.0543379, 1, 0.0619139, 0.0619139, 0.0619139, 1, 0.0699166, 0.0699166, 0.0699166, 1, 0.0783336, 0.0783336, 0.0783336, 1, 0.0871525, 0.0871525, 0.0871525, 1, 0.096361, 0.096361, 0.096361, 1, 0.105947, 0.105947, 0.105947, 1, 0.115897, 0.115897, 0.115897, 1, 0.1262, 0.1262, 0.1262, 1, 0.136843, 0.136843, 0.136843, 1, 0.147814, 0.147814, 0.147814, 1, 0.1591, 0.1591, 0.1591, 1, 0.17069, 0.17069, 0.17069, 1, 0.18257, 0.18257, 0.18257, 1, 0.194728, 0.194728, 0.194728, 1, 0.207152, 0.207152, 0.207152, 1, 0.219829, 0.219829, 0.219829, 1, 0.232748, 0.232748, 0.232748, 1, 0.245895, 0.245895, 0.245895, 1, 0.259259, 0.259259, 0.259259, 1, 0.272827, 0.272827, 0.272827, 1, 0.286587, 0.286587, 0.286587, 1, 0.300526, 0.300526, 0.300526, 1, 0.314632, 0.314632, 0.314632, 1, 0.328892, 0.328892, 0.328892, 1, 0.343295, 0.343295, 0.343295, 1, 0.357828, 0.357828, 0.357828, 1, 0.372478, 0.372478, 0.372478, 1, 0.387233, 0.387233, 0.387233, 1, 0.402081, 0.402081, 0.402081, 1, 0.41701, 0.41701, 0.41701, 1, 0.432006, 0.432006, 0.432006, 1, 0.447058, 0.447058, 0.447058, 1, 0.462153, 0.462153, 0.462153, 1, 0.47728, 0.47728, 0.47728, 1, 0.492425, 0.492425, 0.492425, 1, 0.507576, 0.507576, 0.507576, 1, 0.52272, 0.52272, 0.52272, 1, 0.537847, 0.537847, 0.537847, 1, 0.552942, 0.552942, 0.552942, 1, 0.567994, 0.567994, 0.567994, 1, 0.58299, 0.58299, 0.58299, 1, 0.597919, 0.597919, 0.597919, 1, 0.612767, 0.612767, 0.612767, 1, 0.627522, 0.627522, 0.627522, 1, 0.642172, 0.642172, 0.642172, 1, 0.656705, 0.656705, 0.656705, 1, 0.671108, 0.671108, 0.671108, 1, 0.685368, 0.685368, 0.685368, 1, 0.699474, 0.699474, 0.699474, 1, 0.713413, 0.713413, 0.713413, 1, 0.727173, 0.727173, 0.727173, 1, 0.740741, 0.740741, 0.740741, 1, 0.754105, 0.754105, 0.754105, 1, 0.767252, 0.767252, 0.767252, 1, 0.780171, 0.780171, 0.780171, 1, 0.792848, 0.792848, 0.792848, 1, 0.805272, 0.805272, 0.805272, 1, 0.81743, 0.81743, 0.81743, 1, 0.82931, 0.82931, 0.82931, 1, 0.8409, 0.8409, 0.8409, 1, 0.852186, 0.852186, 0.852186, 1, 0.863157, 0.863157, 0.863157, 1, 0.8738, 0.8738, 0.8738, 1, 0.884103, 0.884103, 0.884103, 1, 0.894053, 0.894053, 0.894053, 1, 0.903639, 0.903639, 0.903639, 1, 0.912848, 0.912848, 0.912848, 1, 0.921666, 0.921666, 0.921666, 1, 0.930083, 0.930083, 0.930083, 1, 0.938086, 0.938086, 0.938086, 1, 0.945662, 0.945662, 0.945662, 1, 0.952799, 0.952799, 0.952799, 1, 0.959485, 0.959485, 0.959485, 1, 0.965706, 0.965706, 0.965706, 1, 0.971452, 0.971452, 0.971452, 1, 0.976709, 0.976709, 0.976709, 1, 0.981465, 0.981465, 0.981465, 1, 0.985709, 0.985709, 0.985709, 1, 0.989426, 0.989426, 0.989426, 1, 0.992605, 0.992605, 0.992605, 1, 0.995234, 0.995234, 0.995234, 1, 0.997301, 0.997301, 0.997301, 1, 0.998792, 0.998792, 0.998792, 1, 0.999696, 0.999696, 0.999696, 1, 1, 1, 1, 1)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_iltco"]
+gradient = SubResource("Gradient_fdfre")
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_ucuwo"]
+render_priority = 0
+shader = ExtResource("4_6w24m")
+shader_parameter/position_list = null
+shader_parameter/radius = 300.0
+shader_parameter/is_debug = false
+shader_parameter/is_cube = false
+shader_parameter/is_texture_1D = false
+shader_parameter/height_scale = 5.0
+shader_parameter/normal_strength = 4.90654
+shader_parameter/resolution = 13
+shader_parameter/albedo_map = ExtResource("4_45e13")
+shader_parameter/height_map = ExtResource("5_cml18")
+shader_parameter/height_gradient = SubResource("GradientTexture1D_iltco")
+
+[sub_resource type="ConvexPolygonShape3D" id="ConvexPolygonShape3D_1yiki"]
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_nfgg7"]
+radius = 71.991
+
+[sub_resource type="ArrayMesh" id="ArrayMesh_qwnla"]
+_surfaces = [{
+"aabb": AABB(0, 0, 1, 1, 1, 1.00136e-05),
+"attribute_data": PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63),
+"format": 34359742487,
+"index_count": 3,
+"index_data": PackedByteArray(0, 0, 1, 0, 2, 0),
+"material": SubResource("ShaderMaterial_ucuwo"),
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 3,
+"vertex_data": PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 128, 63, 0, 0, 128, 63, 0, 0, 0, 0, 0, 0, 128, 63, 255, 127, 255, 127, 255, 127, 0, 128, 255, 127, 255, 127, 255, 127, 0, 128, 255, 127, 255, 127, 255, 127, 0, 128)
+}]
+
+[sub_resource type="MultiMesh" id="MultiMesh_1qvxc"]
+transform_format = 1
+use_colors = true
+use_custom_data = true
+mesh = SubResource("ArrayMesh_qwnla")
+
+[node name="Planet" type="StaticBody3D" node_paths=PackedStringArray("_multimesh", "GravityField", "PlayerController")]
+script = ExtResource("1_mnyts")
+PlanetData = SubResource("Resource_fp01a")
+_multimesh = NodePath("Surface")
+_material = SubResource("ShaderMaterial_ucuwo")
+_computeCullShader = "res://Planet/LOD/ComputeCull.glsl"
+_copyShader = "res://Planet/LOD/Copy.glsl"
+GravityField = NodePath("GravityField")
+PlayerController = NodePath("PlayerController")
+metadata/_access_modifiers = {
+"Dispatcher": 2,
+"GravityField": 2,
+"PlayerController": 2,
+"_computeCullShader": 2,
+"_copyShader": 2,
+"_material": 2,
+"_multimesh": 2
+}
+
+[node name="PlayerController" parent="." node_paths=PackedStringArray("Camera", "orbitGimbal", "rotationGimbal", "Focus") instance=ExtResource("6_nspdd")]
+Camera = NodePath("OrbitGimbal/RotationGimbal/Character/Player Camera")
+orbitGimbal = NodePath("OrbitGimbal")
+rotationGimbal = NodePath("OrbitGimbal/RotationGimbal")
+CameraRange = Vector2(501, 1000)
+CameraZoomSpeed = Vector2(0.01, 50)
+ZoomToRotationRatio = 0.025
+Focus = NodePath("..")
+FocusRadius = 500.0
+
+[node name="MeshInstance3D" parent="PlayerController/OrbitGimbal/RotationGimbal/Character" index="2"]
+visible = false
+
+[node name="PlanetCollision" type="CollisionShape3D" parent="."]
+shape = SubResource("ConvexPolygonShape3D_1yiki")
+
+[node name="GravityField" type="Area3D" parent="." node_paths=PackedStringArray("Planet", "Collision")]
+script = ExtResource("5_h71di")
+Planet = NodePath("..")
+Collision = NodePath("GravityFieldCollision")
+
+[node name="GravityFieldCollision" type="CollisionShape3D" parent="GravityField"]
+shape = SubResource("SphereShape3D_nfgg7")
+
+[node name="Surface" type="MultiMeshInstance3D" parent="."]
+extra_cull_margin = 2.0
+multimesh = SubResource("MultiMesh_1qvxc")
+
+[editable path="PlayerController"]

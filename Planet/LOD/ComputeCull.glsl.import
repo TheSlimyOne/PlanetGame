@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://cgja2pikxbk6t"
+path="res://.godot/imported/ComputeCull.glsl-af8a6efa6fa42c58ca47cc7a01c780cf.res"
+
+[deps]
+
+source_file="res://Planet/LOD/ComputeCull.glsl"
+dest_files=["res://.godot/imported/ComputeCull.glsl-af8a6efa6fa42c58ca47cc7a01c780cf.res"]
+
+[params]
+

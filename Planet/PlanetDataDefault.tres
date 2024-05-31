@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="PlanetData" load_steps=5 format=3 uid="uid://gwppe7ras2x"]
+
+[ext_resource type="Texture2D" uid="uid://b8yvegish7whm" path="res://Assets/Textures/Surface1D.tres" id="1_ba5ni"]
+[ext_resource type="Texture2D" uid="uid://banhn15brscdb" path="res://Assets/Images/World_elevation_map.png" id="2_tm2su"]
+[ext_resource type="Script" path="res://Planet/PlanetData.cs" id="3_6i60t"]
+
+[sub_resource type="Curve" id="Curve_nn4yf"]
+_data = [Vector2(0, 0), 0.0, 0.0, 0, 0, Vector2(1, 1), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[resource]
+script = ExtResource("3_6i60t")
+Radius = 500.0
+HeightScale = 2.0
+Resolution = 11
+SubFactor = 4.0
+GravityRadius = 50.0
+AlbedoMap = ExtResource("1_ba5ni")
+HeightMap = ExtResource("2_tm2su")
+HeightGradient = SubResource("Curve_nn4yf")
+NormalStrength = 6.46729
+DebugMode = false
+CubeMode = false

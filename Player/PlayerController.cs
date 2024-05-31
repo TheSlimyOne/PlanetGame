@@ -1,10 +1,8 @@
 using Godot;
-using System;
-using System.Linq;
-
+[Tool]
 public partial class PlayerController : Node3D
 {
-	[Export] private Camera3D Camera;
+	[Export] public Camera3D Camera { get; set; }
 
 	[ExportGroup("Gimbals")] 
 	[Export] private Node3D orbitGimbal;
@@ -13,6 +11,7 @@ public partial class PlayerController : Node3D
 	[ExportGroup("Control Settings")] 
 	[Export] private Vector2 MouseSensitivity = new Vector2(0.09f, 0.09f);
 	[Export] private Vector2 CameraRange = new Vector2(1, 100);
+	[Export] private Vector3 CameraPosition = Vector3.Zero;
 	[Export] private Vector2 CameraZoomSpeed = new Vector2(0.01f, 1000);
 	[Export] private float ZoomToRotationRatio;
 
@@ -33,6 +32,7 @@ public partial class PlayerController : Node3D
 
 	public override void _Ready()
 	{
+		if (Engine.IsEditorHint()) return;
 		RenderingServer.SetDebugGenerateWireframes(true);
 		rotationGimbal.Position = rotationGimbal.Position with { Y = CameraRange.Y };
 		isReady = true;
@@ -78,7 +78,9 @@ public partial class PlayerController : Node3D
 
 		rotationGimbal.Position = rotationGimbal.Position with { Y = rotationGimbal.Position.Y + direction.Y * moveSpeed };
 		rotationGimbal.Position = rotationGimbal.Position with { Y = Mathf.Clamp(rotationGimbal.Position.Y, CameraRange.X, CameraRange.Y) };
-		
+
+		// GD.Print(Camera.GlobalPosition, Camera.GlobalPosition.Length());
+
 		if (direction != Vector3.Zero || keyCameraRotation != Vector2.Zero || mouseCameraRotation != Vector2.Zero)
 		{
 			EmitSignal("CameraMovement", Camera);

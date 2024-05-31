@@ -262,9 +262,9 @@ public struct Key
         Vector3 point_F = localPointToWorldPoint(point_f, base_Triangle_a, base_Triangle_b, base_Triangle_c);
 
         Triangle t = new Triangle(new Vector3[] {
-            (!isCube ? QuadTree.QuadTreeNode.PointOnCubeToPointOnSphere(point_A) : point_A) * radius,
-            (!isCube ? QuadTree.QuadTreeNode.PointOnCubeToPointOnSphere(point_B) : point_B) * radius,
-            (!isCube ? QuadTree.QuadTreeNode.PointOnCubeToPointOnSphere(point_C) : point_C) * radius
+            point_A * radius,
+            point_B * radius,
+            point_C * radius
         }, origin
         );
         // t.spawnPoint = point_D * radius;
