@@ -1,22 +1,31 @@
-[gd_resource type="Resource" script_class="PlanetData" load_steps=5 format=3 uid="uid://gwppe7ras2x"]
+[gd_resource type="Resource" script_class="PlanetData" load_steps=6 format=3 uid="uid://gwppe7ras2x"]
 
-[ext_resource type="Texture2D" uid="uid://b8yvegish7whm" path="res://Assets/Textures/Surface1D.tres" id="1_ba5ni"]
-[ext_resource type="Texture2D" uid="uid://banhn15brscdb" path="res://Assets/Images/World_elevation_map.png" id="2_tm2su"]
+[ext_resource type="Texture2D" uid="uid://c4e0b4biysbp" path="res://Assets/Images/gebco_08_rev_elev_21600x10800.png" id="1_2xcvp"]
 [ext_resource type="Script" path="res://Planet/PlanetData.cs" id="3_6i60t"]
 
+[sub_resource type="Gradient" id="Gradient_2sx2u"]
+interpolation_mode = 1
+offsets = PackedFloat32Array(0, 4.99989e-07)
+colors = PackedColorArray(0.205423, 0.508461, 0.769461, 1, 0.260527, 0.421095, 9.62615e-08, 1)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_mlgj4"]
+gradient = SubResource("Gradient_2sx2u")
+width = 512
+
 [sub_resource type="Curve" id="Curve_nn4yf"]
-_data = [Vector2(0, 0), 0.0, 0.0, 0, 0, Vector2(1, 1), 0.0, 0.0, 0, 0]
+max_value = 0.5
+_data = [Vector2(0, 0.0594471), 0.0, 0.0, 0, 0, Vector2(1, 0.5), 0.0, 0.0, 0, 0]
 point_count = 2
 
 [resource]
 script = ExtResource("3_6i60t")
 Radius = 500.0
-HeightScale = 2.0
-Resolution = 11
+HeightScale = 18.1215
+Resolution = 15
 SubFactor = 4.0
 GravityRadius = 50.0
-AlbedoMap = ExtResource("1_ba5ni")
-HeightMap = ExtResource("2_tm2su")
+AlbedoMap = SubResource("GradientTexture1D_mlgj4")
+HeightMap = ExtResource("1_2xcvp")
 HeightGradient = SubResource("Curve_nn4yf")
 NormalStrength = 6.46729
 DebugMode = false

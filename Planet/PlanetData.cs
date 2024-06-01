@@ -1,3 +1,4 @@
+using System;
 using Godot;
 
 [Tool]
@@ -7,15 +8,15 @@ public partial class PlanetData : Resource
 
     #region Variables
     [ExportGroup("Planet Settings")]
-    [Export(PropertyHint.Range, "1,1000")]
+    [Export(PropertyHint.Range, "1,8000")]
     public float Radius
     {
         get => _radius;
         set
         {   
-            if (_radius != Mathf.Clamp(value, 1, 1000))
+            if (_radius != Mathf.Clamp(value, 1, 8000))
             {
-                _radius = Mathf.Clamp(value, 1, 1000);
+                _radius = Mathf.Clamp(value, 1, 8000);
                 EmitChanged();
             }
         }
@@ -66,7 +67,7 @@ public partial class PlanetData : Resource
             }
         }
     }
-    private float _subFactor;
+    private float _subFactor = 1;
 
     [ExportGroup("Gravity Settings")]
     [Export(PropertyHint.Range, "0, 1000")]
@@ -116,7 +117,7 @@ public partial class PlanetData : Resource
     private Texture2D _heightMap;
 
     [Export]
-    public Curve HeightGradient
+    public CurveTexture HeightGradient
     {
         get => _heightGradient;
         set
@@ -128,7 +129,7 @@ public partial class PlanetData : Resource
             }
         }
     }
-    private Curve _heightGradient = new Curve();
+    private CurveTexture _heightGradient = new CurveTexture() { Curve = new Curve() };
 
     [Export(PropertyHint.Range, "0, 10")]
     public float NormalStrength
@@ -177,26 +178,19 @@ public partial class PlanetData : Resource
     private bool _cubeMode;
     #endregion
 
-    public GradientTexture1D CreateHeightGradientTexture()
+    public void ConnectChanged(Action action)
     {
-        int samples = HeightGradient.BakeResolution;
-        GradientTexture1D gradient = new() { Gradient = new() };
-
-        Color[] colors = new Color[samples];
-        float[] colorValues = new float[samples];
-        for (int i = 0; i < samples; i++)
+        if (!IsConnected("changed", Callable.From(action)))
         {
-            float percentage = (float)i / (samples - 1);
-            colorValues[i] = percentage;
-            float colorValue = HeightGradient.Sample(percentage);
-
-            colors[i] = new Color(colorValue, colorValue, colorValue);
+            Changed += action;
         }
-
-        gradient.Gradient.Colors = colors;
-        gradient.Gradient.Offsets = colorValues;
-
-        return gradient;
+    }
+    public void DisconnectChanged(Action action)
+    {
+        if (IsConnected("changed", Callable.From(action)))
+        {
+            Changed -= action;
+        }
     }
 
 }

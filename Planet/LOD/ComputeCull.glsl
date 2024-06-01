@@ -263,9 +263,13 @@ float calculateLOD(float dist, float fovy, float factor) {
     return -log2(num/dom);
 }
 
+float d(vec3 a, vec3 b){
+    return sqrt(pow(a.x - b.x, 2) + pow(a.y - b.y, 2) + pow(a.z - b.z, 2));
+}
+
 float calculateLODToCam(vec3 from) {
     return calculateLOD(
-        distance(from + offset.xyz, cameraToWorld[3].xyz),
+        d(from + offset.xyz, cameraToWorld[3].xyz),
         CameraFOV, // Must be in radians
         subFactor
     );

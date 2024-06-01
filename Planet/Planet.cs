@@ -15,6 +15,7 @@ public partial class Planet : StaticBody3D
 			if (_planetData != null && _planetData.IsConnected("changed", Callable.From(UpdateMulitMesh)) && IsNodeReady())
 			{
 				GD.Print("Disconnecting");
+		
 				_planetData.Changed -= UpdateMulitMesh;
 			}
 			_planetData = value;
@@ -26,6 +27,9 @@ public partial class Planet : StaticBody3D
 		}
 	}
 	private PlanetData _planetData;
+
+	[ExportGroup("Player")]
+	[Export] public PlayerController PlayerController { get; set; }
 
 	[ExportGroup("Required")]
 	[Export] private MultiMeshInstance3D _multimesh;
@@ -63,9 +67,7 @@ public partial class Planet : StaticBody3D
 
 
 	[Export] public GravityField GravityField { get; set; }
-	[Export] public PlayerController PlayerController { get; set; }
-
-
+	
 	private Vector4[] _trianglePoints;
 
 	public Camera3D Camera { get; set; }
@@ -106,7 +108,7 @@ public partial class Planet : StaticBody3D
 	{
 		CreateTrianglePoints();
 		Camera = PlayerController?.Camera;
-		PlanetData = PlanetData == null ? new PlanetData() : PlanetData;
+		if (PlanetData == null) return;
 		SetupComputeShader();
 		UpdateMulitMesh();
 		Processing = true;
@@ -119,6 +121,12 @@ public partial class Planet : StaticBody3D
 		if (what == NotificationWMCloseRequest || what == NotificationPredelete)
 		{
 			CleanupGPU();
+
+			if (_planetData != null && _planetData.IsConnected("changed", Callable.From(UpdateMulitMesh)) && IsNodeReady())
+			{
+				GD.Print("Disconnecting");
+				_planetData.Changed -= UpdateMulitMesh;
+			}
 		}
 
 	}
@@ -147,8 +155,6 @@ public partial class Planet : StaticBody3D
 			_trianglePoints[5 * i + 2] = Vector3Utils.toVector4(-axisA - axisB + normal, 1);
 			_trianglePoints[5 * i + 3] = Vector3Utils.toVector4(axisA + axisB + normal, 1);
 			_trianglePoints[5 * i + 4] = Vector3Utils.toVector4(axisA - axisB + normal, 1);
-
-
 		}
 	}
 
@@ -157,7 +163,7 @@ public partial class Planet : StaticBody3D
 		if (_material == null || _planetData == null) return;
 
 		_material.SetShaderParameter("position_list", _trianglePoints);
-		_material.SetShaderParameter("height_gradient", _planetData.CreateHeightGradientTexture());
+		_material.SetShaderParameter("height_gradient", _planetData.HeightGradient);
 		_material.SetShaderParameter("radius", _planetData.Radius);
 		_material.SetShaderParameter("albedo_map", _planetData.AlbedoMap);
 		_material.SetShaderParameter("is_texture_1D", _planetData.AlbedoMap is GradientTexture1D);
@@ -172,7 +178,7 @@ public partial class Planet : StaticBody3D
 	public void UpdateMulitMesh()
 	{
 		GD.Print("Mesh was updated");
-		if (_planetData == null && !IsNodeReady()) return;
+		if (_planetData == null || !IsNodeReady()) return;
 		
 		Vector3[] vertices = new Vector3[_planetData.Resolution * (_planetData.Resolution + 1) / 2];
 		Vector3[] normals = new Vector3[_planetData.Resolution * (_planetData.Resolution + 1) / 2];
@@ -241,17 +247,21 @@ public partial class Planet : StaticBody3D
 		mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
 		mesh.SurfaceSetMaterial(0, _material);
 
-		_multimesh.Multimesh = new MultiMesh()
-		{
-			Mesh = mesh,
-			TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
-			InstanceCount = 0,
-			UseCustomData = true,
-			UseColors = true
-		};
-		_multimesh.ExtraCullMargin = 2 * _planetData.Radius;
+		_multimesh.Multimesh = new MultiMesh();
 
+		_multimesh.Multimesh.InstanceCount = 0;
+		_multimesh.Multimesh.Mesh = mesh;
+		_multimesh.Multimesh.TransformFormat = MultiMesh.TransformFormatEnum.Transform3D;
+		_multimesh.Multimesh.UseCustomData = true;
+		_multimesh.Multimesh.UseColors = true;
+
+
+		_multimesh.ExtraCullMargin = 2 * _planetData.Radius;
+		
 		SetMaterialParameters();
+
+		if (Engine.IsEditorHint())
+			Processing = true;
 	}
 
 	public void SetupComputeShader()
@@ -322,7 +332,7 @@ public partial class Planet : StaticBody3D
 	private void CreateAtomicCounter(int binding)
 	{
 		uint[] primCountFullAndCull = new uint[2 * 16];
-		primCountFullAndCull[0] = 12 * 4;
+		primCountFullAndCull[0] = 6 * 4;
 		byte[] data = Utilities.ToBytes<uint>(primCountFullAndCull).ToArray();
 
 		(RDUniform uniform, _atomicCounterBuffer) = CreateUniformFromData(data, binding);
@@ -342,20 +352,20 @@ public partial class Planet : StaticBody3D
 
 	private void CreateReadList(int binding)
 	{
-		Vector4I[] readList = new Vector4I[MaximumNodes];
+		Key[] readList = new Key[MaximumNodes];
 
 		// Generate cube
 
 		// key = uvec4(nodeID_MSB, nodeID_LSB, meshPolygonID, rootID)
-		for (int i = 0; i < 12; i++)
+		for (int i = 0; i < 6; i++)
 		{
-			readList[4 * i + 0] = new Vector4I(0, 1, i, 0);
-			readList[4 * i + 1] = new Vector4I(0, 1, i, 1);
-			readList[4 * i + 2] = new Vector4I(0, 1, i, 2);
-			readList[4 * i + 3] = new Vector4I(0, 1, i, 3);
+			readList[4 * i + 0] = new Key(0, 1, i, 0);
+			readList[4 * i + 1] = new Key(0, 1, i, 1);
+			readList[4 * i + 2] = new Key(0, 1, i, 2);
+			readList[4 * i + 3] = new Key(0, 1, i, 3);
 		}
 
-		byte[] data = Utilities.ToBytes<Vector4I>(readList).ToArray();
+		byte[] data = Utilities.ToBytes<Key>(readList).ToArray();
 
 		(RDUniform uniform, _readList) = CreateUniformFromData(data, binding);
 		_bindings_CC.Add(uniform);
@@ -381,9 +391,9 @@ public partial class Planet : StaticBody3D
 
 	private void CreateWriteCulledList(int binding)
 	{
-		Vector4I[] writeList = new Vector4I[MaximumNodes];
+		Key[] writeList = new Key[MaximumNodes];
 
-		byte[] data = Utilities.ToBytes<Vector4I>(writeList).ToArray();
+		byte[] data = Utilities.ToBytes<Key>(writeList).ToArray();
 
 		(RDUniform uniform, _writeCulledList) = CreateUniformFromData(data, binding);
 		_bindings_CC.Add(uniform);
@@ -398,10 +408,10 @@ public partial class Planet : StaticBody3D
 
 	private void CreateCameraData(int binding)
 	{
-		Transform3D transform = Camera.GlobalTransform;
+		Transform3D transform = Camera?.GlobalTransform ?? new Transform3D();
 		Basis basis = transform.Basis;
 		Vector3 origin = transform.Origin;
-		Projection projectionMatrix = Camera.GetCameraProjection();
+		Projection projectionMatrix = Camera?.GetCameraProjection() ?? new Projection();
 
 		byte[] data = Utilities.ToBytes<float>(new float[]
 		{
@@ -417,7 +427,7 @@ public partial class Planet : StaticBody3D
 
 			GlobalPosition.X, GlobalPosition.Y, GlobalPosition.Z, 0,
 
-			Mathf.DegToRad(Camera.Fov), Camera.Far, Camera.Near, PlanetData.Radius, PlanetData.SubFactor * PlanetData.Radius
+			Mathf.DegToRad(Camera?.Fov ?? 75), Camera?.Far ?? 4000, Camera?.Near ?? 0.05f, PlanetData.Radius, PlanetData.SubFactor * PlanetData.Radius
 		}).ToArray();
 
 		(RDUniform uniform, _cameraData) = CreateUniformFromData(data, binding);
@@ -436,11 +446,10 @@ public partial class Planet : StaticBody3D
 	#region UPDATE UNIFORMS
 	private void UpdateCameraData()
 	{
-		Transform3D transform = Camera.GlobalTransform;
-
+		Transform3D transform = Camera?.GlobalTransform ?? new Transform3D();
 		Basis basis = transform.Basis;
 		Vector3 origin = transform.Origin;
-		Projection projectionMatrix = Camera.GetCameraProjection();
+		Projection projectionMatrix = Camera?.GetCameraProjection() ?? new Projection();
 
 		byte[] data = Utilities.ToBytes<float>(new float[]
 		{
@@ -456,9 +465,9 @@ public partial class Planet : StaticBody3D
 
 			GlobalPosition.X, GlobalPosition.Y, GlobalPosition.Z, 0,
 
-			Mathf.DegToRad(Camera.Fov), Camera.Far, Camera.Near, PlanetData.Radius, PlanetData.SubFactor * PlanetData.Radius
+			Mathf.DegToRad(Camera?.Fov ?? 75), Camera?.Far ?? 4000, Camera?.Near ?? 0.05f, PlanetData.Radius, PlanetData.SubFactor * PlanetData.Radius
 		}).ToArray();
-
+		
 		_rd.BufferUpdate(_cameraData, 0, (uint)data.Length, data);
 	}
 
@@ -518,9 +527,9 @@ public partial class Planet : StaticBody3D
 
 	async public void StartProcessLoop()
 	{
-		if (_rd == null) { GD.PrintErr("Warning RD was null"); return; }
+		if (_rd == null) SetupComputeShader();
 
-		while (_processing)
+		while (Processing)
 		{
 			UpdateCopy();
 			UpdateComputeCull();
@@ -529,7 +538,7 @@ public partial class Planet : StaticBody3D
 			await Task.Delay(_updateFrequency);
 
 			if (Engine.IsEditorHint())
-				_processing = false;
+				Processing = false;
 		}
 	}
 
@@ -561,7 +570,6 @@ public partial class Planet : StaticBody3D
 		if (_rd == null) return;
 		_rd.Sync();
 
-
 		Key[] keys = Utilities.FromBytes<Key>(_rd.BufferGetData(_writeFullList)).ToArray();
 		uint[] indices = Utilities.FromBytes<uint>(_rd.BufferGetData(_indicesBlockBuffer)).ToArray();
 		uint[] primCounts = Utilities.FromBytes<uint>(_rd.BufferGetData(_atomicCounterBuffer)).ToArray();
@@ -580,10 +588,10 @@ public partial class Planet : StaticBody3D
 			GD.PrintErr($"Array is not large enough to hold: {amount}, currently: {MaximumNodes}");
 			return;
 		}
-
 		_multimesh.Multimesh.InstanceCount = amount;
 		for (int i = 0; i < amount; i++)
 		{
+			// GD.Print(keys[i]);
 			Transform3D transform = new Transform3D(Basis.Identity, Vector3.Zero);
 			_multimesh.Multimesh.SetInstanceTransform(i, transform);
 			_multimesh.Multimesh.SetInstanceCustomData(i, keys[i].ToColor());
@@ -594,6 +602,7 @@ public partial class Planet : StaticBody3D
 	private void CleanupGPU()
 	{
 		if (_rd == null) return;
+
 		GD.PrintRich("[color=red]Cleaning up GPU");
 		_rd.FreeRid(_uniformSet_C);
 		_rd.FreeRid(_pipeline_C);
@@ -614,13 +623,26 @@ public partial class Planet : StaticBody3D
 
 		_rd.Free();
 		_rd = null;
+		_multimesh.Multimesh.InstanceCount = 0;
 	}
 
 	#endregion
 
-	public override void _ExitTree()
+	public override void _EnterTree()
 	{
-		CleanupGPU();
+		if (_planetData != null && !_planetData.IsConnected("changed", Callable.From(UpdateMulitMesh)))
+		{
+			GD.Print("Connecting");
+			_planetData.Changed += UpdateMulitMesh;
+		}
 	}
 
+	public override void _ExitTree()
+	{
+		if (_planetData != null && _planetData.IsConnected("changed", Callable.From(UpdateMulitMesh)))
+		{
+			GD.Print("Disconnecting");
+			_planetData.Changed -= UpdateMulitMesh;
+		}
+	}
 }

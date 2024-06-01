@@ -1,13 +1,15 @@
 shader_type spatial;
-#define sqrt2   1.414213562
-//render_mode blend_add;
 
-uniform vec4[60] position_list;
+#define sqrt2 1.414213562
+
+// render_mode blend_add;
+
+uniform vec4 position_list[60];
 uniform float radius;
 varying float elevation;
-uniform sampler2D albedo_map : repeat_disable;
-uniform sampler2D height_map : repeat_disable;
-uniform sampler2D height_gradient : repeat_disable;
+uniform sampler2D albedo_map;
+uniform sampler2D height_map;
+uniform sampler2D height_gradient;
 uniform bool is_debug;
 uniform bool is_cube;
 uniform bool is_texture_1D;
@@ -16,6 +18,7 @@ uniform float normal_strength;
 varying vec3 object_space_pos;
 uniform int resolution;
 
+uniform float scale_factor : hint_range(0.0, 1.0) = 0.5;
 
 int findMSB64(uvec2 key) {
     return (key.x == 0u) ? int(findMSB(key.y)) : int((findMSB(key.x) + 32u));
@@ -23,15 +26,14 @@ int findMSB64(uvec2 key) {
 
 uvec2 leftShift64(uvec2 nodeID, uint shift) {
     uvec2 result;
-    if (shift == 0u) return nodeID;
+    if (shift == 0u) {
+        return nodeID;
+    }
 
-    if (shift < 32u)
-    {
+    if (shift < 32u) {
         result.x = (nodeID.x << shift) | (nodeID.y >> (32u - shift));
         result.y = nodeID.y << shift;
-    }
-    else
-    {
+    } else {
         result.x = nodeID.y << (shift - 32u);
         result.y = 0u;
     }
@@ -41,15 +43,13 @@ uvec2 leftShift64(uvec2 nodeID, uint shift) {
 
 uvec2 rightShift64(uvec2 nodeID, uint shift) {
     uvec2 result;
-    if (shift == 0u) return nodeID;
-
-    if (shift < 32u)
-    {
+    if (shift == 0u) {
+        return nodeID;
+    }
+    if (shift < 32u) {
         result.y = (nodeID.y >> shift) | (nodeID.x << (32u - shift));
         result.x = nodeID.x >> shift;
-    }
-    else
-    {
+    } else {
         result.y = nodeID.x >> (shift - 32u);
         result.x = 0u;
     }
@@ -90,15 +90,8 @@ int getRotation(uint b1b2, uint b1, uint b2) {
 }
 
 vec3 point_on_cube_to_point_on_sphere(vec3 p) {
-    float x2 = p.x * p.x;
-    float y2 = p.y * p.y;
-    float z2 = p.z * p.z;
-
-    float x = p.x * sqrt(1.0 - (y2 + z2) / 2.0 + y2 * z2 / 3.0);
-    float y = p.y * sqrt(1.0 - (z2 + x2) / 2.0 + z2 * x2 / 3.0);
-    float z = p.z * sqrt(1.0 - (x2 + y2) / 2.0 + x2 * y2 / 3.0);
-
-    return vec3(x, y, z);
+    vec3 square = p * p;
+    return p * sqrt(1.0 - (square.yxx + square.zzy) / 2.0 + square.yxx * square.zzy / 3.0);
 }
 
 uint getBranching(uvec2 key, int level, int msb) {
@@ -128,9 +121,7 @@ mat3 leaf_space(uvec4 key) {
     int theta = 0;
     float scale = 1.0;
 
-
-    for (int i = 0; i < msb / 2; i++)
-    {
+    for (int i = 0; i < msb / 2; i++) {
         uint b1b2 = getBranching(key.xy, i, msb);
         uint b1 = b1b2 >> 1u;
         uint b2 = b1b2 & 1u;
@@ -162,85 +153,78 @@ int getLevelInKey(uvec2 key) {
 }
 
 vec3 height_to_normal(float height, float strength, vec3 vertex, vec3 _normal) {
-	vec3 dX = dFdx(vertex);
-	vec3 dY = dFdy(vertex);
+    vec3 dX = dFdx(vertex);
+    vec3 dY = dFdy(vertex);
 
-	vec3 crossX = cross(_normal, dX);
-	vec3 crossY = cross(dY, _normal);
+    vec3 crossX = cross(_normal, dX);
+    vec3 crossY = cross(dY, _normal);
 
-	float dt = dot(dX, crossY);
-	float sign = dt < 0.0 ? -1.0 : 1.0;
-	float surface = sign / max(1.192093e-12, abs(dt));
+    float dt = dot(dX, crossY);
+    float sign = dt < 0.0 ? -1.0 : 1.0;
+    float surface = sign / max(1.192093e-12, abs(dt));
 
-	float dHdx = dFdx(height);
-	float dHdy = dFdy(height);
+    float dHdx = dFdx(height);
+    float dHdy = dFdy(height);
 
-	vec3 surfGrad = surface * (dHdx * crossY + dHdy * crossX);
+    vec3 surfGrad = surface * (dHdx * crossY + dHdy * crossX);
 
-	return normalize(_normal - strength * surfGrad);
+    return normalize(_normal - strength * surfGrad);
 }
 
 vec2 point_on_sphere_to_UV(vec3 p) {
-	p = normalize(p);
-	float longitude = atan(p.x, p.z);
-	float latitude = asin(-p.y);
-	float u = (longitude / (2.0 * PI) + 0.5);
-	float v = (latitude / PI) + 0.5;
-	return vec2(u, v);
+    p = normalize(p);
+    float longitude = atan(p.x, p.z);
+    float latitude = asin(-p.y);
+    float u = (longitude / (2.0 * PI) + 0.5);
+    float v = (latitude / PI) + 0.5;
+    return vec2(u, v);
 }
-
 
 varying flat uvec4 key;
 varying flat uint flags;
+
 void vertex() {
-	key = floatBitsToUint(INSTANCE_CUSTOM);
-	flags = key.w >> 29u;
-	key.w &= 0x1FFFFFFFu;
+    key = floatBitsToUint(INSTANCE_CUSTOM);
+    flags = key.w >> 29u;
+    key.w &= 0x1FFFFFFFu;
 
+    float skipAmount = 1.0 / float(resolution - 1);
 
-	float skipAmount = 1.0 / float(resolution - 1);
+    if (flags == 0u && (int(UV.y) == 0) && (int(UV.x) % 2 == 1)) {
+        VERTEX -= vec3(0, skipAmount, 0);
+    }
+    if (flags == 3u && (int(UV.x) == 0) && (int(UV.y) % 2 == 1)) {
+        VERTEX -= vec3(skipAmount, 0, 0);
+    }
+    if (flags == 1u && (int(UV.x) == 0) && (int(UV.y) % 2 == 1)) {
+        VERTEX -= vec3(skipAmount, 0, 0);
+    }
+    if (flags == 2u && (int(UV.y) == 0) && (int(UV.x) % 2 == 1)) {
+        VERTEX -= vec3(0, skipAmount, 0);
+    }
 
-	if (flags == 0u && (int(UV.y) == 0) && (int(UV.x) % 2 == 1)) {
-		VERTEX -= vec3(0, skipAmount, 0);
-	}
-	if (flags == 3u && (int(UV.x) == 0) && (int(UV.y) % 2 == 1)) {
-		VERTEX -= vec3(skipAmount, 0, 0);
-	}
-	if (flags == 1u && (int(UV.x) == 0) && (int(UV.y) % 2 == 1)) {
-		VERTEX -= vec3(skipAmount, 0, 0);
-	}
-	if (flags == 2u && (int(UV.y) == 0) && (int(UV.x) % 2 == 1)) {
-		VERTEX -= vec3(0, skipAmount, 0);
-	}
+    vec2 quad_position = leaf_space_to_quad_space(VERTEX, key);
+    vec3 world_position = quad_space_to_world_space(quad_position, key.z, key.w);
+    VERTEX = is_cube ? world_position : point_on_cube_to_point_on_sphere(world_position);
+    NORMAL = VERTEX;
+    object_space_pos = VERTEX;
+    elevation = textureLod(height_map, point_on_sphere_to_UV(VERTEX), 0).r;
 
-
-	vec2 quad_position = leaf_space_to_quad_space(VERTEX, key);
-
-	vec3 world_position = quad_space_to_world_space(quad_position, key.z, key.w);
-	VERTEX = is_cube ? world_position : point_on_cube_to_point_on_sphere(world_position);
-	NORMAL = VERTEX;
-	object_space_pos = VERTEX;
-	elevation = textureLod(height_map, point_on_sphere_to_UV(VERTEX), 0).r;
-
-	VERTEX *= radius;
-	elevation = textureLod(height_gradient, vec2(elevation, 0), 0).r;
-	VERTEX += NORMAL * height_scale * elevation;
-
+    VERTEX *= radius;
+    elevation = textureLod(height_gradient, vec2(elevation, 0), 0).r;
+    VERTEX += NORMAL * height_scale * elevation;
 }
 
 void fragment() {
-	NORMAL = height_to_normal(elevation, normal_strength, VERTEX, NORMAL);
-	int msb = getLevelInKey(key.xy);
-	int a = (msb & 1) != 0 ? 1 : 0;
-	int b = (msb & 2) != 0 ? 1 : 0;
-	int c = (msb & 4) != 0 ? 1 : 0;
-	vec3 debug_color = vec3(float(a), float(b), float(c));
+    NORMAL = height_to_normal(elevation, normal_strength, VERTEX, NORMAL);
+    int msb = getLevelInKey(key.xy);
+    int a = (msb & 1) != 0 ? 1 : 0;
+    int b = (msb & 2) != 0 ? 1 : 0;
+    int c = (msb & 4) != 0 ? 1 : 0;
+    vec3 debug_color = vec3(float(a), float(b), float(c));
 
-	vec2 uv_point = is_texture_1D ? vec2(elevation, 0.0) : point_on_sphere_to_UV(object_space_pos);
-	vec3 surface_texture = textureLod(albedo_map, uv_point, 0).rgb;
+    vec2 uv_point = is_texture_1D ? vec2(elevation, 0.0) : point_on_sphere_to_UV(object_space_pos);
+    vec3 surface_texture = textureLod(albedo_map, uv_point, 0).rgb;
 
-	ALBEDO = is_debug ? mix(COLOR.xyz, debug_color, 0.7) :  surface_texture;
-
-
-
+    ALBEDO = is_debug ? debug_color : surface_texture;
 }

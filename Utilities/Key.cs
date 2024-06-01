@@ -6,18 +6,16 @@ public struct Key
     readonly public uint MSB;
     readonly public uint LSB;
     readonly public uint MeshPolygonID;
-    readonly public uint RootID;
+    readonly public uint FlagAndRootID;
 
-
-
-    public Key(float msb, float lsb, float meshPolygonID, float rootID) : this(BitConverter.SingleToUInt32Bits(msb), BitConverter.SingleToUInt32Bits(lsb), BitConverter.SingleToUInt32Bits(meshPolygonID), BitConverter.SingleToUInt32Bits(rootID)) { }
-    public Key(int msb, int lsb, int meshPolygonID, int rootID) : this((uint)msb, (uint)lsb, (uint)meshPolygonID, (uint)rootID) { }
-    public Key(uint msb, uint lsb, uint meshPolygonID, uint rootID)
+    public Key(float msb, float lsb, float meshPolygonID, float flagAndRootID) : this(BitConverter.SingleToUInt32Bits(msb), BitConverter.SingleToUInt32Bits(lsb), BitConverter.SingleToUInt32Bits(meshPolygonID), BitConverter.SingleToUInt32Bits(flagAndRootID)) { }
+    public Key(int msb, int lsb, int meshPolygonID, int flagAndRootID) : this((uint)msb, (uint)lsb, (uint)meshPolygonID, (uint)flagAndRootID) { }
+    public Key(uint msb, uint lsb, uint meshPolygonID, uint flagAndRootID)
     {
         MSB = msb;
         LSB = lsb;
         MeshPolygonID = meshPolygonID;
-        RootID = rootID;
+        FlagAndRootID = flagAndRootID;
     }
 
     public uint[] GetNodeID()
@@ -31,7 +29,7 @@ public struct Key
             BitConverter.UInt32BitsToSingle(MSB),
             BitConverter.UInt32BitsToSingle(LSB),
             BitConverter.UInt32BitsToSingle(MeshPolygonID),
-            BitConverter.UInt32BitsToSingle(RootID)
+            BitConverter.UInt32BitsToSingle(FlagAndRootID)
         );
     }
 
@@ -42,8 +40,18 @@ public struct Key
             BitConverter.UInt32BitsToSingle(MSB),
             BitConverter.UInt32BitsToSingle(LSB),
             BitConverter.UInt32BitsToSingle(MeshPolygonID),
-            BitConverter.UInt32BitsToSingle(RootID)
+            BitConverter.UInt32BitsToSingle(FlagAndRootID)
         };
+    }
+
+    public uint GetFlag()
+    {
+        return FlagAndRootID >> 29;
+    }
+
+    public uint GetRootID()
+    {
+        return FlagAndRootID & 0x1FFFFFFF;
     }
 
 
@@ -72,13 +80,6 @@ public struct Key
     public uint getBranching(int level)
     {
         int msb = FindMSB64();
-        uint[] shiftedBits = rightShift64(GetNodeID(), (msb - 2) - (level * 2));
-
-        // GD.Print( (msb - 2) - (level * 2));
-        // GD.PrintS(Utilities.ToBinary(shiftedBits[0]), Utilities.ToBinary(shiftedBits[1]));
-        // GD.PrintS(Utilities.ToBinary(GetNodeID()[0]), Utilities.ToBinary(GetNodeID()[1]));
-        // GD.Print("=============================");
-
         return rightShift64(GetNodeID(), (msb - 2) - (level * 2))[1] & 0x3;
     }
 
@@ -87,8 +88,6 @@ public struct Key
         Vector2 translation = new Vector2(b1 & 0x1, b1 ^ 0x1);
         return translation * 0.5f;
     }
-
-
 
     public static uint[] leftShift64(uint[] nodeID, int shift)
     {
@@ -135,6 +134,7 @@ public struct Key
 
         return result;
     }
+
     public static Vector2 rotate(int rotationIndex, Vector2 translation)
     {
         Vector2I trig = quickPI_2(rotationIndex);
@@ -196,22 +196,18 @@ public struct Key
         Vector2 temp;
         int theta = 0;
         float scale = 1.0f;
-        string s = "";
+
         for (int i = 0; i < msb / 2; i++)
         {
             uint b1b2 = getBranching(i);
             uint b1 = b1b2 >> 1;
             uint b2 = b1b2 & 1;
-            s += Convert.ToString(b1b2, 2).PadZeros(2) + " ";
             temp = scale * getTranslation(b1);
 
             translation += rotate(theta, temp);
             theta += getRotation(b1b2, b1, b2);
             scale *= 0.5f;
         }
-        GD.Print(this);
-        GD.Print(s);
-        GD.Print();
 
         Vector2I trig = quickPI_2(theta);
         Basis transform_matrix = new Basis(
@@ -246,8 +242,8 @@ public struct Key
         Vector2 point_f = Vector3Utils.toVector2(new Vector3(0.5f, -0.5f, 1) * transform_matrix);
 
         uint vertexBaseIndex = MeshPolygonID * 5;
-        uint vertexKeyA = RootID;
-        uint vertexKeyB = ((RootID >> 1) ^ 1) + ((RootID & 1) << 1);
+        uint vertexKeyA = FlagAndRootID;
+        uint vertexKeyB = ((FlagAndRootID >> 1) ^ 1) + ((FlagAndRootID & 1) << 1);
 
         Vector3 base_Triangle_a = Vector3Utils.toVector3(position_list[vertexBaseIndex + vertexKeyA + 1]);
         Vector3 base_Triangle_b = Vector3Utils.toVector3(position_list[vertexBaseIndex + vertexKeyB + 1]);
@@ -267,15 +263,7 @@ public struct Key
             point_C * radius
         }, origin
         );
-        // t.spawnPoint = point_D * radius;
-        // GD.Print(point_a);
-        // GD.Print(point_b);
-        // GD.Print(point_c);
 
-        // GD.PrintS(point_e, point_f);
-        // GD.PrintS(point_E * radius, point_F * radius);
-        // GD.Print(this);
-        // GD.Print();
         return t;
     }
 
@@ -286,7 +274,8 @@ public struct Key
 
     public override string ToString()
     {
-
-        return $"{Convert.ToString(MSB, 2).PadZeros(32)}, {Convert.ToString(LSB, 2).PadZeros(32)}, {MeshPolygonID}, {RootID}";
+        uint flag = GetFlag();
+        uint rootID = GetRootID();
+        return $"{Convert.ToString(MSB, 2).PadZeros(32)}, {Convert.ToString(LSB, 2).PadZeros(32)}, {MeshPolygonID,-4} {rootID}, {Convert.ToString(flag, 2).PadZeros(3)}";
     }
 }

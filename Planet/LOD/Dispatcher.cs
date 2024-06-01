@@ -105,7 +105,7 @@ public partial class Dispatcher : Node
     public void SetMaterialParameters()
     {
         _material.SetShaderParameter("position_list", _trianglePoints);
-        _material.SetShaderParameter("height_gradient", _planetData.CreateHeightGradientTexture());
+        _material.SetShaderParameter("height_gradient", _planetData.HeightGradient);
         _material.SetShaderParameter("radius", _planetData.Radius);
         _material.SetShaderParameter("albedo_map", _planetData.AlbedoMap);
         _material.SetShaderParameter("height_map", _planetData.HeightMap);
