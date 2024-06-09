@@ -109,10 +109,28 @@ public static class Vector3Utils
     {
         return new Vector3(vector.X, vector.Y, vector.Z);
     }
+
+    public static Vector3 toVector3(Vector2 vector, float padding)
+    {
+        return new Vector3(vector.X, vector.Y, padding);
+    }
     
     public static Vector2 toVector2(Vector3 vector)
     {
         return new Vector2(vector.X, vector.Y);
+    }
+
+    public static Vector3 PointOnCubeToPointOnSphere(Vector3 point)
+    {
+        float x2 = point.X * point.X;
+        float y2 = point.Y * point.Y;
+        float z2 = point.Z * point.Z;
+
+        float x = point.X * Mathf.Sqrt(1 - (y2 + z2) / 2 + y2 * z2 / 3);
+        float y = point.Y * Mathf.Sqrt(1 - (z2 + x2) / 2 + z2 * x2 / 3);
+        float z = point.Z * Mathf.Sqrt(1 - (x2 + y2) / 2 + x2 * y2 / 3);
+
+        return new Vector3(x, y, z);
     }
 
 }

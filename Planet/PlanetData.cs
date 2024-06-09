@@ -23,15 +23,15 @@ public partial class PlanetData : Resource
     }
     private float _radius;
 
-    [Export(PropertyHint.Range, "0,50")]
+    [Export]
     public float HeightScale
     {
         get => _heightScale;
         set
         {
-            if (_heightScale != Mathf.Clamp(value, 0, 50))
+            if (_heightScale != value)
             {
-                _heightScale = Mathf.Clamp(value, 0, 50);
+                _heightScale = value;
                 EmitChanged();
             }
         }
@@ -39,15 +39,15 @@ public partial class PlanetData : Resource
     private float _heightScale;
 
     [ExportGroup("LOD Settings")]
-    [Export(PropertyHint.Range, "2,100,")]
+    [Export(PropertyHint.Range, "2,500,")]
     public int Resolution
     {
         get => _resolution;
         set
         {
-            if (_resolution != Mathf.Clamp(value, 2, 100))
+            if (_resolution != Mathf.Clamp(value, 2, 500))
             {
-                _resolution = Mathf.Clamp(value, 2, 100);
+                _resolution = Mathf.Clamp(value, 2, 500);
                 EmitChanged();
             }
         }
@@ -99,7 +99,7 @@ public partial class PlanetData : Resource
             }
         }
     }
-    private Texture2D _albedoMap;
+    private Texture2D _albedoMap = new PlaceholderTexture2D();
 
     [Export]
     public Texture2D HeightMap
@@ -114,7 +114,7 @@ public partial class PlanetData : Resource
             }
         }
     }
-    private Texture2D _heightMap;
+    private Texture2D _heightMap = new PlaceholderTexture2D();
 
     [Export]
     public CurveTexture HeightGradient
@@ -131,7 +131,7 @@ public partial class PlanetData : Resource
     }
     private CurveTexture _heightGradient = new CurveTexture() { Curve = new Curve() };
 
-    [Export(PropertyHint.Range, "0, 10")]
+    [Export]
     public float NormalStrength
     {
         get => _normalStrength;
@@ -144,7 +144,7 @@ public partial class PlanetData : Resource
             }
         }
     }
-    private float _normalStrength;
+    private float _normalStrength = 5;
 
     [ExportGroup("Debug Settings")]
     [Export]

@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://b8nluepgt5u0f"
-path="res://.godot/imported/gebco_08_rev_elev_21600x10800.png-991f5d21655c4c3c061a3f6a13086f9c.ctex"
+uid="uid://bnu0qnqbfp56c"
+path="res://.godot/imported/Untitled-4.png-1c0210d75e907d00319c2dd31626b4ab.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Images/gebco_08_rev_elev_21600x10800.png"
-dest_files=["res://.godot/imported/gebco_08_rev_elev_21600x10800.png-991f5d21655c4c3c061a3f6a13086f9c.ctex"]
+source_file="res://Assets/Images/Untitled-4.png"
+dest_files=["res://.godot/imported/Untitled-4.png-1c0210d75e907d00319c2dd31626b4ab.ctex"]
 
 [params]
 
@@ -21,11 +21,11 @@ compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=true
+mipmaps/generate=false
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""
-process/fix_alpha_border=true
+process/fix_alpha_border=false
 process/premult_alpha=false
 process/normal_map_invert_y=false
 process/hdr_as_srgb=false

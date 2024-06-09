@@ -10,6 +10,7 @@ layout(local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
 layout(set = 0, binding = 0, std430) buffer restrict AtomicCounterBuffer {
     uint primCount_full[16];
     uint primCount_culled[16];
+    uint primCount_collision[16];
 };
 
 layout(set = 0, binding = 1, std430) buffer restrict readonly IndicesBlock {
@@ -31,27 +32,53 @@ layout(set = 0, binding = 4, std430) buffer restrict writeonly WriteCulledList {
     uvec4 write_culled_list[];
 };
 
-layout(set = 0, binding = 5, std430) buffer restrict readonly Positions {
+layout(set = 0, binding = 5, std430) buffer restrict writeonly WriteCollisionList {
+    uvec4 write_collision_list[];
+};
+
+layout(set = 0, binding = 6, std430) buffer restrict readonly Positions {
     vec4 position_list[];
 };
 
-layout(set = 0, binding = 6, std430) buffer restrict CameraData {
-    mat4 cameraToWorld;
-    mat4 projectionMatrix;
-    vec4 offset;
-    float CameraFOV;
-    float CameraFarPlane;
-    float CameraNearPlane;
-    float radius;
-    float subFactor;
+layout(set = 0, binding = 7, std430) buffer restrict CameraData {
+    mat4 viewMatrix;         // 16 * 4 = 64 bytes
+    mat4 projectionMatrix;   // 16 * 4 = 64 bytes
+    float CameraFOV;         // 4 bytes
+    float CameraFarPlane;    // 4 bytes
+    float CameraNearPlane;   // 4 bytes
+    float radius;            // 4 bytes
+
+    float subFactor;         // 4 bytes
+    float resolution;        // 4 bytes
+    vec2 padding1;           // 8 bytes padding to align next vec2 to 16-byte boundary
+
+    vec2 xbias;              // 8 bytes
+    vec2 ybias;              // 8 bytes
+    vec2 zbias;              // 8 bytes
+    vec2 padding2;           // 8 bytes padding to align to 16-byte boundary
 };
 
-layout(set = 0, binding = 7, std430) buffer restrict debug {
-    vec4 data_list[];
+layout(set = 0, binding = 8, std430) buffer restrict Debug {
+    // bool renderAll;
+    vec4 debug[];
+};
+
+layout(set = 0, binding = 9, r8) restrict uniform readonly image2D heightMap;
+layout(set = 0, binding = 10, r8) restrict uniform readonly image2D heightGradient;
+
+layout(set = 0, binding = 11, std430) buffer restrict readonly ExternalPosition {
+    vec4 planetPosition;
+    vec4 cameraPosition;
+    vec4 mousePosition;
 };
 
 struct Triangle {
+    vec3 v0; // (0, 0)
+    vec3 v1; // (0, 1)
+    vec3 v2; // (1, 0)
+
     vec3 origin; // (0.5, 0.5)
+
     vec3 xNeighbor; // (0.5, -0.5)
     vec3 yNeighbor; // (-0.5, 0.5)
 };
@@ -66,6 +93,15 @@ vec3 point_on_cube_to_point_on_sphere(vec3 p) {
 	float z = p.z * sqrt(1.0 - (x2 + y2) / 2.0 + x2 * y2 / 3.0);
 
 	return vec3(x, y, z);
+}
+
+vec2 point_on_sphere_to_UV(vec3 p) {
+    p = normalize(p);
+    float longitude = atan(p.x, p.z);
+    float latitude = asin(-p.y);
+    float u = (longitude / (2.0 * PI) + 0.5);
+    float v = (latitude / PI) + 0.5;
+    return vec2(u, v);
 }
 
 vec2 getTranslation(uint b1) {
@@ -159,7 +195,11 @@ int findMSB64(uvec2 key) {
     return (key.x == 0) ? findMSB(key.y) : (findMSB(key.x) + 32);
 }
 
-vec3 localPointToWorldPoint(vec2 point, vec3 vertexA, vec3 vertexB, vec3 vertexC) {
+vec3 localPointToWorldPointCubical(vec2 point, vec3 vertexA, vec3 vertexB, vec3 vertexC) {
+    return vertexA * point.x + vertexB * point.y + vertexC * (1 - point.x - point.y);
+}
+
+vec3 localPointToWorldPointSpherical(vec2 point, vec3 vertexA, vec3 vertexB, vec3 vertexC) {
     return radius * point_on_cube_to_point_on_sphere(vertexA * point.x + vertexB * point.y + vertexC * (1 - point.x - point.y));
 }
 
@@ -178,6 +218,10 @@ Triangle createTriangle(mat3 transform_matrix, uint meshPolygonID, uint rootID) 
     vec2 point_b = (vec3(0.5, -0.5, 1) * transform_matrix).xy;
     vec2 point_c = (vec3(-0.5, 0.5, 1) * transform_matrix).xy;
 
+    vec2 point_v0 = (vec3(0, 0, 1) * transform_matrix).xy;
+    vec2 point_v1 = (vec3(0, 1, 1) * transform_matrix).xy;
+    vec2 point_v2 = (vec3(1, 0, 1) * transform_matrix).xy;
+
     uint vertexBaseIndex = meshPolygonID * 5;
     uint vertexKeyA = rootID;
     uint vertexKeyB = ((rootID >> 1) ^ 1) + ((rootID & 1) << 1);
@@ -187,9 +231,13 @@ Triangle createTriangle(mat3 transform_matrix, uint meshPolygonID, uint rootID) 
     vec3 base_Triangle_c = (position_list[vertexBaseIndex]).xyz;
 
     Triangle t;
-    t.origin = localPointToWorldPoint(point_a, base_Triangle_a, base_Triangle_b, base_Triangle_c);
-    t.xNeighbor = localPointToWorldPoint(point_b, base_Triangle_a, base_Triangle_b, base_Triangle_c);
-    t.yNeighbor = localPointToWorldPoint(point_c, base_Triangle_a, base_Triangle_b, base_Triangle_c);
+    t.v0 = localPointToWorldPointSpherical(point_v0, base_Triangle_a, base_Triangle_b, base_Triangle_c);
+    t.v1 = localPointToWorldPointSpherical(point_v1, base_Triangle_a, base_Triangle_b, base_Triangle_c);
+    t.v2 = localPointToWorldPointSpherical(point_v2, base_Triangle_a, base_Triangle_b, base_Triangle_c);
+    
+    t.origin = localPointToWorldPointSpherical(point_a, base_Triangle_a, base_Triangle_b, base_Triangle_c);
+    t.xNeighbor = localPointToWorldPointSpherical(point_b, base_Triangle_a, base_Triangle_b, base_Triangle_c);
+    t.yNeighbor = localPointToWorldPointSpherical(point_c, base_Triangle_a, base_Triangle_b, base_Triangle_c);
 
     return t;
 }
@@ -263,13 +311,9 @@ float calculateLOD(float dist, float fovy, float factor) {
     return -log2(num/dom);
 }
 
-float d(vec3 a, vec3 b){
-    return sqrt(pow(a.x - b.x, 2) + pow(a.y - b.y, 2) + pow(a.z - b.z, 2));
-}
-
 float calculateLODToCam(vec3 from) {
     return calculateLOD(
-        d(from + offset.xyz, cameraToWorld[3].xyz),
+        distance(from + planetPosition.xyz, cameraPosition.xyz),
         CameraFOV, // Must be in radians
         subFactor
     );
@@ -346,6 +390,79 @@ uint getJunctionFlags(uvec4 key, Triangle triangle, float lod) {
    
 }
 
+bool PointInFrustum(vec3 point) {
+    mat4 viewProjectionMatrix = projectionMatrix * viewMatrix;
+    vec4 clipSpacePoint = viewProjectionMatrix * vec4(point, 1);
+    vec3 ndcPoint = clipSpacePoint.xyz/clipSpacePoint.w;
+    // return true;
+
+    return 
+           ndcPoint.x >= -1.0 - xbias[0] && ndcPoint.x <= 1.0 + xbias[1] &&
+           ndcPoint.y >= -1.0 - ybias[0] && ndcPoint.y <= 1.0 + ybias[1] &&
+           ndcPoint.z >= -1.0 - zbias[0] && ndcPoint.z <= 1.0 + zbias[1];
+}
+
+bool TriangleInFrustum(Triangle triangle) {
+    // vec3[3] sphere_points = {
+    //     radius * point_on_cube_to_point_on_sphere(triangle.v0),
+    //     radius * point_on_cube_to_point_on_sphere(triangle.v1),
+    //     radius * point_on_cube_to_point_on_sphere(triangle.v2)
+    // };
+
+    return PointInFrustum(triangle.v0) || 
+           PointInFrustum(triangle.v1) ||
+           PointInFrustum(triangle.v2);
+}
+
+float calculateArea(vec3 v0, vec3 v1, vec3 v2)
+{
+    vec3 a = v1 - v0;
+    vec3 b = v2 - v0;
+
+    return 0.5 * length(cross(a, b));
+}
+
+void cull_key(uvec4 key, Triangle triangle, Triangle parent_triangle) {
+    if (TriangleInFrustum(parent_triangle)) {
+        
+        
+        vec3 AB = triangle.v1 - triangle.v0;
+        vec3 AC = triangle.v2 - triangle.v0;
+        vec3 AD = mousePosition.xyz - triangle.v0;
+
+        vec3 normal = cross(AB, AC);
+        vec3 projected_normal = (dot(normal, AD) / length(normal)) * (normal / length(normal));
+
+        // if (length(projected_normal) > 10)
+        //     return;
+
+
+        // Set some threshold value the length is < 0.05?
+        vec3 pointOnPlane = -projected_normal + cameraPosition.xyz;
+
+        float esimatedArea = calculateArea(pointOnPlane, triangle.v0, triangle.v1) + 
+                             calculateArea(pointOnPlane, triangle.v1, triangle.v2) + 
+                             calculateArea(pointOnPlane, triangle.v2, triangle.v0);
+
+        float realArea = calculateArea(triangle.v0, triangle.v1, triangle.v2);
+        
+        vec4 pop = vec4(0,0,0,0);
+        if (esimatedArea <= realArea) {
+            uint index = atomicAdd(primCount_collision[write_index], 1);
+            
+            write_collision_list[index] = key;
+            pop.x = 1;
+        }
+        // else if (distance(normalize(cameraPosition.xyz) * radius, normalize(triangle.origin) * radius) < 50) {
+        //     uint index = atomicAdd(primCount_collision[write_index], 1);
+        //     write_collision_list[index] = key;
+        // }
+        uint write_culled_index = atomicAdd(primCount_culled[write_index], 1);
+        write_culled_list[write_culled_index] = key;
+        debug[write_culled_index] = pop;
+    }
+}
+
 void main() {
     uint leaf_count = uint(atomicExchange(primCount_full[read_index], primCount_full[read_index]));
     uint invocationID = gl_GlobalInvocationID.x;
@@ -358,7 +475,6 @@ void main() {
     uvec4 parent_key = getParentKey(key);
     uvec4 grand_parent_key = getParentKey(parent_key);
 
-
     Triangle triangle = leafSpaceToWorldSpace(key);
     Triangle parent_triangle = leafSpaceToWorldSpace(parent_key);
     Triangle grand_parent_triangle = leafSpaceToWorldSpace(grand_parent_key);
@@ -369,33 +485,29 @@ void main() {
     float target_LOD = calculateLODToCam(triangle.origin);
 
     if (target_LOD > current_LOD) { // subdivide
-    
         uvec4 children[4] = getChildKeys(key);
         for (int i = 0; i < 4; i++) {
             uint idx = atomicAdd(primCount_full[write_index], 1);
             children[i].w |= getJunctionFlags(children[i], triangle, current_LOD + 1);
             
-            data_list[idx] = isTJunction(children[i], triangle, current_LOD + 1);
             write_full_list[idx] = children[i];
+            Triangle child_triangle = leafSpaceToWorldSpace(children[i]);
+            cull_key(children[i], child_triangle, triangle);
         }
     } else if (parent_target_LOD < current_LOD - 1 && key.xy != uvec2(0, 1)) { // merging
         if (isUpperLeftChild(key.xy)) {
             uint idx = atomicAdd(primCount_full[write_index], 1);
             parent_key.w |= getJunctionFlags(parent_key, grand_parent_triangle, current_LOD - 1);
-            
-            
-            
-            data_list[idx] = isTJunction(parent_key, grand_parent_triangle, current_LOD - 1);
+        
             write_full_list[idx] = parent_key;
+            cull_key(parent_key, parent_triangle, grand_parent_triangle);
         } else 
             return;
-
     } else {
         uint idx = atomicAdd(primCount_full[write_index], 1);
         key.w |= getJunctionFlags(key, parent_triangle, current_LOD);
         
-        data_list[idx] = isTJunction(key, parent_triangle, current_LOD);
         write_full_list[idx] = key;
-        
+        cull_key(key, triangle, parent_triangle);
     }
 }

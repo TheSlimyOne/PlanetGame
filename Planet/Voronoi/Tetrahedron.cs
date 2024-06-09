@@ -130,10 +130,10 @@ public class Tetrahedron
         }
     }
 
-    public static MeshInstance3D CreatePoint(Vector3 position, Color color)
+    public static MeshInstance3D CreatePoint(Vector3 position, float radius, Color color)
     {
         MeshInstance3D sphere = new MeshInstance3D();
-        sphere.Mesh = new SphereMesh();
+        sphere.Mesh = new SphereMesh() { Radius = radius, Height = radius * 2 };
         sphere.Position = position;
         sphere.Mesh.SurfaceSetMaterial(0, new StandardMaterial3D() { AlbedoColor = color });
         return sphere;

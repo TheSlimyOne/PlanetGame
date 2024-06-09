@@ -241,9 +241,10 @@ public struct Key
         Vector2 point_e = Vector3Utils.toVector2(new Vector3(-0.5f, 0.5f, 1) * transform_matrix);
         Vector2 point_f = Vector3Utils.toVector2(new Vector3(0.5f, -0.5f, 1) * transform_matrix);
 
+        uint rootID = GetRootID();
         uint vertexBaseIndex = MeshPolygonID * 5;
-        uint vertexKeyA = FlagAndRootID;
-        uint vertexKeyB = ((FlagAndRootID >> 1) ^ 1) + ((FlagAndRootID & 1) << 1);
+        uint vertexKeyA = rootID;
+        uint vertexKeyB = ((rootID >> 1) ^ 1) + ((rootID & 1) << 1);
 
         Vector3 base_Triangle_a = Vector3Utils.toVector3(position_list[vertexBaseIndex + vertexKeyA + 1]);
         Vector3 base_Triangle_b = Vector3Utils.toVector3(position_list[vertexBaseIndex + vertexKeyB + 1]);
@@ -258,9 +259,9 @@ public struct Key
         Vector3 point_F = localPointToWorldPoint(point_f, base_Triangle_a, base_Triangle_b, base_Triangle_c);
 
         Triangle t = new Triangle(new Vector3[] {
-            point_A * radius,
-            point_B * radius,
-            point_C * radius
+            (isCube ? point_A : Vector3Utils.PointOnCubeToPointOnSphere(point_A)) * radius,
+            (isCube ? point_B : Vector3Utils.PointOnCubeToPointOnSphere(point_B)) * radius,
+            (isCube ? point_C : Vector3Utils.PointOnCubeToPointOnSphere(point_C)) * radius
         }, origin
         );
 

@@ -1,4 +1,4 @@
-[gd_scene load_steps=16 format=3 uid="uid://vfkamkwnbmqi"]
+[gd_scene load_steps=18 format=3 uid="uid://vfkamkwnbmqi"]
 
 [ext_resource type="Script" path="res://Player/PlayerController.cs" id="1_rnbou"]
 [ext_resource type="Script" path="res://Player/PlayerControllerBody.cs" id="2_tyhda"]
@@ -38,19 +38,33 @@ albedo_color = Color(0.697581, 0.584132, 0.0880889, 1)
 material = SubResource("StandardMaterial3D_heq6c")
 inner_radius = 0.9
 
-[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_6ukee"]
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_3qbwm"]
+albedo_color = Color(1, 0, 0, 1)
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_sif28"]
-albedo_color = Color(1, 0.43, 0.43, 1)
+[sub_resource type="SphereMesh" id="SphereMesh_717aj"]
+material = SubResource("StandardMaterial3D_3qbwm")
 
-[sub_resource type="SphereMesh" id="SphereMesh_0ku5p"]
-material = SubResource("StandardMaterial3D_sif28")
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_1ynhw"]
+albedo_color = Color(0, 0.528413, 0.882724, 1)
 
-[node name="PlayerController" type="Node3D" node_paths=PackedStringArray("Camera", "orbitGimbal", "rotationGimbal")]
+[sub_resource type="PrismMesh" id="PrismMesh_o5wav"]
+material = SubResource("StandardMaterial3D_1ynhw")
+
+[sub_resource type="LabelSettings" id="LabelSettings_jr5mq"]
+font_size = 28
+outline_size = 5
+outline_color = Color(0.0768358, 0.0768358, 0.0768358, 1)
+
+[node name="PlayerController" type="Node3D" node_paths=PackedStringArray("Camera", "HelperCamera", "orbitGimbal", "rotationGimbal", "lblTriangleCount", "lblFPS", "lblMouseCursor", "lblCameraPosition")]
 script = ExtResource("1_rnbou")
-Camera = NodePath("OrbitGimbal/RotationGimbal/Character/Player Camera")
+Camera = NodePath("OrbitGimbal/RotationGimbal/Character/PlayerCamera")
+HelperCamera = NodePath("OrbitGimbal/RotationGimbal/Character/PlayerCamera/Helper")
 orbitGimbal = NodePath("OrbitGimbal")
 rotationGimbal = NodePath("OrbitGimbal/RotationGimbal")
+lblTriangleCount = NodePath("CanvasLayer/VBoxContainer/TriangleCount")
+lblFPS = NodePath("CanvasLayer/VBoxContainer/FPS")
+lblMouseCursor = NodePath("CanvasLayer/VBoxContainer/MouseCursor")
+lblCameraPosition = NodePath("CanvasLayer/VBoxContainer/CameraPosition")
 metadata/_access_modifiers = {
 "LightSource": 2,
 "camera": 2,
@@ -95,15 +109,49 @@ skeleton = NodePath("../../Y-Mesh")
 motion_mode = 1
 script = ExtResource("2_tyhda")
 
-[node name="Player Camera" type="Camera3D" parent="OrbitGimbal/RotationGimbal/Character"]
+[node name="PlayerCamera" type="Camera3D" parent="OrbitGimbal/RotationGimbal/Character"]
 current = true
 size = 0.257
 near = 0.001
 far = 10000.0
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="OrbitGimbal/RotationGimbal/Character"]
+[node name="MeshInstance3D" type="MeshInstance3D" parent="OrbitGimbal/RotationGimbal/Character/PlayerCamera"]
 visible = false
-shape = SubResource("CapsuleShape3D_6ukee")
+mesh = SubResource("SphereMesh_717aj")
+skeleton = NodePath("../Helper")
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="OrbitGimbal/RotationGimbal/Character"]
-mesh = SubResource("SphereMesh_0ku5p")
+[node name="Helper" type="Camera3D" parent="OrbitGimbal/RotationGimbal/Character/PlayerCamera"]
+projection = 1
+size = 4000.0
+near = 0.001
+
+[node name="MeshInstance3D2" type="MeshInstance3D" parent="OrbitGimbal/RotationGimbal/Character/PlayerCamera/Helper"]
+transform = Transform3D(1, 0, 0, 0, -4.37114e-08, 1, 0, -1, -4.37114e-08, 0, 0, 0)
+visible = false
+mesh = SubResource("PrismMesh_o5wav")
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer"]
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="TriangleCount" type="Label" parent="CanvasLayer/VBoxContainer"]
+layout_mode = 2
+text = "Triangles: X"
+label_settings = SubResource("LabelSettings_jr5mq")
+
+[node name="FPS" type="Label" parent="CanvasLayer/VBoxContainer"]
+layout_mode = 2
+text = "FPS: 10"
+label_settings = SubResource("LabelSettings_jr5mq")
+
+[node name="MouseCursor" type="Label" parent="CanvasLayer/VBoxContainer"]
+layout_mode = 2
+text = "(3.222773, 0.76732695, -0.1)"
+label_settings = SubResource("LabelSettings_jr5mq")
+
+[node name="CameraPosition" type="Label" parent="CanvasLayer/VBoxContainer"]
+layout_mode = 2
+text = "(0, 0, 0)"
+label_settings = SubResource("LabelSettings_jr5mq")

@@ -3,6 +3,7 @@ using Godot;
 public partial class PlayerController : Node3D
 {
 	[Export] public Camera3D Camera { get; set; }
+	[Export] public Camera3D HelperCamera { get; set; }
 
 	[ExportGroup("Gimbals")] 
 	[Export] private Node3D orbitGimbal;
@@ -19,6 +20,11 @@ public partial class PlayerController : Node3D
     [Export] public Node3D Focus { get; set; }
 	[Export] private float FocusRadius;
 
+	[ExportGroup("UI Elements")]
+	[Export] Label lblTriangleCount;
+	[Export] Label lblFPS;
+	[Export] Label lblMouseCursor;
+	[Export] Label lblCameraPosition;
 
     Vector2 mouseCameraRotation = Vector2.Zero;
 	private float horizontalRotation = 0;
@@ -87,34 +93,39 @@ public partial class PlayerController : Node3D
 			// GD.Print(moveSpeed);
 		}
 
-		mouseCameraRotation = Vector2.Zero;
-		ResizeGimbalMesh();
+		mouseCameraRotation = Vector2.Zero;	
 	}
 
-	private void ResizeGimbalMesh()
+    public override void _Process(double delta)
+    {
+        SetFPSCount((int)Engine.GetFramesPerSecond());
+        SetMouseCoordinates();
+		SetCameraPosition();	
+    }
+
+
+	public Vector3 GetMouseWorldPosition()
 	{
-		MeshInstance3D xMesh = orbitGimbal.GetChild<MeshInstance3D>(0);
-		if (((TorusMesh)xMesh.Mesh).InnerRadius - 0.5 > 0)
-		{
-			((TorusMesh)xMesh.Mesh).InnerRadius = rotationGimbal.Position.Length() - 0.5f;
-			((TorusMesh)xMesh.Mesh).OuterRadius = rotationGimbal.Position.Length();
-		}
-
-		MeshInstance3D yMesh = orbitGimbal.GetChild<MeshInstance3D>(1);
-		if (((TorusMesh)yMesh.Mesh).InnerRadius - 0.5 > 0)
-		{
-			((TorusMesh)yMesh.Mesh).InnerRadius = rotationGimbal.Position.Length() - 0.5f;
-			((TorusMesh)yMesh.Mesh).OuterRadius = rotationGimbal.Position.Length();
-		}
-
-		MeshInstance3D zMesh = orbitGimbal.GetChild<MeshInstance3D>(2);
-		if (((TorusMesh)zMesh.Mesh).InnerRadius - 0.5 > 0)
-		{
-			((TorusMesh)zMesh.Mesh).InnerRadius = rotationGimbal.Position.Length() - 0.5f;
-			((TorusMesh)zMesh.Mesh).OuterRadius = rotationGimbal.Position.Length();
-		}
+		return Camera.ProjectPosition(GetMouseScreenPosition(), 0.1f);
 	}
 
+
+
+	public Vector2 GetMouseScreenPosition()
+	{
+		return Camera.GetViewport().GetMousePosition();
+	}
+
+	public Godot.Collections.Dictionary currentMouseIntersection { get; private set; }
+	
+	public Vector3 GetMouseIntersection()
+	{
+		
+		if (!Engine.IsEditorHint() && currentMouseIntersection != null && currentMouseIntersection.ContainsKey("position"))
+			return (Vector3)currentMouseIntersection["position"];
+		else
+			return Vector3.Inf;
+	}
 
 	public override void _Input(InputEvent @event)
 	{
@@ -126,29 +137,31 @@ public partial class PlayerController : Node3D
 				return;
 			}
 
-			
-
-		}
-
-		if (@event is InputEventMouseButton mouseButtonEvent)
-		{
-			// if (mouseButtonEvent.ButtonIndex == MouseButton.WheelUp)
-			// {
-			// 	CameraZoomSpeed.Y += 0.05f;
-			// }
-			// else if (mouseButtonEvent.ButtonIndex == MouseButton.WheelDown)
-			// {
-
-			// 	CameraZoomSpeed.X = CameraZoomSpeed.X - 0.01f <= 0 ? 0.01f :  CameraZoomSpeed.X - 0.01f;
-			
-
-			// }
-
-		}
-
-
+			if (!Engine.IsEditorHint())
+			{
+				var spaceState = GetWorld3D().DirectSpaceState;
+				Vector3 from = Camera.ProjectRayOrigin(mouseMotionEvent.Position);
+				Vector3 to = from + Camera.ProjectRayNormal(mouseMotionEvent.Position) * Camera.Far;
+				var query = PhysicsRayQueryParameters3D.Create(from, to);
+				query.CollideWithAreas = true;
+				currentMouseIntersection = spaceState.IntersectRay(query);
+			}
 		
 
+		}
+		if (@event is InputEventMouseButton mouseButtonEvent)
+		{
+			
+			
+	
+		}
+		if (Input.IsActionJustPressed("click"))
+		{
+			GD.PrintS("clicking!");
+			
+			// if (!isLocked)
+			GetTree().Root.AddChild(Tetrahedron.CreatePoint(GetMouseWorldPosition(), 0.005f, new Color(1,0,0)));
+		}
 		if (Input.IsActionJustPressed("change_view"))
 		{
 			Viewport viewport = GetViewport();
@@ -163,7 +176,20 @@ public partial class PlayerController : Node3D
 				viewport.DebugDraw = Viewport.DebugDrawEnum.Wireframe;
 
 		}
+		if (Input.IsActionJustPressed("change_view"))
+		{
+			Viewport viewport = GetViewport();
 
+			if (viewport.DebugDraw == Viewport.DebugDrawEnum.Wireframe)
+				viewport.DebugDraw = Viewport.DebugDrawEnum.NormalBuffer;
+			else if (viewport.DebugDraw == Viewport.DebugDrawEnum.NormalBuffer)
+				viewport.DebugDraw = Viewport.DebugDrawEnum.Disabled;
+			else if (viewport.DebugDraw == Viewport.DebugDrawEnum.Disabled)
+				viewport.DebugDraw = Viewport.DebugDrawEnum.Overdraw;
+			else if (viewport.DebugDraw == Viewport.DebugDrawEnum.Overdraw)
+				viewport.DebugDraw = Viewport.DebugDrawEnum.Wireframe;
+
+		}
 		if (Input.IsActionJustReleased("cam_exit"))
 		{
 			if (isLocked)
@@ -172,11 +198,32 @@ public partial class PlayerController : Node3D
 				LockMouse();
 
 		}
-
 	}
+
+	public Vector3 GetCameraPosition() => Camera.GlobalPosition;
 
 	float easeOutQuart(float number)
 	{
 		return 1 - Mathf.Pow(1 - number, 4);
+	}
+
+	public void SetLabelTriangleCount(int loaded, int unloaded)
+	{
+		lblTriangleCount.Text = $"Triangles: {loaded}/{unloaded}";
+	}
+
+	public void SetFPSCount(int amount)
+	{
+		lblFPS.Text = $"FPS: {amount}";
+	}
+
+	public void SetMouseCoordinates()
+	{
+		lblMouseCursor.Text = $"{GetMouseWorldPosition()}";
+	}
+
+	public void SetCameraPosition()
+	{
+		lblCameraPosition.Text = $"{Camera?.GlobalPosition}";
 	}
 }

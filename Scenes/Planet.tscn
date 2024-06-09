@@ -1,309 +1,116 @@
-[gd_scene load_steps=8 format=3 uid="uid://bcima1jclqypi"]
+[gd_scene load_steps=20 format=4 uid="uid://bcima1jclqypi"]
 
 [ext_resource type="Script" path="res://Planet/Planet.cs" id="1_mnyts"]
+[ext_resource type="Script" path="res://Planet/PlanetData.cs" id="2_amg5g"]
+[ext_resource type="Shader" path="res://Planet/LOD/PlanetTerrainShader.gdshader" id="3_mv2nt"]
+[ext_resource type="Texture2D" uid="uid://b0xaoom76i6uo" path="res://Assets/Images/4_no_ice_clouds_mts_16k.jpg" id="4_uudhy"]
+[ext_resource type="Texture2D" uid="uid://b8nluepgt5u0f" path="res://Assets/Images/gebco_08_rev_elev_21600x10800.png" id="5_0g6ei"]
 [ext_resource type="Script" path="res://Planet/GravityField.cs" id="5_h71di"]
 
-[sub_resource type="Shader" id="Shader_ynekg"]
-code = "shader_type spatial;
-#define sqrt2   1.414213562
-//render_mode blend_add;
+[sub_resource type="PlaceholderTexture2D" id="PlaceholderTexture2D_yeovf"]
 
-uniform vec4[60] position_list;
-uniform float radius;
-varying float elevation;
-uniform sampler2D albedo_map : repeat_disable;
-uniform sampler2D height_map : repeat_disable;
-uniform sampler2D height_gradient : repeat_disable;
-uniform bool is_debug;
-uniform bool is_cube;
-uniform bool is_texture_1D;
-uniform float height_scale;
-uniform float normal_strength;
-varying vec3 object_space_pos;
-uniform int resolution;
+[sub_resource type="Curve" id="Curve_qrxln"]
 
-uniform float scale_factor : hint_range(0.0, 1.0) = 0.5;
+[sub_resource type="CurveTexture" id="CurveTexture_4o7by"]
+curve = SubResource("Curve_qrxln")
 
+[sub_resource type="PlaceholderTexture2D" id="PlaceholderTexture2D_owm5m"]
 
+[sub_resource type="Resource" id="Resource_c6703"]
+script = ExtResource("2_amg5g")
+Radius = 1.0
+HeightScale = 0.0
+Resolution = 3
+SubFactor = 1.0
+GravityRadius = 0.0
+AlbedoMap = SubResource("PlaceholderTexture2D_yeovf")
+HeightMap = SubResource("PlaceholderTexture2D_owm5m")
+HeightGradient = SubResource("CurveTexture_4o7by")
+NormalStrength = 5.0
+DebugMode = false
+CubeMode = false
 
-int findMSB64(uvec2 key) {
-    return (key.x == 0u) ? int(findMSB(key.y)) : int((findMSB(key.x) + 32u));
-}
+[sub_resource type="Curve" id="Curve_4sr00"]
+_data = [Vector2(0, 0), 0.13054, 0.0, 1, 0, Vector2(1, 0.346734), 0.0, 0.0, 0, 0]
+point_count = 2
 
-uvec2 leftShift64(uvec2 nodeID, uint shift) {
-    uvec2 result;
-    if (shift == 0u) return nodeID;
+[sub_resource type="CurveTexture" id="CurveTexture_0rbgi"]
+curve = SubResource("Curve_4sr00")
 
-    if (shift < 32u)
-    {
-        result.x = (nodeID.x << shift) | (nodeID.y >> (32u - shift));
-        result.y = nodeID.y << shift;
-    }
-    else
-    {
-        result.x = nodeID.y << (shift - 32u);
-        result.y = 0u;
-    }
-
-    return result;
-}
-
-uvec2 rightShift64(uvec2 nodeID, uint shift) {
-    uvec2 result;
-    if (shift == 0u) return nodeID;
-
-    if (shift < 32u)
-    {
-        result.y = (nodeID.y >> shift) | (nodeID.x << (32u - shift));
-        result.x = nodeID.x >> shift;
-    }
-    else
-    {
-        result.y = nodeID.x >> (shift - 32u);
-        result.x = 0u;
-    }
-
-    return result;
-}
-
-vec2 getTranslation(uint b1) {
-    vec2 translation;
-    translation.x = float(b1 & 0x1u);
-    translation.y = float(b1 ^ 0x1u);
-    return translation * 0.5;
-}
-
-ivec2 quickPI_2(int a) {
-    int b = a & 3;
-    int b1 = b >> 1;
-    int b2 = b & 1;
-    int bn2 = b2 ^ 1;
-    int c = bn2 - (2 * (b1 & bn2));
-    int s = b2 - (2 * (b1 & b2));
-    return ivec2(c, s);
-}
-
-vec2 rotate(int rotationIndex, vec2 translation) {
-    vec2 r;
-    ivec2 trig = quickPI_2(rotationIndex);
-    r.x = float(trig.x) * translation.x - float(trig.y) * translation.y;
-    r.y = float(trig.y) * translation.x + float(trig.x) * translation.y;
-    return r;
-}
-
-int getRotation(uint b1b2, uint b1, uint b2) {
-    uint a = (b1b2 ^ 0x2u);
-    uint b = (a | 0x1u);
-    uint c = (b1 ^ b2);
-    return int(b * c);
-}
-
-vec3 point_on_cube_to_point_on_sphere(vec3 p) {
-    vec3 square = p * p;
-	return p * sqrt(1.0 - (square.yxx + square.zzy) / 2.0 + square.yxx * square.zzy / 3.0);
-}
-
-uint getBranching(uvec2 key, int level, int msb) {
-    return (rightShift64(key, uint(msb - 2) - uint(level * 2)).y & 0x3u);
-}
-
-vec3 localPointToWorldPoint(vec2 point, vec3 vertexA, vec3 vertexB, vec3 vertexC) {
-    return vertexA * point.x + vertexB * point.y + vertexC * (1.0 - point.x - point.y);
-}
-
-vec3 quad_space_to_world_space(vec2 point, uint meshPolygonID, uint rootID) {
-    uint vertexBaseIndex = meshPolygonID * 5u;
-    uint vertexKeyA = rootID;
-    uint vertexKeyB = ((rootID >> 1u) ^ 1u) + ((rootID & 1u) << 1u);
-
-    vec3 base_Triangle_a = (position_list[vertexBaseIndex + vertexKeyA + 1u]).xyz;
-    vec3 base_Triangle_b = (position_list[vertexBaseIndex + vertexKeyB + 1u]).xyz;
-    vec3 base_Triangle_c = (position_list[vertexBaseIndex]).xyz;
-
-    return localPointToWorldPoint(point, base_Triangle_a, base_Triangle_b, base_Triangle_c);
-}
-
-mat3 leaf_space(uvec4 key) {
-    int msb = findMSB64(key.xy);
-    vec2 translation = vec2(0, 0);
-    vec2 temp = vec2(0, 0);
-    int theta = 0;
-    float scale = 1.0;
-
-
-    for (int i = 0; i < msb / 2; i++)
-    {
-        uint b1b2 = getBranching(key.xy, i, msb);
-        uint b1 = b1b2 >> 1u;
-        uint b2 = b1b2 & 1u;
-        temp = scale * getTranslation(b1);
-
-        translation += rotate(theta, temp);
-        theta += getRotation(b1b2, b1, b2);
-        scale *= 0.5;
-    }
-
-    ivec2 trig = quickPI_2(theta);
-
-    mat3 transform_matrix = mat3(
-        vec3(float(trig.x) * scale, float(-trig.y) * scale, translation.x),
-        vec3(float(trig.y) * scale, float(trig.x) * scale, translation.y),
-        vec3(0.0, 0.0, 1.0)
-    );
-
-    return transform_matrix;
-}
-
-vec2 leaf_space_to_quad_space(vec3 point, uvec4 key) {
-    mat3 leaf_matrix = leaf_space(key);
-    return (point * leaf_matrix).xy;
-}
-
-int getLevelInKey(uvec2 key) {
-    return findMSB64(key) / 2;
-}
-
-vec3 height_to_normal(float height, float strength, vec3 vertex, vec3 _normal) {
-	vec3 dX = dFdx(vertex);
-	vec3 dY = dFdy(vertex);
-
-	vec3 crossX = cross(_normal, dX);
-	vec3 crossY = cross(dY, _normal);
-
-	float dt = dot(dX, crossY);
-	float sign = dt < 0.0 ? -1.0 : 1.0;
-	float surface = sign / max(1.192093e-12, abs(dt));
-
-	float dHdx = dFdx(height);
-	float dHdy = dFdy(height);
-
-	vec3 surfGrad = surface * (dHdx * crossY + dHdy * crossX);
-
-	return normalize(_normal - strength * surfGrad);
-}
-
-vec2 point_on_sphere_to_UV(vec3 p) {
-	p = normalize(p);
-	float longitude = atan(p.x, p.z);
-	float latitude = asin(-p.y);
-	float u = (longitude / (2.0 * PI) + 0.5);
-	float v = (latitude / PI) + 0.5;
-	return vec2(u, v);
-}
-
-
-varying flat uvec4 key;
-varying flat uint flags;
-void vertex() {
-	key = floatBitsToUint(INSTANCE_CUSTOM);
-	flags = key.w >> 29u;
-	key.w &= 0x1FFFFFFFu;
-
-
-	float skipAmount = 1.0 / float(resolution - 1);
-
-	if (flags == 0u && (int(UV.y) == 0) && (int(UV.x) % 2 == 1)) {
-		VERTEX -= vec3(0, skipAmount, 0);
-	}
-	if (flags == 3u && (int(UV.x) == 0) && (int(UV.y) % 2 == 1)) {
-		VERTEX -= vec3(skipAmount, 0, 0);
-	}
-	if (flags == 1u && (int(UV.x) == 0) && (int(UV.y) % 2 == 1)) {
-		VERTEX -= vec3(skipAmount, 0, 0);
-	}
-	if (flags == 2u && (int(UV.y) == 0) && (int(UV.x) % 2 == 1)) {
-		VERTEX -= vec3(0, skipAmount, 0);
-	}
-
-
-	vec2 quad_position = leaf_space_to_quad_space(VERTEX, key);
-
-	vec3 world_position = quad_space_to_world_space(quad_position, key.z, key.w);
-	VERTEX = is_cube ? world_position : point_on_cube_to_point_on_sphere(world_position);
-	NORMAL = VERTEX;
-	object_space_pos = VERTEX;
-	elevation = textureLod(height_map, point_on_sphere_to_UV(VERTEX), 0).r;
-
-	VERTEX *= radius;
-	elevation = textureLod(height_gradient, vec2(elevation, 0), 0).r;
-	VERTEX += NORMAL * height_scale * elevation;
-
-}
-
-void fragment() {
-	NORMAL = height_to_normal(elevation, normal_strength, VERTEX, NORMAL);
-	int msb = getLevelInKey(key.xy);
-	int a = (msb & 1) != 0 ? 1 : 0;
-	int b = (msb & 2) != 0 ? 1 : 0;
-	int c = (msb & 4) != 0 ? 1 : 0;
-	vec3 debug_color = vec3(float(a), float(b), float(c));
-
-	vec2 uv_point = is_texture_1D ? vec2(elevation, 0.0) : point_on_sphere_to_UV(object_space_pos);
-	vec3 surface_texture = textureLod(albedo_map, uv_point, 0).rgb;
-
-	ALBEDO = is_debug ? debug_color :  surface_texture;
-
-
-
-}
-"
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_i8dnx"]
-resource_local_to_scene = true
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_cnakb"]
 render_priority = 0
-shader = SubResource("Shader_ynekg")
+shader = ExtResource("3_mv2nt")
 shader_parameter/position_list = null
-shader_parameter/radius = null
-shader_parameter/is_debug = null
-shader_parameter/is_cube = null
-shader_parameter/is_texture_1D = null
-shader_parameter/height_scale = null
-shader_parameter/normal_strength = null
-shader_parameter/resolution = null
+shader_parameter/radius = 200.0
+shader_parameter/is_debug = false
+shader_parameter/is_cube = false
+shader_parameter/is_texture_1D = false
+shader_parameter/height_scale = 2.0
+shader_parameter/normal_strength = 5.0
+shader_parameter/resolution = 25
 shader_parameter/scale_factor = 0.5
-
-[sub_resource type="ConvexPolygonShape3D" id="ConvexPolygonShape3D_0rldo"]
-points = PackedVector3Array(-10, 0, -10, 10, 0, -10, 10, 0, 10, -10, 0, 10)
-
-[sub_resource type="HeightMapShape3D" id="HeightMapShape3D_yhgm4"]
-custom_solver_bias = 0.062
-margin = 0.0
-map_width = 21
-map_depth = 21
-map_data = PackedFloat32Array(5.3, 3, 3, 1, 4, 5, 2, 12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+shader_parameter/albedo_map = ExtResource("4_uudhy")
+shader_parameter/height_map = ExtResource("5_0g6ei")
+shader_parameter/height_gradient = SubResource("CurveTexture_0rbgi")
 
 [sub_resource type="SphereShape3D" id="SphereShape3D_4srep"]
 
-[node name="Planet" type="StaticBody3D" node_paths=PackedStringArray("_multimesh", "GravityField")]
+[sub_resource type="SphereShape3D" id="SphereShape3D_2ijrl"]
+radius = 1.0
+
+[sub_resource type="ArrayMesh" id="ArrayMesh_co7mw"]
+_surfaces = [{
+"aabb": AABB(0, 0, 1, 1, 1, 1.00136e-05),
+"attribute_data": PackedByteArray("AAAAAAAAAAAAAIA/AAAAAAAAAEAAAAAAAAAAAAAAgD8AAIA/AACAPwAAAAAAAABA"),
+"format": 34359742487,
+"index_count": 12,
+"index_data": PackedByteArray("AAAEAAMAAAABAAQAAQACAAQAAwAEAAUA"),
+"material": SubResource("ShaderMaterial_cnakb"),
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 6,
+"vertex_data": PackedByteArray("AAAAAAAAAAAAAIA/AAAAAAAAAD8AAIA/AAAAAAAAgD8AAIA/AAAAPwAAAAAAAIA/AAAAPwAAAD8AAIA/AACAPwAAAAAAAIA//3//f/9/AID/f/9//38AgP9//3//fwCA/3//f/9/AID/f/9//38AgP9//3//fwCA")
+}]
+
+[sub_resource type="MultiMesh" id="MultiMesh_d4c6c"]
+transform_format = 1
+use_colors = true
+use_custom_data = true
+instance_count = 24
+mesh = SubResource("ArrayMesh_co7mw")
+buffer = PackedFloat32Array(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1.4013e-45, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1.4013e-45, 0, -1.4013e-45, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1.4013e-45, 0, -2.8026e-45, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1.4013e-45, 0, -4.2039e-45, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1.4013e-45, 1.4013e-45, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1.4013e-45, 1.4013e-45, -1.4013e-45, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1.4013e-45, 1.4013e-45, -2.8026e-45, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1.4013e-45, 1.4013e-45, -4.2039e-45, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1.4013e-45, 2.8026e-45, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1.4013e-45, 2.8026e-45, -1.4013e-45, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1.4013e-45, 2.8026e-45, -2.8026e-45, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1.4013e-45, 2.8026e-45, -4.2039e-45, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1.4013e-45, 4.2039e-45, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1.4013e-45, 4.2039e-45, -1.4013e-45, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1.4013e-45, 4.2039e-45, -2.8026e-45, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1.4013e-45, 4.2039e-45, -4.2039e-45, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1.4013e-45, 5.60519e-45, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1.4013e-45, 5.60519e-45, -1.4013e-45, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1.4013e-45, 5.60519e-45, -2.8026e-45, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1.4013e-45, 5.60519e-45, -4.2039e-45, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1.4013e-45, 7.00649e-45, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1.4013e-45, 7.00649e-45, -1.4013e-45, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1.4013e-45, 7.00649e-45, -2.8026e-45, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1.4013e-45, 7.00649e-45, -4.2039e-45)
+
+[sub_resource type="ConvexPolygonShape3D" id="ConvexPolygonShape3D_fx715"]
+
+[node name="Planet" type="Node3D" node_paths=PackedStringArray("_surface", "_heightMapCollider", "_mouseDetectionArea", "_mouseDetectionCollider", "GravityField")]
 script = ExtResource("1_mnyts")
-_multimesh = NodePath("Surface")
-_material = SubResource("ShaderMaterial_i8dnx")
+PlanetData = SubResource("Resource_c6703")
+_surface = NodePath("Surface")
+_heightMapCollider = NodePath("MouseDetection/MouseCollider")
+_mouseDetectionArea = NodePath("MouseDetection")
+_mouseDetectionCollider = NodePath("MouseDetection/MouseCollider")
+_material = SubResource("ShaderMaterial_cnakb")
 _computeCullShader = "res://Planet/LOD/ComputeCull.glsl"
 _copyShader = "res://Planet/LOD/Copy.glsl"
 GravityField = NodePath("GravityField")
-metadata/_access_modifiers = {
-"Dispatcher": 2,
-"GravityField": 2,
-"PlayerController": 0,
-"_computeCullShader": 2,
-"_copyShader": 2,
-"_material": 2,
-"_multimesh": 2
-}
-metadata/_edit_pinned_properties_ = [&"_material", &"_computeCullShader", &"_copyShader"]
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
-shape = SubResource("ConvexPolygonShape3D_0rldo")
-
-[node name="CollisionShape3D2" type="CollisionShape3D" parent="."]
-shape = SubResource("HeightMapShape3D_yhgm4")
-
-[node name="GravityField" type="Area3D" parent="." node_paths=PackedStringArray("Planet", "Collision")]
+[node name="GravityField" type="Area3D" parent="." node_paths=PackedStringArray("Collision")]
 script = ExtResource("5_h71di")
-Planet = NodePath("..")
 Collision = NodePath("GravityFieldCollision")
 
 [node name="GravityFieldCollision" type="CollisionShape3D" parent="GravityField"]
 shape = SubResource("SphereShape3D_4srep")
 
+[node name="MouseDetection" type="Area3D" parent="."]
+
+[node name="MouseCollider" type="CollisionShape3D" parent="MouseDetection"]
+shape = SubResource("SphereShape3D_2ijrl")
+
 [node name="Surface" type="MultiMeshInstance3D" parent="."]
+extra_cull_margin = 2.0
+multimesh = SubResource("MultiMesh_d4c6c")
+
+[node name="PlanetCollision" type="StaticBody3D" parent="."]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="PlanetCollision"]
+shape = SubResource("ConvexPolygonShape3D_fx715")
