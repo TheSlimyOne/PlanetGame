@@ -12,10 +12,20 @@ public static class Utilities
         return MemoryMarshal.Cast<T, byte>(data);
     }
 
+    public static Span<byte> ToBytesSingle<T>(T data) where T : unmanaged
+    {   
+        return ToBytes(MemoryMarshal.CreateSpan(ref data, 1));
+    }
+
     public static Span<T> FromBytes<T>(Span<byte> data) where T : unmanaged
     {
         int length = data.Length - (data.Length % Unsafe.SizeOf<T>());
         return MemoryMarshal.Cast<byte, T>(data[..length]);
+    }
+
+    public static T FromBytesSingle<T>(Span<byte> data) where T : unmanaged
+    {
+        return MemoryMarshal.Cast<byte, T>(data)[0];
     }
 
     public static string ToBinary(int number, bool isPadded=true)

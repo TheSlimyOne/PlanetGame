@@ -8,10 +8,24 @@ public class Triangle
     public Edge[] Edges { get; private set; }
     readonly public bool HasReversed;
 
+    public static Triangle operator *(float b, Triangle a) => a * b;
+    public static Triangle operator *(Triangle a, float b)
+    {
+        Vector3[] vertices = a.GetVertices(b);
+        return new Triangle( vertices, a.GetCentroid() );
+    }
+
+    public static Triangle operator /(float b, Triangle a) => a / b;
+    public static Triangle operator /(Triangle a, float b)
+    {
+        Vector3[] vertices = a.GetVertices(1/b);
+        return new Triangle( vertices, a.GetCentroid() );
+    }
+
     public Triangle(Vector3[] vertices, Vector3 centroid)
     {
         Vector3 CentroidToVertex = (vertices[0] - centroid).Normalized();
-        Vector3 normal = Vector3Utils.GetTriangularNormal(vertices);
+        Vector3 normal = VectorUtils.GetTriangularNormal(vertices);
         if (normal.Dot(CentroidToVertex) < 0)
         {
             vertices = vertices.Reverse().ToArray();
@@ -22,9 +36,9 @@ public class Triangle
 
         Edges = new Edge[]
         {
-            new Edge(vertices[0], vertices[1], this),
-            new Edge(vertices[1], vertices[2], this),
-            new Edge(vertices[2], vertices[0], this)
+            new(vertices[0], vertices[1], this),
+            new(vertices[1], vertices[2], this),
+            new(vertices[2], vertices[0], this)
         };
     }
     
@@ -52,7 +66,7 @@ public class Triangle
 
     public Edge[] GetIllegalEdges()
     {
-        List<Edge> edges = new List<Edge>();
+        List<Edge> edges = new();
         foreach (Edge edge in Edges)
             if (edge.ReverseEdge == null)
                 edges.Add(edge);
@@ -103,9 +117,9 @@ public class Triangle
         throw new ArgumentException("Triangle does not contain " + edge);
     }
 
-    public Vector3[] GetVertices()
+    public Vector3[] GetVertices(float scale=1)
     {
-        return new Vector3[] { Edges[0].VertexA, Edges[1].VertexA, Edges[2].VertexA };
+        return new Vector3[] { Edges[0].VertexA * scale, Edges[1].VertexA * scale, Edges[2].VertexA * scale };
     }
 
     public bool IsPointVisible(Vector3 seed)
@@ -158,21 +172,21 @@ public class Triangle
                   (direction1.X * direction2.Z - direction1.Z * direction2.X);
 
         // Calculate the intersection point
-        Vector3 intersection = new Vector3(point1.X + t * direction1.X, point1.Y + t * direction1.Y, point1.Z + t * direction1.Z);
+        Vector3 intersection = new(point1.X + t * direction1.X, point1.Y + t * direction1.Y, point1.Z + t * direction1.Z);
 
         return intersection;
     }
 
     public static Edge[] GetAllUniqueEdges(Triangle[] triangles)
     {
-        List<Edge> edges = new List<Edge>();
+        List<Edge> edges = new();
 
-        if (triangles.Distinct().Count() != triangles.Count())
+        if (triangles.Distinct().Count() != triangles.Length)
         {
             GD.Print("FALSE!");
         }
 
-        foreach (Triangle triangle in triangles.Distinct().ToList())
+        foreach (Triangle triangle in triangles.Distinct())
             edges.AddRange(triangle.Edges);
 
         return edges.GroupBy(x => x).Where(x => !x.Skip(1).Any()).Select(x => x.Key).ToArray();
@@ -191,8 +205,8 @@ public class Triangle
 
     public void Instance(Node3D node, Material material = null)
     {
-        MeshInstance3D meshInstance3D = new MeshInstance3D { Mesh = new ArrayMesh() };
-        Godot.Collections.Array arrays = new Godot.Collections.Array();
+        MeshInstance3D meshInstance3D = new() { Mesh = new ArrayMesh() };
+        Godot.Collections.Array arrays = new();
         arrays.Resize((int)Mesh.ArrayType.Max);
 
         arrays[(int)Mesh.ArrayType.Vertex] = GetVertices();

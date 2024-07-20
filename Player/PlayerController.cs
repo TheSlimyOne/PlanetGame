@@ -3,7 +3,6 @@ using Godot;
 public partial class PlayerController : Node3D
 {
 	[Export] public Camera3D Camera { get; set; }
-	[Export] public Camera3D HelperCamera { get; set; }
 
 	[ExportGroup("Gimbals")] 
 	[Export] private Node3D orbitGimbal;
@@ -17,7 +16,7 @@ public partial class PlayerController : Node3D
 	[Export] private float ZoomToRotationRatio;
 
 	[ExportGroup("Focus Info")]	
-    [Export] public Node3D Focus { get; set; }
+	[Export] public Node3D Focus { get; set; }
 	[Export] private float FocusRadius;
 
 	[ExportGroup("UI Elements")]
@@ -26,7 +25,7 @@ public partial class PlayerController : Node3D
 	[Export] Label lblMouseCursor;
 	[Export] Label lblCameraPosition;
 
-    Vector2 mouseCameraRotation = Vector2.Zero;
+	Vector2 mouseCameraRotation = Vector2.Zero;
 	private float horizontalRotation = 0;
 	private float verticalRotation = 0;
 
@@ -96,12 +95,12 @@ public partial class PlayerController : Node3D
 		mouseCameraRotation = Vector2.Zero;	
 	}
 
-    public override void _Process(double delta)
-    {
-        SetFPSCount((int)Engine.GetFramesPerSecond());
-        SetMouseCoordinates();
+	public override void _Process(double delta)
+	{
+		SetFPSCount((int)Engine.GetFramesPerSecond());
+		SetMouseCoordinates();
 		SetCameraPosition();	
-    }
+	}
 
 
 	public Vector3 GetMouseWorldPosition()
@@ -137,17 +136,6 @@ public partial class PlayerController : Node3D
 				return;
 			}
 
-			if (!Engine.IsEditorHint())
-			{
-				var spaceState = GetWorld3D().DirectSpaceState;
-				Vector3 from = Camera.ProjectRayOrigin(mouseMotionEvent.Position);
-				Vector3 to = from + Camera.ProjectRayNormal(mouseMotionEvent.Position) * Camera.Far;
-				var query = PhysicsRayQueryParameters3D.Create(from, to);
-				query.CollideWithAreas = true;
-				currentMouseIntersection = spaceState.IntersectRay(query);
-			}
-		
-
 		}
 		if (@event is InputEventMouseButton mouseButtonEvent)
 		{
@@ -155,6 +143,15 @@ public partial class PlayerController : Node3D
 			
 	
 		}
+		if (!Engine.IsEditorHint())
+			{
+				var spaceState = GetWorld3D().DirectSpaceState;
+				Vector3 from = Camera.ProjectRayOrigin(GetViewport().GetMousePosition());
+				Vector3 to = from + Camera.ProjectRayNormal(GetViewport().GetMousePosition()) * Camera.Far;
+				var query = PhysicsRayQueryParameters3D.Create(from, to);
+				query.CollideWithAreas = true;
+				currentMouseIntersection = spaceState.IntersectRay(query);
+			}
 		if (Input.IsActionJustPressed("click"))
 		{
 			GD.PrintS("clicking!");

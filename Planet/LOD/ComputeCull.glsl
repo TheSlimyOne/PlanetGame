@@ -1,5 +1,6 @@
 #[compute]
 #version 450
+#extension GL_EXT_shader_atomic_float2 : require
 #define sqrt2_2 0.707106781
 #define sqrt2   1.414213562
 #define PI      3.141592653
@@ -10,7 +11,6 @@ layout(local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
 layout(set = 0, binding = 0, std430) buffer restrict AtomicCounterBuffer {
     uint primCount_full[16];
     uint primCount_culled[16];
-    uint primCount_collision[16];
 };
 
 layout(set = 0, binding = 1, std430) buffer restrict readonly IndicesBlock {
@@ -24,25 +24,22 @@ layout(set = 0, binding = 2, std430) buffer restrict readonly ReadList {
     uvec4 read_list[];
 };
 
-layout(set = 0, binding = 3, std430) buffer restrict writeonly WriteFullList {
+layout(set = 0, binding = 3, r32f) restrict uniform image2D GlobalKeyData;
+layout(set = 0, binding = 4, std430) buffer restrict writeonly WriteFullList {
     uvec4 write_full_list[];
 };
 
-layout(set = 0, binding = 4, std430) buffer restrict writeonly WriteCulledList {
+layout(set = 0, binding = 5, std430) buffer restrict writeonly WriteCulledList {
     uvec4 write_culled_list[];
-};
-
-layout(set = 0, binding = 5, std430) buffer restrict writeonly WriteCollisionList {
-    uvec4 write_collision_list[];
 };
 
 layout(set = 0, binding = 6, std430) buffer restrict readonly Positions {
     vec4 position_list[];
 };
 
-layout(set = 0, binding = 7, std430) buffer restrict CameraData {
-    mat4 viewMatrix;         // 16 * 4 = 64 bytes
-    mat4 projectionMatrix;   // 16 * 4 = 64 bytes
+layout(set = 0, binding = 7, std430) buffer restrict readonly ExternalData {
+    mat4 viewProjectionMatrix;         // 16 * 4 = 64 bytes
+    mat4 planetTransformMatrix;
     float CameraFOV;         // 4 bytes
     float CameraFarPlane;    // 4 bytes
     float CameraNearPlane;   // 4 bytes
@@ -50,32 +47,23 @@ layout(set = 0, binding = 7, std430) buffer restrict CameraData {
 
     float subFactor;         // 4 bytes
     float resolution;        // 4 bytes
-    vec2 padding1;           // 8 bytes padding to align next vec2 to 16-byte boundary
+    vec2 _padding;           // 8 bytes padding to align next vec2 to 16-byte boundary
 
-    vec2 xbias;              // 8 bytes
-    vec2 ybias;              // 8 bytes
-    vec2 zbias;              // 8 bytes
-    vec2 padding2;           // 8 bytes padding to align to 16-byte boundary
 };
 
 layout(set = 0, binding = 8, std430) buffer restrict Debug {
-    // bool renderAll;
-    vec4 debug[];
+    bool renderAll;
 };
 
 layout(set = 0, binding = 9, r8) restrict uniform readonly image2D heightMap;
 layout(set = 0, binding = 10, r8) restrict uniform readonly image2D heightGradient;
-
-layout(set = 0, binding = 11, std430) buffer restrict readonly ExternalPosition {
-    vec4 planetPosition;
-    vec4 cameraPosition;
-    vec4 mousePosition;
-};
+layout(set = 0, binding = 11, rgba32f) restrict writeonly uniform image2D DisplayKeys;
 
 struct Triangle {
     vec3 v0; // (0, 0)
     vec3 v1; // (0, 1)
     vec3 v2; // (1, 0)
+    vec3 v3; // (1, 1) // REMOVE ME!
 
     vec3 origin; // (0.5, 0.5)
 
@@ -84,15 +72,8 @@ struct Triangle {
 };
 
 vec3 point_on_cube_to_point_on_sphere(vec3 p) {
-	float x2 = p.x * p.x;
-	float y2 = p.y * p.y;
-	float z2 = p.z * p.z;
-	
-	float x = p.x * sqrt(1.0 - (y2 + z2) / 2.0 + y2 * z2 / 3.0);
-	float y = p.y * sqrt(1.0 - (z2 + x2) / 2.0 + z2 * x2 / 3.0);
-	float z = p.z * sqrt(1.0 - (x2 + y2) / 2.0 + x2 * y2 / 3.0);
-
-	return vec3(x, y, z);
+    vec3 square = p * p;
+	return p * sqrt(1.0 - (square.yxx + square.zzy) / 2.0 + square.yxx * square.zzy / 3.0);
 }
 
 vec2 point_on_sphere_to_UV(vec3 p) {
@@ -221,6 +202,7 @@ Triangle createTriangle(mat3 transform_matrix, uint meshPolygonID, uint rootID) 
     vec2 point_v0 = (vec3(0, 0, 1) * transform_matrix).xy;
     vec2 point_v1 = (vec3(0, 1, 1) * transform_matrix).xy;
     vec2 point_v2 = (vec3(1, 0, 1) * transform_matrix).xy;
+    vec2 point_v3 = (vec3(1, 1, 1) * transform_matrix).xy;
 
     uint vertexBaseIndex = meshPolygonID * 5;
     uint vertexKeyA = rootID;
@@ -234,6 +216,7 @@ Triangle createTriangle(mat3 transform_matrix, uint meshPolygonID, uint rootID) 
     t.v0 = localPointToWorldPointSpherical(point_v0, base_Triangle_a, base_Triangle_b, base_Triangle_c);
     t.v1 = localPointToWorldPointSpherical(point_v1, base_Triangle_a, base_Triangle_b, base_Triangle_c);
     t.v2 = localPointToWorldPointSpherical(point_v2, base_Triangle_a, base_Triangle_b, base_Triangle_c);
+    t.v3 = localPointToWorldPointSpherical(point_v3, base_Triangle_a, base_Triangle_b, base_Triangle_c);
     
     t.origin = localPointToWorldPointSpherical(point_a, base_Triangle_a, base_Triangle_b, base_Triangle_c);
     t.xNeighbor = localPointToWorldPointSpherical(point_b, base_Triangle_a, base_Triangle_b, base_Triangle_c);
@@ -291,6 +274,11 @@ vec4 getTransformation(uvec4 key) {
     return vec4(theta, scale, translation);
 }
 
+float getScale(uvec4 key)
+{
+    return pow(0.5, findMSB64(key.xy) / 2);
+}
+
 uint base4ToHex(uint base4Value) {
     uint result = 0u;
     uint base = 1u;
@@ -313,7 +301,7 @@ float calculateLOD(float dist, float fovy, float factor) {
 
 float calculateLODToCam(vec3 from) {
     return calculateLOD(
-        distance(from + planetPosition.xyz, cameraPosition.xyz),
+        distance((vec4(from, 1) * planetTransformMatrix).xyz, vec3(0)),
         CameraFOV, // Must be in radians
         subFactor
     );
@@ -391,27 +379,20 @@ uint getJunctionFlags(uvec4 key, Triangle triangle, float lod) {
 }
 
 bool PointInFrustum(vec3 point) {
-    mat4 viewProjectionMatrix = projectionMatrix * viewMatrix;
-    vec4 clipSpacePoint = viewProjectionMatrix * vec4(point, 1);
+    vec4 clipSpacePoint = viewProjectionMatrix * (vec4(point, 1) * planetTransformMatrix);
     vec3 ndcPoint = clipSpacePoint.xyz/clipSpacePoint.w;
     // return true;
 
-    return 
-           ndcPoint.x >= -1.0 - xbias[0] && ndcPoint.x <= 1.0 + xbias[1] &&
-           ndcPoint.y >= -1.0 - ybias[0] && ndcPoint.y <= 1.0 + ybias[1] &&
-           ndcPoint.z >= -1.0 - zbias[0] && ndcPoint.z <= 1.0 + zbias[1];
+    return ndcPoint.x >= -1.0 && ndcPoint.x <= 1.0 &&
+           ndcPoint.y >= -1.0 && ndcPoint.y <= 1.0 &&
+           ndcPoint.z >= -1.0 && ndcPoint.z <= 1.0;
 }
 
 bool TriangleInFrustum(Triangle triangle) {
-    // vec3[3] sphere_points = {
-    //     radius * point_on_cube_to_point_on_sphere(triangle.v0),
-    //     radius * point_on_cube_to_point_on_sphere(triangle.v1),
-    //     radius * point_on_cube_to_point_on_sphere(triangle.v2)
-    // };
-
-    return PointInFrustum(triangle.v0) || 
+    return PointInFrustum(triangle.v0) ||
            PointInFrustum(triangle.v1) ||
-           PointInFrustum(triangle.v2);
+           PointInFrustum(triangle.v2) ||
+           PointInFrustum(triangle.v3);
 }
 
 float calculateArea(vec3 v0, vec3 v1, vec3 v2)
@@ -422,45 +403,35 @@ float calculateArea(vec3 v0, vec3 v1, vec3 v2)
     return 0.5 * length(cross(a, b));
 }
 
-void cull_key(uvec4 key, Triangle triangle, Triangle parent_triangle) {
-    if (TriangleInFrustum(parent_triangle)) {
-        
-        
-        vec3 AB = triangle.v1 - triangle.v0;
-        vec3 AC = triangle.v2 - triangle.v0;
-        vec3 AD = mousePosition.xyz - triangle.v0;
+ivec2 getKeyCoordinate(uint idx){
+    ivec2 image_size = imageSize(DisplayKeys);
+    return ivec2(idx % image_size.x, idx / image_size.y);
+}
 
-        vec3 normal = cross(AB, AC);
-        vec3 projected_normal = (dot(normal, AD) / length(normal)) * (normal / length(normal));
-
-        // if (length(projected_normal) > 10)
-        //     return;
-
-
-        // Set some threshold value the length is < 0.05?
-        vec3 pointOnPlane = -projected_normal + cameraPosition.xyz;
-
-        float esimatedArea = calculateArea(pointOnPlane, triangle.v0, triangle.v1) + 
-                             calculateArea(pointOnPlane, triangle.v1, triangle.v2) + 
-                             calculateArea(pointOnPlane, triangle.v2, triangle.v0);
-
-        float realArea = calculateArea(triangle.v0, triangle.v1, triangle.v2);
-        
-        vec4 pop = vec4(0,0,0,0);
-        if (esimatedArea <= realArea) {
-            uint index = atomicAdd(primCount_collision[write_index], 1);
-            
-            write_collision_list[index] = key;
-            pop.x = 1;
-        }
-        // else if (distance(normalize(cameraPosition.xyz) * radius, normalize(triangle.origin) * radius) < 50) {
-        //     uint index = atomicAdd(primCount_collision[write_index], 1);
-        //     write_collision_list[index] = key;
-        // }
+void cull_key(uvec4 key, Triangle triangle, Triangle parent_triangle, float lod) {
+    if (renderAll || TriangleInFrustum(parent_triangle)) {
         uint write_culled_index = atomicAdd(primCount_culled[write_index], 1);
+      
         write_culled_list[write_culled_index] = key;
-        debug[write_culled_index] = pop;
+        imageStore(DisplayKeys, getKeyCoordinate(write_culled_index), uintBitsToFloat(key));
+        
+        imageAtomicMax(GlobalKeyData, ivec2(0, 0), getLevelInKey(key.xy));
     }
+
+    // vec3 a = triangle.v1 - triangle.v0;
+    // vec3 b = triangle.v2 - triangle.v0;
+    // vec3 c = mousePosition.xyz - triangle.v0;
+    // vec3 n = normalize(cross(a, b));
+    // vec3 projN = dot(c, n) * n;
+    // vec3 pointOnPlane = -projN + c;
+
+    // float triangleArea = calculateArea(triangle.v0, triangle.v1, triangle.v2);
+    // triangleArea -= calculateArea(triangle.v0, triangle.v1, pointOnPlane);
+    // triangleArea -= calculateArea(triangle.v0, triangle.v2, pointOnPlane);
+    // triangleArea -= calculateArea(triangle.v1, triangle.v2, pointOnPlane);
+  
+
+
 }
 
 void main() {
@@ -492,7 +463,8 @@ void main() {
             
             write_full_list[idx] = children[i];
             Triangle child_triangle = leafSpaceToWorldSpace(children[i]);
-            cull_key(children[i], child_triangle, triangle);
+            cull_key(children[i], child_triangle, triangle, current_LOD + 1);
+            // imageStore(DisplayKeys, getKeyCoordinate(idx), uintBitsToFloat(children[i]));
         }
     } else if (parent_target_LOD < current_LOD - 1 && key.xy != uvec2(0, 1)) { // merging
         if (isUpperLeftChild(key.xy)) {
@@ -500,7 +472,8 @@ void main() {
             parent_key.w |= getJunctionFlags(parent_key, grand_parent_triangle, current_LOD - 1);
         
             write_full_list[idx] = parent_key;
-            cull_key(parent_key, parent_triangle, grand_parent_triangle);
+            cull_key(parent_key, parent_triangle, grand_parent_triangle, current_LOD - 1);
+            // imageStore(DisplayKeys, getKeyCoordinate(idx), uintBitsToFloat(parent_key));
         } else 
             return;
     } else {
@@ -508,6 +481,7 @@ void main() {
         key.w |= getJunctionFlags(key, parent_triangle, current_LOD);
         
         write_full_list[idx] = key;
-        cull_key(key, triangle, parent_triangle);
+        cull_key(key, triangle, parent_triangle, current_LOD);
+        // imageStore(DisplayKeys, getKeyCoordinate(idx), uintBitsToFloat(key));
     }
 }

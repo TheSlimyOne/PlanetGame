@@ -92,11 +92,11 @@ public partial class Dispatcher : Node
             Vector3 axisA = new Vector3(normal.Y, normal.Z, normal.X);
             Vector3 axisB = normal.Cross(axisA);
 
-            _trianglePoints[5 * i + 0] = Vector3Utils.toVector4(normal, 1);
-            _trianglePoints[5 * i + 1] = Vector3Utils.toVector4(-axisA + axisB + normal, 1);
-            _trianglePoints[5 * i + 2] = Vector3Utils.toVector4(-axisA - axisB + normal, 1);
-            _trianglePoints[5 * i + 3] = Vector3Utils.toVector4(axisA + axisB + normal, 1);
-            _trianglePoints[5 * i + 4] = Vector3Utils.toVector4(axisA - axisB + normal, 1);
+            _trianglePoints[5 * i + 0] = VectorUtils.toVector4(normal, 1);
+            _trianglePoints[5 * i + 1] = VectorUtils.toVector4(-axisA + axisB + normal, 1);
+            _trianglePoints[5 * i + 2] = VectorUtils.toVector4(-axisA - axisB + normal, 1);
+            _trianglePoints[5 * i + 3] = VectorUtils.toVector4(axisA + axisB + normal, 1);
+            _trianglePoints[5 * i + 4] = VectorUtils.toVector4(axisA - axisB + normal, 1);
         }
 
     }
@@ -266,7 +266,7 @@ public partial class Dispatcher : Node
         CreateWriteCulledList(4);
         CreatePositionList(5);
         CreateCameraData(6);
-        CreateDebugList(7);
+        CreateDebug(7);
         CreateDispatchOutBuffer(2);
 
         _uniformSet_C = _rd.UniformSetCreate(_bindings_C, _shader_C, 0);
@@ -343,9 +343,9 @@ public partial class Dispatcher : Node
         _bindings_CC.Add(uniform);
     }
 
-    private void CreateDebugList(int binding)
+    private void CreateDebug(int binding)
     {
-        byte[] data = Utilities.ToBytes<Vector4>(new Vector4[MaximumNodes]).ToArray();
+        byte[] data = Utilities.ToBytes<bool>(new bool[] { Engine.IsEditorHint() }).ToArray();
         (RDUniform uniform, _debug) = CreateUniformFromData(data, binding);
         _bindings_CC.Add(uniform);
     }
@@ -469,11 +469,6 @@ public partial class Dispatcher : Node
         _rd.BufferUpdate(_indicesBlockBuffer, 0, (uint)data.Length, data);
     }
 
-    private void UpdateDebug()
-    {
-        byte[] data = Utilities.ToBytes<Vector4>(new Vector4[MaximumNodes]).ToArray();
-        _rd.BufferUpdate(_writeFullList, 0, (uint)data.Length, data);
-    }
 
     private void UpdateUniforms()
     {
@@ -483,7 +478,6 @@ public partial class Dispatcher : Node
         UpdateWriteFullList();
         UpdateWriteCulledList();
         UpdateCameraData();
-        UpdateDebug();
     }
 
 
@@ -496,7 +490,6 @@ public partial class Dispatcher : Node
     async public void StartProcessLoop()
     {
         GD.Print("In start process loop");
-        GD.Print(_planetData);
         if (_rd == null) { GD.PrintErr("Warning RD was null"); return; }
     
         while (Processing)
@@ -540,12 +533,11 @@ public partial class Dispatcher : Node
         Key[] keys = Utilities.FromBytes<Key>(_rd.BufferGetData(_writeFullList)).ToArray();
         uint[] indices = Utilities.FromBytes<uint>(_rd.BufferGetData(_indicesBlockBuffer)).ToArray();
         uint[] primCounts = Utilities.FromBytes<uint>(_rd.BufferGetData(_atomicCounterBuffer)).ToArray();
-        Vector4[] debugData = Utilities.FromBytes<Vector4>(_rd.BufferGetData(_debug)).ToArray();
 
-        InstanceAllTriangles(keys, (int)primCounts[indices[1]], debugData);
+        InstanceAllTriangles(keys, (int)primCounts[indices[1]]);
     }
 
-    public void InstanceAllTriangles(Key[] keys, int amount, Vector4[] debugData)
+    public void InstanceAllTriangles(Key[] keys, int amount)
     {
         _multimesh.Multimesh.InstanceCount = 0;
         _multimesh.Multimesh.InstanceCount = amount;
@@ -561,7 +553,6 @@ public partial class Dispatcher : Node
             Transform3D transform = new Transform3D(Basis.Identity, Vector3.Zero);
             _multimesh.Multimesh.SetInstanceTransform(i, transform);
             _multimesh.Multimesh.SetInstanceCustomData(i, keys[i].ToColor());
-            _multimesh.Multimesh.SetInstanceColor(i, new Color(debugData[i].X, debugData[i].Y, debugData[i].Z, 0));
         }
     }
 

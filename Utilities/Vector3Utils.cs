@@ -1,7 +1,7 @@
 using System;
 using Godot;
 
-public static class Vector3Utils
+public static class VectorUtils
 {
     public static bool IsGreaterVector3(Vector3 vectorA, Vector3 vectorB)
     {

@@ -2,7 +2,6 @@ using Godot;
 using Godot.Collections;
 using System.Threading.Tasks;
 
-[Tool]
 public partial class Planet : Node3D
 {
 
@@ -32,9 +31,6 @@ public partial class Planet : Node3D
 
 	[ExportGroup("Required")]
 	[Export] private MultiMeshInstance3D _surface;
-	[Export] private CollisionShape3D _heightMapCollider;
-	[Export] private Area3D _mouseDetectionArea;
-	[Export] private CollisionShape3D _mouseDetectionCollider;
 	[Export] private ShaderMaterial _material;
 
 	[ExportGroup("Settings")]
@@ -42,9 +38,6 @@ public partial class Planet : Node3D
 	[Export(PropertyHint.Range, "24, 65536")] private uint MaximumNodes = 30000;
 	[Export(PropertyHint.Range, "24, 65536")] private uint MaximumCollisionNodes = 30000;
 
-	[Export] private Vector2 _xBias = new();
-	[Export] private Vector2 _yBias = new();
-	[Export] private Vector2 _zBias = new();
 	[Export]
 	public bool Processing
 	{
@@ -96,7 +89,6 @@ public partial class Planet : Node3D
 	private Rid _readList;
 	private Rid _writeFullList;
 	private Rid _writeCulledList;
-	private Rid _writeCollisionList;
 	private Rid _writeExternalPositionsList;
 	private Rid _positions;
 	private Rid _cameraData;
@@ -140,7 +132,7 @@ public partial class Planet : Node3D
 
 	public void CreateTrianglePoints()
 	{
-		_trianglePoints = new Vector4[30];
+		_trianglePoints = new Vector4[5];
 		Vector3[] normals = new Vector3[]
 		{
 			Vector3.Up,
@@ -151,17 +143,17 @@ public partial class Planet : Node3D
 			Vector3.Back,
 		};
 
-		for (int i = 0; i < 6; i++)
+		for (int i = 0; i < 1; i++)
 		{
 			Vector3 normal = normals[i];
 			Vector3 axisA = new Vector3(normal.Y, normal.Z, normal.X);
 			Vector3 axisB = normal.Cross(axisA);
 
-			_trianglePoints[5 * i + 0] = Vector3Utils.toVector4(normal, 1);
-			_trianglePoints[5 * i + 1] = Vector3Utils.toVector4(-axisA + axisB + normal, 1);
-			_trianglePoints[5 * i + 2] = Vector3Utils.toVector4(-axisA - axisB + normal, 1);
-			_trianglePoints[5 * i + 3] = Vector3Utils.toVector4(axisA + axisB + normal, 1);
-			_trianglePoints[5 * i + 4] = Vector3Utils.toVector4(axisA - axisB + normal, 1);
+			_trianglePoints[5 * i + 0] = VectorUtils.toVector4(normal, 1);
+			_trianglePoints[5 * i + 1] = VectorUtils.toVector4(-axisA + axisB + normal, 1);
+			_trianglePoints[5 * i + 2] = VectorUtils.toVector4(-axisA - axisB + normal, 1);
+			_trianglePoints[5 * i + 3] = VectorUtils.toVector4(axisA + axisB + normal, 1);
+			_trianglePoints[5 * i + 4] = VectorUtils.toVector4(axisA - axisB + normal, 1);
 		}
 	}
 
@@ -250,9 +242,9 @@ public partial class Planet : Node3D
 		arrays[(int)Mesh.ArrayType.Index] = triangles;
 		arrays[(int)Mesh.ArrayType.Normal] = normals;
 		arrays[(int)Mesh.ArrayType.TexUV] = uvs;
-
 		mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
 		mesh.SurfaceSetMaterial(0, _material);
+
 
 		_surface.Multimesh = new MultiMesh();
 
@@ -264,11 +256,6 @@ public partial class Planet : Node3D
 
 
 		_surface.ExtraCullMargin = 2 * _planetData.Radius;
-
-		// _mouseDetectionCollider.Shape = new BoxShape3D() { Size = Vector3.One * 2 * PlanetData.Radius };
-		_mouseDetectionCollider.Shape = new SphereShape3D() { Radius = PlanetData.Radius };
-
-
 		SetMaterialParameters();
 	}
 
@@ -327,13 +314,12 @@ public partial class Planet : Node3D
 		CreateReadList(2);
 		CreateWriteFullList(3);
 		CreateWriteCulledList(4);
-		CreateWriteCollisionList(5);
-		CreatePositionList(6);
-		CreateCameraData(7);
-		CreateDebugList(8);
-		CreateHeightMapBuffer(9);
-		CreateHeightGradientBuffer(10);
-		CreateExternalPositionsList(11);
+		CreatePositionList(5);
+		CreateCameraData(6);
+		CreateDebugData(7);
+		CreateHeightMapBuffer(8);
+		CreateHeightGradientBuffer(9);
+		CreateExternalPositionsList(10);
 
 		CreateDispatchOutBuffer(2);
 
@@ -348,7 +334,7 @@ public partial class Planet : Node3D
 		// Culling   list 16 - 31
 		// Collision list 32 - 47
 		uint[] primCounts = new uint[3 * 16];
-		primCounts[0] = 6 * 4;
+		primCounts[0] = 1 * 4;
 		byte[] data = Utilities.ToBytes<uint>(primCounts).ToArray();
 
 		(RDUniform uniform, _atomicCounterBuffer) = CreateUniformBufferFromData(data, binding);
@@ -372,7 +358,7 @@ public partial class Planet : Node3D
 
 		// Generate cube
 		// key = uvec4(nodeIDMSB, nodeIDLSB, meshPolygonID, flagsAndRootID)
-		for (int i = 0; i < 6; i++)
+		for (int i = 0; i < 1; i++)
 		{
 			readList[4 * i + 0] = new Key(0, 1, i, 0);
 			readList[4 * i + 1] = new Key(0, 1, i, 1);
@@ -414,29 +400,16 @@ public partial class Planet : Node3D
 		_bindings_CC.Add(uniform);
 	}
 
-	private void CreateWriteCollisionList(int binding)
-	{
-		byte[] data = Utilities.ToBytes<Key>(new Key[MaximumCollisionNodes]).ToArray();
-		
-		(RDUniform uniform, _writeCollisionList) = CreateUniformBufferFromData(data, binding);
-		_bindings_CC.Add(uniform);
-	}
-
 	private void CreateExternalPositionsList(int binding)
 	{
 		Vector3 mouseIntersection = Vector3.Inf;
 		Vector3 playerPosition = Vector3.Inf;
-		if (PlayerController != null)
-		{
-			mouseIntersection = PlayerController.GetMouseIntersection();
-			playerPosition = PlayerController.GetCameraPosition();
-		}
 
 		byte[] data = Utilities.ToBytes<Vector4>(new Vector4[]
 		{
-			Vector3Utils.toVector4(GlobalPosition, 0),
-			Vector3Utils.toVector4(playerPosition, 0),
-			Vector3Utils.toVector4(mouseIntersection, 0),
+			VectorUtils.toVector4(GlobalPosition, 0),
+			VectorUtils.toVector4(playerPosition, 0),
+			VectorUtils.toVector4(mouseIntersection, 0),
 
 		}).ToArray();
 
@@ -444,22 +417,19 @@ public partial class Planet : Node3D
 		_bindings_CC.Add(uniform);
 	}
 
-	private void CreateDebugList(int binding)
+	private void CreateDebugData(int binding)
 	{
-		// byte[] data = Utilities.ToBytes<bool>(new bool[] { Engine.IsEditorHint() }).ToArray();
-		byte[] data = Utilities.ToBytes<Vector4>(new Vector4[MaximumNodes]).ToArray();
-
+		byte[] data = Utilities.ToBytes<bool>(new bool[] { Engine.IsEditorHint() }).ToArray();
 		(RDUniform uniform, _debug) = CreateUniformBufferFromData(data, binding);
 		_bindings_CC.Add(uniform);
 	}
 
 	private void CreateCameraData(int binding)
 	{
-		Camera3D mainCamera = PlayerController?.Camera ?? null;
-		Camera3D helperCamera = PlayerController?.HelperCamera ?? null;
+		Camera3D camera = PlayerController?.Camera ?? null;
 
-		Transform3D viewMatrix = helperCamera?.GlobalTransform.AffineInverse() ?? GlobalTransform.AffineInverse();
-		Projection projectionMatrix = helperCamera?.GetCameraProjection() ?? Projection.Identity;
+		Transform3D viewMatrix = camera?.GlobalTransform.AffineInverse() ?? GlobalTransform.AffineInverse();
+		Projection projectionMatrix = camera?.GetCameraProjection() ?? Projection.Identity;
 
 		byte[] data = Utilities.ToBytes<float>(new float[]
 		{
@@ -473,17 +443,13 @@ public partial class Planet : Node3D
 			projectionMatrix[2].X, projectionMatrix[2].Y, projectionMatrix[2].Z, projectionMatrix[2].W,
 			projectionMatrix[3].X, projectionMatrix[3].Y, projectionMatrix[3].Z, projectionMatrix[3].W,
 
-			Mathf.DegToRad(mainCamera?.Fov ?? 75), 
-			mainCamera?.Far ?? 4000,
-			mainCamera?.Near ?? 0.05f,
+			Mathf.DegToRad(camera?.Fov ?? 75), 
+			camera?.Far ?? 4000,
+			camera?.Near ?? 0.05f,
 			PlanetData.Radius,
 			PlanetData.SubFactor * PlanetData.Radius, 
 			PlanetData.Resolution,
 			0,0,
-			_xBias.X, _xBias.Y,
-			_yBias.X, _yBias.Y,
-			_zBias.X, _zBias.Y,
-			0,0
 		}).ToArray();
 
 		(RDUniform uniform, _cameraData) = CreateUniformBufferFromData(data, binding);
@@ -560,11 +526,10 @@ public partial class Planet : Node3D
 	#region UPDATE UNIFORMS
 	private void UpdateCameraData()
 	{
-		Camera3D mainCamera = PlayerController?.Camera ?? null;
-		Camera3D helperCamera = PlayerController?.HelperCamera ?? null;
+		Camera3D camera = PlayerController?.Camera ?? null;
 
-		Transform3D viewMatrix = helperCamera?.GlobalTransform.AffineInverse() ?? GlobalTransform.AffineInverse();
-		Projection projectionMatrix = helperCamera?.GetCameraProjection() ?? Projection.Identity;
+		Transform3D viewMatrix = camera?.GlobalTransform.AffineInverse() ?? GlobalTransform.AffineInverse();
+		Projection projectionMatrix = camera?.GetCameraProjection() ?? Projection.Identity;
 
 		byte[] data = Utilities.ToBytes<float>(new float[]
 		{
@@ -578,17 +543,13 @@ public partial class Planet : Node3D
 			projectionMatrix[2].X, projectionMatrix[2].Y, projectionMatrix[2].Z, projectionMatrix[2].W,
 			projectionMatrix[3].X, projectionMatrix[3].Y, projectionMatrix[3].Z, projectionMatrix[3].W,
 
-			Mathf.DegToRad(mainCamera?.Fov ?? 75), 
-			mainCamera?.Far ?? 4000,
-			mainCamera?.Near ?? 0.05f,
+			Mathf.DegToRad(camera?.Fov ?? 75), 
+			camera?.Far ?? 4000,
+			camera?.Near ?? 0.05f,
 			PlanetData.Radius,
 			PlanetData.SubFactor * PlanetData.Radius, 
 			PlanetData.Resolution,
 			0,0,
-			_xBias.X, _xBias.Y,
-			_yBias.X, _yBias.Y,
-			_zBias.X, _zBias.Y,
-			0,0
 		}).ToArray();
 
 		_rd.BufferUpdate(_cameraData, 0, (uint)data.Length, data);
@@ -612,11 +573,6 @@ public partial class Planet : Node3D
 		_rd.BufferUpdate(_writeFullList, 0, (uint)data.Length, data);
 	}
 
-	private void UpdateWriteCollisionList()
-	{
-		byte[] data = Utilities.ToBytes<Key>(new Key[MaximumCollisionNodes]).ToArray();
-		_rd.BufferUpdate(_writeCollisionList, 0, (uint)data.Length, data);
-	}
 
 	private void UpdateExternalPositionsList()
 	{
@@ -630,9 +586,9 @@ public partial class Planet : Node3D
 
 		byte[] data = Utilities.ToBytes<Vector4>(new Vector4[]
 		{
-			Vector3Utils.toVector4(GlobalPosition, 0),
-			Vector3Utils.toVector4(playerPosition, 0),
-			Vector3Utils.toVector4(mouseIntersection, 0),
+			VectorUtils.toVector4(GlobalPosition, 0),
+			VectorUtils.toVector4(playerPosition, 0),
+			VectorUtils.toVector4(mouseIntersection, 0),
 
 		}).ToArray();
 
@@ -659,16 +615,14 @@ public partial class Planet : Node3D
 		UpdateWriteFullList();
 		UpdateCameraData();
 		UpdateWriteCulledList();
-		UpdateWriteCollisionList();
 		UpdateExternalPositionsList();
 	}
 
 	#endregion
-
 	#endregion
 
 	#region PROCESSING
-
+	Vector3 oldposition;
 	async public void StartProcessLoop()
 	{
 		if (PlanetData == null) return;
@@ -676,11 +630,16 @@ public partial class Planet : Node3D
 
 		while (Processing)
 		{
-			UpdateCopy();
-			UpdateComputeCull();
-			await Task.Delay(_updateFrequency);
-			Render();
-			UpdateUniforms();
+			// if (Engine.IsEditorHint() || oldposition.DistanceSquaredTo(PlayerController.Camera.GlobalPosition) > Mathf.Pow(PlanetData.Radius / 8, 2))
+			// {
+				UpdateCopy();
+				UpdateComputeCull();
+				await Task.Delay(_updateFrequency);
+				Render();
+				UpdateUniforms();
+			// }
+
+			// oldposition = PlayerController.Camera.GlobalPosition;
 
 			if (Engine.IsEditorHint())
 			{
@@ -719,19 +678,17 @@ public partial class Planet : Node3D
 		_rd.Sync();
 
 		Key[] keys = Utilities.FromBytes<Key>(_rd.BufferGetData(_writeCulledList)).ToArray();
-		// Key[] keys = Utilities.FromBytes<Key>(_rd.BufferGetData(_writeCollisionList)).ToArray();
 		uint[] indices = Utilities.FromBytes<uint>(_rd.BufferGetData(_indicesBlockBuffer)).ToArray();
 		uint[] primCounts = Utilities.FromBytes<uint>(_rd.BufferGetData(_atomicCounterBuffer)).ToArray();
-		Vector4[] debug = Utilities.FromBytes<Vector4>(_rd.BufferGetData(_debug)).ToArray();
-
 		int loaded = (int)primCounts[indices[1] + 16];
 		int unloaded = (int)primCounts[indices[1]];
 
 		PlayerController?.SetLabelTriangleCount(loaded, unloaded);
-		InstanceAllTriangles(keys, loaded, debug);
+		
+		InstanceAllTriangles(keys, loaded);
 	}
 
-	public void InstanceAllTriangles(Key[] keys, int amount, Vector4[] debug)
+	public void InstanceAllTriangles(Key[] keys, int amount)
 	{
 		// TODO make this better?
 		_surface.Multimesh.InstanceCount = 0;
@@ -743,17 +700,11 @@ public partial class Planet : Node3D
 			Processing = false;
 			return;
 		}
-
-		
-
+		Transform3D transform = new(Basis.Identity, Vector3.Zero);
 		for (int i = 0; i < amount; i++)
 		{
-			
-			// GD.Print(keys[i]);
-			Transform3D transform = new Transform3D(Basis.Identity, Vector3.Zero);
 			_surface.Multimesh.SetInstanceTransform(i, transform);
 			_surface.Multimesh.SetInstanceCustomData(i, keys[i].ToColor());
-			// _surface.Multimesh.SetInstanceColor(i, new Color(debug[i].X,debug[i].Y,debug[i].Z,debug[i].W));
 		}
 		
 	}
@@ -782,8 +733,6 @@ public partial class Planet : Node3D
 			_rd.FreeRid(_writeFullList);
 		if (_writeCulledList.Id != 0)
 			_rd.FreeRid(_writeCulledList);
-		if (_writeCollisionList.Id != 0)
-			_rd.FreeRid(_writeCollisionList);
 		if (_writeExternalPositionsList.Id != 0)
 			_rd.FreeRid(_writeExternalPositionsList);
 		if (_positions.Id != 0)

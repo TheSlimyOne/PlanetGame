@@ -11,7 +11,7 @@ public class Tetrahedron
 
     public Tetrahedron(Vector3[] initialVertices)
     {
-        Vector3 centroid = Vector3Utils.GetCentroid(initialVertices);
+        Vector3 centroid = VectorUtils.GetCentroid(initialVertices);
 
         Triangle triangleA = new Triangle(new Vector3[] { initialVertices[0], initialVertices[1], initialVertices[2] }, centroid);
         Triangle triangleB = new Triangle(new Vector3[] { initialVertices[0], initialVertices[2], initialVertices[3] }, centroid);

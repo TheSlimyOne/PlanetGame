@@ -71,8 +71,8 @@ public class Edge : IComparable<Edge>
             return false;
 
         return
-            Vector3Utils.IsEqualVector3(VertexA, otherEdge.VertexA) &&
-            Vector3Utils.IsEqualVector3(VertexB, otherEdge.VertexB);
+            VectorUtils.IsEqualVector3(VertexA, otherEdge.VertexA) &&
+            VectorUtils.IsEqualVector3(VertexB, otherEdge.VertexB);
     }
 
     public override bool Equals(object obj)
@@ -81,10 +81,10 @@ public class Edge : IComparable<Edge>
             return false;
 
         return
-            (Vector3Utils.IsEqualVector3(VertexA, otherEdge.VertexA) &&
-            Vector3Utils.IsEqualVector3(VertexB, otherEdge.VertexB)) ||
-            (Vector3Utils.IsEqualVector3(VertexA, otherEdge.VertexB) &&
-            Vector3Utils.IsEqualVector3(VertexB, otherEdge.VertexA));
+            (VectorUtils.IsEqualVector3(VertexA, otherEdge.VertexA) &&
+            VectorUtils.IsEqualVector3(VertexB, otherEdge.VertexB)) ||
+            (VectorUtils.IsEqualVector3(VertexA, otherEdge.VertexB) &&
+            VectorUtils.IsEqualVector3(VertexB, otherEdge.VertexA));
 
     }
     

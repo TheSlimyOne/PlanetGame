@@ -1,4 +1,6 @@
 shader_type spatial;
+//render_mode unshaded;
+
 #define sqrt2   1.414213562
 //render_mode blend_add;
 
@@ -16,9 +18,8 @@ uniform float normal_strength;
 varying vec3 object_space_pos;
 uniform int resolution;
 
-uniform float scale_factor : hint_range(0.0, 1.0) = 0.5;
-
-
+uniform sampler2D key_image : repeat_disable;
+uniform sampler2D global_key_data : repeat_disable;
 
 int findMSB64(uvec2 key) {
     return (key.x == 0u) ? int(findMSB(key.y)) : int((findMSB(key.x) + 32u));
@@ -185,11 +186,22 @@ vec2 point_on_sphere_to_UV(vec3 p) {
 	return vec2(u, v);
 }
 
+ivec2 getKeyCoordinate(int idx){
+    ivec2 image_size = ivec2(textureSize(key_image, 0));
+    return ivec2(idx % image_size.x, idx / image_size.y);
+}
+
+float getScale(float idx)
+{
+	return pow(0.5, float(idx / 2.0));
+}
 
 varying flat uvec4 key;
 varying flat uint flags;
 void vertex() {
-	key = floatBitsToUint(INSTANCE_CUSTOM);
+	
+	key = floatBitsToUint(texelFetch(key_image, getKeyCoordinate(int(INSTANCE_ID)), 0));
+	//key = floatBitsToUint(INSTANCE_CUSTOM);
 	flags = key.w >> 29u;
 	key.w &= 0x1FFFFFFFu;
 
@@ -234,9 +246,15 @@ void fragment() {
 
 	vec2 uv_point = is_texture_1D ? vec2(elevation, 0.0) : point_on_sphere_to_UV(object_space_pos);
 	vec3 surface_texture = textureLod(albedo_map, uv_point, 0).rgb;
-
-	ALBEDO = is_debug ? debug_color :  surface_texture;
-	//ALBEDO = COLOR.xyz;
+	
+	
+	
+	ALBEDO = is_debug ? debug_color : surface_texture;
+	
+	float C = texelFetch(global_key_data, ivec2(0, 0), 0).r;
+	float B = getScale(C);
+	float A = pow(2.0, C);
+	//ALBEDO = vec3(A, 0, 0);
 
 
 

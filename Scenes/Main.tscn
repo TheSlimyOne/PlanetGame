@@ -1,65 +1,24 @@
-[gd_scene load_steps=8 format=3 uid="uid://bohwiijugk070"]
+[gd_scene load_steps=5 format=3 uid="uid://bohwiijugk070"]
 
-[ext_resource type="Texture2D" uid="uid://y5l42qoob2d" path="res://Assets/Images/panorama_image (1).png" id="1_so8p0"]
-[ext_resource type="PackedScene" uid="uid://bcima1jclqypi" path="res://Scenes/Planet.tscn" id="2_33i7o"]
-[ext_resource type="Resource" uid="uid://gwppe7ras2x" path="res://Planet/PlanetDataDefault.tres" id="4_833tc"]
-[ext_resource type="PackedScene" uid="uid://vfkamkwnbmqi" path="res://Scenes/PlayerController.tscn" id="4_g0oh4"]
+[ext_resource type="Texture2D" uid="uid://y5l42qoob2d" path="res://Assets/Images/panorama_image (1).png" id="1_hgmbp"]
 
-[sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_2c0i8"]
-panorama = ExtResource("1_so8p0")
+[sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_1an5v"]
+panorama = ExtResource("1_hgmbp")
 
-[sub_resource type="Sky" id="Sky_s4jer"]
-sky_material = SubResource("PanoramaSkyMaterial_2c0i8")
+[sub_resource type="Sky" id="Sky_f85mr"]
+sky_material = SubResource("PanoramaSkyMaterial_1an5v")
 
-[sub_resource type="Environment" id="Environment_71xie"]
+[sub_resource type="Environment" id="Environment_o1x22"]
 background_mode = 2
-background_color = Color(0.140447, 0.140447, 0.140447, 1)
-sky = SubResource("Sky_s4jer")
-tonemap_mode = 2
-glow_enabled = true
+sky = SubResource("Sky_f85mr")
 
 [node name="Main" type="Node3D"]
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
-environment = SubResource("Environment_71xie")
+environment = SubResource("Environment_o1x22")
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
-transform = Transform3D(0.90423, 0, 0.427045, 0, 1, 0, -0.427045, 0, 0.90423, 0, 0, 0)
+transform = Transform3D(-0.153207, -0.599628, 0.785477, -0.646181, 0.662166, 0.379456, -0.747649, -0.449425, -0.488916, 0, 0, 0)
 light_energy = 0.5
 shadow_enabled = true
 directional_shadow_max_distance = 500.0
-
-[node name="PlayerController" parent="." node_paths=PackedStringArray("Camera", "HelperCamera", "orbitGimbal", "rotationGimbal", "Focus", "lblTriangleCount", "lblFPS", "lblMouseCursor", "lblCameraPosition") instance=ExtResource("4_g0oh4")]
-Camera = NodePath("OrbitGimbal/RotationGimbal/Character/PlayerCamera")
-HelperCamera = NodePath("OrbitGimbal/RotationGimbal/Character/PlayerCamera/Helper")
-orbitGimbal = NodePath("OrbitGimbal")
-rotationGimbal = NodePath("OrbitGimbal/RotationGimbal")
-CameraRange = Vector2(200, 500)
-CameraZoomSpeed = Vector2(0.01, 10)
-ZoomToRotationRatio = 0.25
-Focus = NodePath("../Planet")
-FocusRadius = 200.0
-lblTriangleCount = NodePath("CanvasLayer/VBoxContainer/TriangleCount")
-lblFPS = NodePath("CanvasLayer/VBoxContainer/FPS")
-lblMouseCursor = NodePath("CanvasLayer/VBoxContainer/MouseCursor")
-lblCameraPosition = NodePath("CanvasLayer/VBoxContainer/CameraPosition")
-
-[node name="TriangleCount" parent="PlayerController/CanvasLayer/VBoxContainer" index="0"]
-text = "Triangles: 64/64"
-
-[node name="FPS" parent="PlayerController/CanvasLayer/VBoxContainer" index="1"]
-text = "FPS: 10"
-
-[node name="MouseCursor" parent="PlayerController/CanvasLayer/VBoxContainer" index="2"]
-text = "(118.24509, 3.6064367, -0.1)"
-
-[node name="Planet" parent="." node_paths=PackedStringArray("PlayerController", "_surface", "_heightMapCollider", "_mouseDetectionArea", "_mouseDetectionCollider", "GravityField") instance=ExtResource("2_33i7o")]
-PlanetData = ExtResource("4_833tc")
-PlayerController = NodePath("../PlayerController")
-_surface = NodePath("Surface")
-_heightMapCollider = NodePath("MouseDetection/MouseCollider")
-_mouseDetectionArea = NodePath("MouseDetection")
-_mouseDetectionCollider = NodePath("MouseDetection/MouseCollider")
-GravityField = NodePath("GravityField")
-
-[editable path="PlayerController"]
