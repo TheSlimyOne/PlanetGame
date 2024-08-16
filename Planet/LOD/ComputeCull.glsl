@@ -39,16 +39,12 @@ layout(set = 0, binding = 6, std430) buffer restrict readonly Positions {
 
 layout(set = 0, binding = 7, std430) buffer restrict readonly ExternalData {
     mat4 viewProjectionMatrix;         // 16 * 4 = 64 bytes
+    vec4 cameraPosition;
     mat4 planetTransformMatrix;
     float CameraFOV;         // 4 bytes
-    float CameraFarPlane;    // 4 bytes
-    float CameraNearPlane;   // 4 bytes
     float radius;            // 4 bytes
-
     float subFactor;         // 4 bytes
     float resolution;        // 4 bytes
-    vec2 _padding;           // 8 bytes padding to align next vec2 to 16-byte boundary
-
 };
 
 layout(set = 0, binding = 8, std430) buffer restrict Debug {
@@ -181,7 +177,7 @@ vec3 localPointToWorldPointCubical(vec2 point, vec3 vertexA, vec3 vertexB, vec3 
 }
 
 vec3 localPointToWorldPointSpherical(vec2 point, vec3 vertexA, vec3 vertexB, vec3 vertexC) {
-    return radius * point_on_cube_to_point_on_sphere(vertexA * point.x + vertexB * point.y + vertexC * (1 - point.x - point.y));
+    return point_on_cube_to_point_on_sphere(vertexA * point.x + vertexB * point.y + vertexC * (1 - point.x - point.y));
 }
 
 /*
@@ -274,8 +270,7 @@ vec4 getTransformation(uvec4 key) {
     return vec4(theta, scale, translation);
 }
 
-float getScale(uvec4 key)
-{
+float getScale(uvec4 key) {
     return pow(0.5, findMSB64(key.xy) / 2);
 }
 
@@ -296,12 +291,12 @@ uint base4ToHex(uint base4Value) {
 float calculateLOD(float dist, float fovy, float factor) {
     float num = dist * tan(fovy/2);
     float dom = sqrt2 * factor;
-    return -log2(num/dom);
+    return clamp(-log2(num/dom), 0, 31);
 }
 
 float calculateLODToCam(vec3 from) {
     return calculateLOD(
-        distance((vec4(from, 1) * planetTransformMatrix).xyz, vec3(0)),
+        distance((vec4(from, 1) * planetTransformMatrix).xyz, cameraPosition.xyz),
         CameraFOV, // Must be in radians
         subFactor
     );
@@ -380,7 +375,7 @@ uint getJunctionFlags(uvec4 key, Triangle triangle, float lod) {
 
 bool PointInFrustum(vec3 point) {
     vec4 clipSpacePoint = viewProjectionMatrix * (vec4(point, 1) * planetTransformMatrix);
-    vec3 ndcPoint = clipSpacePoint.xyz/clipSpacePoint.w;
+    vec3 ndcPoint = clipSpacePoint.xyz / clipSpacePoint.w;
     // return true;
 
     return ndcPoint.x >= -1.0 && ndcPoint.x <= 1.0 &&
@@ -395,15 +390,7 @@ bool TriangleInFrustum(Triangle triangle) {
            PointInFrustum(triangle.v3);
 }
 
-float calculateArea(vec3 v0, vec3 v1, vec3 v2)
-{
-    vec3 a = v1 - v0;
-    vec3 b = v2 - v0;
-
-    return 0.5 * length(cross(a, b));
-}
-
-ivec2 getKeyCoordinate(uint idx){
+ivec2 getKeyCoordinate(uint idx) {
     ivec2 image_size = imageSize(DisplayKeys);
     return ivec2(idx % image_size.x, idx / image_size.y);
 }
@@ -411,27 +398,10 @@ ivec2 getKeyCoordinate(uint idx){
 void cull_key(uvec4 key, Triangle triangle, Triangle parent_triangle, float lod) {
     if (renderAll || TriangleInFrustum(parent_triangle)) {
         uint write_culled_index = atomicAdd(primCount_culled[write_index], 1);
-      
         write_culled_list[write_culled_index] = key;
         imageStore(DisplayKeys, getKeyCoordinate(write_culled_index), uintBitsToFloat(key));
-        
-        imageAtomicMax(GlobalKeyData, ivec2(0, 0), getLevelInKey(key.xy));
     }
-
-    // vec3 a = triangle.v1 - triangle.v0;
-    // vec3 b = triangle.v2 - triangle.v0;
-    // vec3 c = mousePosition.xyz - triangle.v0;
-    // vec3 n = normalize(cross(a, b));
-    // vec3 projN = dot(c, n) * n;
-    // vec3 pointOnPlane = -projN + c;
-
-    // float triangleArea = calculateArea(triangle.v0, triangle.v1, triangle.v2);
-    // triangleArea -= calculateArea(triangle.v0, triangle.v1, pointOnPlane);
-    // triangleArea -= calculateArea(triangle.v0, triangle.v2, pointOnPlane);
-    // triangleArea -= calculateArea(triangle.v1, triangle.v2, pointOnPlane);
-  
-
-
+    imageAtomicMax(GlobalKeyData, ivec2(0, 0), getLevelInKey(key.xy));
 }
 
 void main() {

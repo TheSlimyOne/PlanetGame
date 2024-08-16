@@ -3,13 +3,14 @@ using Godot.Collections;
 using System;
 using System.Linq;
 using ComputeShaderClasses;
+using System.Xml.Serialization;
 
 public partial class Surface : MultiMeshInstance3D
 {
 	[ExportGroup("Required")]
 	[Export] SurfaceController SurfaceController;
 	[Export] CameraController Camera;
-	[Export] ShaderMaterial _material;
+	[Export] public ShaderMaterial Material;
 
 	[ExportGroup("Compute Shader Settings")]
 	[Export] uint MaximumNodes;
@@ -83,8 +84,8 @@ public partial class Surface : MultiMeshInstance3D
 		SetupComputeShader();
 		UpdateMulitMesh();
 
-		_material.SetShaderParameter("key_image", _displayKeyData);
-		_material.SetShaderParameter("global_key_data", _globalKeyData);
+		Material.SetShaderParameter("key_image", _displayKeyData);
+		Material.SetShaderParameter("global_key_data", _globalKeyData);
 		Camera.GetChild(0).GetChild<TextureRect>(1).Texture = _displayKeyData;
 		_processing = true;
 	}
@@ -108,7 +109,12 @@ public partial class Surface : MultiMeshInstance3D
 		if (@event.IsActionPressed("debug_mode"))
 		{
 			SurfaceController.PlanetData.DebugMode = !SurfaceController.PlanetData.DebugMode;
-			_material.SetShaderParameter("is_debug", SurfaceController.PlanetData.DebugMode);
+			Material.SetShaderParameter("is_debug", SurfaceController.PlanetData.DebugMode);
+		}
+		if (@event.IsActionPressed("cube_mode"))
+		{
+			SurfaceController.PlanetData.CubeMode = !SurfaceController.PlanetData.CubeMode;
+			Material.SetShaderParameter("is_cube", SurfaceController.PlanetData.CubeMode);
 		}
 	}
 
@@ -208,7 +214,7 @@ public partial class Surface : MultiMeshInstance3D
 		arrays[(int)Mesh.ArrayType.Normal] = normals;
 		arrays[(int)Mesh.ArrayType.TexUV] = uvs;
 		mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
-		mesh.SurfaceSetMaterial(0, _material);
+		mesh.SurfaceSetMaterial(0, Material);
 
 
 		Multimesh = new MultiMesh
@@ -227,19 +233,19 @@ public partial class Surface : MultiMeshInstance3D
 	public void SetMaterialParameters()
 	{
 		PlanetData planetData = SurfaceController.PlanetData;
-		if (_material == null || planetData == null) return;
+		if (Material == null || planetData == null) return;
 
-		_material.SetShaderParameter("position_list", _trianglePoints);
-		_material.SetShaderParameter("height_gradient", planetData.HeightGradient);
-		_material.SetShaderParameter("radius", planetData.Radius);
-		_material.SetShaderParameter("albedo_map", planetData.AlbedoMap);
-		_material.SetShaderParameter("is_texture_1D", planetData.AlbedoMap is GradientTexture1D);
-		_material.SetShaderParameter("height_map", planetData.HeightMap);
-		_material.SetShaderParameter("height_scale", planetData.HeightScale);
-		_material.SetShaderParameter("is_debug", planetData.DebugMode);
-		_material.SetShaderParameter("is_cube", planetData.CubeMode);
-		_material.SetShaderParameter("resolution", planetData.Resolution);
-		_material.SetShaderParameter("normal_strength", planetData.NormalStrength);
+		Material.SetShaderParameter("position_list", _trianglePoints);
+		Material.SetShaderParameter("height_gradient", planetData.HeightGradient);
+		Material.SetShaderParameter("radius", planetData.Radius);
+		Material.SetShaderParameter("albedo_map", planetData.AlbedoMap);
+		Material.SetShaderParameter("is_texture_1D", planetData.AlbedoMap is GradientTexture1D);
+		Material.SetShaderParameter("height_map", planetData.HeightMap);
+		Material.SetShaderParameter("height_scale", planetData.HeightScale);
+		Material.SetShaderParameter("is_debug", planetData.DebugMode);
+		Material.SetShaderParameter("is_cube", planetData.CubeMode);
+		Material.SetShaderParameter("resolution", planetData.Resolution);
+		Material.SetShaderParameter("normal_strength", planetData.NormalStrength);
 	}
 
 	private void SetupComputeShader()
@@ -293,7 +299,6 @@ public partial class Surface : MultiMeshInstance3D
 				Utilities.ToBytes<uint>(new uint[] { 0, 1, 8, MaximumNodes }).ToArray()
 			),
 
-
 			// key = uvec4(nodeIDMSB, nodeIDLSB, meshPolygonID, flagsAndRootID)
 			[BufferNames.READ_LIST] = new StorageBufferUniform(_rd, _uniformNameToBindings[BufferNames.READ_LIST],
 				new Func<byte[]>(() =>
@@ -327,10 +332,6 @@ public partial class Surface : MultiMeshInstance3D
 				Utilities.ToBytes<Vector4>(_trianglePoints).ToArray()
 			),
 
-			[BufferNames.EXTERNAL_DATA] = new StorageBufferUniform(_rd, _uniformNameToBindings[BufferNames.EXTERNAL_DATA],
-				GetExternalData()
-			),
-
 			[BufferNames.DEBUG_DATA] = new StorageBufferUniform(_rd, _uniformNameToBindings[BufferNames.DEBUG_DATA],
 				new Func<byte[]>(() =>
 				{
@@ -338,17 +339,17 @@ public partial class Surface : MultiMeshInstance3D
 				}).Invoke()
 			),
 
-			[BufferNames.HEIGHT_MAP] = new TextureUniform(_rd, _uniformNameToBindings[BufferNames.HEIGHT_MAP],
+			[BufferNames.HEIGHT_MAP] = new Texture2DUniform(_rd, _uniformNameToBindings[BufferNames.HEIGHT_MAP],
 				SurfaceController.PlanetData.HeightMap),
 
-			[BufferNames.HEIGHT_GRADIENT] = new TextureUniform(_rd, _uniformNameToBindings[BufferNames.HEIGHT_GRADIENT],
+			[BufferNames.HEIGHT_GRADIENT] = new Texture2DUniform(_rd, _uniformNameToBindings[BufferNames.HEIGHT_GRADIENT],
 				SurfaceController.PlanetData.HeightGradient),
 
-			[BufferNames.KEYS] = new TextureUniform(_rd, _uniformNameToBindings[BufferNames.KEYS], ref _displayKeyData,
+			[BufferNames.KEYS] = new Texture2DUniform(_rd, _uniformNameToBindings[BufferNames.KEYS], ref _displayKeyData,
 				new RDTextureFormat()
 				{
-					Width = (uint)(Mathf.Sqrt(MaximumNodes) * 1f/2f),
-					Height = (uint)(Mathf.Sqrt(MaximumNodes) * 1f/2f),
+					Width = (uint)(Mathf.Sqrt(MaximumNodes) * 1f / 2f),
+					Height = (uint)(Mathf.Sqrt(MaximumNodes) * 1f / 2f),
 					TextureType = RenderingDevice.TextureType.Type2D,
 					Format = RenderingDevice.DataFormat.R32G32B32A32Sfloat,
 					UsageBits = RenderingDevice.TextureUsageBits.SamplingBit |
@@ -360,7 +361,8 @@ public partial class Surface : MultiMeshInstance3D
 
 				}
 			),
-			[BufferNames.GLOBALKEYSDATA] = new TextureUniform(_rd, _uniformNameToBindings[BufferNames.GLOBALKEYSDATA], ref _globalKeyData,
+
+			[BufferNames.GLOBALKEYSDATA] = new Texture2DUniform(_rd, _uniformNameToBindings[BufferNames.GLOBALKEYSDATA], ref _globalKeyData,
 				new RDTextureFormat()
 				{
 					Width = 10u,
@@ -375,7 +377,11 @@ public partial class Surface : MultiMeshInstance3D
 								RenderingDevice.TextureUsageBits.ColorAttachmentBit
 
 				}
-			)
+			),
+
+			[BufferNames.EXTERNAL_DATA] = new StorageBufferUniform(_rd, _uniformNameToBindings[BufferNames.EXTERNAL_DATA],
+				GetExternalData()
+			),
 		};
 
 		_bindings_CC.Add(_computeShaderUniforms[BufferNames.ATOMIC_COUNTER].Uniform);
@@ -402,10 +408,10 @@ public partial class Surface : MultiMeshInstance3D
 
 	private void UpdateUniforms()
 	{
+		
 		_computeShaderUniforms[BufferNames.INDICES].UpdateUniform(
 			GetIndicesData()
 		);
-
 		_computeShaderUniforms[BufferNames.READ_LIST].UpdateUniform(
 			_rd.BufferGetData(_computeShaderUniforms[BufferNames.WRITE_FULL_LIST].Rid)
 		);
@@ -424,27 +430,30 @@ public partial class Surface : MultiMeshInstance3D
 		indices[3] = MaximumNodes;
 		return Utilities.ToBytes<uint>(indices).ToArray();
 	}
-
+	
 	private byte[] GetExternalData()
 	{
 		Array<byte> data = new();
-		data.AddRange(Utilities.ToBytesSingle(
-			new Projection(Camera.GlobalTransform.AffineInverse()) * Camera.GetCameraProjection()).ToArray());
+		
 
+		// GD.Print(planetTransform);
+		// GD.Print();
+		// GD.Print("====================");
+		// GD.Print(CreateOffsetMatrix());
+		data.AddRange(Utilities.ToBytesSingle(Camera.GetViewProjectionMatrix()).ToArray());
+		data.AddRange(Utilities.ToBytesSingle(VectorUtils.toVector4(Camera.GlobalPosition, 0)).ToArray());
+		data.AddRange(Utilities.ToBytesSingle(GetPlanetTransformMatrix()).ToArray());
 		data.AddRange(Utilities.ToBytes<float>(new float[]
 		{
-			GlobalTransform[0].X, GlobalTransform[1].X, GlobalTransform[2].X, GlobalTransform[3].X,
-			GlobalTransform[0].Y, GlobalTransform[1].Y, GlobalTransform[2].Y, GlobalTransform[3].Y,
-			GlobalTransform[0].Z, GlobalTransform[1].Z, GlobalTransform[2].Z, GlobalTransform[3].Z,
-			0, 0, 0, 1,
-
+			// planetTransform[0].X, planetTransform[1].X, planetTransform[2].X, planetTransform[3].X,
+			// planetTransform[0].Y, planetTransform[1].Y, planetTransform[2].Y, planetTransform[3].Y,
+			// planetTransform[0].Z, planetTransform[1].Z, planetTransform[2].Z, planetTransform[3].Z,
+			// 0, 0, 0, 1,
+			
 			Mathf.DegToRad(Camera.Fov),
-			Camera.Far,
-			Camera.Near,
 			SurfaceController.PlanetData.Radius,
-			SurfaceController.PlanetData.SubFactor * SurfaceController.PlanetData.Radius * Scale.X,
+			SurfaceController.PlanetData.SubFactor * SurfaceController.PlanetData.Radius,
 			SurfaceController.PlanetData.Resolution,
-			0,0,
 		}).ToArray());
 		return data.ToArray();
 	}
@@ -475,7 +484,7 @@ public partial class Surface : MultiMeshInstance3D
 	public override void _PhysicsProcess(double delta)
 	{
 		if (SurfaceController.PlanetData == null || _rd == null) return;
-
+		SetMaterialParameters();
 		if (_processing)
 		{
 			_rd.TextureClear(_computeShaderUniforms[BufferNames.KEYS].Rid, new Color(0, 0, 0, 1), 0, 1, 0, 1);
@@ -483,6 +492,7 @@ public partial class Surface : MultiMeshInstance3D
 			UpdateComputeCull();
 			Render();
 			UpdateUniforms();
+			// _processing = false;
 		}
 	}
 
@@ -493,24 +503,25 @@ public partial class Surface : MultiMeshInstance3D
 
 		uint[] indices = Utilities.FromBytes<uint>(_rd.BufferGetData(_computeShaderUniforms[BufferNames.INDICES].Rid)).ToArray();
 		uint[] primCounts = Utilities.FromBytes<uint>(_rd.BufferGetData(_computeShaderUniforms[BufferNames.ATOMIC_COUNTER].Rid)).ToArray();
-		// Key[] data = Utilities.FromBytes<Key>(_rd.BufferGetData(_computeShaderUniforms[BufferNames.WRITE_CULLED_LIST].Rid)).ToArray();
-		
-		// byte[] data = _rd.TextureGetData(_computeShaderUniforms[BufferNames.GLOBALKEYSDATA].Rid, 0);
+		Camera.UIElements.SetCurrentLOD(GetGlobalPixelData(0, 0).R);
+
+
+		Key[] data = Utilities.FromBytes<Key>(_rd.BufferGetData(_computeShaderUniforms[BufferNames.WRITE_FULL_LIST].Rid)).ToArray();
 		// Image image = Image.CreateFromData(10, 10, false, Image.Format.Rf, data);
-		// GD.Print(image.GetPixel(0,0));
-		// image.SetPixel(0,0, new Color(1, 0, 1));
-		// image.SetPixel(1,1, new Color(1, 0, 1));
-		// image.SetPixel(2,2, new Color(1, 0, 1));
-		// image.SetPixel(3,3, new Color(1, 0, 1));
-		// image.SetPixel(4,4, new Color(1, 0, 1));
+		// RenderingServer
+		// byte[] data = _rd.TextureGetData(_computeShaderUniforms[BufferNames.GLOBALKEYSDATA].Rid, 0);
+		// float[] yes = Utilities.FromBytes<float>(data).ToArray();
+		// GD.Print(yes[0]);
 
 		int all = (int)primCounts[indices[1]];
-		int loaded = (int)primCounts[indices[1] + 16];
+		int culled = (int)primCounts[indices[1] + 16];
 
-		Camera.UIElements.SetLabelTriangleCount(loaded, all);
+		Camera.UIElements.SetLabelTriangleCount(culled, all);
 
-		InstanceAllTriangles(loaded);
-		// InstanceAllTriangles(unloaded);
+
+		// _processing = false;
+		InstanceAllTriangles(culled);
+		// InstanceAllTriangles(data, all);
 	}
 
 	public void InstanceAllTriangles(Key[] keys, int amount)
@@ -522,6 +533,25 @@ public partial class Surface : MultiMeshInstance3D
 			Multimesh.SetInstanceTransform(i, transform);
 			Multimesh.SetInstanceCustomData(i, keys[i].ToColor());
 		}
+	}
+
+	public Color GetGlobalPixelData(int x, int y)
+	{
+		return RenderingServer.Texture2DGet(_globalKeyData.GetRid()).GetPixel(x, y);
+	}
+
+	public Projection GetPlanetTransformMatrix()
+	{
+		float radius = SurfaceController.PlanetData.Radius;
+		Vector3 scaleFromPoint = Vector3.Back;
+
+		// Radius isnt applied here future me idk why tho
+		return SurfaceController.GetProjection() * new Projection(
+			new Vector4(radius, 0, 0, scaleFromPoint.X - radius * scaleFromPoint.X),
+			new Vector4(0, radius, 0, scaleFromPoint.Y - radius * scaleFromPoint.Y),
+			new Vector4(0, 0, radius, scaleFromPoint.Z - radius * scaleFromPoint.Z - 1),
+			new Vector4(0, 0, 0, 1)
+		);
 	}
 
 	public void InstanceAllTriangles(int amount)

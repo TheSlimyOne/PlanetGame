@@ -8,21 +8,21 @@ public abstract partial class ComputeShaderUniform : GodotObject
     public Rid Rid;
     public int Binding;
     
-    public RenderingDevice RenderingDevice;
+    public RenderingDevice _rd;
     public RDUniform Uniform;
     private byte[] data;
 
     public ComputeShaderUniform(RenderingDevice renderingDevice, int binding)
     {
-        RenderingDevice = renderingDevice;
+        _rd = renderingDevice;
         Binding = binding;
     }
 
     public abstract void UpdateUniform(byte[] data);
-
+    
     public void FreeRid()
     {
-        RenderingDevice.FreeRid(Rid);
+        _rd.FreeRid(Rid);
     }
 
     ~ComputeShaderUniform()

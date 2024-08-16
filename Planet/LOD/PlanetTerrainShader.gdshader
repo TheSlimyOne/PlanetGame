@@ -1,5 +1,5 @@
 shader_type spatial;
-//render_mode unshaded;
+render_mode unshaded;
 
 #define sqrt2   1.414213562
 //render_mode blend_add;
@@ -17,6 +17,7 @@ uniform float height_scale;
 uniform float normal_strength;
 varying vec3 object_space_pos;
 uniform int resolution;
+uniform mat4 transformations;
 
 uniform sampler2D key_image : repeat_disable;
 uniform sampler2D global_key_data : repeat_disable;
@@ -102,8 +103,12 @@ uint getBranching(uvec2 key, int level, int msb) {
     return (rightShift64(key, uint(msb - 2) - uint(level * 2)).y & 0x3u);
 }
 
+float getScale(float idx) {
+	return 1.0/pow(2, idx);
+}
+
 vec3 localPointToWorldPoint(vec2 point, vec3 vertexA, vec3 vertexB, vec3 vertexC) {
-    return vertexA * point.x + vertexB * point.y + vertexC * (1.0 - point.x - point.y);
+    return (vertexA * point.x + vertexB * point.y + vertexC * (1.0 - point.x - point.y));
 }
 
 vec3 quad_space_to_world_space(vec2 point, uint meshPolygonID, uint rootID) {
@@ -125,9 +130,7 @@ mat3 leaf_space(uvec4 key) {
     int theta = 0;
     float scale = 1.0;
 
-
-    for (int i = 0; i < msb / 2; i++)
-    {
+    for (int i = 0; i < msb / 2; i++) {
         uint b1b2 = getBranching(key.xy, i, msb);
         uint b1 = b1b2 >> 1u;
         uint b2 = b1b2 & 1u;
@@ -186,20 +189,27 @@ vec2 point_on_sphere_to_UV(vec3 p) {
 	return vec2(u, v);
 }
 
-ivec2 getKeyCoordinate(int idx){
+ivec2 getKeyCoordinate(int idx) {
     ivec2 image_size = ivec2(textureSize(key_image, 0));
     return ivec2(idx % image_size.x, idx / image_size.y);
 }
 
-float getScale(float idx)
-{
-	return pow(0.5, float(idx / 2.0));
+mat4 createTransform() {
+	float scale = 1.0 / getScale(texelFetch(global_key_data, ivec2(0, 0), 0).r);
+	vec3 scaleFromPoint = vec3(0, 0, 1);
+	scale = radius;
+	return mat4(
+		vec4( scale, 0, 0, scaleFromPoint.x - scale * scaleFromPoint.x),
+		vec4( 0, scale, 0, scaleFromPoint.y - scale * scaleFromPoint.y),
+		vec4( 0, 0, scale, scaleFromPoint.z - scale * scaleFromPoint.z - 1.0),
+		vec4( 0, 0, 0, 1)
+	);
 }
 
 varying flat uvec4 key;
 varying flat uint flags;
 void vertex() {
-	
+
 	key = floatBitsToUint(texelFetch(key_image, getKeyCoordinate(int(INSTANCE_ID)), 0));
 	//key = floatBitsToUint(INSTANCE_CUSTOM);
 	flags = key.w >> 29u;
@@ -226,13 +236,20 @@ void vertex() {
 
 	vec3 world_position = quad_space_to_world_space(quad_position, key.z, key.w);
 	VERTEX = is_cube ? world_position : point_on_cube_to_point_on_sphere(world_position);
-	NORMAL = VERTEX;
-	object_space_pos = VERTEX;
+	float scale = 1.0 / getScale(texelFetch(global_key_data, ivec2(0, 0), 0).r);
 	elevation = textureLod(height_map, point_on_sphere_to_UV(VERTEX), 0).r;
+	object_space_pos = VERTEX;
 
-	VERTEX *= radius;
+	VERTEX = (vec4(VERTEX, 1) * transformations).xyz;
+	NORMAL = VERTEX;
+	VERTEX = (vec4(VERTEX, 1) * createTransform()).xyz;
+
+
 	elevation = textureLod(height_gradient, vec2(elevation, 0), 0).r;
 	VERTEX += NORMAL * height_scale * elevation;
+	// VERTEX += vec3(0,0, 1);
+
+	// VERTEX *= scale * radius;
 
 }
 
@@ -246,11 +263,11 @@ void fragment() {
 
 	vec2 uv_point = is_texture_1D ? vec2(elevation, 0.0) : point_on_sphere_to_UV(object_space_pos);
 	vec3 surface_texture = textureLod(albedo_map, uv_point, 0).rgb;
-	
-	
-	
+
+
+
 	ALBEDO = is_debug ? debug_color : surface_texture;
-	
+
 	float C = texelFetch(global_key_data, ivec2(0, 0), 0).r;
 	float B = getScale(C);
 	float A = pow(2.0, C);

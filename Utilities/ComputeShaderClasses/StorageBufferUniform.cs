@@ -18,6 +18,6 @@ public partial class StorageBufferUniform : ComputeShaderUniform
 
     public override void UpdateUniform(byte[] data)
     {
-        RenderingDevice.BufferUpdate(Rid, 0, (uint)data.Length, data);
+        _rd.BufferUpdate(Rid, 0, (uint)data.Length, data);
     }
 }

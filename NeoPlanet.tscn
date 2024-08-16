@@ -1,20 +1,20 @@
-[gd_scene load_steps=22 format=3 uid="uid://c1roirj1ei3ci"]
+[gd_scene load_steps=25 format=3 uid="uid://c1roirj1ei3ci"]
 
-[ext_resource type="Texture2D" uid="uid://y5l42qoob2d" path="res://Assets/Images/panorama_image (1).png" id="1_eeklj"]
 [ext_resource type="Script" path="res://Planet/SurfaceController.cs" id="1_ifmac"]
+[ext_resource type="Texture2D" uid="uid://y5l42qoob2d" path="res://Assets/Images/panorama_image (1).png" id="1_opie7"]
 [ext_resource type="Script" path="res://CameraController.cs" id="1_wpl4r"]
-[ext_resource type="Script" path="res://UIElements.cs" id="2_wfyw6"]
 [ext_resource type="Script" path="res://Planet/LOD/Surface.cs" id="2_ynw3a"]
 [ext_resource type="Texture2D" uid="uid://b0xaoom76i6uo" path="res://Assets/Images/4_no_ice_clouds_mts_16k.jpg" id="3_74s3p"]
 [ext_resource type="Script" path="res://Planet/PlanetData.cs" id="3_lwfoi"]
+[ext_resource type="Script" path="res://Player/UIElements.cs" id="3_sf6jl"]
 [ext_resource type="Texture2D" uid="uid://b8nluepgt5u0f" path="res://Assets/Images/gebco_08_rev_elev_21600x10800.png" id="4_btb7m"]
 [ext_resource type="Shader" path="res://Planet/LOD/PlanetTerrainShader.gdshader" id="5_00pdu"]
 
-[sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_w1wxd"]
-panorama = ExtResource("1_eeklj")
+[sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_f3nyy"]
+panorama = ExtResource("1_opie7")
 
 [sub_resource type="Sky" id="Sky_ka54y"]
-sky_material = SubResource("PanoramaSkyMaterial_w1wxd")
+sky_material = SubResource("PanoramaSkyMaterial_f3nyy")
 
 [sub_resource type="Environment" id="Environment_y50lk"]
 background_mode = 2
@@ -27,51 +27,64 @@ font_size = 28
 outline_size = 5
 outline_color = Color(0.0768358, 0.0768358, 0.0768358, 1)
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_8vy8e"]
-transparency = 1
-albedo_color = Color(1, 0.0235294, 1, 0.462745)
-
-[sub_resource type="QuadMesh" id="QuadMesh_w5b8v"]
-material = SubResource("StandardMaterial3D_8vy8e")
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_vfcol"]
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_dnxvr"]
 albedo_color = Color(1, 0, 0, 1)
 
-[sub_resource type="SphereMesh" id="SphereMesh_lxtgu"]
-material = SubResource("StandardMaterial3D_vfcol")
+[sub_resource type="BoxMesh" id="BoxMesh_5eynu"]
+material = SubResource("StandardMaterial3D_dnxvr")
+size = Vector3(5, 5, 5)
 
-[sub_resource type="Curve" id="Curve_ncjrx"]
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_8otcj"]
+albedo_color = Color(0.978023, 0.897386, 0, 1)
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_nb11k"]
+material = SubResource("StandardMaterial3D_8otcj")
+
+[sub_resource type="Curve" id="Curve_wyb6b"]
 _data = [Vector2(0, 0), 0.0, 0.0, 0, 0, Vector2(1, 1), 0.0, 0.0, 0, 0]
 point_count = 2
 
-[sub_resource type="CurveTexture" id="CurveTexture_1arnc"]
-curve = SubResource("Curve_ncjrx")
+[sub_resource type="CurveTexture" id="CurveTexture_dckd0"]
+curve = SubResource("Curve_wyb6b")
 
-[sub_resource type="Resource" id="Resource_capcm"]
+[sub_resource type="Resource" id="Resource_cgqh6"]
 script = ExtResource("3_lwfoi")
 Radius = 50.0
-HeightScale = 0.25
-Resolution = 15
+HeightScale = 1.0
+Resolution = 3
 SubFactor = 4.0
 GravityRadius = 0.0
 AlbedoMap = ExtResource("3_74s3p")
 HeightMap = ExtResource("4_btb7m")
-HeightGradient = SubResource("CurveTexture_1arnc")
+HeightGradient = SubResource("CurveTexture_dckd0")
 NormalStrength = 5.0
 DebugMode = false
 CubeMode = false
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_njbf1"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_d0p58"]
 render_priority = 0
 shader = ExtResource("5_00pdu")
 shader_parameter/position_list = null
-shader_parameter/radius = null
+shader_parameter/radius = 1.0
 shader_parameter/is_debug = null
 shader_parameter/is_cube = null
 shader_parameter/is_texture_1D = null
 shader_parameter/height_scale = null
 shader_parameter/normal_strength = null
 shader_parameter/resolution = null
+shader_parameter/transformations = null
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_pwec1"]
+transparency = 1
+shading_mode = 0
+
+[sub_resource type="BoxMesh" id="BoxMesh_l36tw"]
+material = SubResource("StandardMaterial3D_pwec1")
+size = Vector3(5600, 5600, 1)
+
+[sub_resource type="SphereMesh" id="SphereMesh_vaq67"]
+radius = 50.0
+height = 100.0
 
 [node name="Planet" type="Node3D"]
 
@@ -91,12 +104,14 @@ script = ExtResource("1_wpl4r")
 SurfaceController = NodePath("../SurfaceController")
 UIElements = NodePath("CanvasLayer")
 WorldEnvironment = NodePath("../WorldEnvironment")
+DistanceFromSurface = 50.0
 
-[node name="CanvasLayer" type="CanvasLayer" parent="Camera" node_paths=PackedStringArray("_lblTriangleCount", "_lblFPS", "_lblDistance")]
-script = ExtResource("2_wfyw6")
+[node name="CanvasLayer" type="CanvasLayer" parent="Camera" node_paths=PackedStringArray("_lblTriangleCount", "_lblFPS", "_lblDistance", "_lblLOD")]
+script = ExtResource("3_sf6jl")
 _lblTriangleCount = NodePath("VBoxContainer/TriangleCount")
 _lblFPS = NodePath("VBoxContainer/FPS")
 _lblDistance = NodePath("VBoxContainer/Distance")
+_lblLOD = NodePath("VBoxContainer/LOD")
 
 [node name="VBoxContainer" type="VBoxContainer" parent="Camera/CanvasLayer"]
 offset_right = 40.0
@@ -117,6 +132,11 @@ layout_mode = 2
 text = "Distance: X"
 label_settings = SubResource("LabelSettings_jr5mq")
 
+[node name="LOD" type="Label" parent="Camera/CanvasLayer/VBoxContainer"]
+layout_mode = 2
+text = "Current LOD: X"
+label_settings = SubResource("LabelSettings_jr5mq")
+
 [node name="TextureRect" type="TextureRect" parent="Camera/CanvasLayer"]
 anchors_preset = 2
 anchor_top = 1.0
@@ -127,35 +147,41 @@ offset_right = 312.0
 grow_vertical = 0
 rotation = 1.5708
 
-[node name="1x1 plane" type="MeshInstance3D" parent="Camera"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -1)
-visible = false
-mesh = SubResource("QuadMesh_w5b8v")
-
 [node name="CameraIcon" type="MeshInstance3D" parent="Camera"]
-mesh = SubResource("SphereMesh_lxtgu")
+cast_shadow = 0
+mesh = SubResource("BoxMesh_5eynu")
 
-[node name="SurfaceController" type="Node3D" parent="." node_paths=PackedStringArray("Camera", "Surface", "WorldEnvironment", "MainLightSource", "PlanetaryGimbal", "LightGimbal")]
+[node name="CameraIcon" type="MeshInstance3D" parent="Camera/CameraIcon"]
+transform = Transform3D(0.5, 0, 0, 0, -2.18557e-08, 0.5, 0, -0.5, -2.18557e-08, 0, 0, -0.3)
+cast_shadow = 0
+mesh = SubResource("CylinderMesh_nb11k")
+
+[node name="SurfaceController" type="Node3D" parent="." node_paths=PackedStringArray("Camera", "Surface", "WorldEnvironment", "MainLightSource", "LightGimbal")]
 script = ExtResource("1_ifmac")
 Camera = NodePath("../Camera")
-PlanetData = SubResource("Resource_capcm")
-Surface = NodePath("PlanetaryGimbal/Surface")
+PlanetData = SubResource("Resource_cgqh6")
+Surface = NodePath("Surface")
 WorldEnvironment = NodePath("../WorldEnvironment")
 MainLightSource = NodePath("../LightGimbal/MainLightSource")
-PlanetaryGimbal = NodePath("PlanetaryGimbal")
 LightGimbal = NodePath("../LightGimbal")
-DecayConstant = 0.005
-BaseSpeed = 9.0
-DistanceFromSurface = 12.0
+BaseOrbitSpeed = 5.0
+OrbitSpeedModifier = 800.0
+BaseZoomSpeed = 500.0
+ZoomSpeedModifier = 60.0
+_minDistancePadding = 1.0
 
-[node name="PlanetaryGimbal" type="Node3D" parent="SurfaceController"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -100)
-
-[node name="Surface" type="MultiMeshInstance3D" parent="SurfaceController/PlanetaryGimbal" node_paths=PackedStringArray("SurfaceController", "Camera")]
+[node name="Surface" type="MultiMeshInstance3D" parent="SurfaceController" node_paths=PackedStringArray("SurfaceController", "Camera")]
 script = ExtResource("2_ynw3a")
-SurfaceController = NodePath("../..")
-Camera = NodePath("../../../Camera")
-_material = SubResource("ShaderMaterial_njbf1")
-MaximumNodes = 25000
+SurfaceController = NodePath("..")
+Camera = NodePath("../../Camera")
+Material = SubResource("ShaderMaterial_d0p58")
+MaximumNodes = 40000
 _computeCullShader = "res://Planet/LOD/ComputeCull.glsl"
 _copyShader = "res://Planet/LOD/Copy.glsl"
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+visible = false
+mesh = SubResource("BoxMesh_l36tw")
+
+[node name="MeshInstance3D2" type="MeshInstance3D" parent="."]
+mesh = SubResource("SphereMesh_vaq67")

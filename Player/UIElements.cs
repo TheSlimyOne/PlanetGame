@@ -7,14 +7,15 @@ public partial class UIElements : CanvasLayer
 	[Export] private Label _lblTriangleCount;
 	[Export] private Label _lblFPS;
 	[Export] private Label _lblDistance;
-	private int _unloaded_max;
-	private int _loaded_max;
+	[Export] private Label _lblLOD;
+	private int _all_max;
+	private int _culled_max;
 
-	public void SetLabelTriangleCount(int loaded, int unloaded)
+	public void SetLabelTriangleCount(int culled, int all)
 	{
-		_loaded_max = loaded > _loaded_max ? loaded : _loaded_max;
-		_unloaded_max = unloaded > _unloaded_max ? unloaded : _unloaded_max;
-		_lblTriangleCount.Text = $"Triangles: {loaded}/{unloaded} | Max: {_loaded_max}/{_unloaded_max}";
+		_culled_max = culled > _culled_max ? culled : _culled_max;
+		_all_max = all > _all_max ? all : _all_max;
+		_lblTriangleCount.Text = $"Triangles: {culled}/{all} | Max: {_culled_max}/{_all_max}";
 	}
 
 	public void SetFPSCount(int amount)
@@ -25,6 +26,11 @@ public partial class UIElements : CanvasLayer
 	public void SetDistance(float distance)
 	{
 		_lblDistance.Text = $"Distance: {distance}";
+	}
+
+	public void SetCurrentLOD(float lod)
+	{
+		_lblLOD.Text = $"Current LOD: {lod}";
 	}
 
 	public override void _Process(double delta)

@@ -66,6 +66,11 @@ public struct Key
         return (MSB == 0) ? FindMSB(LSB) : (FindMSB(MSB) + 32);
     }
 
+    public readonly float GetScale()
+    {
+        return Mathf.Pow(0.5f, FindMSB64() / 2f);
+    }
+
     public static int FindMSB(uint n)
     {
         int msb = 0;
