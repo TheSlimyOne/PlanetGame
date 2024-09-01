@@ -3,9 +3,8 @@ using System;
 
 public partial class SurfaceController : Node3D
 {
-	[Export] public CameraController Camera;
 	[ExportGroup("Planet Properties")]
-	[Export] public PlanetData PlanetData;
+	private PlanetController _planetController;
 	[Export] public Surface Surface;
 	[Export] public WorldEnvironment WorldEnvironment;
 	[Export] public DirectionalLight3D MainLightSource;
@@ -29,7 +28,24 @@ public partial class SurfaceController : Node3D
 	private Vector2 _mouseCameraRotation;
 	private Vector2 _keyCameraRotation;
 
-	float CalculateSpeed(float distanceFromSurface, float d_min, float d_max, float v_max)
+    public override void _Ready()
+    {
+		_planetController = (PlanetController)GetParent().GetParent();
+
+		float radius = _planetController.PlanetData.Radius;
+        _planetController.PlanetData.Scaled(Vector3.One * radius);
+
+		Vector3 scaleFromPoint = Vector3.Back;
+		_planetController.PlanetData.Translation = new Transform3D
+		(
+			1, 0, 0,
+			0, 1, 0,
+			0, 0, 1,
+			scaleFromPoint.X - radius * scaleFromPoint.X, scaleFromPoint.Y - radius * scaleFromPoint.Y, scaleFromPoint.Z - radius * scaleFromPoint.Z - 1
+		);
+    }
+
+    float CalculateSpeed(float distanceFromSurface, float d_min, float d_max, float v_max)
 	{
 		// Ensure the distance is within the min and max range
 		distanceFromSurface = Mathf.Clamp(distanceFromSurface, d_min, d_max);
@@ -40,7 +56,7 @@ public partial class SurfaceController : Node3D
 		// Calculate the speed
 		return Mathf.Lerp(0.001f, v_max, t);
 	}
-	public Transform3D PlanetTransform = Transform3D.Identity;
+
 	public override void _PhysicsProcess(double delta)
 	{
 		Vector3 direction = Vector3.Zero;
@@ -52,27 +68,23 @@ public partial class SurfaceController : Node3D
 		_keyCameraRotation.X = Input.GetActionStrength("rotate_right") - Input.GetActionStrength("rotate_left");
 		_keyCameraRotation.Y = Input.GetActionStrength("rotate_up") - Input.GetActionStrength("rotate_down");
 
-		_mouseCameraRotation = Camera.Locked ? _mouseCameraRotation : Vector2.Zero;
+		_mouseCameraRotation = _planetController.CameraController.Locked ? _mouseCameraRotation : Vector2.Zero;
 
 
-		float adjectedOrbitSpeed = BaseOrbitSpeed * Camera.DistanceFromSurface / OrbitSpeedModifier;
-		// float adjectedZoomSpeed = BaseZoomSpeed * DistanceFromSurface / ZoomSpeedModifier;
+		float adjectedOrbitSpeed = BaseOrbitSpeed * _planetController.CameraController.DistanceFromSurface / OrbitSpeedModifier;
 
-		PlanetTransform = PlanetTransform
-			.Rotated(Vector3.Right, adjectedOrbitSpeed * by * direction.Z)
-			.Rotated(Vector3.Up, adjectedOrbitSpeed * by * direction.X)
-			.Rotated(Vector3.Back, by * (_keyCameraRotation.X + _mouseCameraRotation.X))
-			.Orthonormalized();
+		_planetController.PlanetData.Rotate(Vector3.Right, adjectedOrbitSpeed * by * direction.Z);
+		_planetController.PlanetData.Rotate(Vector3.Up, adjectedOrbitSpeed * by * direction.X);
+		_planetController.PlanetData.Rotate(Vector3.Back, by * (_keyCameraRotation.X + _mouseCameraRotation.X));
 
-		Surface.Material.SetShaderParameter("transformations", GetProjection());
-
+		_planetController.PlanetData.ShaderMaterial.SetShaderParameter("transformations", Utilities.ToProjection(_planetController.PlanetData.Rotation));
 
 		// Look up and down rotations
-		Camera.Rotation = Camera.Rotation with { X = Mathf.Clamp(Camera.Rotation.X + (by * (_keyCameraRotation.Y + _mouseCameraRotation.Y)), 0, Mathf.Pi) };
+		_planetController.CameraController.Rotation = _planetController.CameraController.Rotation with { X = Mathf.Clamp(_planetController.CameraController.Rotation.X + (by * (_keyCameraRotation.Y + _mouseCameraRotation.Y)), 0, Mathf.Pi - 0.0001f) };
 
 		// External Objects that need to rotate to simulate the effect
-		WorldEnvironment.Environment.SkyRotation = PlanetTransform.Basis.GetEuler();
-		LightGimbal.GlobalRotation = PlanetTransform.Basis.GetEuler();
+		WorldEnvironment.Environment.SkyRotation = _planetController.PlanetData.Rotation.Basis.GetEuler();
+		LightGimbal.GlobalRotation = _planetController.PlanetData.Rotation.Basis.GetEuler();
 		MainLightSource.RotationDegrees = axis;
 
 		_mouseCameraRotation = Vector2.Zero;
@@ -88,15 +100,5 @@ public partial class SurfaceController : Node3D
 		}
 	}
 
-	public Projection GetProjection()
-	{
-		return new(
-			new Vector4(PlanetTransform[0].X, PlanetTransform[1].X, PlanetTransform[2].X, PlanetTransform[3].X),
-			new Vector4(PlanetTransform[0].Y, PlanetTransform[1].Y, PlanetTransform[2].Y, PlanetTransform[3].Y),
-			new Vector4(PlanetTransform[0].Z, PlanetTransform[1].Z, PlanetTransform[2].Z, PlanetTransform[3].Z),
-			new Vector4(0, 0, 0, 1)
-		);
-	}
-
-
+	
 }

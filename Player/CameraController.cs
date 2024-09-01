@@ -1,19 +1,20 @@
 using Godot;
 using System;
 
+
 public partial class CameraController : Camera3D
 {
-	[Export] public SurfaceController SurfaceController;
 	[Export] public UIElements UIElements;
 	[Export] public WorldEnvironment WorldEnvironment;
 	[Export] public float DistanceFromSurface { get; private set; }
-	
+	private PlanetController _planetController;
 	
 
 	[Export] public bool Locked { get; private set; }
 
     public override void _Ready()
 	{
+		_planetController = (PlanetController)GetParent().GetParent();
 		RenderingServer.SetDebugGenerateWireframes(true);
 	}
 
@@ -60,7 +61,7 @@ public partial class CameraController : Camera3D
 		
 		direction.Y = Input.GetActionStrength("move_up") - Input.GetActionStrength("move_down");
 		
-		DistanceFromSurface += direction.Y * by * CalculateSpeed(DistanceFromSurface, 0, SurfaceController.PlanetData.Radius * 2, SurfaceController.BaseZoomSpeed);
+		DistanceFromSurface += direction.Y * by * CalculateSpeed(DistanceFromSurface, 0, _planetController.PlanetData.Radius * 2, _planetController.SurfaceController.BaseZoomSpeed);
 		DistanceFromSurface = Mathf.Clamp(DistanceFromSurface, 0, float.MaxValue);
 		UIElements.SetDistance(DistanceFromSurface);
 		GlobalPosition = Vector3.Back * DistanceFromSurface;
@@ -80,6 +81,8 @@ public partial class CameraController : Camera3D
 		
 		return projectionMatrix * viewMatrix4;
 	}
+
+	
 
 	public void LockMouse()
 	{

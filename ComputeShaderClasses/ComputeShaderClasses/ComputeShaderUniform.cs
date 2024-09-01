@@ -10,7 +10,6 @@ public abstract partial class ComputeShaderUniform : GodotObject
     
     public RenderingDevice _rd;
     public RDUniform Uniform;
-    private byte[] data;
 
     public ComputeShaderUniform(RenderingDevice renderingDevice, int binding)
     {
@@ -23,6 +22,16 @@ public abstract partial class ComputeShaderUniform : GodotObject
     public void FreeRid()
     {
         _rd.FreeRid(Rid);
+    }
+
+    public T[] GetData<T>() where T : unmanaged
+    {
+        return Utilities.FromBytes<T>(_rd.BufferGetData(Rid)).ToArray();
+    }
+
+    public byte[] GetByteData()
+    {
+        return _rd.BufferGetData(Rid);
     }
 
     ~ComputeShaderUniform()

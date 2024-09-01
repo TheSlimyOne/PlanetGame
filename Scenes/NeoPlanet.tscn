@@ -1,0 +1,133 @@
+[gd_scene load_steps=16 format=3 uid="uid://c1roirj1ei3ci"]
+
+[ext_resource type="Script" path="res://Planet/PlanetController.cs" id="1_7brg2"]
+[ext_resource type="Resource" uid="uid://gwppe7ras2x" path="res://Planet/PlanetDataDefault.tres" id="2_ap1os"]
+[ext_resource type="Script" path="res://Planet/SurfaceController.cs" id="3_22w0g"]
+[ext_resource type="Script" path="res://Planet/LOD/Surface.cs" id="4_fq238"]
+[ext_resource type="Script" path="res://Player/CameraController.cs" id="5_0yfbu"]
+[ext_resource type="Script" path="res://Player/UIElements.cs" id="6_upt2i"]
+[ext_resource type="Texture2D" uid="uid://y5l42qoob2d" path="res://Assets/Images/panorama_image (1).png" id="7_lx4ft"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_jr5mq"]
+font_size = 28
+outline_size = 5
+outline_color = Color(0.0768358, 0.0768358, 0.0768358, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_dnxvr"]
+albedo_color = Color(1, 0, 0, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_5eynu"]
+material = SubResource("StandardMaterial3D_dnxvr")
+size = Vector3(5, 5, 5)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_8otcj"]
+albedo_color = Color(0.978023, 0.897386, 0, 1)
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_nb11k"]
+material = SubResource("StandardMaterial3D_8otcj")
+
+[sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_f3nyy"]
+panorama = ExtResource("7_lx4ft")
+
+[sub_resource type="Sky" id="Sky_ka54y"]
+sky_material = SubResource("PanoramaSkyMaterial_f3nyy")
+
+[sub_resource type="Environment" id="Environment_y50lk"]
+background_mode = 2
+sky = SubResource("Sky_ka54y")
+tonemap_mode = 2
+glow_enabled = true
+
+[node name="Planet" type="Node3D" node_paths=PackedStringArray("CameraController", "SurfaceController")]
+script = ExtResource("1_7brg2")
+PlanetData = ExtResource("2_ap1os")
+CameraController = NodePath("Controllers/CameraController")
+SurfaceController = NodePath("Controllers/SurfaceController")
+
+[node name="Controllers" type="Node" parent="."]
+
+[node name="SurfaceController" type="Node3D" parent="Controllers" node_paths=PackedStringArray("Surface", "WorldEnvironment", "MainLightSource", "LightGimbal")]
+script = ExtResource("3_22w0g")
+Surface = NodePath("Surface")
+WorldEnvironment = NodePath("../../WorldEnvironment")
+MainLightSource = NodePath("../../LightGimbal/MainLightSource")
+LightGimbal = NodePath("../../LightGimbal")
+BaseOrbitSpeed = 5.0
+OrbitSpeedModifier = 800.0
+BaseZoomSpeed = 500.0
+ZoomSpeedModifier = 60.0
+_minDistancePadding = 1.0
+
+[node name="Surface" type="MultiMeshInstance3D" parent="Controllers/SurfaceController" node_paths=PackedStringArray("_planetController")]
+script = ExtResource("4_fq238")
+_planetController = NodePath("../../..")
+_computeCullShaderPath = "res://Planet/LOD/ComputeCull.glsl"
+_computeCopyShaderPath = "res://Planet/LOD/Copy.glsl"
+
+[node name="CameraController" type="Camera3D" parent="Controllers" node_paths=PackedStringArray("SurfaceController", "UIElements", "WorldEnvironment")]
+near = 0.001
+far = 10000.0
+script = ExtResource("5_0yfbu")
+SurfaceController = NodePath("../SurfaceController")
+UIElements = NodePath("CanvasLayer")
+WorldEnvironment = NodePath("../../WorldEnvironment")
+DistanceFromSurface = 50.0
+
+[node name="CanvasLayer" type="CanvasLayer" parent="Controllers/CameraController" node_paths=PackedStringArray("_lblTriangleCount", "_lblFPS", "_lblDistance", "_lblLOD")]
+script = ExtResource("6_upt2i")
+_lblTriangleCount = NodePath("VBoxContainer/TriangleCount")
+_lblFPS = NodePath("VBoxContainer/FPS")
+_lblDistance = NodePath("VBoxContainer/Distance")
+_lblLOD = NodePath("VBoxContainer/LOD")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Controllers/CameraController/CanvasLayer"]
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="TriangleCount" type="Label" parent="Controllers/CameraController/CanvasLayer/VBoxContainer"]
+layout_mode = 2
+text = "Triangles: X"
+label_settings = SubResource("LabelSettings_jr5mq")
+
+[node name="FPS" type="Label" parent="Controllers/CameraController/CanvasLayer/VBoxContainer"]
+layout_mode = 2
+text = "FPS: X"
+label_settings = SubResource("LabelSettings_jr5mq")
+
+[node name="Distance" type="Label" parent="Controllers/CameraController/CanvasLayer/VBoxContainer"]
+layout_mode = 2
+text = "Distance: X"
+label_settings = SubResource("LabelSettings_jr5mq")
+
+[node name="LOD" type="Label" parent="Controllers/CameraController/CanvasLayer/VBoxContainer"]
+layout_mode = 2
+text = "Current LOD: X"
+label_settings = SubResource("LabelSettings_jr5mq")
+
+[node name="TextureRect" type="TextureRect" parent="Controllers/CameraController/CanvasLayer"]
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 156.0
+offset_top = -156.0
+offset_right = 312.0
+grow_vertical = 0
+rotation = 1.5708
+
+[node name="CameraIcon" type="MeshInstance3D" parent="Controllers/CameraController"]
+cast_shadow = 0
+mesh = SubResource("BoxMesh_5eynu")
+
+[node name="CameraIcon" type="MeshInstance3D" parent="Controllers/CameraController/CameraIcon"]
+transform = Transform3D(0.5, 0, 0, 0, -2.18557e-08, 0.5, 0, -0.5, -2.18557e-08, 0, 0, -0.3)
+cast_shadow = 0
+mesh = SubResource("CylinderMesh_nb11k")
+
+[node name="LightGimbal" type="Node3D" parent="."]
+
+[node name="MainLightSource" type="DirectionalLight3D" parent="LightGimbal"]
+shadow_enabled = true
+sky_mode = 1
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_y50lk")

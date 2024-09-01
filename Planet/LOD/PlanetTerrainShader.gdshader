@@ -1,8 +1,6 @@
 shader_type spatial;
-render_mode unshaded;
-
+//render_mode unshaded;
 #define sqrt2   1.414213562
-//render_mode blend_add;
 
 uniform vec4[60] position_list;
 uniform float radius;
@@ -19,6 +17,14 @@ varying vec3 object_space_pos;
 uniform int resolution;
 uniform mat4 transformations;
 
+uniform int octaves : hint_range(0, 12) = 5;
+uniform float persistence = 0.5;
+uniform float lacunarity = 2.0;
+uniform float noise_scale = 1;
+uniform float exaggeration_factor = 1;
+uniform vec3 offset = vec3(0, 0, 0);
+uniform float seed = 1207.01;
+
 uniform sampler2D key_image : repeat_disable;
 uniform sampler2D global_key_data : repeat_disable;
 
@@ -30,17 +36,13 @@ uvec2 leftShift64(uvec2 nodeID, uint shift) {
     uvec2 result;
     if (shift == 0u) return nodeID;
 
-    if (shift < 32u)
-    {
+    if (shift < 32u) {
         result.x = (nodeID.x << shift) | (nodeID.y >> (32u - shift));
         result.y = nodeID.y << shift;
-    }
-    else
-    {
+    } else {
         result.x = nodeID.y << (shift - 32u);
         result.y = 0u;
     }
-
     return result;
 }
 
@@ -48,13 +50,10 @@ uvec2 rightShift64(uvec2 nodeID, uint shift) {
     uvec2 result;
     if (shift == 0u) return nodeID;
 
-    if (shift < 32u)
-    {
+    if (shift < 32u) {
         result.y = (nodeID.y >> shift) | (nodeID.x << (32u - shift));
         result.x = nodeID.x >> shift;
-    }
-    else
-    {
+    } else {
         result.y = nodeID.x >> (shift - 32u);
         result.x = 0u;
     }
@@ -184,7 +183,7 @@ vec2 point_on_sphere_to_UV(vec3 p) {
 	p = normalize(p);
 	float longitude = atan(p.x, p.z);
 	float latitude = asin(-p.y);
-	float u = (longitude / (2.0 * PI) + 0.5);
+	float u = longitude / (2.0 * PI) + 0.5;
 	float v = (latitude / PI) + 0.5;
 	return vec2(u, v);
 }
@@ -206,6 +205,54 @@ mat4 createTransform() {
 	);
 }
 
+vec3 hash(vec3 p) {
+	p = vec3(dot(p, vec3(127.1, 311.7, 74.7)),
+		dot(p, vec3(269.5, 183.3, 246.1)),
+		dot(p, vec3(113.5, 271.9, 124.6)));
+	p += seed;
+	return -1.0 + 2.0 * fract(sin(p) * 43758.5453123);
+}
+
+float noise(vec3 p) {
+ 	vec3 i = floor(p);
+ 	vec3 f = fract(p);
+ 	vec3 u = f * f * (3.0 - 2.0 * f);
+	return mix(mix(mix(dot(hash(i + vec3(0.0, 0.0, 0.0)), f - vec3(0.0, 0.0, 0.0)),
+                     dot(hash(i + vec3(1.0, 0.0, 0.0)), f - vec3(1.0, 0.0, 0.0)), u.x),
+                 mix(dot(hash(i + vec3(0.0, 1.0, 0.0)), f - vec3(0.0, 1.0, 0.0)),
+                     dot(hash(i + vec3(1.0, 1.0, 0.0)), f - vec3(1.0, 1.0, 0.0)), u.x), u.y),
+             mix(mix(dot(hash(i + vec3(0.0, 0.0, 1.0)), f - vec3(0.0, 0.0, 1.0)),
+                     dot(hash(i + vec3(1.0, 0.0, 1.0)), f - vec3(1.0, 0.0, 1.0)), u.x),
+                 mix(dot(hash(i + vec3(0.0, 1.0, 1.0)), f - vec3(0.0, 1.0, 1.0)),
+                     dot(hash(i + vec3(1.0, 1.0, 1.0)), f - vec3(1.0, 1.0, 1.0)), u.x), u.y), u.z );
+}
+
+float param_noise(vec3 p) {
+	float frequency = 1.0;
+	float amplitude = 1.0;
+	float noiseHeight = 0.0;
+	
+	for (int i = 0; i < octaves; i++) {
+		float sampleX = p.x / noise_scale * frequency + offset.x;
+		float sampleY = p.y / noise_scale * frequency + offset.y;
+		float sampleZ = p.z / noise_scale * frequency + offset.z;
+		
+		float noiseValue = noise(vec3(sampleX, sampleY, sampleZ) * 5.0) * 0.5;
+		noiseValue += noise(vec3(sampleX, sampleY, sampleZ) * 10.0) * 0.25/2.0;
+		noiseValue += noise(vec3(sampleX, sampleY, sampleZ) * 20.0) * 0.125/2.0;
+		noiseValue += noise(vec3(sampleX, sampleY, sampleZ) * 40.0) * 0.0625/2.0;
+
+		noiseHeight += noiseValue * amplitude;
+		
+		amplitude += persistence;
+		frequency += lacunarity;
+	}
+
+	noiseHeight = pow(max(noiseHeight, 0), exaggeration_factor);
+	
+	return noiseHeight;
+}
+
 varying flat uvec4 key;
 varying flat uint flags;
 void vertex() {
@@ -214,7 +261,6 @@ void vertex() {
 	//key = floatBitsToUint(INSTANCE_CUSTOM);
 	flags = key.w >> 29u;
 	key.w &= 0x1FFFFFFFu;
-
 
 	float skipAmount = 1.0 / float(resolution - 1);
 
@@ -236,21 +282,17 @@ void vertex() {
 
 	vec3 world_position = quad_space_to_world_space(quad_position, key.z, key.w);
 	VERTEX = is_cube ? world_position : point_on_cube_to_point_on_sphere(world_position);
-	float scale = 1.0 / getScale(texelFetch(global_key_data, ivec2(0, 0), 0).r);
+	
 	elevation = textureLod(height_map, point_on_sphere_to_UV(VERTEX), 0).r;
 	object_space_pos = VERTEX;
 
-	VERTEX = (vec4(VERTEX, 1) * transformations).xyz;
 	NORMAL = VERTEX;
+	VERTEX = (vec4(VERTEX, 1) * transformations).xyz;
 	VERTEX = (vec4(VERTEX, 1) * createTransform()).xyz;
 
+	elevation *= textureLod(height_gradient, vec2(elevation, 0), 0).r;
 
-	elevation = textureLod(height_gradient, vec2(elevation, 0), 0).r;
 	VERTEX += NORMAL * height_scale * elevation;
-	// VERTEX += vec3(0,0, 1);
-
-	// VERTEX *= scale * radius;
-
 }
 
 void fragment() {
@@ -259,20 +301,12 @@ void fragment() {
 	int a = (msb & 1) != 0 ? 1 : 0;
 	int b = (msb & 2) != 0 ? 1 : 0;
 	int c = (msb & 4) != 0 ? 1 : 0;
+	
 	vec3 debug_color = vec3(float(a), float(b), float(c));
+	debug_color = mix(debug_color, vec3(float(key.y & 3u / 3u)), 0.25f);
 
 	vec2 uv_point = is_texture_1D ? vec2(elevation, 0.0) : point_on_sphere_to_UV(object_space_pos);
-	vec3 surface_texture = textureLod(albedo_map, uv_point, 0).rgb;
-
-
+	vec3 surface_texture = textureLod(albedo_map, uv_point, 0.0).rgb;
 
 	ALBEDO = is_debug ? debug_color : surface_texture;
-
-	float C = texelFetch(global_key_data, ivec2(0, 0), 0).r;
-	float B = getScale(C);
-	float A = pow(2.0, C);
-	//ALBEDO = vec3(A, 0, 0);
-
-
-
 }

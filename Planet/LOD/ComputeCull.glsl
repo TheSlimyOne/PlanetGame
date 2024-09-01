@@ -33,18 +33,16 @@ layout(set = 0, binding = 5, std430) buffer restrict writeonly WriteCulledList {
     uvec4 write_culled_list[];
 };
 
-layout(set = 0, binding = 6, std430) buffer restrict readonly Positions {
-    vec4 position_list[];
+layout(set = 0, binding = 6, std430) buffer restrict readonly BaseTriangles {
+    vec4 base_triangles[];
 };
 
 layout(set = 0, binding = 7, std430) buffer restrict readonly ExternalData {
     mat4 viewProjectionMatrix;         // 16 * 4 = 64 bytes
     vec4 cameraPosition;
     mat4 planetTransformMatrix;
-    float CameraFOV;         // 4 bytes
-    float radius;            // 4 bytes
-    float subFactor;         // 4 bytes
-    float resolution;        // 4 bytes
+    float CameraFOV;     
+    float subFactor;
 };
 
 layout(set = 0, binding = 8, std430) buffer restrict Debug {
@@ -59,7 +57,6 @@ struct Triangle {
     vec3 v0; // (0, 0)
     vec3 v1; // (0, 1)
     vec3 v2; // (1, 0)
-    vec3 v3; // (1, 1) // REMOVE ME!
 
     vec3 origin; // (0.5, 0.5)
 
@@ -198,21 +195,19 @@ Triangle createTriangle(mat3 transform_matrix, uint meshPolygonID, uint rootID) 
     vec2 point_v0 = (vec3(0, 0, 1) * transform_matrix).xy;
     vec2 point_v1 = (vec3(0, 1, 1) * transform_matrix).xy;
     vec2 point_v2 = (vec3(1, 0, 1) * transform_matrix).xy;
-    vec2 point_v3 = (vec3(1, 1, 1) * transform_matrix).xy;
 
     uint vertexBaseIndex = meshPolygonID * 5;
     uint vertexKeyA = rootID;
     uint vertexKeyB = ((rootID >> 1) ^ 1) + ((rootID & 1) << 1);
 
-    vec3 base_Triangle_a = (position_list[vertexBaseIndex + vertexKeyA + 1]).xyz;
-    vec3 base_Triangle_b = (position_list[vertexBaseIndex + vertexKeyB + 1]).xyz;
-    vec3 base_Triangle_c = (position_list[vertexBaseIndex]).xyz;
+    vec3 base_Triangle_a = (base_triangles[vertexBaseIndex + vertexKeyA + 1]).xyz;
+    vec3 base_Triangle_b = (base_triangles[vertexBaseIndex + vertexKeyB + 1]).xyz;
+    vec3 base_Triangle_c = (base_triangles[vertexBaseIndex]).xyz;
 
     Triangle t;
     t.v0 = localPointToWorldPointSpherical(point_v0, base_Triangle_a, base_Triangle_b, base_Triangle_c);
     t.v1 = localPointToWorldPointSpherical(point_v1, base_Triangle_a, base_Triangle_b, base_Triangle_c);
     t.v2 = localPointToWorldPointSpherical(point_v2, base_Triangle_a, base_Triangle_b, base_Triangle_c);
-    t.v3 = localPointToWorldPointSpherical(point_v3, base_Triangle_a, base_Triangle_b, base_Triangle_c);
     
     t.origin = localPointToWorldPointSpherical(point_a, base_Triangle_a, base_Triangle_b, base_Triangle_c);
     t.xNeighbor = localPointToWorldPointSpherical(point_b, base_Triangle_a, base_Triangle_b, base_Triangle_c);
@@ -386,8 +381,7 @@ bool PointInFrustum(vec3 point) {
 bool TriangleInFrustum(Triangle triangle) {
     return PointInFrustum(triangle.v0) ||
            PointInFrustum(triangle.v1) ||
-           PointInFrustum(triangle.v2) ||
-           PointInFrustum(triangle.v3);
+           PointInFrustum(triangle.v2);
 }
 
 ivec2 getKeyCoordinate(uint idx) {
@@ -395,8 +389,8 @@ ivec2 getKeyCoordinate(uint idx) {
     return ivec2(idx % image_size.x, idx / image_size.y);
 }
 
-void cull_key(uvec4 key, Triangle triangle, Triangle parent_triangle, float lod) {
-    if (renderAll || TriangleInFrustum(parent_triangle)) {
+void cull_key(uvec4 key, Triangle triangle, float lod) {
+    if (renderAll || TriangleInFrustum(triangle)) {
         uint write_culled_index = atomicAdd(primCount_culled[write_index], 1);
         write_culled_list[write_culled_index] = key;
         imageStore(DisplayKeys, getKeyCoordinate(write_culled_index), uintBitsToFloat(key));
@@ -433,8 +427,7 @@ void main() {
             
             write_full_list[idx] = children[i];
             Triangle child_triangle = leafSpaceToWorldSpace(children[i]);
-            cull_key(children[i], child_triangle, triangle, current_LOD + 1);
-            // imageStore(DisplayKeys, getKeyCoordinate(idx), uintBitsToFloat(children[i]));
+            cull_key(children[i], child_triangle, current_LOD + 1);
         }
     } else if (parent_target_LOD < current_LOD - 1 && key.xy != uvec2(0, 1)) { // merging
         if (isUpperLeftChild(key.xy)) {
@@ -442,8 +435,7 @@ void main() {
             parent_key.w |= getJunctionFlags(parent_key, grand_parent_triangle, current_LOD - 1);
         
             write_full_list[idx] = parent_key;
-            cull_key(parent_key, parent_triangle, grand_parent_triangle, current_LOD - 1);
-            // imageStore(DisplayKeys, getKeyCoordinate(idx), uintBitsToFloat(parent_key));
+            cull_key(parent_key, parent_triangle, current_LOD - 1);
         } else 
             return;
     } else {
@@ -451,7 +443,6 @@ void main() {
         key.w |= getJunctionFlags(key, parent_triangle, current_LOD);
         
         write_full_list[idx] = key;
-        cull_key(key, triangle, parent_triangle, current_LOD);
-        // imageStore(DisplayKeys, getKeyCoordinate(idx), uintBitsToFloat(key));
+        cull_key(key, triangle, current_LOD);
     }
 }

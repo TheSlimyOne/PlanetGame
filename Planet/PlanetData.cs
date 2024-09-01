@@ -1,12 +1,13 @@
 using System;
 using Godot;
-
+namespace Planet;
 [Tool]
 [GlobalClass]
 public partial class PlanetData : Resource
 {
 
-    #region Variables
+
+    #region Planet Settings
     [ExportGroup("Planet Settings")]
     [Export(PropertyHint.Range, "1,8000")]
     public float Radius
@@ -37,7 +38,73 @@ public partial class PlanetData : Resource
         }
     }
     private float _heightScale;
+    #endregion
 
+    #region  Planet Transforms
+    public Transform3D Translation
+    {
+        get => _translation;
+        set
+        {
+            if (_translation != value)
+            {
+                _translation = value;
+                EmitChanged();
+            }
+        }
+    }
+    private Transform3D _translation = Transform3D.Identity;
+
+    private void Translate(Vector3 offset)
+    {
+        _translation = _translation.Translated(offset);
+    }
+
+    public Transform3D Rotation
+    {
+        get => _rotation;
+        set
+        {
+            if (_rotation != value)
+            {
+                _rotation = value;
+                EmitChanged();
+            }
+        }
+    }
+    private Transform3D _rotation = Transform3D.Identity;
+
+    public void Rotate(Vector3 axis, float angle)
+    {
+        _rotation = _rotation.Rotated(axis, angle).Orthonormalized();
+    }
+
+    public Transform3D Scale
+    {
+        get => _scale;
+        set
+        {
+            if (_scale != value)
+            {
+                _scale = value;
+                EmitChanged();
+            }
+        }
+    }
+    private Transform3D _scale = Transform3D.Identity;
+
+    public void Scaled(Vector3 scale)
+    {
+        _scale = _scale.Scaled(scale);
+    }
+
+    public Transform3D GetPlanetTransformMatrix()
+    {
+        return _translation * _rotation * _scale;
+    }
+    #endregion
+
+    #region LOD Settings
     [ExportGroup("LOD Settings")]
     [Export(PropertyHint.Range, "2,500,")]
     public int Resolution
@@ -54,6 +121,21 @@ public partial class PlanetData : Resource
     }
     private int _resolution = 3;
 
+    [Export]
+    public int MaximumNodes
+    {
+        get => _maximumNodes;
+        set
+        {
+            if (_resolution != value)
+            {
+                _maximumNodes = value;
+                EmitChanged();
+            }
+        }
+    }
+    private int _maximumNodes = 3;
+    
     [Export(PropertyHint.Range, "1, 10")]
     public float SubFactor
     {
@@ -68,23 +150,9 @@ public partial class PlanetData : Resource
         }
     }
     private float _subFactor = 1;
+    #endregion
 
-    [ExportGroup("Gravity Settings")]
-    [Export(PropertyHint.Range, "0, 1000")]
-    public float GravityRadius
-    {
-        get => _gravityRadius;
-        set
-        {
-            if (_gravityRadius != Mathf.Clamp(value, 0, 1000))
-            {
-                _gravityRadius = Mathf.Clamp(value, 0, 1000);
-                EmitChanged();
-            }
-        }
-    }
-    private float _gravityRadius;
-
+    #region Surface Settings
     [ExportGroup("Surface Settings")]
     [Export]
     public Texture2D AlbedoMap
@@ -145,7 +213,44 @@ public partial class PlanetData : Resource
         }
     }
     private float _normalStrength = 5;
+    #endregion
 
+    #region Material Settings
+    [ExportGroup("Material Settings")]
+    [Export]
+    public ShaderMaterial ShaderMaterial
+    {
+        get => _shaderMaterial;
+        set
+        {
+            if (_shaderMaterial != value)
+            {
+                _shaderMaterial = value;
+                EmitChanged();
+            }
+        }
+    }
+    private ShaderMaterial _shaderMaterial;
+    
+    public void SetMaterialParameters()
+	{
+		_shaderMaterial.SetShaderParameter("position_list", GenerateTrianglePoints());
+		_shaderMaterial.SetShaderParameter("height_gradient", _heightGradient);
+		_shaderMaterial.SetShaderParameter("radius", _radius);
+		_shaderMaterial.SetShaderParameter("albedo_map", _albedoMap);
+		_shaderMaterial.SetShaderParameter("is_texture_1D", _albedoMap is GradientTexture1D);
+		_shaderMaterial.SetShaderParameter("height_map", _heightMap);
+		_shaderMaterial.SetShaderParameter("height_scale", _heightScale);
+		_shaderMaterial.SetShaderParameter("is_debug", _debugMode);
+		_shaderMaterial.SetShaderParameter("is_cube", _cubeMode);
+		_shaderMaterial.SetShaderParameter("resolution", _resolution);
+		_shaderMaterial.SetShaderParameter("normal_strength", _normalStrength);
+	}
+
+    #endregion
+
+
+    #region Debug Settings
     [ExportGroup("Debug Settings")]
     [Export]
     public bool DebugMode
@@ -178,6 +283,8 @@ public partial class PlanetData : Resource
     private bool _cubeMode;
     #endregion
 
+    
+
     public void ConnectChanged(Action action)
     {
         if (!IsConnected("changed", Callable.From(action)))
@@ -193,4 +300,109 @@ public partial class PlanetData : Resource
         }
     }
 
+    public Vector4[] GenerateTrianglePoints()
+    {
+        Vector4[] trianglePoints = new Vector4[6 * 5];
+		Vector3[] normals = new Vector3[]
+		{
+			Vector3.Up,
+			Vector3.Down,
+			Vector3.Right,
+			Vector3.Left,
+			Vector3.Forward,
+			Vector3.Back,
+		};
+
+		for (int i = 0; i < 6; i++)
+		{
+			Vector3 normal = normals[i];
+			Vector3 axisA = new(normal.Y, normal.Z, normal.X);
+			Vector3 axisB = normal.Cross(axisA);
+
+			trianglePoints[5 * i + 0] = VectorUtils.toVector4(normal, 1);
+			trianglePoints[5 * i + 1] = VectorUtils.toVector4(-axisA + axisB + normal, 1);
+			trianglePoints[5 * i + 2] = VectorUtils.toVector4(-axisA - axisB + normal, 1);
+			trianglePoints[5 * i + 3] = VectorUtils.toVector4(axisA + axisB + normal, 1);
+			trianglePoints[5 * i + 4] = VectorUtils.toVector4(axisA - axisB + normal, 1);
+		}
+        return trianglePoints;
+    }
+
+    public MultiMesh GenerateMulitMesh()
+	{
+		Vector3[] vertices = new Vector3[_resolution * (_resolution + 1) / 2];
+		Vector3[] normals = new Vector3[_resolution * (_resolution + 1) / 2];
+		Vector2[] uvs = new Vector2[_resolution * (_resolution + 1) / 2];
+		int[] triangles = new int[(_resolution - 1) * (_resolution - 1) * 6 / 2];
+		Vector3 normal = Vector3.Back;
+		Vector3 axisA = new(normal.Y, normal.Z, normal.X);
+		Vector3 axisB = normal.Cross(axisA).Abs();
+		int triIndex = 0;
+		int vertexIndex = 0;
+
+		for (int y = 0; y < _resolution; y++)
+		{
+			for (int x = 0; x < _resolution - y; x++)
+			{
+				int currentIndex = vertexIndex++;
+				Vector2 percentage = new Vector2(x, y) / (_resolution - 1);
+				vertices[currentIndex] = normal + (percentage.X * axisA + percentage.Y * axisB);
+				uvs[currentIndex] = new Vector2(x, y);
+				normals[currentIndex] = normal;
+
+				if (x != _resolution - y - 1)
+				{
+					if (x == _resolution - y - 2)
+					{
+						triangles[triIndex++] = currentIndex;
+						triangles[triIndex++] = currentIndex + 1;
+						triangles[triIndex++] = currentIndex + _resolution - y;
+					}
+					else
+					{
+						bool isXEven = x % 2 == 0;
+						bool isYEven = y % 2 == 0;
+
+						if ((isXEven && isYEven) || (!isXEven && !isYEven))
+						{
+							triangles[triIndex++] = currentIndex;
+							triangles[triIndex++] = currentIndex + _resolution - y + 1;
+							triangles[triIndex++] = currentIndex + _resolution - y;
+							triangles[triIndex++] = currentIndex;
+							triangles[triIndex++] = currentIndex + 1;
+							triangles[triIndex++] = currentIndex + _resolution - y + 1;
+						}
+						else
+						{
+							triangles[triIndex++] = currentIndex;
+							triangles[triIndex++] = currentIndex + 1;
+							triangles[triIndex++] = currentIndex + _resolution - y;
+							triangles[triIndex++] = currentIndex + 1;
+							triangles[triIndex++] = currentIndex + _resolution - y + 1;
+							triangles[triIndex++] = currentIndex + _resolution - y;
+						}
+					}
+				}
+			}
+		}
+
+		ArrayMesh mesh = new();
+		Godot.Collections.Array arrays = new();
+		arrays.Resize((int)Mesh.ArrayType.Max);
+		arrays[(int)Mesh.ArrayType.Vertex] = vertices;
+		arrays[(int)Mesh.ArrayType.Index] = triangles;
+		arrays[(int)Mesh.ArrayType.Normal] = normals;
+		arrays[(int)Mesh.ArrayType.TexUV] = uvs;
+		mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
+		mesh.SurfaceSetMaterial(0, _shaderMaterial);
+
+		return new MultiMesh
+		{
+			InstanceCount = 0,
+			Mesh = mesh,
+			TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
+			UseCustomData = true,
+			UseColors = true
+		};
+	}
 }

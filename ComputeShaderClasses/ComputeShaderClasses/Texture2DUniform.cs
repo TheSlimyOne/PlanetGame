@@ -1,5 +1,6 @@
 using Godot;
 using Godot.Collections;
+using Godot.NativeInterop;
 using System;
 
 namespace ComputeShaderClasses;
@@ -21,7 +22,6 @@ public partial class Texture2DUniform : ComputeShaderUniform
         Array<byte[]> data = new() { image.GetData() };
 
         Rid = renderingDevice.TextureCreate(format, new RDTextureView(), data);
-        _rd = renderingDevice;
 
         Uniform = new()
         {
@@ -32,10 +32,9 @@ public partial class Texture2DUniform : ComputeShaderUniform
 
     }
 
-    public Texture2DUniform(RenderingDevice renderingDevice, int binding, ref Texture2Drd texture, RDTextureFormat format) : base(renderingDevice, binding)
+    public Texture2DUniform(RenderingDevice renderingDevice, int binding, RDTextureFormat format) : base(renderingDevice, binding)
     {
         Rid = renderingDevice.TextureCreate(format, new RDTextureView(), null);
-        _rd = renderingDevice;
 
         Uniform = new()
         {
@@ -43,8 +42,21 @@ public partial class Texture2DUniform : ComputeShaderUniform
             Binding = binding
         };
         Uniform.AddId(Rid);
+    }
 
-        texture = new Texture2Drd() { TextureRdRid = Rid };
+    public Texture2Drd GetTexture2Drd()
+    {
+        return new Texture2Drd() { TextureRdRid = Rid };
+    }
+
+    public Color GetPixel(int x, int y)
+    {
+        return RenderingServer.Texture2DGet(GetTexture2Drd().GetRid()).GetPixel(x, y);
+    }
+
+    public void ClearTexture(Color color)
+    {
+        _rd.TextureClear(Rid, color, 0, 1, 0, 1);
     }
 
     public override void UpdateUniform(byte[] data)

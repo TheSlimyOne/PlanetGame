@@ -38,4 +38,14 @@ public static class Utilities
         return isPadded ? Convert.ToString(number, 2).PadZeros(32) : Convert.ToString(number, 2);
     }
 
+    public static Projection ToProjection(Transform3D transformation)
+    {
+        return new Projection(
+            new Vector4(transformation[0].X, transformation[1].X, transformation[2].X, transformation[3].X),
+			new Vector4(transformation[0].Y, transformation[1].Y, transformation[2].Y, transformation[3].Y),
+			new Vector4(transformation[0].Z, transformation[1].Z, transformation[2].Z, transformation[3].Z),
+			new Vector4(0, 0, 0, 1)
+        );
+    }
+
 }
