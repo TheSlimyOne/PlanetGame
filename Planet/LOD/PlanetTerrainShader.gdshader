@@ -1,6 +1,5 @@
 shader_type spatial;
 //render_mode unshaded;
-#define sqrt2   1.414213562
 
 uniform vec4[60] position_list;
 uniform float radius;
@@ -30,6 +29,17 @@ uniform sampler2D global_key_data : repeat_disable;
 
 int findMSB64(uvec2 key) {
     return (key.x == 0u) ? int(findMSB(key.y)) : int((findMSB(key.x) + 32u));
+}
+
+vec2 morphVertex(vec2 vertex, float morphK)
+{
+	float patchTessFactor = float(resolution - 1); // = nb of intervals per side of the primitive
+	vec2 fracPart = fract(vertex * patchTessFactor * 0.5);
+	fracPart *= 2.0 / patchTessFactor;
+
+	vec2 intPart = floor(vertex * patchTessFactor * 0.5);
+	vec2 signVec = mod(intPart, 2.0) * vec2(-2.0) + vec2(1.0);
+	return vertex - (signVec * fracPart) * morphK;
 }
 
 uvec2 leftShift64(uvec2 nodeID, uint shift) {
@@ -110,7 +120,7 @@ vec3 localPointToWorldPoint(vec2 point, vec3 vertexA, vec3 vertexB, vec3 vertexC
     return (vertexA * point.x + vertexB * point.y + vertexC * (1.0 - point.x - point.y));
 }
 
-vec3 quad_space_to_world_space(vec2 point, uint meshPolygonID, uint rootID) {
+vec3 quad_space_to_world_space(vec2 point, uint meshPolygonID, uint rootID, float morph) {
     uint vertexBaseIndex = meshPolygonID * 5u;
     uint vertexKeyA = rootID;
     uint vertexKeyB = ((rootID >> 1u) ^ 1u) + ((rootID & 1u) << 1u);
@@ -119,7 +129,7 @@ vec3 quad_space_to_world_space(vec2 point, uint meshPolygonID, uint rootID) {
     vec3 base_Triangle_b = (position_list[vertexBaseIndex + vertexKeyB + 1u]).xyz;
     vec3 base_Triangle_c = (position_list[vertexBaseIndex]).xyz;
 
-    return localPointToWorldPoint(point, base_Triangle_a, base_Triangle_b, base_Triangle_c);
+    return localPointToWorldPoint(morphVertex(point, morph), base_Triangle_a, base_Triangle_b, base_Triangle_c);
 }
 
 mat3 leaf_space(uvec4 key) {
@@ -205,6 +215,8 @@ mat4 createTransform() {
 	);
 }
 
+
+
 vec3 hash(vec3 p) {
 	p = vec3(dot(p, vec3(127.1, 311.7, 74.7)),
 		dot(p, vec3(269.5, 183.3, 246.1)),
@@ -257,11 +269,16 @@ varying flat uvec4 key;
 varying flat uint flags;
 void vertex() {
 
-	key = floatBitsToUint(texelFetch(key_image, getKeyCoordinate(int(INSTANCE_ID)), 0));
-	//key = floatBitsToUint(INSTANCE_CUSTOM);
+	//key = floatBitsToUint(texelFetch(key_image, getKeyCoordinate(int(INSTANCE_ID)), 0));
+	key = floatBitsToUint(INSTANCE_CUSTOM);
 	flags = key.w >> 29u;
-	key.w &= 0x1FFFFFFFu;
+	uint half = (key.w & 0xFFFF0u) >> 4u;
+	half = half | (half << 16u);
+	mediump float morph = unpackHalf2x16(half).x;
 
+	key.w &= 0xFu;
+	
+	
 	float skipAmount = 1.0 / float(resolution - 1);
 
 	if (flags == 0u && (int(UV.y) == 0) && (int(UV.x) % 2 == 1)) {
@@ -276,20 +293,19 @@ void vertex() {
 	if (flags == 2u && (int(UV.y) == 0) && (int(UV.x) % 2 == 1)) {
 		VERTEX -= vec3(0, skipAmount, 0);
 	}
-
-
+	
+	
 	vec2 quad_position = leaf_space_to_quad_space(VERTEX, key);
-
-	vec3 world_position = quad_space_to_world_space(quad_position, key.z, key.w);
+	vec3 world_position = quad_space_to_world_space(quad_position, key.z, key.w, 0);
 	VERTEX = is_cube ? world_position : point_on_cube_to_point_on_sphere(world_position);
 	
-	elevation = textureLod(height_map, point_on_sphere_to_UV(VERTEX), 0).r;
 	object_space_pos = VERTEX;
 
-	NORMAL = VERTEX;
 	VERTEX = (vec4(VERTEX, 1) * transformations).xyz;
+	NORMAL = VERTEX;
 	VERTEX = (vec4(VERTEX, 1) * createTransform()).xyz;
 
+	elevation = textureLod(height_map, point_on_sphere_to_UV(object_space_pos), 0).r;
 	elevation *= textureLod(height_gradient, vec2(elevation, 0), 0).r;
 
 	VERTEX += NORMAL * height_scale * elevation;

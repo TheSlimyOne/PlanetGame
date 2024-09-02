@@ -194,6 +194,8 @@ public partial class ComputeCullShader : ComputeShader<ComputeCullShader.BufferN
 		{
 			Mathf.DegToRad(_planetController.CameraController.Fov),
 			_planetController.PlanetData.SubFactor * _planetController.PlanetData.Radius,
+            _planetController.PlanetData.MorphFactor,
+            0
 		}).ToArray());
 		return data.ToArray();
 	}

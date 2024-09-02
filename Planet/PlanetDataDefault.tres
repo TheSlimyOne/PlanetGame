@@ -1,12 +1,12 @@
 [gd_resource type="Resource" script_class="PlanetData" load_steps=8 format=3 uid="uid://gwppe7ras2x"]
 
-[ext_resource type="Texture2D" uid="uid://b8yvegish7whm" path="res://Assets/Textures/Surface1D.tres" id="1_ulrn4"]
+[ext_resource type="Texture2D" uid="uid://b0xaoom76i6uo" path="res://Assets/Images/4_no_ice_clouds_mts_16k.jpg" id="1_nktxi"]
 [ext_resource type="Texture2D" uid="uid://b8nluepgt5u0f" path="res://Assets/Images/gebco_08_rev_elev_21600x10800.png" id="2_cnw8u"]
 [ext_resource type="Script" path="res://Planet/PlanetData.cs" id="3_6i60t"]
 [ext_resource type="Shader" path="res://Planet/LOD/PlanetTerrainShader.gdshader" id="3_ylsc5"]
 
 [sub_resource type="Curve" id="Curve_4sr00"]
-_data = [Vector2(0, 0), 0.0, 1.91964, 0, 1, Vector2(1, 1), 0.0658425, 0.0, 1, 0]
+_data = [Vector2(0, 0), 0.0, 1.0, 0, 1, Vector2(1, 1), 1.0, 0.0, 1, 0]
 point_count = 2
 
 [sub_resource type="CurveTexture" id="CurveTexture_0rbgi"]
@@ -35,11 +35,12 @@ shader_parameter/seed = 1207.01
 [resource]
 script = ExtResource("3_6i60t")
 Radius = 500.0
-HeightScale = 1.0
+HeightScale = 5.0
 Resolution = 15
 MaximumNodes = 40000
 SubFactor = 4.0
-AlbedoMap = ExtResource("1_ulrn4")
+MorphFactor = 0.3
+AlbedoMap = ExtResource("1_nktxi")
 HeightMap = ExtResource("2_cnw8u")
 HeightGradient = SubResource("CurveTexture_0rbgi")
 NormalStrength = 5.0

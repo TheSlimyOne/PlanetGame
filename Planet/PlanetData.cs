@@ -134,7 +134,7 @@ public partial class PlanetData : Resource
             }
         }
     }
-    private int _maximumNodes = 3;
+    private int _maximumNodes = 40000;
     
     [Export(PropertyHint.Range, "1, 10")]
     public float SubFactor
@@ -150,6 +150,21 @@ public partial class PlanetData : Resource
         }
     }
     private float _subFactor = 1;
+
+    [Export(PropertyHint.Range, "0, 1")]
+    public float MorphFactor
+    {
+        get => _morphFactor;
+        set
+        {
+            if (_morphFactor != Mathf.Clamp(value, 0, 1))
+            {
+                _morphFactor = Mathf.Clamp(value, 0, 1);
+                EmitChanged();
+            }
+        }
+    }
+    private float _morphFactor = 1;
     #endregion
 
     #region Surface Settings

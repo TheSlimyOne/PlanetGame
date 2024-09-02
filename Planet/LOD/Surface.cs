@@ -67,15 +67,11 @@ public partial class Surface : MultiMeshInstance3D
 		}
 		if (@event.IsActionPressed("cube_mode"))
 		{
-			_planetController.PlanetData.CubeMode = _planetController.PlanetData.CubeMode;
+			_planetController.PlanetData.CubeMode = !_planetController.PlanetData.CubeMode;
 			_planetController.PlanetData.ShaderMaterial.SetShaderParameter("is_cube", _planetController.PlanetData.CubeMode);
 		}
 	}
-
-
-
 	
-
 	public override void _PhysicsProcess(double delta)
 	{
 		if (_processing)
@@ -99,11 +95,12 @@ public partial class Surface : MultiMeshInstance3D
 		int culled = (int)primCounts[indices[1] + 16];
 
 		_planetController.CameraController.UIElements.SetLabelTriangleCount(culled, all);
-
+		Key[] keys = _computeCullShader.GetUniformData<Key>(ComputeCullShader.BufferNames.WRITE_FULL_LIST);
+		// GD.Print(keys[0]);
 
 		// _processing = false;
-		InstanceAllTriangles(culled);
-		// InstanceAllTriangles(data, all);
+		// InstanceAllTriangles(culled);
+		InstanceAllTriangles(keys, all);
 	}
 
 	public void InstanceAllTriangles(Key[] keys, int amount)
@@ -116,12 +113,6 @@ public partial class Surface : MultiMeshInstance3D
 			Multimesh.SetInstanceCustomData(i, keys[i].ToColor());
 		}
 	}
-
-	// public Color GetGlobalPixelData(int x, int y)
-	// {
-	// 	return RenderingServer.Texture2DGet(_globalKeyData.GetRid()).GetPixel(x, y);
-	// }
-
 
 	public void InstanceAllTriangles(int amount)
 	{

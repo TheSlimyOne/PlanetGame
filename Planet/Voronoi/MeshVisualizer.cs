@@ -54,10 +54,17 @@ public partial class MeshVisualizer : Node3D
 
 	private void CreateConvexHull()
 	{
+		foreach(var child in GetChildren())
+		{
+			child.QueueFree();
+		}
+
 		Vector3[] seeds = RandomSeeds(_amount);
-		ConvexHull convexHull = new ConvexHull(seeds, isCentroid);
+		ConvexHull convexHull = new ConvexHull(seeds);
 		convexHull.Hull.GetMesh(_showIndex, this, _radius, material, isVoronoi, isCentroid);
-		// Vector3[] voronoiSeeds = convexHull.Hull.GetVoronoiSeeds(isCentroid);
+
+		Vector3[] voronoiSeeds = convexHull.Hull.GetVoronoiSeeds(isCentroid);
+		Tetrahedron.AddAllChildren(this, Tetrahedron.CreatePoint(voronoiSeeds, 0.125f, Colors.Red));
 		// ConvexHull voronoiHull = new ConvexHull(voronoiSeeds, true);
 
 	}

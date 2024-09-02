@@ -1,7 +1,6 @@
 #[compute]
 #version 450
 #extension GL_EXT_shader_atomic_float2 : require
-#define sqrt2_2 0.707106781
 #define sqrt2   1.414213562
 #define PI      3.141592653
 
@@ -43,6 +42,8 @@ layout(set = 0, binding = 7, std430) buffer restrict readonly ExternalData {
     mat4 planetTransformMatrix;
     float CameraFOV;     
     float subFactor;
+    float morphFactor;
+    float padding;
 };
 
 layout(set = 0, binding = 8, std430) buffer restrict Debug {
@@ -203,7 +204,7 @@ Triangle createTriangle(mat3 transform_matrix, uint meshPolygonID, uint rootID) 
     vec3 base_Triangle_a = (base_triangles[vertexBaseIndex + vertexKeyA + 1]).xyz;
     vec3 base_Triangle_b = (base_triangles[vertexBaseIndex + vertexKeyB + 1]).xyz;
     vec3 base_Triangle_c = (base_triangles[vertexBaseIndex]).xyz;
-
+    
     Triangle t;
     t.v0 = localPointToWorldPointSpherical(point_v0, base_Triangle_a, base_Triangle_b, base_Triangle_c);
     t.v1 = localPointToWorldPointSpherical(point_v1, base_Triangle_a, base_Triangle_b, base_Triangle_c);
@@ -286,7 +287,7 @@ uint base4ToHex(uint base4Value) {
 float calculateLOD(float dist, float fovy, float factor) {
     float num = dist * tan(fovy/2);
     float dom = sqrt2 * factor;
-    return clamp(-log2(num/dom), 0, 31);
+    return clamp(-log2(num/dom), -1, 31);
 }
 
 float calculateLODToCam(vec3 from) {
@@ -368,6 +369,16 @@ uint getJunctionFlags(uvec4 key, Triangle triangle, float lod) {
    
 }
 
+uint getMorphFactor(vec3 point) {
+    float lod = calculateLODToCam(point);
+    float morphFactor = clamp((abs(fract(lod) - 1) - (1 - morphFactor))/morphFactor, 0, 1);
+    uint packedHalf = packHalf2x16(vec2(morphFactor, 0.0));
+    uint halfFloat = packedHalf & 0xFFFF;
+
+    // return halfFloat << 4;
+    return halfFloat << 4;
+}
+
 bool PointInFrustum(vec3 point) {
     vec4 clipSpacePoint = viewProjectionMatrix * (vec4(point, 1) * planetTransformMatrix);
     vec3 ndcPoint = clipSpacePoint.xyz / clipSpacePoint.w;
@@ -405,7 +416,7 @@ void main() {
         return;
     
     uvec4 key = read_list[invocationID];
-    key.w &= 0x1FFFFFFFu;
+    key.w &= 0xFu;
 
     uvec4 parent_key = getParentKey(key);
     uvec4 grand_parent_key = getParentKey(parent_key);
@@ -418,29 +429,34 @@ void main() {
 
     float parent_target_LOD = calculateLODToCam(parent_triangle.origin);
     float target_LOD = calculateLODToCam(triangle.origin);
-
+ 
     if (target_LOD > current_LOD) { // subdivide
-        uvec4 children[4] = getChildKeys(key);
+        uvec4 children_keys[4] = getChildKeys(key);
         for (int i = 0; i < 4; i++) {
             uint idx = atomicAdd(primCount_full[write_index], 1);
-            children[i].w |= getJunctionFlags(children[i], triangle, current_LOD + 1);
+            Triangle child_triangle = leafSpaceToWorldSpace(children_keys[i]);
             
-            write_full_list[idx] = children[i];
-            Triangle child_triangle = leafSpaceToWorldSpace(children[i]);
-            cull_key(children[i], child_triangle, current_LOD + 1);
+            children_keys[i].w |= getJunctionFlags(children_keys[i], triangle, current_LOD + 1);
+            children_keys[i].w |= getMorphFactor(child_triangle.origin);
+            
+            write_full_list[idx] = children_keys[i];
+            cull_key(children_keys[i], child_triangle, current_LOD + 1);
         }
     } else if (parent_target_LOD < current_LOD - 1 && key.xy != uvec2(0, 1)) { // merging
         if (isUpperLeftChild(key.xy)) {
             uint idx = atomicAdd(primCount_full[write_index], 1);
+
             parent_key.w |= getJunctionFlags(parent_key, grand_parent_triangle, current_LOD - 1);
-        
+            parent_key.w |= getMorphFactor(parent_triangle.origin);
+
             write_full_list[idx] = parent_key;
             cull_key(parent_key, parent_triangle, current_LOD - 1);
-        } else 
-            return;
+        }
     } else {
         uint idx = atomicAdd(primCount_full[write_index], 1);
+
         key.w |= getJunctionFlags(key, parent_triangle, current_LOD);
+        key.w |= getMorphFactor(triangle.origin);
         
         write_full_list[idx] = key;
         cull_key(key, triangle, current_LOD);

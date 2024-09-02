@@ -6,17 +6,17 @@ public struct Key
     readonly public uint MSB;
     readonly public uint LSB;
     readonly public uint MeshPolygonID;
-    readonly public uint FlagAndRootID;
+    readonly public uint LocalKeyData; // FFF0000000000000000000000000RRRR
 
     public Key(Color color) : this(color.R, color.G, color.B, color.A) { }
-    public Key(float msb, float lsb, float meshPolygonID, float flagAndRootID) : this(BitConverter.SingleToUInt32Bits(msb), BitConverter.SingleToUInt32Bits(lsb), BitConverter.SingleToUInt32Bits(meshPolygonID), BitConverter.SingleToUInt32Bits(flagAndRootID)) { }
-    public Key(int msb, int lsb, int meshPolygonID, int flagAndRootID) : this((uint)msb, (uint)lsb, (uint)meshPolygonID, (uint)flagAndRootID) { }
-    public Key(uint msb, uint lsb, uint meshPolygonID, uint flagAndRootID)
+    public Key(float msb, float lsb, float meshPolygonID, float localKeyData) : this(BitConverter.SingleToUInt32Bits(msb), BitConverter.SingleToUInt32Bits(lsb), BitConverter.SingleToUInt32Bits(meshPolygonID), BitConverter.SingleToUInt32Bits(localKeyData)) { }
+    public Key(int msb, int lsb, int meshPolygonID, int localKeyData) : this((uint)msb, (uint)lsb, (uint)meshPolygonID, (uint)localKeyData) { }
+    public Key(uint msb, uint lsb, uint meshPolygonID, uint localKeyData)
     {
         MSB = msb;
         LSB = lsb;
         MeshPolygonID = meshPolygonID;
-        FlagAndRootID = flagAndRootID;
+        LocalKeyData = localKeyData;
     }
 
     public readonly uint[] GetNodeID()
@@ -30,7 +30,7 @@ public struct Key
             BitConverter.UInt32BitsToSingle(MSB),
             BitConverter.UInt32BitsToSingle(LSB),
             BitConverter.UInt32BitsToSingle(MeshPolygonID),
-            BitConverter.UInt32BitsToSingle(FlagAndRootID)
+            BitConverter.UInt32BitsToSingle(LocalKeyData)
         );
     }
 
@@ -41,18 +41,23 @@ public struct Key
             BitConverter.UInt32BitsToSingle(MSB),
             BitConverter.UInt32BitsToSingle(LSB),
             BitConverter.UInt32BitsToSingle(MeshPolygonID),
-            BitConverter.UInt32BitsToSingle(FlagAndRootID)
+            BitConverter.UInt32BitsToSingle(LocalKeyData)
         };
     }
 
     public readonly uint GetFlag()
     {
-        return FlagAndRootID >> 29;
+        return LocalKeyData >> 29;
     }
 
     public readonly uint GetRootID()
     {
-        return FlagAndRootID & 0x1FFFFFFF;
+        return LocalKeyData & 0xF;
+    }
+
+    public readonly Half GetMorphFactor()
+    {
+        return BitConverter.UInt16BitsToHalf((ushort)((LocalKeyData & 0xFFFF0u) >> 4));
     }
 
 
@@ -282,7 +287,8 @@ public struct Key
     public override string ToString()
     {
         uint flag = GetFlag();
+        Half morphFactor = GetMorphFactor();
         uint rootID = GetRootID();
-        return $"{Convert.ToString(MSB, 2).PadZeros(32)}, {Convert.ToString(LSB, 2).PadZeros(32)}, {MeshPolygonID,-4} {rootID}, {Convert.ToString(flag, 2).PadZeros(3)}";
+        return $"{Convert.ToString(MSB, 2).PadZeros(32)}, {Convert.ToString(LSB, 2).PadZeros(32)}, {MeshPolygonID,-4}, {Convert.ToString(flag, 2).PadZeros(3)}, {morphFactor}, {rootID}";
     }
 }

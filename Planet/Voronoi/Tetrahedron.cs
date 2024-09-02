@@ -89,7 +89,7 @@ public class Tetrahedron
             indices.Add(amount + 1);
 
             otherEdge = otherEdge.ReverseEdge.ParentTriangle.GetEdgesFromVertex(flipVertex)[0];
-            vertices.Add(otherEdge.ParentTriangle.GetCentroid() * radius);
+            vertices.Add((isCentroid ? otherEdge.ParentTriangle.GetCentroid() : otherEdge.ParentTriangle.GetCircumcenter()) * radius);
             vertices[0] += vertices[amount];
             normal.Add(vertices[amount].Normalized());
             amount++;
@@ -137,6 +137,28 @@ public class Tetrahedron
         sphere.Position = position;
         sphere.Mesh.SurfaceSetMaterial(0, new StandardMaterial3D() { AlbedoColor = color });
         return sphere;
+    }
+    
+    public static MeshInstance3D[] CreatePoint(Vector3[] positions, float radius, Color color)
+    {
+        MeshInstance3D[] spheres = new MeshInstance3D[positions.Length];
+        for(int i = 0; i < positions.Length; i++)
+        {
+            MeshInstance3D sphere = new MeshInstance3D();
+            sphere.Mesh = new SphereMesh() { Radius = radius, Height = radius * 2 };
+            sphere.Position = positions[i];
+            sphere.Mesh.SurfaceSetMaterial(0, new StandardMaterial3D() { AlbedoColor = color });
+            spheres[i] = sphere;
+        }
+        return spheres;
+    }
+
+    public static void AddAllChildren(Node parent, MeshInstance3D[] meshes)
+    {
+        foreach (MeshInstance3D mesh in meshes)
+        {
+            parent.AddChild(mesh);
+        }
     }
 
     public Vector3 GenerateEdgeVertex(Vector3 pointA, Vector3 pointB, Edge targetEdge)
@@ -193,7 +215,10 @@ public class Tetrahedron
             if (isCentroid)
                 seeds[index++] = triangle.GetCentroid();
             else
+            {
+                GD.Print(isCentroid);
                 seeds[index++] = triangle.GetCircumcenter();
+            }
         }
         return seeds;
     }

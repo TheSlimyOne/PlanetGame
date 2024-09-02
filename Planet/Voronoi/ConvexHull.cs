@@ -9,7 +9,7 @@ public partial class ConvexHull
 {
     public Tetrahedron Hull { get; }
 
-    public ConvexHull(Vector3[] seeds, bool isCentroid)
+    public ConvexHull(Vector3[] seeds)
     {
         Hull = DivideAndConquer(seeds);
     }
