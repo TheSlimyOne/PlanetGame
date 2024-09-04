@@ -6,6 +6,7 @@ uniform float radius;
 varying float elevation;
 uniform sampler2D albedo_map : repeat_disable;
 uniform sampler2D height_map : repeat_disable;
+uniform sampler2D normal_map : repeat_disable;
 uniform sampler2D height_gradient : repeat_disable;
 uniform bool is_debug;
 uniform bool is_cube;
@@ -204,9 +205,9 @@ ivec2 getKeyCoordinate(int idx) {
 }
 
 mat4 createTransform() {
-	float scale = 1.0 / getScale(texelFetch(global_key_data, ivec2(0, 0), 0).r);
+	float scale = 1.0 / getScale(texelFetch(global_key_data, ivec2(0, 0), 0).r) * radius;
 	vec3 scaleFromPoint = vec3(0, 0, 1);
-	scale = radius;
+	//scale = radius;
 	return mat4(
 		vec4( scale, 0, 0, scaleFromPoint.x - scale * scaleFromPoint.x),
 		vec4( 0, scale, 0, scaleFromPoint.y - scale * scaleFromPoint.y),
@@ -214,8 +215,6 @@ mat4 createTransform() {
 		vec4( 0, 0, 0, 1)
 	);
 }
-
-
 
 vec3 hash(vec3 p) {
 	p = vec3(dot(p, vec3(127.1, 311.7, 74.7)),
@@ -269,8 +268,8 @@ varying flat uvec4 key;
 varying flat uint flags;
 void vertex() {
 
-	//key = floatBitsToUint(texelFetch(key_image, getKeyCoordinate(int(INSTANCE_ID)), 0));
-	key = floatBitsToUint(INSTANCE_CUSTOM);
+	key = floatBitsToUint(texelFetch(key_image, getKeyCoordinate(int(INSTANCE_ID)), 0));
+	//key = floatBitsToUint(INSTANCE_CUSTOM);
 	flags = key.w >> 29u;
 	uint half = (key.w & 0xFFFF0u) >> 4u;
 	half = half | (half << 16u);
@@ -313,6 +312,7 @@ void vertex() {
 
 void fragment() {
 	NORMAL = height_to_normal(elevation, normal_strength, VERTEX, NORMAL);
+	
 	int msb = getLevelInKey(key.xy);
 	int a = (msb & 1) != 0 ? 1 : 0;
 	int b = (msb & 2) != 0 ? 1 : 0;
@@ -322,7 +322,9 @@ void fragment() {
 	debug_color = mix(debug_color, vec3(float(key.y & 3u / 3u)), 0.25f);
 
 	vec2 uv_point = is_texture_1D ? vec2(elevation, 0.0) : point_on_sphere_to_UV(object_space_pos);
+	NORMAL = textureLod(normal_map, uv_point, 0.0).xyz;
+	ALBEDO = NORMAL;
 	vec3 surface_texture = textureLod(albedo_map, uv_point, 0.0).rgb;
-
-	ALBEDO = is_debug ? debug_color : surface_texture;
+	
+	//ALBEDO = is_debug ? debug_color : surface_texture;
 }

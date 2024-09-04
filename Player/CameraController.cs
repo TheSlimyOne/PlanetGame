@@ -8,6 +8,8 @@ public partial class CameraController : Camera3D
 	[Export] public WorldEnvironment WorldEnvironment;
 	[Export] public float DistanceFromSurface { get; private set; }
 	private PlanetController _planetController;
+
+	[Export] public float BaseZoomSpeed;
 	
 
 	[Export] public bool Locked { get; private set; }
@@ -61,7 +63,7 @@ public partial class CameraController : Camera3D
 		
 		direction.Y = Input.GetActionStrength("move_up") - Input.GetActionStrength("move_down");
 		
-		DistanceFromSurface += direction.Y * by * CalculateSpeed(DistanceFromSurface, 0, _planetController.PlanetData.Radius * 2, _planetController.SurfaceController.BaseZoomSpeed);
+		DistanceFromSurface += direction.Y * by * CalculateSpeed(DistanceFromSurface, 0, _planetController.PlanetData.Radius * 2, BaseZoomSpeed);
 		DistanceFromSurface = Mathf.Clamp(DistanceFromSurface, 0, float.MaxValue);
 		UIElements.SetDistance(DistanceFromSurface);
 		GlobalPosition = Vector3.Back * DistanceFromSurface;

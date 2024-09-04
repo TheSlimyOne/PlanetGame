@@ -66,6 +66,7 @@ public partial class MeshVisualizer : Node3D
 		Vector3[] voronoiSeeds = convexHull.Hull.GetVoronoiSeeds(isCentroid);
 		Tetrahedron.AddAllChildren(this, Tetrahedron.CreatePoint(voronoiSeeds, 0.125f, Colors.Red));
 		// ConvexHull voronoiHull = new ConvexHull(voronoiSeeds, true);
+		GD.Print(convexHull.Hull);
 
 	}
 

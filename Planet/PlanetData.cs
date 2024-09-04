@@ -55,7 +55,7 @@ public partial class PlanetData : Resource
     }
     private Transform3D _translation = Transform3D.Identity;
 
-    private void Translate(Vector3 offset)
+    public void Translate(Vector3 offset)
     {
         _translation = _translation.Translated(offset);
     }
@@ -77,6 +77,10 @@ public partial class PlanetData : Resource
     public void Rotate(Vector3 axis, float angle)
     {
         _rotation = _rotation.Rotated(axis, angle).Orthonormalized();
+    }
+    public void Rotate(Vector3 axis, float angle, float weight)
+    {
+        _rotation = _rotation.InterpolateWith(_rotation.Rotated(axis, angle).Orthonormalized(), weight);
     }
 
     public Transform3D Scale
@@ -102,6 +106,7 @@ public partial class PlanetData : Resource
     {
         return _translation * _rotation * _scale;
     }
+    
     #endregion
 
     #region LOD Settings
@@ -198,6 +203,21 @@ public partial class PlanetData : Resource
         }
     }
     private Texture2D _heightMap = new PlaceholderTexture2D();
+    
+    [Export]
+    public Texture2D NormalMap
+    {
+        get => _normalMap;
+        set
+        {
+            if (_normalMap != value)
+            {
+                _normalMap = value;
+                EmitChanged();
+            }
+        }
+    }
+    private Texture2D _normalMap = new PlaceholderTexture2D();
 
     [Export]
     public CurveTexture HeightGradient
@@ -260,6 +280,7 @@ public partial class PlanetData : Resource
 		_shaderMaterial.SetShaderParameter("is_cube", _cubeMode);
 		_shaderMaterial.SetShaderParameter("resolution", _resolution);
 		_shaderMaterial.SetShaderParameter("normal_strength", _normalStrength);
+		_shaderMaterial.SetShaderParameter("normal_map", _normalMap);
 	}
 
     #endregion

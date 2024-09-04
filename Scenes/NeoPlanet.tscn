@@ -1,9 +1,8 @@
-[gd_scene load_steps=16 format=3 uid="uid://c1roirj1ei3ci"]
+[gd_scene load_steps=15 format=3 uid="uid://c1roirj1ei3ci"]
 
 [ext_resource type="Script" path="res://Planet/PlanetController.cs" id="1_7brg2"]
 [ext_resource type="Resource" uid="uid://gwppe7ras2x" path="res://Planet/PlanetDataDefault.tres" id="2_ap1os"]
 [ext_resource type="Script" path="res://Planet/SurfaceController.cs" id="3_22w0g"]
-[ext_resource type="Script" path="res://Planet/LOD/Surface.cs" id="4_fq238"]
 [ext_resource type="Script" path="res://Player/CameraController.cs" id="5_0yfbu"]
 [ext_resource type="Script" path="res://Player/UIElements.cs" id="6_upt2i"]
 [ext_resource type="Texture2D" uid="uid://y5l42qoob2d" path="res://Assets/Images/panorama_image (1).png" id="7_lx4ft"]
@@ -46,23 +45,17 @@ SurfaceController = NodePath("Controllers/SurfaceController")
 
 [node name="Controllers" type="Node" parent="."]
 
-[node name="SurfaceController" type="Node3D" parent="Controllers" node_paths=PackedStringArray("Surface", "WorldEnvironment", "MainLightSource", "LightGimbal")]
+[node name="SurfaceController" type="MultiMeshInstance3D" parent="Controllers" node_paths=PackedStringArray("WorldEnvironment", "MainLightSource", "LightGimbal")]
 script = ExtResource("3_22w0g")
-Surface = NodePath("Surface")
 WorldEnvironment = NodePath("../../WorldEnvironment")
 MainLightSource = NodePath("../../LightGimbal/MainLightSource")
 LightGimbal = NodePath("../../LightGimbal")
-BaseOrbitSpeed = 5.0
+BaseOrbitSpeed = 4.0
 OrbitSpeedModifier = 800.0
-BaseZoomSpeed = 500.0
-ZoomSpeedModifier = 60.0
-_minDistancePadding = 1.0
-
-[node name="Surface" type="MultiMeshInstance3D" parent="Controllers/SurfaceController" node_paths=PackedStringArray("_planetController")]
-script = ExtResource("4_fq238")
-_planetController = NodePath("../../..")
+weight = 0.15
 _computeCullShaderPath = "res://Planet/LOD/ComputeCull.glsl"
 _computeCopyShaderPath = "res://Planet/LOD/Copy.glsl"
+_computeGenerateNormalsPath = "res://Planet/LOD/ComputeGenerateNormals.glsl"
 
 [node name="CameraController" type="Camera3D" parent="Controllers" node_paths=PackedStringArray("UIElements", "WorldEnvironment")]
 near = 0.001
@@ -71,6 +64,7 @@ script = ExtResource("5_0yfbu")
 UIElements = NodePath("CanvasLayer")
 WorldEnvironment = NodePath("../../WorldEnvironment")
 DistanceFromSurface = 50.0
+BaseZoomSpeed = 1200.0
 
 [node name="CanvasLayer" type="CanvasLayer" parent="Controllers/CameraController" node_paths=PackedStringArray("_lblTriangleCount", "_lblFPS", "_lblDistance", "_lblLOD")]
 script = ExtResource("6_upt2i")
