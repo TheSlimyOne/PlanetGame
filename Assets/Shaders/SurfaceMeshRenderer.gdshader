@@ -9,7 +9,7 @@ uniform float lacunarity = 2.0;
 uniform float noise_scale = 1;
 uniform float exaggeration_factor = 1;
 uniform vec3 offset = vec3(0, 0, 0);
-uniform float seed = 1207.01;
+uniform float seed = 1000;
 uniform int amount: hint_range(1, 100, 1);
 uniform bool isCube;
 
@@ -164,11 +164,8 @@ void vertex() {
 
 
 void fragment() {
-	
-	
 	NORMAL = height_to_normal(elevation, normal_strength, VERTEX, NORMAL);
-    //vec3 surface_texture = textureLod(image_texture, point_on_sphere_to_UV(object_space_pos), 0).rgb;
-	vec3 surface_texture = textureLod(albedo_map, vec2(elevation, 0.0), 0).rgb;
-
+	vec2 uv_point = point_on_sphere_to_UV(object_space_pos);
+    vec3 surface_texture = textureLod(albedo_map, uv_point, 0).rgb;
 	ALBEDO = surface_texture;
 }

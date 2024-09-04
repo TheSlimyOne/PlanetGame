@@ -1,8 +1,0 @@
-[gd_resource type="ShaderMaterial" load_steps=2 format=3 uid="uid://bxqwawms64vxm"]
-
-[ext_resource type="Shader" path="res://Assets/Shaders/Explode.gdshader" id="1_u01hp"]
-
-[resource]
-render_priority = 1
-shader = ExtResource("1_u01hp")
-shader_parameter/radius = 0.0

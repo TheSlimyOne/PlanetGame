@@ -146,10 +146,6 @@ public partial class PlayerController : Node3D
 				viewport.DebugDraw = Viewport.DebugDrawEnum.Wireframe;
 
 		}
-		if (Input.IsActionJustPressed("step"))
-		{
-			PlanetCollision.CreateCollisionChunk(1,Vector3.Zero);
-		}
 		if (Input.IsActionJustReleased("cam_exit"))
 		{
 			if (isLocked)

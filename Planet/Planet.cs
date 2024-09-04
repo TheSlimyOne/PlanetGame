@@ -1,8 +1,7 @@
 using Godot;
 
 
-[Tool]
-public partial class Planet : StaticBody3D
+public partial class Planet : Node3D
 {
 
 	private bool _isReady;
@@ -12,20 +11,10 @@ public partial class Planet : StaticBody3D
 	private ShaderMaterial _material;
 	private Surface _surface;
 	private Node _quadTreesContainer;
-	private CollisionShape3D _gravityCollision;
-	private PlanetCollision _planetCollision;
-	private float _gravityRadius;
-	private float[] _subdivision;
+
 	private float[] _distance;
 	private CompressedTexture2D _heightMap;
 
-	// Properties
-	[Export]
-	public float GravityRadius
-	{
-		get => _gravityRadius;
-		set { _gravityRadius = value; Initialize(); }
-	}
 
 	[Export(PropertyHint.Range, "1,1000")]
 	public float Radius
@@ -69,12 +58,6 @@ public partial class Planet : StaticBody3D
 		set { _quadTreesContainer = value; }
 	}
 
-	[Export]
-	public float[] Subdivision
-	{
-		get => _subdivision;
-		set => _subdivision = value;
-	}
 
 	[Export]
 	public float[] Distance
@@ -104,13 +87,7 @@ public partial class Planet : StaticBody3D
 			_surface = GetNode<Surface>("Surface");
 			QuadTreesContainer = GetNode<Node>("QuadTrees");
 
-			_planetCollision = GetNode<PlanetCollision>("PlanetCollisionShape");
-
-			_gravityCollision = GetNode<CollisionShape3D>("GravityArea/GravityCollisionShape");
-			_gravityCollision.Shape = new SphereShape3D();
-			((SphereShape3D)_gravityCollision.Shape).Radius = _radius + _gravityRadius;
-
-			_surface.Initialize(_radius, _resolution, _material, _planetCollision, _heightMap);
+			_surface.Initialize(_radius, _resolution, _material, _heightMap);
 			_surface.UpdateQuadTrees(Vector3.Inf);
 
 		}

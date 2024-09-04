@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 
 
-[Tool]
+
 /// <summary>
 /// 
 /// QuadTree
@@ -236,11 +236,10 @@ public partial class QuadTree : Node
     private void UpdateQuadTree(Vector3 target, QuadTreeNode node)
     {
         float renderAngle = node.spherePosition.AngleTo(target);
-        float renderDistance = target.DistanceTo(_planet.Transform.Origin);
 
-        if (Mathf.DegToRad(_planet.Subdivision[node.subdivisionLevel]) >= renderAngle)
+        if (Mathf.DegToRad(renderAngleLOD[node.subdivisionLevel]) >= renderAngle)
         {
-            if (node.subdivisionLevel < _planet.Subdivision.Length - 1)
+            if (node.subdivisionLevel < renderAngleLOD.Values.Count - 1)
             {
                 if (!node.hasChildren)
                 {
