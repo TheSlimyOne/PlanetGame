@@ -1,5 +1,5 @@
 using Godot;
-using System;
+using Godot.Collections;
 
 
 public partial class CameraController : Camera3D
@@ -8,8 +8,13 @@ public partial class CameraController : Camera3D
 	[Export] public WorldEnvironment WorldEnvironment;
 	[Export] public float DistanceFromSurface { get; private set; }
 	private PlanetController _planetController;
+	
+	private MultiMeshInstance3D _cameraLine = new();
+	private MultiMeshInstance3D _planetLine = new();
+	private MultiMeshInstance3D _debugLine = new();
 
 	[Export] public float BaseZoomSpeed;
+	[Export] public float RayLength = 5000;
 	
 
 	[Export] public bool Locked { get; private set; }
@@ -17,7 +22,61 @@ public partial class CameraController : Camera3D
     public override void _Ready()
 	{
 		_planetController = (PlanetController)GetParent().GetParent();
-		RenderingServer.SetDebugGenerateWireframes(true);
+
+		GetWindow().CallDeferred("add_child", _cameraLine);
+		GetWindow().CallDeferred("add_child", _planetLine);
+		GetWindow().CallDeferred("add_child", _debugLine);
+		_debugLine.Multimesh = new MultiMesh() { UseColors = true, Mesh = new SphereMesh() { Material = new StandardMaterial3D() { VertexColorUseAsAlbedo = true }, Radius = 2, Height = 4 }, TransformFormat = MultiMesh.TransformFormatEnum.Transform3D };
+	}
+
+	public void CalculateRayToPlanet(Vector3 from, Vector3 to)
+	{
+		PhysicsDirectSpaceState3D spaceState = GetWorld3D().DirectSpaceState;
+		Rid inner = _planetController.SurfaceController.InnerCollision.GetRid();
+		Rid outer = _planetController.SurfaceController.OuterCollision.GetRid();
+		Dictionary[] intersections =  new Dictionary[4];
+
+		intersections[0] = spaceState.IntersectRay( new PhysicsRayQueryParameters3D()
+		{
+			To = to,
+			From = from,
+			Exclude = new Array<Rid>(){ inner }
+		} );
+		intersections[1] = spaceState.IntersectRay( new PhysicsRayQueryParameters3D()
+		{
+			To = from,
+			From = to,
+			Exclude = new Array<Rid>(){ inner }
+		} );
+		intersections[2] = spaceState.IntersectRay( new PhysicsRayQueryParameters3D()
+		{
+			To = to,
+			From = from,
+			Exclude = new Array<Rid>(){ outer }
+		} );
+		intersections[3] = spaceState.IntersectRay( new PhysicsRayQueryParameters3D()
+		{
+			To = from,
+			From = to,
+			Exclude = new Array<Rid>(){ outer }
+		} );
+		
+		Color[] colors = new Color[] { Colors.Red, Colors.Blue, Colors.Yellow, Colors.Green };
+		_debugLine.Multimesh.InstanceCount = 4;
+		for (int i = 0; i < 4; i++)
+		{
+			if (intersections[i].ContainsKey("position"))
+			{
+				Vector3 position = (Vector3)intersections[i]["position"];
+				// position = _planetController.PlanetData.Rotation * position;
+
+				Transform3D transform = new Transform3D(Basis.Identity, position);
+				
+				_debugLine.Multimesh.SetInstanceColor(i, colors[i]);
+				_debugLine.Multimesh.SetInstanceTransform(i, transform);
+			}
+		}
+
 	}
 
 	float CalculateSpeed(float distanceFromSurface, float d_min, float d_max, float v_max)
@@ -54,6 +113,19 @@ public partial class CameraController : Camera3D
 			else if (viewport.DebugDraw == Viewport.DebugDrawEnum.Overdraw)
 				viewport.DebugDraw = Viewport.DebugDrawEnum.Wireframe;
 		}
+
+		if (@event is InputEventMouseButton mouseEvent)
+        {
+            if (mouseEvent.ButtonIndex == MouseButton.Left && mouseEvent.Pressed)
+            {
+				Vector2 mousePosition = GetViewport().GetMousePosition();
+				Vector3 rayOrigin = ProjectRayOrigin(mousePosition);
+				Vector3 rayEnd = rayOrigin + ProjectRayNormal(mousePosition) * RayLength;
+
+				CalculateRayToPlanet(rayOrigin, rayEnd);
+
+            }
+        }
 	}
 	
 	public override void _PhysicsProcess(double delta)
@@ -83,8 +155,6 @@ public partial class CameraController : Camera3D
 		
 		return projectionMatrix * viewMatrix4;
 	}
-
-	
 
 	public void LockMouse()
 	{

@@ -1,11 +1,12 @@
 import math
 from PIL import Image
+import numpy as np
 # base = Image.open("6bdc82820e21da8018052aa4873f4a9cd25f1273.png")
-base = Image.new('RGB', (4*256, 4*128))
+base = Image.new('RGB', (64, 32))
 img = Image.new('RGB', base.size)
-img_r = Image.new('RGB', base.size)
-img_g = Image.new('RGB', base.size)
-img_b = Image.new('RGB', base.size)
+# img_r = Image.new('RGB', base.size)
+# img_g = Image.new('RGB', base.size)
+# img_b = Image.new('RGB', base.size)
 img_debug = Image.new('RGB', base.size)
 
 
@@ -19,8 +20,8 @@ def uv_to_point_on_sphere(uv):
 
     y = math.sin(latitude)
     r = math.cos(latitude)
-    x = math.sin(longitude) * r
-    z = -math.cos(longitude) * r
+    x = -math.sin(longitude) * r
+    z = math.cos(longitude) * r
     return (x, y, z)
 
 
@@ -60,27 +61,49 @@ for i in range(base.size[0]):
         dir_north = normalize([a - b for a, b in zip(north, south)])
         dir_east = normalize([a - b for a, b in zip(east, west)])
 
-        if (not dir_north or not dir_east):
-            continue
-
-
+        # if (not dir_north or not dir_east):
+        #     continue
         normal_vector = normalize(cross(dir_east, dir_north))
+        # normal_vector = [int(256 * (p + 1.0)/2.0) for p in normal_vector]
 
-        normal_vector = [int(256 * (p + 1.0)/2.0) for p in normal_vector]
-        # print()
+        TBN = np.matrix(
+            [dir_north,
+            dir_east,
+            normal_vector]
+        )
 
-        # img.putpixel(index, (int(256 * normal_vector[0]), int(256 * normal_vector[1]), int(256 * normal_vector[2])))
+        TBN_inv = np.linalg.inv(TBN)
+
+        tangent_space_normal = np.dot(normal_vector, TBN_inv)
+
+        x = tangent_space_normal[0, 0]
+        y = tangent_space_normal[0, 1]
+        z = tangent_space_normal[0, 2]
+
+
+        tangent_space_normal = [int(256 * (p + 1) * 0.5) for p in [x,y,z]]
+        
+        # print(normal_vector)
+        # print(tangent_space_normal)
+        # print(TBN)
+        # print("===========================")
+        
+        img_debug.putpixel(index, tuple(tangent_space_normal))
+        
+        # break
+    # break
+
+        # img.putpixel(index, (int(256 * tangent_space_normal[0]), int(256 * tangent_space_normal[1]), int(256 * tangent_space_normal[2])))
         # img_r.putpixel(index, (int(256 * normal_vector[0]), 0, 0))
         # img_g.putpixel(index, (0, int(256 * normal_vector[1]), 0))
         # img_b.putpixel(index, (0, 0, int(256 * normal_vector[2])))
 
         # uv = [int(256 * a) for a in normalize(normal_vector)]
-        normal_vector.append(int(1))
+        # normal_vector.append(int(1))
         # print(len(uv))
-        img_debug.putpixel(index, tuple(normal_vector))
-img.save("$python\\output\\output.png")
+# img.save("$python\\output\\output.png")
 # img_r.save("$python\\output\\output_r.png")
 # img_g.save("$python\\output\\output_g.png")
 # img_b.save("$python\\output\\output_b.png")
 img_debug.save("$python\\output\\output_debug.png")
-img.getpixel((-1, -1))
+# img.getpixel((-1, -1))

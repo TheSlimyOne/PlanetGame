@@ -5,11 +5,10 @@ namespace Uniform;
 
 public abstract partial class ComputeShaderUniform : GodotObject
 {
-    public Rid Rid { get; set; }
-    public int Binding { get; set; }
-    
+    public Rid Rid { get; protected set; }
+    public int Binding { get; protected set; }
+    public RDUniform Uniform { get; protected set; }
     protected RenderingDevice _rd;
-    public RDUniform Uniform { get; set; }
 
     protected ComputeShaderUniform(RenderingDevice renderingDevice, int binding)
     {
@@ -17,13 +16,13 @@ public abstract partial class ComputeShaderUniform : GodotObject
         Binding = binding;
     }
 
-    public abstract ComputeShaderUniform RebindUniform(int binding);
+    public abstract ComputeShaderUniform RebindUniform(RenderingDevice rd, int binding);
 
     public abstract void UpdateUniform(byte[] data);
     
     public void FreeRid()
     {
-        if (Rid.Id != 0) _rd.FreeRid(Rid);
+        if (Rid.IsValid) _rd.FreeRid(Rid);
     }
 
     public T[] GetData<T>() where T : unmanaged
@@ -31,13 +30,15 @@ public abstract partial class ComputeShaderUniform : GodotObject
         return Utilities.FromBytes<T>(_rd.BufferGetData(Rid)).ToArray();
     }
 
-    public byte[] GetByteData()
+    public virtual byte[] GetByteData()
     {
         return _rd.BufferGetData(Rid);
     }
 
     ~ComputeShaderUniform()
     {
+        Uniform.ClearIds();
         FreeRid();
+        _rd = null;
     }
 }

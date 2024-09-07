@@ -1,9 +1,9 @@
 [gd_scene load_steps=5 format=3 uid="uid://bohwiijugk070"]
 
-[ext_resource type="Texture2D" uid="uid://y5l42qoob2d" path="res://Assets/Images/panorama_image (1).png" id="1_hgmbp"]
+[ext_resource type="Texture2D" path="res://Assets/Images/new_compressed_texture_2d.tres" id="1_k3sss"]
 
 [sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_1an5v"]
-panorama = ExtResource("1_hgmbp")
+panorama = ExtResource("1_k3sss")
 
 [sub_resource type="Sky" id="Sky_f85mr"]
 sky_material = SubResource("PanoramaSkyMaterial_1an5v")

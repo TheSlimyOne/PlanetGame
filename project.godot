@@ -20,7 +20,7 @@ project/assembly_name="Planet Game"
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/asset-drawer/addons/Asset_Drawer/plugin.cfg")
+enabled=PackedStringArray()
 
 [input]
 

@@ -1,26 +1,26 @@
-[gd_resource type="Resource" script_class="PlanetData" load_steps=9 format=3 uid="uid://gwppe7ras2x"]
+[gd_resource type="Resource" script_class="PlanetData" load_steps=8 format=3 uid="uid://gwppe7ras2x"]
 
-[ext_resource type="Texture2D" uid="uid://b0xaoom76i6uo" path="res://Assets/Images/4_no_ice_clouds_mts_16k.jpg" id="1_nktxi"]
-[ext_resource type="Texture2D" uid="uid://banhn15brscdb" path="res://Assets/Images/World_elevation_map.png" id="2_ndq2v"]
-[ext_resource type="Texture2D" uid="uid://byka5p7kn4mvg" path="res://Normal.png" id="3_0ippi"]
+[ext_resource type="Texture2D" uid="uid://b0xaoom76i6uo" path="res://Assets/Images/4_no_ice_clouds_mts_16k.jpg" id="1_gagem"]
+[ext_resource type="Texture2D" uid="uid://b8nluepgt5u0f" path="res://Assets/Images/gebco_08_rev_elev_21600x10800.png" id="2_vc6j3"]
+[ext_resource type="Shader" path="res://Assets/Shaders/PlanetTerrainShader.gdshader" id="2_y4vca"]
 [ext_resource type="Script" path="res://Planet/PlanetData.cs" id="3_6i60t"]
-[ext_resource type="Shader" path="res://Planet/LOD/PlanetTerrainShader.gdshader" id="3_ylsc5"]
 
 [sub_resource type="Curve" id="Curve_4sr00"]
-_data = [Vector2(0, 0), 0.0, 1.32536, 0, 1, Vector2(1, 1), 0.0, 0.0, 1, 0]
+_data = [Vector2(0, 0), 0.0, 1.0, 0, 1, Vector2(1, 1), 1.0, 0.0, 1, 0]
 point_count = 2
 
 [sub_resource type="CurveTexture" id="CurveTexture_0rbgi"]
 curve = SubResource("Curve_4sr00")
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_fbba6"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_w4k3g"]
 render_priority = 0
-shader = ExtResource("3_ylsc5")
+shader = ExtResource("2_y4vca")
 shader_parameter/position_list = null
 shader_parameter/radius = null
-shader_parameter/is_debug = null
+shader_parameter/is_colorize_lod = null
 shader_parameter/is_cube = null
 shader_parameter/is_texture_1D = null
+shader_parameter/is_culling = null
 shader_parameter/height_scale = null
 shader_parameter/normal_strength = null
 shader_parameter/resolution = null
@@ -35,17 +35,17 @@ shader_parameter/seed = 1207.01
 
 [resource]
 script = ExtResource("3_6i60t")
-Radius = 500.0
-HeightScale = 15.0
+Radius = 100.0
+HeightScale = 12.0
 Resolution = 15
 MaximumNodes = 40000
 SubFactor = 4.0
 MorphFactor = 0.25
-AlbedoMap = ExtResource("1_nktxi")
-HeightMap = ExtResource("2_ndq2v")
-NormalMap = ExtResource("3_0ippi")
+AlbedoMap = ExtResource("1_gagem")
+HeightMap = ExtResource("2_vc6j3")
 HeightGradient = SubResource("CurveTexture_0rbgi")
 NormalStrength = 5.0
-ShaderMaterial = SubResource("ShaderMaterial_fbba6")
-DebugMode = false
+ShaderMaterial = SubResource("ShaderMaterial_w4k3g")
+ColorizeLod = false
 CubeMode = false
+Culling = true

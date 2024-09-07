@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://depmg4x8sg4vp"
+path="res://.godot/imported/ComputeGenerateNormals.glsl-5e41309d6e82383e49a912ee60842d22.res"
+
+[deps]
+
+source_file="res://ComputeShaders/GLSL/ComputeGenerateNormals.glsl"
+dest_files=["res://.godot/imported/ComputeGenerateNormals.glsl-5e41309d6e82383e49a912ee60842d22.res"]
+
+[params]
+

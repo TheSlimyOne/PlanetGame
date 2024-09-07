@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3 uid="uid://djbm886fr02gs"]
 
-[ext_resource type="Script" path="res://Planet/Voronoi/MeshVisualizer.cs" id="1_b3v2q"]
+[ext_resource type="Script" path="res://Voronoi/MeshVisualizer.cs" id="1_b3v2q"]
 
 [node name="Node3D" type="Node3D"]
 

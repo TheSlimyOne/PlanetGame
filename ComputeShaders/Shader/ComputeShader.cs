@@ -14,9 +14,8 @@ public abstract partial class ComputeShader<TEnum> : GodotObject where TEnum : E
 	protected Rid _shader;
 	protected Rid _pipeline;
 
-	protected Array<RDUniform> _bindings = new();
-    protected System.Collections.Generic.Dictionary<TEnum, ComputeShaderUniform> _computeShaderUniforms;
 
+    protected System.Collections.Generic.Dictionary<TEnum, ComputeShaderUniform> _computeShaderUniforms;
 
     protected ComputeShader(string shaderFilePath, ref RenderingDevice rd) 
     {
@@ -69,16 +68,17 @@ public abstract partial class ComputeShader<TEnum> : GodotObject where TEnum : E
 
     protected void CreateUniformSet()
     {
+        Array<RDUniform> bindings = new();
         for(int i = 0; i < _computeShaderUniforms.Count; i++)
         {
             TEnum @enum = (TEnum)Enum.ToObject(typeof(TEnum), i);
             ComputeShaderUniform computeShaderUniform = _computeShaderUniforms[@enum];
-            _computeShaderUniforms[@enum] = computeShaderUniform.RebindUniform(i);
+            _computeShaderUniforms[@enum] = computeShaderUniform.RebindUniform(_rd, i);
 
-            _bindings.Add(_computeShaderUniforms[@enum].Uniform);
+            bindings.Add(_computeShaderUniforms[@enum].Uniform);
         }
 
-        _uniformSet = _rd.UniformSetCreate(_bindings, _shader, 0);
+        _uniformSet = _rd.UniformSetCreate(bindings, _shader, 0);
     }
 
     public void SubmitThenSync()
@@ -87,13 +87,12 @@ public abstract partial class ComputeShader<TEnum> : GodotObject where TEnum : E
        _rd.Sync();
     }
 
-    public void CleanupGPU()
+    public virtual void CleanupGPU()
 	{
 		if (_rd == null) return;
-        _bindings.Clear();
 		foreach (ComputeShaderUniform computeShaderUniform in _computeShaderUniforms.Values)
 		{
-			computeShaderUniform.FreeRid();
+            computeShaderUniform.Free();
 		}
 
 		_rd.FreeRid(_pipeline);

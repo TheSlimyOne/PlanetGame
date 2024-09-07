@@ -5,9 +5,12 @@ namespace Uniform;
 
 public partial class StorageBufferUniform : ComputeShaderUniform
 {
+    public int Indirect {get; private set;}
+    
     public  StorageBufferUniform(RenderingDevice renderingDevice, int binding, byte[] data, int indirect = 0) : base(renderingDevice, binding)
     {
-        Rid = renderingDevice.StorageBufferCreate((uint)data.Length, data, usage: (RenderingDevice.StorageBufferUsage)indirect);
+        Indirect = indirect;
+        Rid = renderingDevice.StorageBufferCreate((uint)data.Length, data, usage: (RenderingDevice.StorageBufferUsage)Indirect);
         Uniform = new()
         {
             UniformType = RenderingDevice.UniformType.StorageBuffer,
@@ -19,6 +22,7 @@ public partial class StorageBufferUniform : ComputeShaderUniform
     public StorageBufferUniform(StorageBufferUniform storageBufferUniform, int binding) : base(storageBufferUniform._rd, binding)
     {
         Rid = storageBufferUniform.Rid;
+        Indirect = storageBufferUniform.Indirect;
         Uniform = new()
         {
             UniformType = RenderingDevice.UniformType.StorageBuffer,
@@ -32,9 +36,12 @@ public partial class StorageBufferUniform : ComputeShaderUniform
         _rd.BufferUpdate(Rid, 0, (uint)data.Length, data);
     }
 
-    public override StorageBufferUniform RebindUniform(int binding)
+    public override StorageBufferUniform RebindUniform(RenderingDevice rd, int binding)
     {
-        return new StorageBufferUniform(this, binding);
+        if (rd == _rd)
+            return new StorageBufferUniform(this, binding);
+        else 
+            return new StorageBufferUniform(rd, binding, GetByteData(), Indirect); 
     }
     
 }

@@ -203,21 +203,6 @@ public partial class PlanetData : Resource
         }
     }
     private Texture2D _heightMap = new PlaceholderTexture2D();
-    
-    [Export]
-    public Texture2D NormalMap
-    {
-        get => _normalMap;
-        set
-        {
-            if (_normalMap != value)
-            {
-                _normalMap = value;
-                EmitChanged();
-            }
-        }
-    }
-    private Texture2D _normalMap = new PlaceholderTexture2D();
 
     [Export]
     public CurveTexture HeightGradient
@@ -276,11 +261,11 @@ public partial class PlanetData : Resource
 		_shaderMaterial.SetShaderParameter("is_texture_1D", _albedoMap is GradientTexture1D);
 		_shaderMaterial.SetShaderParameter("height_map", _heightMap);
 		_shaderMaterial.SetShaderParameter("height_scale", _heightScale);
-		_shaderMaterial.SetShaderParameter("is_debug", _debugMode);
+		_shaderMaterial.SetShaderParameter("is_colorize_lod", _colorizeLod);
 		_shaderMaterial.SetShaderParameter("is_cube", _cubeMode);
+		_shaderMaterial.SetShaderParameter("is_culling", _culling);
 		_shaderMaterial.SetShaderParameter("resolution", _resolution);
 		_shaderMaterial.SetShaderParameter("normal_strength", _normalStrength);
-		_shaderMaterial.SetShaderParameter("normal_map", _normalMap);
 	}
 
     #endregion
@@ -289,19 +274,19 @@ public partial class PlanetData : Resource
     #region Debug Settings
     [ExportGroup("Debug Settings")]
     [Export]
-    public bool DebugMode
+    public bool ColorizeLod
     {
-        get => _debugMode;
+        get => _colorizeLod;
         set
         {
-            if (_debugMode != value)
+            if (_colorizeLod != value)
             {
-                _debugMode = value;
+                _colorizeLod = value;
                 EmitChanged();
             }
         }
     }
-    private bool _debugMode;
+    private bool _colorizeLod = false;
 
     [Export]
     public bool CubeMode
@@ -316,7 +301,22 @@ public partial class PlanetData : Resource
             }
         }
     }
-    private bool _cubeMode;
+    private bool _cubeMode = false;
+    
+    [Export]
+    public bool Culling
+    {
+        get => _culling;
+        set
+        {
+            if (_culling != value)
+            {
+                _culling = value;
+                EmitChanged();
+            }
+        }
+    }
+    private bool _culling = true;
     #endregion
 
     
