@@ -12,11 +12,10 @@ public partial class SurfaceController : MultiMeshInstance3D
 	[Export] public WorldEnvironment WorldEnvironment;
 	[Export] public DirectionalLight3D MainLightSource;
 
-	[Export] public Node3D RotationGimbal;
-
 	[ExportGroup("Colliders")]
 	[Export] public StaticBody3D InnerCollision;
 	[Export] public StaticBody3D OuterCollision;
+	[Export] private MeshInstance3D _shadowCaster;
 
 	[ExportGroup("Movement Settings")]
 	[Export] private Vector2 MouseSensitivity = new Vector2(0.09f, 0.09f);
@@ -35,15 +34,16 @@ public partial class SurfaceController : MultiMeshInstance3D
 
 	public bool Processing;
 	private RenderingDevice _rd;
-	private RenderingDevice _normalRd;
 
 	private Vector2 _mouseCameraRotation;
 	private Vector2 _keyCameraRotation;
 	private Vector3 _direction = Vector3.Zero;
 
+	const float MINIMUM_RADIUS_SCALE = 0.999f;
+
 	public override void _Ready()
 	{
-		_planetController = (PlanetController)GetParent().GetParent();
+		_planetController = (PlanetController)GetParent();
 
 		float radius = _planetController.PlanetData.Radius;
 
@@ -52,13 +52,12 @@ public partial class SurfaceController : MultiMeshInstance3D
 
 		ExtraCullMargin = 2 * _planetController.PlanetData.Radius;
 
-		InnerCollision.Transform = _planetController.PlanetData.Translation;
-		OuterCollision.Transform = _planetController.PlanetData.Translation;
-	
 		CollisionShape3D InnerCollisionShape = InnerCollision.GetChild<CollisionShape3D>(0);
 		CollisionShape3D OuterCollisionShape = OuterCollision.GetChild<CollisionShape3D>(0);
 
-		((SphereShape3D)InnerCollisionShape.Shape).Radius = 0.99f * radius;
+		_shadowCaster.Mesh = new SphereMesh(){ Radius = MINIMUM_RADIUS_SCALE * radius, Height = 2 * MINIMUM_RADIUS_SCALE * radius};
+
+		((SphereShape3D)InnerCollisionShape.Shape).Radius = MINIMUM_RADIUS_SCALE * radius;
 		((SphereShape3D)OuterCollisionShape.Shape).Radius = radius + _planetController.PlanetData.HeightScale;
 
 
@@ -115,6 +114,8 @@ public partial class SurfaceController : MultiMeshInstance3D
 			Processing = false;
 			_computeCullShader.CleanupGPU();
 			_computeCopyShader.CleanupGPU();
+			_rd.Free();
+       		_rd = null;
 		}
 	}
 
@@ -151,7 +152,6 @@ public partial class SurfaceController : MultiMeshInstance3D
 		_direction.X += Input.GetActionStrength("move_left") - Input.GetActionStrength("move_right");
 		_direction.Z += Input.GetActionStrength("move_forward") - Input.GetActionStrength("move_backward");
 		_direction = _direction.Clamp(-1, 1);
-		
 
 		_keyCameraRotation.X += Input.GetActionStrength("rotate_right") - Input.GetActionStrength("rotate_left");
 		_keyCameraRotation.Y += Input.GetActionStrength("rotate_up") - Input.GetActionStrength("rotate_down");
@@ -172,8 +172,12 @@ public partial class SurfaceController : MultiMeshInstance3D
 
 		// External Objects that need to rotate to simulate the effect
 		WorldEnvironment.Environment.SkyRotation = _planetController.PlanetData.Rotation.Basis.GetEuler();
-		RotationGimbal.GlobalRotation = _planetController.PlanetData.Rotation.Basis.GetEuler();
+		_planetController.SurfaceAttachment.Transform = _planetController.PlanetData.GetPlanetTRMatrix();
 
+		InnerCollision.Transform = _planetController.PlanetData.Translation;
+		OuterCollision.Transform = _planetController.PlanetData.Translation;
+
+		// Reset or Lerp movement
 		_mouseCameraRotation = Vector2.Zero;
 		_keyCameraRotation = _keyCameraRotation.Lerp(Vector2.Zero, weight);
 		_direction = _direction.Lerp(Vector3.Zero, weight);

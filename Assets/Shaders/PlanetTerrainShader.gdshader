@@ -6,6 +6,7 @@ uniform float radius;
 varying float elevation;
 uniform sampler2D albedo_map : repeat_disable;
 uniform sampler2D height_map : repeat_disable;
+uniform sampler2D normal_map : repeat_disable;
 uniform sampler2D height_gradient : repeat_disable;
 uniform bool is_colorize_lod;
 uniform bool is_cube;
@@ -309,8 +310,8 @@ void vertex() {
 		vec4(normalize(transformations[2].xyz), 0),
 		vec4(0, 0, 0, 1)
 	);
+	
 	NORMAL = (vec4(object_space_pos, 1) * rotationOnly).xyz;
-
 	elevation = textureLod(height_map, point_on_sphere_to_UV(object_space_pos), 0).r;
 	//elevation *= textureLod(height_gradient, vec2(elevation, 0), 0).r;
 
@@ -348,8 +349,10 @@ void fragment() {
 	
 	vec3 surface_texture = textureLod(albedo_map, uv_point, 0.0).rgb;
 	
+	//NORMAL = height_to_normal(elevation, normal_strength, VERTEX, NORMAL);
 	
-	NORMAL = height_to_normal(elevation, normal_strength, VERTEX, NORMAL);
+	NORMAL_MAP = textureLod(normal_map, uv_point, 0.0).rgb;
+	// NORMAL_MAP_DEPTH = height_scale;
 	
 	ALBEDO = is_colorize_lod ? debug_color : surface_texture;
 }

@@ -5,25 +5,27 @@ namespace Uniform;
 
 public partial class TextureUniform : ComputeShaderUniform
 {
-    public RDTextureFormat Format { get; private set; }
+    public RDTextureFormat TextureFormat { get; private set; }
     public RDSamplerState SamplerState { get; private set; }
 
-    public TextureUniform(RenderingDevice renderingDevice, int binding, Texture2D texture, bool isSampler = false) : base(renderingDevice, binding)
+    public TextureUniform(RenderingDevice renderingDevice, int binding, Texture2D texture, Image.Format imageFormat = Image.Format.Max, bool clearMipmaps = false, bool isSampler = false) : base(renderingDevice, binding)
     {
-        Image image = RenderingServer.Texture2DGet(texture.GetRid());
+        Image image = texture.GetImage();
 
-        Format = new RDTextureFormat()
+        TextureFormat = new RDTextureFormat()
         {
             Width = (uint)image.GetWidth(),
             Height = (uint)image.GetHeight(),
             Format = RenderingDevice.DataFormat.R8Unorm,
             UsageBits = RenderingDevice.TextureUsageBits.StorageBit | RenderingDevice.TextureUsageBits.SamplingBit | RenderingDevice.TextureUsageBits.CanCopyFromBit
         };
-        image.ClearMipmaps();
-        image.Convert(Image.Format.L8);
-        Array<byte[]> data = new() { image.GetData() };
-
-        Rid = renderingDevice.TextureCreate(Format, new RDTextureView(), data);
+        
+        if (clearMipmaps)
+            image.ClearMipmaps();
+        
+        image.Convert(imageFormat == Image.Format.Max ? image.GetFormat() : imageFormat);
+    
+        Rid = renderingDevice.TextureCreate(TextureFormat, new RDTextureView(), new Array<byte[]>(){ image.GetData() });
 
         Uniform = new()
         {
@@ -33,7 +35,7 @@ public partial class TextureUniform : ComputeShaderUniform
 
         if (isSampler)
         {
-            SamplerState = new RDSamplerState() { MagFilter = RenderingDevice.SamplerFilter.Linear };
+            SamplerState = new RDSamplerState() { MagFilter = RenderingDevice.SamplerFilter.Linear, MinFilter = RenderingDevice.SamplerFilter.Linear };
             Uniform.AddId(_rd.SamplerCreate(SamplerState));
         }
         Uniform.AddId(Rid);
@@ -42,8 +44,8 @@ public partial class TextureUniform : ComputeShaderUniform
  
     public TextureUniform(RenderingDevice renderingDevice, int binding, RDTextureFormat format, bool isSampler = false, byte[] textureData = null) : base(renderingDevice, binding)
     {
-        Format = format;
-        Rid = renderingDevice.TextureCreate(Format, new RDTextureView(), textureData != null ? new Array<byte[]>() { textureData } : null);
+        TextureFormat = format;
+        Rid = renderingDevice.TextureCreate(TextureFormat, new RDTextureView(), textureData != null ? new Array<byte[]>() { textureData } : null);
 
         Uniform = new()
         {
@@ -56,12 +58,13 @@ public partial class TextureUniform : ComputeShaderUniform
             SamplerState = new RDSamplerState();
             Uniform.AddId(_rd.SamplerCreate(SamplerState));
         }
+        
         Uniform.AddId(Rid);
     }
 
     private TextureUniform(TextureUniform textureUniform, int binding) : base(textureUniform._rd, binding)
     {
-        Format = textureUniform.Format;
+        TextureFormat = textureUniform.TextureFormat;
         Rid = textureUniform.Rid;
 
         Uniform = new()
@@ -79,12 +82,6 @@ public partial class TextureUniform : ComputeShaderUniform
 
     }
 
-    // private Rid CreateSampler()
-    // {
-    //     RDSamplerState samplerState = new();
-    //     _rd.SamplerCreate(new RDSamplerState());
-    // }
-
     public Texture2Drd GetTexture2Drd()
     {
         return new Texture2Drd() { TextureRdRid = Rid };
@@ -93,7 +90,7 @@ public partial class TextureUniform : ComputeShaderUniform
     public Image GetImage(Image.Format format)
     {
         byte[] bytes = _rd.TextureGetData(Rid, 0);
-        return Image.CreateFromData((int)Format.Width, (int)Format.Height, false, format, bytes); ;
+        return Image.CreateFromData((int)TextureFormat.Width, (int)TextureFormat.Height, false, format, bytes); ;
     }
 
     public void SaveImage(string path, Image.Format format)
@@ -111,7 +108,7 @@ public partial class TextureUniform : ComputeShaderUniform
 
     public Color GetPixel(int x, int y)
     {
-        return RenderingServer.Texture2DGet(GetTexture2Drd().GetRid()).GetPixel(x, y);
+        return GetTexture2Drd().GetImage().GetPixel(x, y);
     }
 
     public void ClearTexture(Color color)
@@ -131,7 +128,7 @@ public partial class TextureUniform : ComputeShaderUniform
         else
         {
             bool isSampler = Uniform.UniformType == RenderingDevice.UniformType.SamplerWithTexture;
-            return new TextureUniform(rd, binding, Format, isSampler, GetByteData());
+            return new TextureUniform(rd, binding, TextureFormat, isSampler, GetByteData());
         }
     }
 

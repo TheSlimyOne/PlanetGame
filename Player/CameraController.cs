@@ -1,3 +1,4 @@
+using System;
 using Godot;
 using Godot.Collections;
 
@@ -8,25 +9,30 @@ public partial class CameraController : Camera3D
 	[Export] public WorldEnvironment WorldEnvironment;
 	[Export] public float DistanceFromSurface { get; private set; }
 	private PlanetController _planetController;
-	
+
 	private MultiMeshInstance3D _cameraLine = new();
 	private MultiMeshInstance3D _planetLine = new();
-	private MultiMeshInstance3D _debugLine = new();
+	private MultiMeshInstance3D _debugPlot = new();
 
 	[Export] public float BaseZoomSpeed;
 	[Export] public float RayLength = 5000;
-	
+	Image heightMap;
+
 
 	[Export] public bool Locked { get; private set; }
 
-    public override void _Ready()
+	public override void _Ready()
 	{
-		_planetController = (PlanetController)GetParent().GetParent();
+		_planetController = (PlanetController)GetParent();
 
-		GetWindow().CallDeferred("add_child", _cameraLine);
-		GetWindow().CallDeferred("add_child", _planetLine);
-		GetWindow().CallDeferred("add_child", _debugLine);
-		_debugLine.Multimesh = new MultiMesh() { UseColors = true, Mesh = new SphereMesh() { Material = new StandardMaterial3D() { VertexColorUseAsAlbedo = true }, Radius = 2, Height = 4 }, TransformFormat = MultiMesh.TransformFormatEnum.Transform3D };
+		_planetController.SurfaceAttachment.CallDeferred("add_child", _cameraLine);
+		_planetController.SurfaceAttachment.CallDeferred("add_child", _planetLine);
+		_planetController.SurfaceAttachment.CallDeferred("add_child", _debugPlot);
+		_debugPlot.ExtraCullMargin = 2 * _planetController.PlanetData.Radius;
+
+		heightMap = _planetController.PlanetData.HeightMap.GetImage();
+
+		_debugPlot.Multimesh = new MultiMesh() { UseColors = true, Mesh = new SphereMesh() { RadialSegments = 8, Rings = 4, Material = new StandardMaterial3D() { VertexColorUseAsAlbedo = true }, Radius = 0.25f, Height = 0.5f }, TransformFormat = MultiMesh.TransformFormatEnum.Transform3D };
 	}
 
 	public void CalculateRayToPlanet(Vector3 from, Vector3 to)
@@ -34,48 +40,95 @@ public partial class CameraController : Camera3D
 		PhysicsDirectSpaceState3D spaceState = GetWorld3D().DirectSpaceState;
 		Rid inner = _planetController.SurfaceController.InnerCollision.GetRid();
 		Rid outer = _planetController.SurfaceController.OuterCollision.GetRid();
-		Dictionary[] intersections =  new Dictionary[4];
+		Dictionary[] intersections = new Dictionary[4];
 
-		intersections[0] = spaceState.IntersectRay( new PhysicsRayQueryParameters3D()
+		intersections[0] = spaceState.IntersectRay(new PhysicsRayQueryParameters3D()
 		{
 			To = to,
 			From = from,
-			Exclude = new Array<Rid>(){ inner }
-		} );
-		intersections[1] = spaceState.IntersectRay( new PhysicsRayQueryParameters3D()
-		{
-			To = from,
-			From = to,
-			Exclude = new Array<Rid>(){ inner }
-		} );
-		intersections[2] = spaceState.IntersectRay( new PhysicsRayQueryParameters3D()
+			Exclude = new Array<Rid>() { inner }
+		});
+		intersections[1] = spaceState.IntersectRay(new PhysicsRayQueryParameters3D()
 		{
 			To = to,
 			From = from,
-			Exclude = new Array<Rid>(){ outer }
-		} );
-		intersections[3] = spaceState.IntersectRay( new PhysicsRayQueryParameters3D()
+			Exclude = new Array<Rid>() { outer }
+		});
+		intersections[2] = spaceState.IntersectRay(new PhysicsRayQueryParameters3D()
 		{
 			To = from,
 			From = to,
-			Exclude = new Array<Rid>(){ outer }
-		} );
-		
-		Color[] colors = new Color[] { Colors.Red, Colors.Blue, Colors.Yellow, Colors.Green };
-		_debugLine.Multimesh.InstanceCount = 4;
-		for (int i = 0; i < 4; i++)
-		{
-			if (intersections[i].ContainsKey("position"))
-			{
-				Vector3 position = (Vector3)intersections[i]["position"];
-				// position = _planetController.PlanetData.Rotation * position;
+			Exclude = new Array<Rid>() { inner }
+		});
 
-				Transform3D transform = new Transform3D(Basis.Identity, position);
-				
-				_debugLine.Multimesh.SetInstanceColor(i, colors[i]);
-				_debugLine.Multimesh.SetInstanceTransform(i, transform);
-			}
+		int identity = (intersections[0].ContainsKey("position") ? 1 << 2 : 0) | (intersections[1].ContainsKey("position") ? 1 << 1 : 0) | (intersections[2].ContainsKey("position") ? 1 : 0);
+
+		Vector3 start;
+		Vector3 end;
+
+		switch (identity)
+		{
+			case 7:
+				start = (Vector3)intersections[0]["position"];
+				end = (Vector3)intersections[1]["position"];
+				break;
+			case 5:
+				start = (Vector3)intersections[0]["position"];
+				end = (Vector3)intersections[2]["position"];
+				break;
+			case 3:
+				start = from;
+				end = (Vector3)intersections[1]["position"];
+				break;
+			case 1:
+				start = from;
+				end = (Vector3)intersections[2]["position"];
+				break;
+			default:
+				_debugPlot.Multimesh.InstanceCount = 0;
+				return;
 		}
+
+		int amount = 30 * Mathf.RoundToInt(start.DistanceTo(end));
+	
+		_debugPlot.Multimesh.InstanceCount = 1;
+
+		for (int i = 0; i < amount; i++)
+		{
+
+			Vector3 position = start.Lerp(end, i / (amount - 1f));
+
+			position -= _planetController.PlanetData.Translation.Origin;
+			position = _planetController.PlanetData.Rotation.Basis.Transposed().Orthonormalized() * position;
+
+			Vector3 directPath = position;
+
+			Vector3 surfacePath = position.Normalized();
+			Vector2I size = heightMap.GetSize();
+			Vector2 uv = VectorUtils.PointOnSphereToUV(surfacePath);
+			
+			float height = heightMap.GetPixelv(new Vector2I(Mathf.RoundToInt(size.X * uv.X), Mathf.RoundToInt(size.Y * uv.Y))).R * _planetController.PlanetData.HeightScale;
+
+			surfacePath = surfacePath * _planetController.PlanetData.Radius + surfacePath * height;
+
+			if (surfacePath.Length() >= directPath.Length())
+			{
+				Transform3D directTransform = new(Basis.Identity, directPath);
+				_debugPlot.Multimesh.SetInstanceTransform(0, directTransform);
+
+				return;
+			}
+			// Transform3D directTransform = new(Basis.Identity, directPath);
+			// Transform3D surfaceTransform = new(Basis.Identity, surfacePath);
+
+
+			// _debugPlot.Multimesh.SetInstanceColor(2 * i + 0, Colors.Red);
+			// _debugPlot.Multimesh.SetInstanceColor(2 * i + 1, Colors.Blue);
+			// _debugPlot.Multimesh.SetInstanceTransform(2 * i + 0, directTransform);
+			// _debugPlot.Multimesh.SetInstanceTransform(2 * i + 1, surfaceTransform);
+
+		}
+		_debugPlot.Multimesh.InstanceCount = 0;
 
 	}
 
@@ -100,7 +153,7 @@ public partial class CameraController : Camera3D
 			else
 				LockMouse();
 		}
-		
+
 		if (Input.IsActionJustPressed("change_view"))
 		{
 			Viewport viewport = GetViewport();
@@ -115,26 +168,24 @@ public partial class CameraController : Camera3D
 		}
 
 		if (@event is InputEventMouseButton mouseEvent)
-        {
-            if (mouseEvent.ButtonIndex == MouseButton.Left && mouseEvent.Pressed)
-            {
+		{
+			if (mouseEvent.ButtonIndex == MouseButton.Left && mouseEvent.Pressed)
+			{
 				Vector2 mousePosition = GetViewport().GetMousePosition();
 				Vector3 rayOrigin = ProjectRayOrigin(mousePosition);
 				Vector3 rayEnd = rayOrigin + ProjectRayNormal(mousePosition) * RayLength;
-
 				CalculateRayToPlanet(rayOrigin, rayEnd);
-
-            }
-        }
+			}
+		}
 	}
-	
+
 	public override void _PhysicsProcess(double delta)
 	{
 		Vector3 direction = Vector3.Zero;
 		float by = (float)delta;
-		
+
 		direction.Y = Input.GetActionStrength("move_up") - Input.GetActionStrength("move_down");
-		
+
 		DistanceFromSurface += direction.Y * by * CalculateSpeed(DistanceFromSurface, 0, _planetController.PlanetData.Radius * 2, BaseZoomSpeed);
 		DistanceFromSurface = Mathf.Clamp(DistanceFromSurface, 0, float.MaxValue);
 		UIElements.SetDistance(DistanceFromSurface);
@@ -152,7 +203,7 @@ public partial class CameraController : Camera3D
 			new Vector4(viewMatrix[2].X, viewMatrix[2].Y, viewMatrix[2].Z, 0),
 			new Vector4(viewMatrix[3].X, viewMatrix[3].Y, viewMatrix[3].Z, 1)
 		);
-		
+
 		return projectionMatrix * viewMatrix4;
 	}
 

@@ -133,5 +133,15 @@ public static class VectorUtils
         return new Vector3(x, y, z);
     }
 
+    public static Vector2 PointOnSphereToUV(Vector3 point)
+    {
+        float longitude = Mathf.Atan2(point.X, point.Z);
+        float latitude = Mathf.Asin(-point.Y);
+        float u = (longitude / Mathf.Pi + 1) * 0.5f;
+        float v = latitude / Mathf.Pi + 0.5f;
+
+        return new Vector2(u, v);
+    }
+
 }
 

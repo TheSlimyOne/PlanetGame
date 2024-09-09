@@ -22,7 +22,6 @@ public partial class ComputeCull : ComputeShader<ComputeCull.BufferNames>
 		EXTERNAL_DATA,
 		DEBUG_DATA,
 		HEIGHT_MAP,
-		HEIGHT_GRADIENT,
 		KEYS,
 	}
 
@@ -91,10 +90,7 @@ public partial class ComputeCull : ComputeShader<ComputeCull.BufferNames>
 			),
 
 			[BufferNames.HEIGHT_MAP] = new TextureUniform(_rd, (int)BufferNames.HEIGHT_MAP,
-				PlanetController.PlanetData.HeightMap, true),
-
-			[BufferNames.HEIGHT_GRADIENT] = new TextureUniform(_rd, (int)BufferNames.HEIGHT_GRADIENT,
-				PlanetController.PlanetData.HeightGradient),
+				PlanetController.PlanetData.HeightMap, isSampler: true, imageFormat: Image.Format.R8),
 
 			[BufferNames.KEYS] = new TextureUniform(_rd, (int)BufferNames.KEYS,
 				new RDTextureFormat()

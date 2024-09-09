@@ -51,8 +51,7 @@ layout(set = 0, binding = 8, std430) buffer restrict Debug {
 };
 
 layout(set = 0, binding = 9) uniform sampler2D heightMap;
-layout(set = 0, binding = 10, r8) restrict uniform readonly image2D heightGradient;
-layout(set = 0, binding = 11, rgba32f) restrict writeonly uniform image2D DisplayKeys;
+layout(set = 0, binding = 10, rgba32f) restrict writeonly uniform image2D DisplayKeys;
 
 struct Triangle {
     vec3 v0; // (0, 0)
@@ -302,7 +301,6 @@ float calculateLODToCam(vec3 from) {
 		vec4(0, 0, 0, 1)
 	);
     vec3 normal = (vec4(from, 1) * rotationOnly).xyz;
-
 
     point = point + (normal * height * heightScale);
 

@@ -48,4 +48,25 @@ public static class Utilities
         );
     }
 
+    public static MeshInstance3D DrawLineDebug(Node node, Vector3 from, Vector3 to, Color color)
+	{
+		ImmediateMesh lineMesh = new();
+
+		lineMesh.SurfaceBegin(Mesh.PrimitiveType.Lines, new OrmMaterial3D() { AlbedoColor = color, MetallicSpecular = 0 });
+		lineMesh.SurfaceAddVertex(from);
+		lineMesh.SurfaceAddVertex(to);
+		lineMesh.SurfaceEnd();
+
+		MeshInstance3D meshInstance = new()
+		{
+			Name = $"{from}_{to}_DEBUG",
+			Mesh = lineMesh,
+			CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+		};
+
+        node.GetWindow().CallDeferred("add_child", meshInstance);
+
+		return meshInstance;
+	}
+
 }

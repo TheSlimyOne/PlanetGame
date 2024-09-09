@@ -1,6 +1,8 @@
 using Godot;
 using Planet;
+using Uniform;
 using System;
+using Shader;
 
 public partial class UIElements : CanvasLayer
 {
@@ -15,6 +17,10 @@ public partial class UIElements : CanvasLayer
 	[Export] private Button _btnColorizeLod;
 	[Export] private Button _btnCubeMode;
 	[Export] private Button _btnCulling;
+	[Export] private Button _btnGenerateNormals;
+
+	[ExportGroup("Compute Shader")]
+	[Export(PropertyHint.File)] private string _normalPath;
 
 	private int _all_max;
 	private int _culled_max;
@@ -44,6 +50,13 @@ public partial class UIElements : CanvasLayer
 	public override void _Process(double delta)
 	{
 		SetFPSCount((int)Engine.GetFramesPerSecond());
+		// SetProfiler();
+	}
+
+	public void SetProfiler()
+	{
+		GD.Print(Performance.GetMonitor(Performance.Monitor.RenderTotalDrawCallsInFrame));
+		GD.Print(Performance.GetMonitor(Performance.Monitor.ObjectCount));
 	}
 
 	public void EnableOrDisableProcessing()
@@ -76,5 +89,20 @@ public partial class UIElements : CanvasLayer
 		_planetController.PlanetData.Culling = currentSetting;
 		_btnCulling.Text = currentSetting ? "Disable Culling" : "Enable Culling";
 		_planetController.PlanetData.SetMaterialParameters();
+	}
+
+	public void GenerateNormals()
+	{
+		RenderingDevice rd = RenderingServer.CreateLocalRenderingDevice();
+        ComputeNormals computeNormals = new(_normalPath, ref rd) { PlanetController = _planetController };
+        computeNormals.CreateUniforms();
+		computeNormals.Ready();
+		computeNormals.SaveNormalMap("Normal.png");
+		rd.Submit();
+		rd.Sync();
+		computeNormals.CleanupGPU();
+		rd.Free();
+        rd = null;
+
 	}
 }

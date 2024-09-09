@@ -107,6 +107,11 @@ public partial class PlanetData : Resource
         return _translation * _rotation * _scale;
     }
     
+    public Transform3D GetPlanetTRMatrix()
+    {
+        return _translation * _rotation;
+    }
+    
     #endregion
 
     #region LOD Settings
@@ -203,21 +208,21 @@ public partial class PlanetData : Resource
         }
     }
     private Texture2D _heightMap = new PlaceholderTexture2D();
-
+    
     [Export]
-    public CurveTexture HeightGradient
+    public Texture2D NormalMap
     {
-        get => _heightGradient;
+        get => _normalMap;
         set
         {
-            if (_heightGradient != value)
+            if (_normalMap != value)
             {
-                _heightGradient = value;
+                _normalMap = value;
                 EmitChanged();
             }
         }
     }
-    private CurveTexture _heightGradient = new CurveTexture() { Curve = new Curve() };
+    private Texture2D _normalMap = new PlaceholderTexture2D();
 
     [Export]
     public float NormalStrength
@@ -255,11 +260,11 @@ public partial class PlanetData : Resource
     public void SetMaterialParameters()
 	{
 		_shaderMaterial.SetShaderParameter("position_list", GenerateTrianglePoints());
-		_shaderMaterial.SetShaderParameter("height_gradient", _heightGradient);
 		_shaderMaterial.SetShaderParameter("radius", _radius);
 		_shaderMaterial.SetShaderParameter("albedo_map", _albedoMap);
 		_shaderMaterial.SetShaderParameter("is_texture_1D", _albedoMap is GradientTexture1D);
 		_shaderMaterial.SetShaderParameter("height_map", _heightMap);
+		_shaderMaterial.SetShaderParameter("normal_map", _normalMap);
 		_shaderMaterial.SetShaderParameter("height_scale", _heightScale);
 		_shaderMaterial.SetShaderParameter("is_colorize_lod", _colorizeLod);
 		_shaderMaterial.SetShaderParameter("is_cube", _cubeMode);
