@@ -380,7 +380,6 @@ public partial class PlanetData : Resource
 		Vector3 axisB = normal.Cross(axisA).Abs();
 		int triIndex = 0;
 		int vertexIndex = 0;
-
 		for (int y = 0; y < _resolution; y++)
 		{
 			for (int x = 0; x < _resolution - y; x++)
@@ -390,7 +389,7 @@ public partial class PlanetData : Resource
 				vertices[currentIndex] = normal + (percentage.X * axisA + percentage.Y * axisB);
 				uvs[currentIndex] = new Vector2(x, y);
 				normals[currentIndex] = normal;
-
+                GD.Print(uvs[currentIndex]);
 				if (x != _resolution - y - 1)
 				{
 					if (x == _resolution - y - 2)
@@ -426,6 +425,16 @@ public partial class PlanetData : Resource
 				}
 			}
 		}
+        string s = "[";
+        for (int i = 0; i < triangles.Length; i+=3)
+        {
+            Vector2 A = VectorUtils.toVector2(vertices[triangles[i + 0]]);
+            Vector2 B = VectorUtils.toVector2(vertices[triangles[i + 1]]);
+            Vector2 C = VectorUtils.toVector2(vertices[triangles[i + 2]]);
+            s += $"{A}, {B}, {C}, ";
+        }
+        s = s.Remove(s.Length - 2) + "]";
+        GD.Print(s);
 
 		ArrayMesh mesh = new();
 		Godot.Collections.Array arrays = new();

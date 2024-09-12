@@ -15,6 +15,7 @@ sky_material = SubResource("PanoramaSkyMaterial_eodwd")
 
 [sub_resource type="Environment" id="Environment_qqt2a"]
 background_mode = 2
+background_color = Color(0.801031, 0.808113, 0.836121, 1)
 sky = SubResource("Sky_emtpu")
 tonemap_mode = 2
 glow_enabled = true
@@ -123,7 +124,7 @@ script = ExtResource("5_0yfbu")
 UIElements = NodePath("CanvasLayer")
 WorldEnvironment = NodePath("../WorldEnvironment")
 DistanceFromSurface = 60.0
-BaseZoomSpeed = 5000.0
+BaseZoomSpeed = 500.0
 
 [node name="CanvasLayer" type="CanvasLayer" parent="CameraController" node_paths=PackedStringArray("_planetController", "_lblTriangleCount", "_lblFPS", "_lblDistance", "_lblLOD", "_btnProcessLod", "_btnColorizeLod", "_btnCubeMode", "_btnCulling", "_btnGenerateNormals")]
 script = ExtResource("6_upt2i")

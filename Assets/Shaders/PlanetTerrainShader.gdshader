@@ -33,8 +33,10 @@ int findMSB64(uvec2 key) {
     return (key.x == 0u) ? int(findMSB(key.y)) : int((findMSB(key.x) + 32u));
 }
 
-vec2 morphVertex(vec2 vertex, float morphK) {
-	float patchTessFactor = float(resolution - 1); // = nb of intervals per side of the primitive
+vec2 morphVertex(vec2 vertex, float current_lod, float morphK) {
+	float resolution_index = log2(float(resolution - 1));
+	
+	float patchTessFactor = pow(2, resolution_index + current_lod); // = nb of intervals per side of the primitive
 	vec2 fracPart = fract(vertex * patchTessFactor * 0.5);
 	fracPart *= 2.0 / patchTessFactor;
 
@@ -121,7 +123,7 @@ vec3 localPointToWorldPoint(vec2 point, vec3 vertexA, vec3 vertexB, vec3 vertexC
     return vertexA * point.x + vertexB * point.y + vertexC * (1.0 - point.x - point.y);
 }
 
-vec3 quad_space_to_world_space(vec2 point, uint meshPolygonID, uint rootID, float morph) {
+vec3 quad_space_to_world_space(vec2 point, uint meshPolygonID, uint rootID) {
     uint vertexBaseIndex = meshPolygonID * 5u;
     uint vertexKeyA = rootID;
     uint vertexKeyB = ((rootID >> 1u) ^ 1u) + ((rootID & 1u) << 1u);
@@ -130,7 +132,7 @@ vec3 quad_space_to_world_space(vec2 point, uint meshPolygonID, uint rootID, floa
     vec3 base_Triangle_b = (position_list[vertexBaseIndex + vertexKeyB + 1u]).xyz;
     vec3 base_Triangle_c = (position_list[vertexBaseIndex]).xyz;
 
-    return localPointToWorldPoint(morphVertex(point, morph), base_Triangle_a, base_Triangle_b, base_Triangle_c);
+    return localPointToWorldPoint(point, base_Triangle_a, base_Triangle_b, base_Triangle_c);
 }
 
 mat3 leaf_space(uvec4 key) {
@@ -266,6 +268,7 @@ float param_noise(vec3 p) {
 
 varying flat uvec4 key;
 varying flat uint flags;
+varying float morph;
 void vertex() {
 	if (is_culling) {
 		key = floatBitsToUint(texelFetch(key_image, getKeyCoordinate(int(INSTANCE_ID)), 0));
@@ -275,8 +278,7 @@ void vertex() {
 	flags = key.w >> 29u;
 	uint half = (key.w & 0xFFFF0u) >> 4u;
 	half = half | (half << 16u);
-	mediump float morph = unpackHalf2x16(half).x;
-
+	morph = unpackHalf2x16(half).x;
 	key.w &= 0xFu;
 	
 	
@@ -296,7 +298,7 @@ void vertex() {
 	}
 	
 	vec2 quad_position = leaf_space_to_quad_space(VERTEX, key);
-	vec3 world_position = quad_space_to_world_space(quad_position, key.z, key.w, 0);
+	vec3 world_position = quad_space_to_world_space(morphVertex(quad_position, float(getLevelInKey(key.xy)), 0.0 * morph), key.z, key.w);
 	VERTEX = is_cube ? world_position : point_on_cube_to_point_on_sphere(world_position);
 	
 	// Save the vertex for later
@@ -343,15 +345,15 @@ void fragment() {
 			break;
 	}
 	debug_color = mix(debug_color, child_color, 0.25f);
-	
+	//debug_color= mix(debug_color, vec3(morph, 0, morph), 0.25f);
 
 	vec2 uv_point = is_texture_1D ? vec2(elevation, 0.0) : point_on_sphere_to_UV(object_space_pos);
 	
 	vec3 surface_texture = textureLod(albedo_map, uv_point, 0.0).rgb;
 	
-	//NORMAL = height_to_normal(elevation, normal_strength, VERTEX, NORMAL);
+	NORMAL = height_to_normal(elevation, normal_strength, VERTEX, NORMAL);
 	
-	NORMAL_MAP = textureLod(normal_map, uv_point, 0.0).rgb;
+	//NORMAL_MAP = textureLod(normal_map, uv_point, 0.0).rgb;
 	// NORMAL_MAP_DEPTH = height_scale;
 	
 	ALBEDO = is_colorize_lod ? debug_color : surface_texture;

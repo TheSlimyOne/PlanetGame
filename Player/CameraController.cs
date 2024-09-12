@@ -7,7 +7,7 @@ public partial class CameraController : Camera3D
 {
 	[Export] public UIElements UIElements;
 	[Export] public WorldEnvironment WorldEnvironment;
-	[Export] public float DistanceFromSurface { get; private set; }
+	[Export] public float DistanceFromSurface { get; set; }
 	private PlanetController _planetController;
 
 	private MultiMeshInstance3D _cameraLine = new();
@@ -114,8 +114,8 @@ public partial class CameraController : Camera3D
 			if (surfacePath.Length() >= directPath.Length())
 			{
 				Transform3D directTransform = new(Basis.Identity, directPath);
+				_debugPlot.Multimesh.SetInstanceColor(0, Colors.Red);
 				_debugPlot.Multimesh.SetInstanceTransform(0, directTransform);
-
 				return;
 			}
 			// Transform3D directTransform = new(Basis.Identity, directPath);
@@ -164,6 +164,8 @@ public partial class CameraController : Camera3D
 			else if (viewport.DebugDraw == Viewport.DebugDrawEnum.Disabled)
 				viewport.DebugDraw = Viewport.DebugDrawEnum.Overdraw;
 			else if (viewport.DebugDraw == Viewport.DebugDrawEnum.Overdraw)
+				viewport.DebugDraw = Viewport.DebugDrawEnum.Unshaded;
+			else if (viewport.DebugDraw == Viewport.DebugDrawEnum.Unshaded)
 				viewport.DebugDraw = Viewport.DebugDrawEnum.Wireframe;
 		}
 
@@ -180,14 +182,7 @@ public partial class CameraController : Camera3D
 	}
 
 	public override void _PhysicsProcess(double delta)
-	{
-		Vector3 direction = Vector3.Zero;
-		float by = (float)delta;
-
-		direction.Y = Input.GetActionStrength("move_up") - Input.GetActionStrength("move_down");
-
-		DistanceFromSurface += direction.Y * by * CalculateSpeed(DistanceFromSurface, 0, _planetController.PlanetData.Radius * 2, BaseZoomSpeed);
-		DistanceFromSurface = Mathf.Clamp(DistanceFromSurface, 0, float.MaxValue);
+	{		
 		UIElements.SetDistance(DistanceFromSurface);
 		GlobalPosition = Vector3.Back * DistanceFromSurface;
 	}

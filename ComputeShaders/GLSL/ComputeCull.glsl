@@ -40,7 +40,7 @@ layout(set = 0, binding = 7, std430) buffer restrict readonly ExternalData {
     mat4 viewProjectionMatrix;         // 16 * 4 = 64 bytes
     vec4 cameraPosition;
     mat4 planetTransformMatrix;
-    float CameraFOV;     
+    float cameraFOV;     
     float subFactor;
     float morphFactor;
     float heightScale;
@@ -52,6 +52,7 @@ layout(set = 0, binding = 8, std430) buffer restrict Debug {
 
 layout(set = 0, binding = 9) uniform sampler2D heightMap;
 layout(set = 0, binding = 10, rgba32f) restrict writeonly uniform image2D DisplayKeys;
+layout(set = 0, binding = 11, rgba32f) restrict writeonly uniform image2D morphFactorImage;
 
 struct Triangle {
     vec3 v0; // (0, 0)
@@ -289,6 +290,23 @@ float calculateLOD(float dist, float fovy, float factor) {
     return clamp(-log2(num/dom), -1, 31);
 }
 
+
+float distanceFromCam(vec3 from) {
+    vec2 uv = point_on_sphere_to_UV(from);
+    float height = texture(heightMap, uv).x;
+    vec3 point = (vec4(from, 1) * planetTransformMatrix).xyz;
+    mat4 rotationOnly = mat4(
+		vec4(normalize(planetTransformMatrix[0].xyz), 0), 
+		vec4(normalize(planetTransformMatrix[1].xyz), 0), 
+		vec4(normalize(planetTransformMatrix[2].xyz), 0),
+		vec4(0, 0, 0, 1)
+	);
+    vec3 normal = (vec4(from, 1) * rotationOnly).xyz;
+
+    point = point + (normal * height * heightScale);
+    return distance(point, cameraPosition.xyz);
+}
+
 float calculateLODToCam(vec3 from) {
     vec2 uv = point_on_sphere_to_UV(from);
     float height = texture(heightMap, uv).x;
@@ -306,7 +324,7 @@ float calculateLODToCam(vec3 from) {
 
     return calculateLOD(
         distance(point, cameraPosition.xyz),
-        CameraFOV, // Must be in radians
+        cameraFOV, // Must be in radians
         subFactor
     );
 }
@@ -385,9 +403,9 @@ uint getJunctionFlags(uvec4 key, Triangle triangle, float lod) {
 uint getMorphFactor(vec3 point) {
     float lod = calculateLODToCam(point);
     float morphFactor = clamp((abs(fract(lod) - 1) - (1 - morphFactor))/morphFactor, 0, 1);
+    // float morphFactor = distanceFromCam(point);
     uint packedHalf = packHalf2x16(vec2(morphFactor, 0.0));
     uint halfFloat = packedHalf & 0xFFFF;
-
     return halfFloat << 4;
 }
 
@@ -417,6 +435,8 @@ void cull_key(uvec4 key, Triangle triangle, float lod) {
         uint write_culled_index = atomicAdd(primCount_culled[write_index], 1);
         write_culled_list[write_culled_index] = key;
         imageStore(DisplayKeys, getKeyCoordinate(write_culled_index), uintBitsToFloat(key));
+
+        // imageStore(morphFactorImage, getKeyCoordinate(write_culled_index), vec4(getMorphFactor(triangle.origin), 0, 0, 1));
     }
     imageAtomicMax(GlobalKeyData, ivec2(0, 0), getLevelInKey(key.xy));
 }
@@ -442,19 +462,21 @@ void main() {
     float parent_target_LOD = calculateLODToCam(parent_triangle.origin);
     float target_LOD = calculateLODToCam(triangle.origin);
  
-    vec3 planetOrigin = (vec4(0, 0, 0, 1) * planetTransformMatrix).xyz;
-    vec3 camera_to_planet = normalize(planetOrigin - cameraPosition.xyz);
+    // vec3 planetOrigin = (vec4(0, 0, 0, 1) * planetTransformMatrix).xyz;
+    // vec3 camera_to_planet = normalize(planetOrigin - cameraPosition.xyz);
     
-    mat4 rotationOnly = mat4(
-		vec4(normalize(planetTransformMatrix[0].xyz), 0), 
-		vec4(normalize(planetTransformMatrix[1].xyz), 0), 
-		vec4(normalize(planetTransformMatrix[2].xyz), 0),
-		vec4(0, 0, 0, 1)
-	);
+    // mat4 rotationOnly = mat4(
+	// 	vec4(normalize(planetTransformMatrix[0].xyz), 0), 
+	// 	vec4(normalize(planetTransformMatrix[1].xyz), 0), 
+	// 	vec4(normalize(planetTransformMatrix[2].xyz), 0),
+	// 	vec4(0, 0, 0, 1)
+	// );
 
-    vec3 point = (vec4(triangle.origin, 1) * rotationOnly).xyz;
-    // && dot(camera_to_planet, point) <= 0
-    if (target_LOD > current_LOD) 
+    // vec3 point = (vec4(triangle.origin, 1) * rotationOnly).xyz;
+    
+
+
+    if (target_LOD > current_LOD && current_LOD < 10) 
     { // subdivide
         uvec4 children_keys[4] = getChildKeys(key);
         for (int i = 0; i < 4; i++) {
@@ -468,7 +490,7 @@ void main() {
             cull_key(children_keys[i], child_triangle, current_LOD + 1);
         }
     } 
-    else if (parent_target_LOD < current_LOD - 1 && key.xy != uvec2(0, 1)) 
+    else if (parent_target_LOD < current_LOD - 1 && current_LOD > 0) 
     { // merging
         if (isUpperLeftChild(key.xy)) {
             uint idx = atomicAdd(primCount_full[write_index], 1);
