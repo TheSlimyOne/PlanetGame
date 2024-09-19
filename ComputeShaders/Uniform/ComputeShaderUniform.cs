@@ -20,9 +20,11 @@ public abstract partial class ComputeShaderUniform : GodotObject
 
     public abstract void UpdateUniform(byte[] data);
     
-    public void FreeRid()
+    public virtual void FreeRid()
     {
         if (Rid.IsValid) _rd.FreeRid(Rid);
+        Uniform.ClearIds();
+        _rd = null;
     }
 
     public T[] GetData<T>() where T : unmanaged
@@ -33,12 +35,5 @@ public abstract partial class ComputeShaderUniform : GodotObject
     public virtual byte[] GetByteData()
     {
         return _rd.BufferGetData(Rid);
-    }
-
-    ~ComputeShaderUniform()
-    {
-        Uniform.ClearIds();
-        FreeRid();
-        _rd = null;
     }
 }

@@ -1,44 +1,40 @@
-[gd_resource type="Resource" script_class="PlanetData" load_steps=7 format=3 uid="uid://gwppe7ras2x"]
+[gd_resource type="Resource" script_class="PlanetData" load_steps=7 format=4 uid="uid://gwppe7ras2x"]
 
-[ext_resource type="Texture2D" uid="uid://b0xaoom76i6uo" path="res://Assets/Images/4_no_ice_clouds_mts_16k.jpg" id="1_gagem"]
-[ext_resource type="Texture2D" uid="uid://b8nluepgt5u0f" path="res://Assets/Images/gebco_08_rev_elev_21600x10800.png" id="2_vc6j3"]
+[ext_resource type="Texture2D" uid="uid://cbldkdomjtu2h" path="res://Assets/Images/MapTest120.png" id="1_u3glm"]
+[ext_resource type="Texture2D" uid="uid://bw77v0cre8bf8" path="res://Assets/Images/World Map Height Map.png" id="2_i1mi1"]
 [ext_resource type="Shader" path="res://Assets/Shaders/PlanetTerrainShader.gdshader" id="2_y4vca"]
 [ext_resource type="Script" path="res://Planet/PlanetData.cs" id="3_6i60t"]
 
-[sub_resource type="PlaceholderTexture2D" id="PlaceholderTexture2D_wljx6"]
+[sub_resource type="PlaceholderTexture2D" id="PlaceholderTexture2D_a7sq0"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_taf2v"]
 render_priority = 0
 shader = ExtResource("2_y4vca")
-shader_parameter/position_list = null
+shader_parameter/position_list = PackedVector4Array(0, 1, 0, 1, -1, 1, -1, 1, -1, 1, 1, 1, 1, 1, -1, 1, 1, 1, 1, 1, 0, -1, 0, 1, 1, -1, -1, 1, 1, -1, 1, 1, -1, -1, -1, 1, -1, -1, 1, 1, 1, 0, 0, 1, 1, -1, -1, 1, 1, 1, -1, 1, 1, -1, 1, 1, 1, 1, 1, 1, -1, 0, 0, 1, -1, -1, 1, 1, -1, 1, 1, 1, -1, -1, -1, 1, -1, 1, -1, 1, 0, 0, -1, 1, -1, 1, -1, 1, 1, 1, -1, 1, -1, -1, -1, 1, 1, -1, -1, 1, 0, 0, 1, 1, -1, -1, 1, 1, 1, -1, 1, 1, -1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
 shader_parameter/radius = null
-shader_parameter/is_colorize_lod = null
-shader_parameter/is_cube = null
-shader_parameter/is_texture_1D = null
-shader_parameter/is_culling = null
-shader_parameter/height_scale = null
-shader_parameter/normal_strength = null
-shader_parameter/resolution = null
+shader_parameter/is_colorize_lod = false
+shader_parameter/is_cube = false
+shader_parameter/is_texture_1D = false
+shader_parameter/is_culling = true
+shader_parameter/height_scale = 7.0
+shader_parameter/normal_strength = 5.0
+shader_parameter/resolution = 33
 shader_parameter/transformations = null
-shader_parameter/octaves = 5
-shader_parameter/persistence = 0.5
-shader_parameter/lacunarity = 2.0
-shader_parameter/noise_scale = 1.0
-shader_parameter/exaggeration_factor = 1.0
-shader_parameter/offset = Vector3(0, 0, 0)
-shader_parameter/seed = 1207.01
+shader_parameter/albedo_map = ExtResource("1_u3glm")
+shader_parameter/height_map = ExtResource("2_i1mi1")
+shader_parameter/normal_map = SubResource("PlaceholderTexture2D_a7sq0")
 
 [resource]
 script = ExtResource("3_6i60t")
-Radius = 500.0
-HeightScale = 4.0
-Resolution = 15
+Radius = 1000.0
+HeightScale = 7.0
+Resolution = 33
 MaximumNodes = 40000
-SubFactor = 4.0
+SubFactor = 2.0
 MorphFactor = 0.3
-AlbedoMap = ExtResource("1_gagem")
-HeightMap = ExtResource("2_vc6j3")
-NormalMap = SubResource("PlaceholderTexture2D_wljx6")
+AlbedoMap = ExtResource("1_u3glm")
+HeightMap = ExtResource("2_i1mi1")
+NormalMap = SubResource("PlaceholderTexture2D_a7sq0")
 NormalStrength = 5.0
 ShaderMaterial = SubResource("ShaderMaterial_taf2v")
 ColorizeLod = false

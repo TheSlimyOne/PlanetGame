@@ -1,4 +1,4 @@
-[gd_scene load_steps=29 format=3 uid="uid://c1roirj1ei3ci"]
+[gd_scene load_steps=27 format=3 uid="uid://c1roirj1ei3ci"]
 
 [ext_resource type="Script" path="res://Planet/PlanetController.cs" id="1_7brg2"]
 [ext_resource type="Resource" uid="uid://gwppe7ras2x" path="res://Planet/PlanetDataDefault.tres" id="2_ap1os"]
@@ -14,8 +14,6 @@ panorama = ExtResource("3_agj4v")
 sky_material = SubResource("PanoramaSkyMaterial_eodwd")
 
 [sub_resource type="Environment" id="Environment_qqt2a"]
-background_mode = 2
-background_color = Color(0.801031, 0.808113, 0.836121, 1)
 sky = SubResource("Sky_emtpu")
 tonemap_mode = 2
 glow_enabled = true
@@ -28,13 +26,6 @@ glow_enabled = true
 font_size = 28
 outline_size = 5
 outline_color = Color(0.0768358, 0.0768358, 0.0768358, 1)
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_dnxvr"]
-albedo_color = Color(1, 0, 0, 1)
-
-[sub_resource type="BoxMesh" id="BoxMesh_5eynu"]
-material = SubResource("StandardMaterial3D_dnxvr")
-size = Vector3(5, 5, 5)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_tkgps"]
 shading_mode = 0
@@ -118,13 +109,18 @@ weight = 0.15
 _computeCullShaderPath = "res://ComputeShaders/GLSL/ComputeCull.glsl"
 _computeCopyShaderPath = "res://ComputeShaders/GLSL/Copy.glsl"
 
-[node name="CameraController" type="Camera3D" parent="." node_paths=PackedStringArray("UIElements", "WorldEnvironment")]
+[node name="CameraController" type="Camera3D" parent="." node_paths=PackedStringArray("UIElements", "WorldEnvironment", "Frustum")]
 near = 0.001
 script = ExtResource("5_0yfbu")
 UIElements = NodePath("CanvasLayer")
 WorldEnvironment = NodePath("../WorldEnvironment")
 DistanceFromSurface = 60.0
-BaseZoomSpeed = 500.0
+Frustum = NodePath("Frustum")
+BaseZoomSpeed = 1000.0
+
+[node name="Frustum" type="MeshInstance3D" parent="CameraController"]
+cast_shadow = 0
+skeleton = NodePath("../..")
 
 [node name="CanvasLayer" type="CanvasLayer" parent="CameraController" node_paths=PackedStringArray("_planetController", "_lblTriangleCount", "_lblFPS", "_lblDistance", "_lblLOD", "_btnProcessLod", "_btnColorizeLod", "_btnCubeMode", "_btnCulling", "_btnGenerateNormals")]
 script = ExtResource("6_upt2i")
@@ -209,10 +205,6 @@ layout_mode = 2
 button_mask = 2
 text = "Generate Normal"
 
-[node name="CameraIcon" type="MeshInstance3D" parent="CameraController"]
-cast_shadow = 0
-mesh = SubResource("BoxMesh_5eynu")
-
 [node name="SurfaceAttachment" type="Node3D" parent="."]
 
 [node name="ShadowCaster" type="MeshInstance3D" parent="SurfaceAttachment"]
@@ -258,6 +250,9 @@ mesh = SubResource("CylinderMesh_axejk")
 transform = Transform3D(1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 0, -3)
 gi_mode = 0
 mesh = SubResource("CylinderMesh_ffecf")
+
+[node name="Node3D" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -112, 77)
 
 [connection signal="pressed" from="CameraController/CanvasLayer/VBoxContainer2/btnProcessLod" to="SurfaceController" method="GenerateNormals"]
 [connection signal="pressed" from="CameraController/CanvasLayer/VBoxContainer2/btnProcessLod" to="CameraController/CanvasLayer" method="EnableOrDisableProcessing"]

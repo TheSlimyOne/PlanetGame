@@ -1,13 +1,12 @@
 shader_type spatial;
 //render_mode unshaded;
-
+#define sqrt2   1.414213562
 uniform vec4[60] position_list;
 uniform float radius;
 varying float elevation;
 uniform sampler2D albedo_map : repeat_disable;
 uniform sampler2D height_map : repeat_disable;
 uniform sampler2D normal_map : repeat_disable;
-uniform sampler2D height_gradient : repeat_disable;
 uniform bool is_colorize_lod;
 uniform bool is_cube;
 uniform bool is_texture_1D;
@@ -17,14 +16,6 @@ uniform float normal_strength;
 varying vec3 object_space_pos;
 uniform int resolution;
 uniform mat4 transformations;
-
-uniform int octaves : hint_range(0, 12) = 5;
-uniform float persistence = 0.5;
-uniform float lacunarity = 2.0;
-uniform float noise_scale = 1;
-uniform float exaggeration_factor = 1;
-uniform vec3 offset = vec3(0, 0, 0);
-uniform float seed = 1207.01;
 
 uniform sampler2D key_image : repeat_disable;
 uniform sampler2D global_key_data : repeat_disable;
@@ -43,20 +34,6 @@ vec2 morphVertex(vec2 vertex, float current_lod, float morphK) {
 	vec2 intPart = floor(vertex * patchTessFactor * 0.5);
 	vec2 signVec = mod(intPart, 2.0) * vec2(-2.0) + vec2(1.0);
 	return vertex - (signVec * fracPart) * morphK;
-}
-
-uvec2 leftShift64(uvec2 nodeID, uint shift) {
-    uvec2 result;
-    if (shift == 0u) return nodeID;
-
-    if (shift < 32u) {
-        result.x = (nodeID.x << shift) | (nodeID.y >> (32u - shift));
-        result.y = nodeID.y << shift;
-    } else {
-        result.x = nodeID.y << (shift - 32u);
-        result.y = 0u;
-    }
-    return result;
 }
 
 uvec2 rightShift64(uvec2 nodeID, uint shift) {
@@ -113,10 +90,6 @@ vec3 point_on_cube_to_point_on_sphere(vec3 p) {
 
 uint getBranching(uvec2 key, int level, int msb) {
     return (rightShift64(key, uint(msb - 2) - uint(level * 2)).y & 0x3u);
-}
-
-float getScale(float idx) {
-	return 1.0/pow(2, idx);
 }
 
 vec3 localPointToWorldPoint(vec2 point, vec3 vertexA, vec3 vertexB, vec3 vertexC) {
@@ -206,76 +179,16 @@ ivec2 getKeyCoordinate(int idx) {
     return ivec2(idx % image_size.x, idx / image_size.y);
 }
 
-mat4 createTransform() {
-	float scale = 1.0 / getScale(texelFetch(global_key_data, ivec2(0, 0), 0).r) * radius;
-	vec3 scaleFromPoint = vec3(0, 0, 1);
-	//scale = radius;
-	return mat4(
-		vec4( scale, 0, 0, scaleFromPoint.x - scale * scaleFromPoint.x),
-		vec4( 0, scale, 0, scaleFromPoint.y - scale * scaleFromPoint.y),
-		vec4( 0, 0, scale, scaleFromPoint.z - scale * scaleFromPoint.z - 1.0),
-		vec4( 0, 0, 0, 1)
-	);
-}
-
-vec3 hash(vec3 p) {
-	p = vec3(dot(p, vec3(127.1, 311.7, 74.7)),
-		dot(p, vec3(269.5, 183.3, 246.1)),
-		dot(p, vec3(113.5, 271.9, 124.6)));
-	p += seed;
-	return -1.0 + 2.0 * fract(sin(p) * 43758.5453123);
-}
-
-float noise(vec3 p) {
- 	vec3 i = floor(p);
- 	vec3 f = fract(p);
- 	vec3 u = f * f * (3.0 - 2.0 * f);
-	return mix(mix(mix(dot(hash(i + vec3(0.0, 0.0, 0.0)), f - vec3(0.0, 0.0, 0.0)),
-                     dot(hash(i + vec3(1.0, 0.0, 0.0)), f - vec3(1.0, 0.0, 0.0)), u.x),
-                 mix(dot(hash(i + vec3(0.0, 1.0, 0.0)), f - vec3(0.0, 1.0, 0.0)),
-                     dot(hash(i + vec3(1.0, 1.0, 0.0)), f - vec3(1.0, 1.0, 0.0)), u.x), u.y),
-             mix(mix(dot(hash(i + vec3(0.0, 0.0, 1.0)), f - vec3(0.0, 0.0, 1.0)),
-                     dot(hash(i + vec3(1.0, 0.0, 1.0)), f - vec3(1.0, 0.0, 1.0)), u.x),
-                 mix(dot(hash(i + vec3(0.0, 1.0, 1.0)), f - vec3(0.0, 1.0, 1.0)),
-                     dot(hash(i + vec3(1.0, 1.0, 1.0)), f - vec3(1.0, 1.0, 1.0)), u.x), u.y), u.z );
-}
-
-float param_noise(vec3 p) {
-	float frequency = 1.0;
-	float amplitude = 1.0;
-	float noiseHeight = 0.0;
-	
-	for (int i = 0; i < octaves; i++) {
-		float sampleX = p.x / noise_scale * frequency + offset.x;
-		float sampleY = p.y / noise_scale * frequency + offset.y;
-		float sampleZ = p.z / noise_scale * frequency + offset.z;
-		
-		float noiseValue = noise(vec3(sampleX, sampleY, sampleZ) * 5.0) * 0.5;
-		noiseValue += noise(vec3(sampleX, sampleY, sampleZ) * 10.0) * 0.25/2.0;
-		noiseValue += noise(vec3(sampleX, sampleY, sampleZ) * 20.0) * 0.125/2.0;
-		noiseValue += noise(vec3(sampleX, sampleY, sampleZ) * 40.0) * 0.0625/2.0;
-
-		noiseHeight += noiseValue * amplitude;
-		
-		amplitude += persistence;
-		frequency += lacunarity;
-	}
-
-	noiseHeight = pow(max(noiseHeight, 0), exaggeration_factor);
-	
-	return noiseHeight;
-}
-
 varying flat uvec4 key;
-varying flat uint flags;
 varying float morph;
+varying vec2 quad_position;
 void vertex() {
 	if (is_culling) {
 		key = floatBitsToUint(texelFetch(key_image, getKeyCoordinate(int(INSTANCE_ID)), 0));
 	} else {
 		key = floatBitsToUint(INSTANCE_CUSTOM);
 	}
-	flags = key.w >> 29u;
+	uint flags = key.w >> 29u;
 	uint half = (key.w & 0xFFFF0u) >> 4u;
 	half = half | (half << 16u);
 	morph = unpackHalf2x16(half).x;
@@ -284,38 +197,32 @@ void vertex() {
 	
 	float skipAmount = 1.0 / float(resolution - 1);
 
-	if (flags == 0u && (int(UV.y) == 0) && (int(UV.x) % 2 == 1)) {
+	if ((flags == 0u || flags == 2u) && (int(UV.y) == 0) && (int(UV.x) % 2 == 1)) {
 		VERTEX -= vec3(0, skipAmount, 0);
 	}
-	if (flags == 3u && (int(UV.x) == 0) && (int(UV.y) % 2 == 1)) {
+	if ((flags == 1u || flags == 3u) && (int(UV.x) == 0) && (int(UV.y) % 2 == 1)) {
 		VERTEX -= vec3(skipAmount, 0, 0);
-	}
-	if (flags == 1u && (int(UV.x) == 0) && (int(UV.y) % 2 == 1)) {
-		VERTEX -= vec3(skipAmount, 0, 0);
-	}
-	if (flags == 2u && (int(UV.y) == 0) && (int(UV.x) % 2 == 1)) {
-		VERTEX -= vec3(0, skipAmount, 0);
 	}
 	
-	vec2 quad_position = leaf_space_to_quad_space(VERTEX, key);
-	vec3 world_position = quad_space_to_world_space(morphVertex(quad_position, float(getLevelInKey(key.xy)), 0.0 * morph), key.z, key.w);
+	quad_position = leaf_space_to_quad_space(VERTEX, key);
+	vec3 world_position = quad_space_to_world_space(morphVertex(quad_position, float(getLevelInKey(key.xy)), morph), key.z, key.w);
 	VERTEX = is_cube ? world_position : point_on_cube_to_point_on_sphere(world_position);
 	
 	// Save the vertex for later
 	// After all the transformations use this Vertex as a uv coordinate
 	object_space_pos = VERTEX;
+	
 	VERTEX = (vec4(VERTEX, 1) * transformations).xyz;
 
 	mat4 rotationOnly = mat4(
-		vec4(normalize(transformations[0].xyz), 0), 
-		vec4(normalize(transformations[1].xyz), 0), 
-		vec4(normalize(transformations[2].xyz), 0),
+		vec4(transformations[0].xyz / length(transformations[0].xyz), 0), 
+		vec4(transformations[1].xyz / length(transformations[1].xyz), 0), 
+		vec4(transformations[2].xyz / length(transformations[2].xyz), 0),
 		vec4(0, 0, 0, 1)
 	);
 	
 	NORMAL = (vec4(object_space_pos, 1) * rotationOnly).xyz;
 	elevation = textureLod(height_map, point_on_sphere_to_UV(object_space_pos), 0).r;
-	//elevation *= textureLod(height_gradient, vec2(elevation, 0), 0).r;
 
 	VERTEX += NORMAL * height_scale * elevation;
 }
@@ -345,7 +252,8 @@ void fragment() {
 			break;
 	}
 	debug_color = mix(debug_color, child_color, 0.25f);
-	//debug_color= mix(debug_color, vec3(morph, 0, morph), 0.25f);
+
+	
 
 	vec2 uv_point = is_texture_1D ? vec2(elevation, 0.0) : point_on_sphere_to_UV(object_space_pos);
 	

@@ -19,6 +19,7 @@ public partial class PlanetData : Resource
             {
                 _radius = Mathf.Clamp(value, 1, 8000);
                 EmitChanged();
+                SetMaterialParameters();
             }
         }
     }
@@ -34,6 +35,7 @@ public partial class PlanetData : Resource
             {
                 _heightScale = value;
                 EmitChanged();
+                SetMaterialParameters();
             }
         }
     }
@@ -54,7 +56,6 @@ public partial class PlanetData : Resource
         }
     }
     private Transform3D _translation = Transform3D.Identity;
-
     public void Translate(Vector3 offset)
     {
         _translation = _translation.Translated(offset);
@@ -73,7 +74,6 @@ public partial class PlanetData : Resource
         }
     }
     private Transform3D _rotation = Transform3D.Identity;
-
     public void Rotate(Vector3 axis, float angle)
     {
         _rotation = _rotation.Rotated(axis, angle).Orthonormalized();
@@ -96,7 +96,6 @@ public partial class PlanetData : Resource
         }
     }
     private Transform3D _scale = Transform3D.Identity;
-
     public void Scaled(Vector3 scale)
     {
         _scale = _scale.Scaled(scale);
@@ -105,8 +104,7 @@ public partial class PlanetData : Resource
     public Transform3D GetPlanetTransformMatrix()
     {
         return _translation * _rotation * _scale;
-    }
-    
+    } 
     public Transform3D GetPlanetTRMatrix()
     {
         return _translation * _rotation;
@@ -126,6 +124,8 @@ public partial class PlanetData : Resource
             {
                 _resolution = Mathf.Clamp(value, 2, 500);
                 EmitChanged();
+                GenerateMulitMesh();
+                SetMaterialParameters();
             }
         }
     }
@@ -156,6 +156,7 @@ public partial class PlanetData : Resource
             {
                 _subFactor = Mathf.Clamp(value, 0, 10);
                 EmitChanged();
+                SetMaterialParameters();
             }
         }
     }
@@ -171,6 +172,7 @@ public partial class PlanetData : Resource
             {
                 _morphFactor = Mathf.Clamp(value, 0, 1);
                 EmitChanged();
+                SetMaterialParameters();
             }
         }
     }
@@ -189,6 +191,7 @@ public partial class PlanetData : Resource
             {
                 _albedoMap = value;
                 EmitChanged();
+                SetMaterialParameters();
             }
         }
     }
@@ -204,6 +207,7 @@ public partial class PlanetData : Resource
             {
                 _heightMap = value;
                 EmitChanged();
+                SetMaterialParameters();
             }
         }
     }
@@ -219,6 +223,7 @@ public partial class PlanetData : Resource
             {
                 _normalMap = value;
                 EmitChanged();
+                SetMaterialParameters();
             }
         }
     }
@@ -234,6 +239,7 @@ public partial class PlanetData : Resource
             {
                 _normalStrength = Mathf.Clamp(value, 0, 10);
                 EmitChanged();
+                SetMaterialParameters();
             }
         }
     }
@@ -252,6 +258,7 @@ public partial class PlanetData : Resource
             {
                 _shaderMaterial = value;
                 EmitChanged();
+                SetMaterialParameters();
             }
         }
     }
@@ -259,18 +266,20 @@ public partial class PlanetData : Resource
     
     public void SetMaterialParameters()
 	{
-		_shaderMaterial.SetShaderParameter("position_list", GenerateTrianglePoints());
-		_shaderMaterial.SetShaderParameter("radius", _radius);
-		_shaderMaterial.SetShaderParameter("albedo_map", _albedoMap);
-		_shaderMaterial.SetShaderParameter("is_texture_1D", _albedoMap is GradientTexture1D);
-		_shaderMaterial.SetShaderParameter("height_map", _heightMap);
-		_shaderMaterial.SetShaderParameter("normal_map", _normalMap);
-		_shaderMaterial.SetShaderParameter("height_scale", _heightScale);
-		_shaderMaterial.SetShaderParameter("is_colorize_lod", _colorizeLod);
-		_shaderMaterial.SetShaderParameter("is_cube", _cubeMode);
-		_shaderMaterial.SetShaderParameter("is_culling", _culling);
-		_shaderMaterial.SetShaderParameter("resolution", _resolution);
-		_shaderMaterial.SetShaderParameter("normal_strength", _normalStrength);
+        if (_shaderMaterial != null)
+        {
+		    _shaderMaterial.SetShaderParameter("position_list", GenerateTrianglePoints());
+		    _shaderMaterial.SetShaderParameter("albedo_map", _albedoMap);
+		    _shaderMaterial.SetShaderParameter("is_texture_1D", _albedoMap is GradientTexture1D);
+		    _shaderMaterial.SetShaderParameter("height_map", _heightMap);
+		    _shaderMaterial.SetShaderParameter("normal_map", _normalMap);
+		    _shaderMaterial.SetShaderParameter("height_scale", _heightScale);
+		    _shaderMaterial.SetShaderParameter("is_colorize_lod", _colorizeLod);
+		    _shaderMaterial.SetShaderParameter("is_cube", _cubeMode);
+		    _shaderMaterial.SetShaderParameter("is_culling", _culling);
+		    _shaderMaterial.SetShaderParameter("resolution", _resolution);
+		    _shaderMaterial.SetShaderParameter("normal_strength", _normalStrength);
+        }
 	}
 
     #endregion
@@ -288,6 +297,7 @@ public partial class PlanetData : Resource
             {
                 _colorizeLod = value;
                 EmitChanged();
+                SetMaterialParameters();
             }
         }
     }
@@ -303,6 +313,7 @@ public partial class PlanetData : Resource
             {
                 _cubeMode = value;
                 EmitChanged();
+                SetMaterialParameters();
             }
         }
     }
@@ -318,13 +329,12 @@ public partial class PlanetData : Resource
             {
                 _culling = value;
                 EmitChanged();
+                SetMaterialParameters();
             }
         }
     }
     private bool _culling = true;
     #endregion
-
-    
 
     public void ConnectChanged(Action action)
     {
@@ -341,9 +351,9 @@ public partial class PlanetData : Resource
         }
     }
 
-    public Vector4[] GenerateTrianglePoints()
+    public static Vector4[] GenerateTrianglePoints()
     {
-        Vector4[] trianglePoints = new Vector4[6 * 5];
+        Vector4[] trianglePoints = new Vector4[6 * 6];
 		Vector3[] normals = new Vector3[]
 		{
 			Vector3.Up,
@@ -389,7 +399,7 @@ public partial class PlanetData : Resource
 				vertices[currentIndex] = normal + (percentage.X * axisA + percentage.Y * axisB);
 				uvs[currentIndex] = new Vector2(x, y);
 				normals[currentIndex] = normal;
-                GD.Print(uvs[currentIndex]);
+                
 				if (x != _resolution - y - 1)
 				{
 					if (x == _resolution - y - 2)
@@ -425,16 +435,16 @@ public partial class PlanetData : Resource
 				}
 			}
 		}
-        string s = "[";
-        for (int i = 0; i < triangles.Length; i+=3)
-        {
-            Vector2 A = VectorUtils.toVector2(vertices[triangles[i + 0]]);
-            Vector2 B = VectorUtils.toVector2(vertices[triangles[i + 1]]);
-            Vector2 C = VectorUtils.toVector2(vertices[triangles[i + 2]]);
-            s += $"{A}, {B}, {C}, ";
-        }
-        s = s.Remove(s.Length - 2) + "]";
-        GD.Print(s);
+        // string s = "[";
+        // for (int i = 0; i < triangles.Length; i+=3)
+        // {
+        //     Vector2 A = VectorUtils.toVector2(vertices[triangles[i + 0]]);
+        //     Vector2 B = VectorUtils.toVector2(vertices[triangles[i + 1]]);
+        //     Vector2 C = VectorUtils.toVector2(vertices[triangles[i + 2]]);
+        //     s += $"{A}, {B}, {C}, ";
+        // }
+        // s = s.Remove(s.Length - 2) + "]";
+        // GD.Print(s);
 
 		ArrayMesh mesh = new();
 		Godot.Collections.Array arrays = new();

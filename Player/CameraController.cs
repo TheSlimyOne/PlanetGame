@@ -10,7 +10,7 @@ public partial class CameraController : Camera3D
 	[Export] public float DistanceFromSurface { get; set; }
 	private PlanetController _planetController;
 
-	private MultiMeshInstance3D _cameraLine = new();
+	[Export] public MeshInstance3D Frustum;
 	private MultiMeshInstance3D _planetLine = new();
 	private MultiMeshInstance3D _debugPlot = new();
 
@@ -23,11 +23,11 @@ public partial class CameraController : Camera3D
 
 	public override void _Ready()
 	{
-		_planetController = (PlanetController)GetParent();
 
-		_planetController.SurfaceAttachment.CallDeferred("add_child", _cameraLine);
+		_planetController = (PlanetController)GetParent();
 		_planetController.SurfaceAttachment.CallDeferred("add_child", _planetLine);
 		_planetController.SurfaceAttachment.CallDeferred("add_child", _debugPlot);
+		Frustum.ExtraCullMargin = 2 * _planetController.PlanetData.Radius;
 		_debugPlot.ExtraCullMargin = 2 * _planetController.PlanetData.Radius;
 
 		heightMap = _planetController.PlanetData.HeightMap.GetImage();
@@ -90,23 +90,23 @@ public partial class CameraController : Camera3D
 		}
 
 		int amount = 30 * Mathf.RoundToInt(start.DistanceTo(end));
-	
-		_debugPlot.Multimesh.InstanceCount = 1;
 
+		_debugPlot.Multimesh.InstanceCount = 1;
+		// GD.Print(amount);
 		for (int i = 0; i < amount; i++)
 		{
 
 			Vector3 position = start.Lerp(end, i / (amount - 1f));
 
 			position -= _planetController.PlanetData.Translation.Origin;
-			position = _planetController.PlanetData.Rotation.Basis.Transposed().Orthonormalized() * position;
+			position = _planetController.PlanetData.Rotation.Basis.Transposed() * position;
 
 			Vector3 directPath = position;
 
 			Vector3 surfacePath = position.Normalized();
 			Vector2I size = heightMap.GetSize();
 			Vector2 uv = VectorUtils.PointOnSphereToUV(surfacePath);
-			
+
 			float height = heightMap.GetPixelv(new Vector2I(Mathf.RoundToInt(size.X * uv.X), Mathf.RoundToInt(size.Y * uv.Y))).R * _planetController.PlanetData.HeightScale;
 
 			surfacePath = surfacePath * _planetController.PlanetData.Radius + surfacePath * height;
@@ -151,7 +151,9 @@ public partial class CameraController : Camera3D
 			if (Locked)
 				UnlockMouse();
 			else
+			{
 				LockMouse();
+			}
 		}
 
 		if (Input.IsActionJustPressed("change_view"))
@@ -182,9 +184,57 @@ public partial class CameraController : Camera3D
 	}
 
 	public override void _PhysicsProcess(double delta)
-	{		
+	{
 		UIElements.SetDistance(DistanceFromSurface);
 		GlobalPosition = Vector3.Back * DistanceFromSurface;
+
+		Frustum.Mesh = CreateFrustumMesh(ProjectPoints(new Vector3[] {
+			new(-1, -1, -1), // near-bottom-left
+        	new(1, -1, -1),  // near-bottom-right
+        	new(-1, 1, -1),  // near-top-left
+        	new(1, 1, -1),   // near-top-right
+        	new(-1, -1, 1),  // far-bottom-left
+        	new(1, -1, 1),   // far-bottom-right
+        	new(-1, 1, 1),   // far-top-left
+        	new(1, 1, 1)     // far-top-right
+		}, globally:false));
+
+	}
+	
+	public Vector3[] ProjectPoints(Vector3[] points, bool globally = true)
+	{
+		Vector3[] projectedPoints = new Vector3[points.Length];
+		Projection projection = globally ? GetViewProjectionMatrix().Inverse() : GetCameraProjection().Inverse();
+		for (int i = 0; i < points.Length; i++)
+		{
+			Vector4 corner4D = VectorUtils.toVector4(points[i], 1);
+			corner4D = projection * corner4D;
+			projectedPoints[i] = VectorUtils.toVector3(corner4D) / corner4D.W;
+		}
+		return projectedPoints;
+	}
+
+	// Function to create the frustum mesh
+	private static Mesh CreateFrustumMesh(Vector3[] frustumPoints)
+	{
+		ArrayMesh frustumMesh = new();
+		Vector3[] vertices = new Vector3[]
+		{
+			frustumPoints[0], frustumPoints[1], frustumPoints[1], frustumPoints[3], frustumPoints[3], frustumPoints[2], frustumPoints[2], frustumPoints[0],
+			frustumPoints[4], frustumPoints[5], frustumPoints[5], frustumPoints[7], frustumPoints[7], frustumPoints[6], frustumPoints[6], frustumPoints[4],
+
+			frustumPoints[0], frustumPoints[4],
+			frustumPoints[1], frustumPoints[5],
+			frustumPoints[2], frustumPoints[6],
+			frustumPoints[3], frustumPoints[7]
+
+		};
+		var arrays = new Godot.Collections.Array();
+		arrays.Resize((int)Mesh.ArrayType.Max);
+		arrays[(int)Mesh.ArrayType.Vertex] = vertices;
+		frustumMesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Lines, arrays);
+
+		return frustumMesh;
 	}
 
 	public Projection GetViewProjectionMatrix()

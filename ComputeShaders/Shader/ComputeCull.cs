@@ -3,6 +3,7 @@ using System.Linq;
 using Uniform;
 using Godot;
 using Godot.Collections;
+using Planet;
 namespace Shader;
 
 public partial class ComputeCull : ComputeShader<ComputeCull.BufferNames>
@@ -80,7 +81,7 @@ public partial class ComputeCull : ComputeShader<ComputeCull.BufferNames>
 			 ),
 
 			[BufferNames.TRIANGLE_COORDINATES] = new StorageBufferUniform(_rd, (int)BufferNames.TRIANGLE_COORDINATES,
-				 Utilities.ToBytes<Vector4>(PlanetController.PlanetData.GenerateTrianglePoints()).ToArray()
+				 Utilities.ToBytes<Vector4>(PlanetData.GenerateTrianglePoints()).ToArray()
 			 ),
 
 			[BufferNames.DEBUG_DATA] = new StorageBufferUniform(_rd, (int)BufferNames.DEBUG_DATA,
@@ -127,23 +128,7 @@ public partial class ComputeCull : ComputeShader<ComputeCull.BufferNames>
 
 			[BufferNames.EXTERNAL_DATA] = new StorageBufferUniform(_rd, (int)BufferNames.EXTERNAL_DATA,
 				 GetExternalData()
-			 ),
-
-			[BufferNames.KEYS_DISTANCE] = new TextureUniform(_rd, (int)BufferNames.KEYS_DISTANCE,
-				 new RDTextureFormat()
-				 {
-					 Width = (uint)(Mathf.Sqrt(PlanetController.PlanetData.MaximumNodes) * 1f / 2f),
-					 Height = (uint)(Mathf.Sqrt(PlanetController.PlanetData.MaximumNodes) * 1f / 2f),
-					 TextureType = RenderingDevice.TextureType.Type2D,
-					 Format = RenderingDevice.DataFormat.R32G32B32A32Sfloat,
-					 UsageBits = RenderingDevice.TextureUsageBits.SamplingBit |
-								 RenderingDevice.TextureUsageBits.StorageBit |
-								 RenderingDevice.TextureUsageBits.CanUpdateBit |
-								 RenderingDevice.TextureUsageBits.CanCopyToBit |
-								 RenderingDevice.TextureUsageBits.CanCopyFromBit |
-								 RenderingDevice.TextureUsageBits.ColorAttachmentBit
-				 }
-			 ),
+			 )
 		};
 
 		CreateUniformSet();

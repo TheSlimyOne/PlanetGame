@@ -92,12 +92,13 @@ public abstract partial class ComputeShader<TEnum> : GodotObject where TEnum : E
 		if (_rd == null) return;
 		foreach (ComputeShaderUniform computeShaderUniform in _computeShaderUniforms.Values)
 		{
-            computeShaderUniform.Free();
+            computeShaderUniform.FreeRid();
 		}
 
 		_rd.FreeRid(_pipeline);
 		_rd.FreeRid(_uniformSet);
 		_rd.FreeRid(_shader);
+        _rd = null;
 	}
 
 }
