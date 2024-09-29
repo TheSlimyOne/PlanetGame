@@ -14,7 +14,7 @@ public partial class PlanetData : Resource
     {
         get => _radius;
         set
-        {   
+        {
             if (_radius != Mathf.Clamp(value, 1, 8000))
             {
                 _radius = Mathf.Clamp(value, 1, 8000);
@@ -104,12 +104,12 @@ public partial class PlanetData : Resource
     public Transform3D GetPlanetTransformMatrix()
     {
         return _translation * _rotation * _scale;
-    } 
+    }
     public Transform3D GetPlanetTRMatrix()
     {
         return _translation * _rotation;
     }
-    
+
     #endregion
 
     #region LOD Settings
@@ -146,6 +146,21 @@ public partial class PlanetData : Resource
     }
     private int _maximumNodes = 40000;
     
+    [Export(PropertyHint.Range, "0, 31")]
+    public int MaximumLOD
+    {
+        get => _maximumLOD;
+        set
+        {
+            if (_maximumLOD != value)
+            {
+                _maximumLOD = value;
+                EmitChanged();
+            }
+        }
+    }
+    private int _maximumLOD = 12;
+
     [Export(PropertyHint.Range, "1, 10")]
     public float SubFactor
     {
@@ -162,25 +177,50 @@ public partial class PlanetData : Resource
     }
     private float _subFactor = 1;
 
-    [Export(PropertyHint.Range, "0, 1")]
-    public float MorphFactor
+    [Export]
+    public Vector2 MorphRange
     {
-        get => _morphFactor;
+        get => _morphRange;
         set
         {
-            if (_morphFactor != Mathf.Clamp(value, 0, 1))
+            if (_morphRange != value)
             {
-                _morphFactor = Mathf.Clamp(value, 0, 1);
+                _morphRange = value;
                 EmitChanged();
                 SetMaterialParameters();
             }
         }
     }
-    private float _morphFactor = 1;
+    private Vector2 _morphRange = new(0, 0);
     #endregion
 
     #region Surface Settings
     [ExportGroup("Surface Settings")]
+    
+    [Export(PropertyHint.Range, "1, 100")]
+    public int GridSize
+    {
+        get => _gridSize;
+        set
+        {
+            if (_gridSize != value)
+            {
+                _gridSize = value;
+                EmitChanged();
+                SetMaterialParameters();
+
+                
+            }
+            for (int i = 0; i <= _gridSize; i++)
+            {
+                GD.Print(_radius / _gridSize * i);
+            }
+            GD.Print("====================");
+        }
+    }
+    private int _gridSize = 5;
+
+
     [Export]
     public Texture2D AlbedoMap
     {
@@ -212,7 +252,7 @@ public partial class PlanetData : Resource
         }
     }
     private Texture2D _heightMap = new PlaceholderTexture2D();
-    
+
     [Export]
     public Texture2D NormalMap
     {
@@ -263,24 +303,45 @@ public partial class PlanetData : Resource
         }
     }
     private ShaderMaterial _shaderMaterial;
-    
+
+    public MultiMesh MultiMesh
+    {
+        get => _multiMesh;
+        set
+        {
+            if (_multiMesh != value)
+            {
+                _multiMesh = value;
+                EmitChanged();
+                SetMaterialParameters();
+            }
+        }
+    }
+    private MultiMesh _multiMesh = new() { Mesh = new PlaceholderMesh(), InstanceCount = 0, TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseCustomData = true, UseColors = true };
+
     public void SetMaterialParameters()
-	{
+    {
         if (_shaderMaterial != null)
         {
-		    _shaderMaterial.SetShaderParameter("position_list", GenerateTrianglePoints());
-		    _shaderMaterial.SetShaderParameter("albedo_map", _albedoMap);
-		    _shaderMaterial.SetShaderParameter("is_texture_1D", _albedoMap is GradientTexture1D);
-		    _shaderMaterial.SetShaderParameter("height_map", _heightMap);
-		    _shaderMaterial.SetShaderParameter("normal_map", _normalMap);
-		    _shaderMaterial.SetShaderParameter("height_scale", _heightScale);
-		    _shaderMaterial.SetShaderParameter("is_colorize_lod", _colorizeLod);
-		    _shaderMaterial.SetShaderParameter("is_cube", _cubeMode);
-		    _shaderMaterial.SetShaderParameter("is_culling", _culling);
-		    _shaderMaterial.SetShaderParameter("resolution", _resolution);
-		    _shaderMaterial.SetShaderParameter("normal_strength", _normalStrength);
+            _shaderMaterial.SetShaderParameter("radius", _radius);
+            _shaderMaterial.SetShaderParameter("grid_size", _gridSize);
+            _shaderMaterial.SetShaderParameter("position_list", GenerateTrianglePoints());
+            _shaderMaterial.SetShaderParameter("albedo_map", _albedoMap);
+            _shaderMaterial.SetShaderParameter("is_texture_1D", _albedoMap is GradientTexture1D);
+            _shaderMaterial.SetShaderParameter("height_map", _heightMap);
+            _shaderMaterial.SetShaderParameter("normal_map", _normalMap);
+            _shaderMaterial.SetShaderParameter("height_scale", _heightScale);
+            _shaderMaterial.SetShaderParameter("is_colorize_lod", _colorizeLod);
+            _shaderMaterial.SetShaderParameter("is_cube", _cubeMode);
+            _shaderMaterial.SetShaderParameter("is_culling", _culling);
+            _shaderMaterial.SetShaderParameter("resolution", _resolution);
+            _shaderMaterial.SetShaderParameter("normal_strength", _normalStrength);
+            _shaderMaterial.SetShaderParameter("is_morphing", _morphing);
+            _shaderMaterial.SetShaderParameter("sub_factor", _subFactor);
+            _shaderMaterial.SetShaderParameter("morph_range", _morphRange);
         }
-	}
+
+    }
 
     #endregion
 
@@ -318,7 +379,7 @@ public partial class PlanetData : Resource
         }
     }
     private bool _cubeMode = false;
-    
+
     [Export]
     public bool Culling
     {
@@ -334,6 +395,22 @@ public partial class PlanetData : Resource
         }
     }
     private bool _culling = true;
+
+    [Export]
+    public bool Morphing
+    {
+        get => _morphing;
+        set
+        {
+            if (_morphing != value)
+            {
+                _morphing = value;
+                EmitChanged();
+                SetMaterialParameters();
+            }
+        }
+    }
+    private bool _morphing = true;
     #endregion
 
     public void ConnectChanged(Action action)
@@ -354,87 +431,90 @@ public partial class PlanetData : Resource
     public static Vector4[] GenerateTrianglePoints()
     {
         Vector4[] trianglePoints = new Vector4[6 * 6];
-		Vector3[] normals = new Vector3[]
-		{
-			Vector3.Up,
-			Vector3.Down,
-			Vector3.Right,
-			Vector3.Left,
-			Vector3.Forward,
-			Vector3.Back,
-		};
+        Vector3[] normals = new Vector3[]
+        {
+            Vector3.Up,
+            Vector3.Right,
+            Vector3.Back,
+            Vector3.Down,
+            Vector3.Left,
+            Vector3.Forward,
+        };
 
-		for (int i = 0; i < 6; i++)
-		{
-			Vector3 normal = normals[i];
-			Vector3 axisA = new(normal.Y, normal.Z, normal.X);
-			Vector3 axisB = normal.Cross(axisA);
-
-			trianglePoints[5 * i + 0] = VectorUtils.toVector4(normal, 1);
-			trianglePoints[5 * i + 1] = VectorUtils.toVector4(-axisA + axisB + normal, 1);
-			trianglePoints[5 * i + 2] = VectorUtils.toVector4(-axisA - axisB + normal, 1);
-			trianglePoints[5 * i + 3] = VectorUtils.toVector4(axisA + axisB + normal, 1);
-			trianglePoints[5 * i + 4] = VectorUtils.toVector4(axisA - axisB + normal, 1);
-		}
+        for (int i = 0; i < 6; i++)
+        {
+            Vector3 normal = normals[i];
+            Vector3 axisA = new(normal.Y, normal.Z, normal.X);
+            Vector3 axisB = normal.Cross(axisA);
+            // if (i < 3) {
+                
+            trianglePoints[5 * i + 0] = VectorUtils.toVector4(normal, 1);
+            trianglePoints[5 * i + 1] = VectorUtils.toVector4(-axisA + axisB + normal, 1);
+            trianglePoints[5 * i + 2] = VectorUtils.toVector4(-axisA - axisB + normal, 1);
+            trianglePoints[5 * i + 3] = VectorUtils.toVector4(axisA + axisB + normal, 1);
+            trianglePoints[5 * i + 4] = VectorUtils.toVector4(axisA - axisB + normal, 1);
+            // }
+        }
         return trianglePoints;
     }
 
-    public MultiMesh GenerateMulitMesh()
-	{
-		Vector3[] vertices = new Vector3[_resolution * (_resolution + 1) / 2];
-		Vector3[] normals = new Vector3[_resolution * (_resolution + 1) / 2];
-		Vector2[] uvs = new Vector2[_resolution * (_resolution + 1) / 2];
-		int[] triangles = new int[(_resolution - 1) * (_resolution - 1) * 6 / 2];
-		Vector3 normal = Vector3.Back;
-		Vector3 axisA = new(normal.Y, normal.Z, normal.X);
-		Vector3 axisB = normal.Cross(axisA).Abs();
-		int triIndex = 0;
-		int vertexIndex = 0;
-		for (int y = 0; y < _resolution; y++)
-		{
-			for (int x = 0; x < _resolution - y; x++)
-			{
-				int currentIndex = vertexIndex++;
-				Vector2 percentage = new Vector2(x, y) / (_resolution - 1);
-				vertices[currentIndex] = normal + (percentage.X * axisA + percentage.Y * axisB);
-				uvs[currentIndex] = new Vector2(x, y);
-				normals[currentIndex] = normal;
-                
-				if (x != _resolution - y - 1)
-				{
-					if (x == _resolution - y - 2)
-					{
-						triangles[triIndex++] = currentIndex;
-						triangles[triIndex++] = currentIndex + 1;
-						triangles[triIndex++] = currentIndex + _resolution - y;
-					}
-					else
-					{
-						bool isXEven = x % 2 == 0;
-						bool isYEven = y % 2 == 0;
+    public void GenerateMulitMesh()
+    {
+        Vector3[] vertices = new Vector3[_resolution * (_resolution + 1) / 2];
+        Vector3[] normals = new Vector3[_resolution * (_resolution + 1) / 2];
+        Vector2[] uvs = new Vector2[_resolution * (_resolution + 1) / 2];
+        int[] triangles = new int[(_resolution - 1) * (_resolution - 1) * 6 / 2];
+        
+        Vector3 normal = Vector3.Back;
+        Vector3 axisA = new(normal.Y, normal.Z, normal.X);
+        Vector3 axisB = normal.Cross(axisA).Abs();
+        int triIndex = 0;
+        int vertexIndex = 0;
+        for (int y = 0; y < _resolution; y++)
+        {
+            for (int x = 0; x < _resolution - y; x++)
+            {
+                int currentIndex = vertexIndex++;
+                Vector2 percentage = new Vector2(x, y) / (_resolution - 1);
+                vertices[currentIndex] = normal + (percentage.X * axisA + percentage.Y * axisB);
+                uvs[currentIndex] = new Vector2(x, y);
+                normals[currentIndex] = normal;
 
-						if ((isXEven && isYEven) || (!isXEven && !isYEven))
-						{
-							triangles[triIndex++] = currentIndex;
-							triangles[triIndex++] = currentIndex + _resolution - y + 1;
-							triangles[triIndex++] = currentIndex + _resolution - y;
-							triangles[triIndex++] = currentIndex;
-							triangles[triIndex++] = currentIndex + 1;
-							triangles[triIndex++] = currentIndex + _resolution - y + 1;
-						}
-						else
-						{
-							triangles[triIndex++] = currentIndex;
-							triangles[triIndex++] = currentIndex + 1;
-							triangles[triIndex++] = currentIndex + _resolution - y;
-							triangles[triIndex++] = currentIndex + 1;
-							triangles[triIndex++] = currentIndex + _resolution - y + 1;
-							triangles[triIndex++] = currentIndex + _resolution - y;
-						}
-					}
-				}
-			}
-		}
+                if (x != _resolution - y - 1)
+                {
+                    if (x == _resolution - y - 2)
+                    {
+                        triangles[triIndex++] = currentIndex;
+                        triangles[triIndex++] = currentIndex + 1;
+                        triangles[triIndex++] = currentIndex + _resolution - y;
+                    }
+                    else
+                    {
+                        bool isXEven = x % 2 == 0;
+                        bool isYEven = y % 2 == 0;
+
+                        if ((isXEven && isYEven) || (!isXEven && !isYEven))
+                        {
+                            triangles[triIndex++] = currentIndex;
+                            triangles[triIndex++] = currentIndex + _resolution - y + 1;
+                            triangles[triIndex++] = currentIndex + _resolution - y;
+                            triangles[triIndex++] = currentIndex;
+                            triangles[triIndex++] = currentIndex + 1;
+                            triangles[triIndex++] = currentIndex + _resolution - y + 1;
+                        }
+                        else
+                        {
+                            triangles[triIndex++] = currentIndex;
+                            triangles[triIndex++] = currentIndex + 1;
+                            triangles[triIndex++] = currentIndex + _resolution - y;
+                            triangles[triIndex++] = currentIndex + 1;
+                            triangles[triIndex++] = currentIndex + _resolution - y + 1;
+                            triangles[triIndex++] = currentIndex + _resolution - y;
+                        }
+                    }
+                }
+            }
+        }
         // string s = "[";
         // for (int i = 0; i < triangles.Length; i+=3)
         // {
@@ -446,23 +526,15 @@ public partial class PlanetData : Resource
         // s = s.Remove(s.Length - 2) + "]";
         // GD.Print(s);
 
-		ArrayMesh mesh = new();
-		Godot.Collections.Array arrays = new();
-		arrays.Resize((int)Mesh.ArrayType.Max);
-		arrays[(int)Mesh.ArrayType.Vertex] = vertices;
-		arrays[(int)Mesh.ArrayType.Index] = triangles;
-		arrays[(int)Mesh.ArrayType.Normal] = normals;
-		arrays[(int)Mesh.ArrayType.TexUV] = uvs;
-		mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
-		mesh.SurfaceSetMaterial(0, _shaderMaterial);
-
-		return new MultiMesh
-		{
-			InstanceCount = 0,
-			Mesh = mesh,
-			TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
-			UseCustomData = true,
-			UseColors = true
-		};
-	}
+        ArrayMesh mesh = new();
+        Godot.Collections.Array arrays = new();
+        arrays.Resize((int)Mesh.ArrayType.Max);
+        arrays[(int)Mesh.ArrayType.Vertex] = vertices;
+        arrays[(int)Mesh.ArrayType.Index] = triangles;
+        arrays[(int)Mesh.ArrayType.Normal] = normals;
+        arrays[(int)Mesh.ArrayType.TexUV] = uvs;
+        mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
+        mesh.SurfaceSetMaterial(0, _shaderMaterial);
+        _multiMesh.Mesh = mesh;
+    }
 }

@@ -8,8 +8,10 @@ public partial class CameraController : Camera3D
 	[Export] public UIElements UIElements;
 	[Export] public WorldEnvironment WorldEnvironment;
 	[Export] public float DistanceFromSurface { get; set; }
+	[Export] public Camera3D InnerCamera { get; set; }
 	private PlanetController _planetController;
 
+	// [Export] public MeshInstance3D InnerCameraFrustum;
 	[Export] public MeshInstance3D Frustum;
 	private MultiMeshInstance3D _planetLine = new();
 	private MultiMeshInstance3D _debugPlot = new();
@@ -28,6 +30,7 @@ public partial class CameraController : Camera3D
 		_planetController.SurfaceAttachment.CallDeferred("add_child", _planetLine);
 		_planetController.SurfaceAttachment.CallDeferred("add_child", _debugPlot);
 		Frustum.ExtraCullMargin = 2 * _planetController.PlanetData.Radius;
+		// InnerCameraFrustum.ExtraCullMargin = 2 * _planetController.PlanetData.Radius;
 		_debugPlot.ExtraCullMargin = 2 * _planetController.PlanetData.Radius;
 
 		heightMap = _planetController.PlanetData.HeightMap.GetImage();
@@ -197,14 +200,24 @@ public partial class CameraController : Camera3D
         	new(1, -1, 1),   // far-bottom-right
         	new(-1, 1, 1),   // far-top-left
         	new(1, 1, 1)     // far-top-right
-		}, globally:false));
+		}, GetCameraProjection()));
 
+		// InnerCameraFrustum.Mesh = CreateFrustumMesh(ProjectPoints(new Vector3[] {
+		// 	new(-1, -1, -1), // near-bottom-left
+        // 	new(1, -1, -1),  // near-bottom-right
+        // 	new(-1, 1, -1),  // near-top-left
+        // 	new(1, 1, -1),   // near-top-right
+        // 	new(-1, -1, 1),  // far-bottom-left
+        // 	new(1, -1, 1),   // far-bottom-right
+        // 	new(-1, 1, 1),   // far-top-left
+        // 	new(1, 1, 1)     // far-top-right
+		// }, InnerCamera.GetCameraProjection()));
 	}
-	
-	public Vector3[] ProjectPoints(Vector3[] points, bool globally = true)
+
+	public static Vector3[] ProjectPoints(Vector3[] points, Projection viewProjectionMatrix)
 	{
 		Vector3[] projectedPoints = new Vector3[points.Length];
-		Projection projection = globally ? GetViewProjectionMatrix().Inverse() : GetCameraProjection().Inverse();
+		Projection projection = viewProjectionMatrix.Inverse();
 		for (int i = 0; i < points.Length; i++)
 		{
 			Vector4 corner4D = VectorUtils.toVector4(points[i], 1);

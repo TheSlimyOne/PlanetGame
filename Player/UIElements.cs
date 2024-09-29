@@ -12,12 +12,17 @@ public partial class UIElements : CanvasLayer
 	[Export] private Label _lblFPS;
 	[Export] private Label _lblDistance;
 	[Export] private Label _lblLOD;
+	[Export] private Label _lblCameraMode;
 	[ExportGroup("Buttons")]
 	[Export] private Button _btnProcessLod;
 	[Export] private Button _btnColorizeLod;
 	[Export] private Button _btnCubeMode;
 	[Export] private Button _btnCulling;
 	[Export] private Button _btnGenerateNormals;
+	[Export] private Button _btnMorphing;
+
+	[ExportGroup("Extra")]
+	[Export] public HBoxContainer ImageContainer;
 
 	[ExportGroup("Compute Shader")]
 	[Export(PropertyHint.File)] private string _normalPath;
@@ -25,7 +30,7 @@ public partial class UIElements : CanvasLayer
 	private int _all_max;
 	private int _culled_max;
 
-    public void SetLabelTriangleCount(int culled, int all)
+	public void SetLabelTriangleCount(int culled, int all)
 	{
 		_culled_max = culled > _culled_max ? culled : _culled_max;
 		_all_max = all > _all_max ? all : _all_max;
@@ -50,7 +55,13 @@ public partial class UIElements : CanvasLayer
 	public override void _Process(double delta)
 	{
 		SetFPSCount((int)Engine.GetFramesPerSecond());
+		SetCameraMode();
 		// SetProfiler();
+	}
+
+	public void SetCameraMode()
+	{
+		_lblCameraMode.Text = $"Camera Mode: {_planetController.CameraController.GetViewport().DebugDraw}";
 	}
 
 	public void SetProfiler()
@@ -91,18 +102,31 @@ public partial class UIElements : CanvasLayer
 		_planetController.PlanetData.SetMaterialParameters();
 	}
 
+	public void EnableOrDisableMorphing()
+	{
+		bool currentSetting = !_planetController.PlanetData.Morphing;
+		_planetController.PlanetData.Morphing = currentSetting;
+		_btnMorphing.Text = currentSetting ? "Disable Morphing" : "Enable Morphing";
+		_planetController.PlanetData.SetMaterialParameters();
+	}
+
 	public void GenerateNormals()
 	{
 		RenderingDevice rd = RenderingServer.CreateLocalRenderingDevice();
-        ComputeNormals computeNormals = new(_normalPath, ref rd) { PlanetController = _planetController };
-        computeNormals.CreateUniforms();
+		ComputeNormals computeNormals = new(_normalPath, ref rd)
+		{
+			InputTexture = _planetController.PlanetData.HeightMap,
+			Radius = _planetController.PlanetData.Radius,
+			HeightScale = _planetController.PlanetData.HeightScale
+		};
+		computeNormals.CreateUniforms();
 		computeNormals.Ready();
-		computeNormals.SaveNormalMap("Normal.png");
 		rd.Submit();
 		rd.Sync();
+		computeNormals.SaveNormalMap("Normal.png");
 		computeNormals.CleanupGPU();
 		rd.Free();
-        rd = null;
+		rd = null;
 
 	}
 }

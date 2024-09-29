@@ -8,4 +8,6 @@ public partial class PlanetController : Node3D
 	[Export] public CameraController CameraController { get; private set; }
 	[Export] public SurfaceController SurfaceController { get; private set; }
 	[Export] public Node3D SurfaceAttachment { get; private set; }
+
+	
 }

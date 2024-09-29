@@ -91,10 +91,24 @@ public partial class ComputeCull : ComputeShader<ComputeCull.BufferNames>
 				 }).Invoke()
 			 ),
 
-			[BufferNames.HEIGHT_MAP] = new TextureUniform(_rd, (int)BufferNames.HEIGHT_MAP,
-				 PlanetController.PlanetData.HeightMap, isSampler: true, imageFormat: Image.Format.R8),
+			[BufferNames.HEIGHT_MAP] = new Func<Texture2DUniform>(() =>
+			{
+				Image image = PlanetController.PlanetData.HeightMap.GetImage();
+				image.ClearMipmaps();
+				image.Convert(Image.Format.L8);
 
-			[BufferNames.KEYS] = new TextureUniform(_rd, (int)BufferNames.KEYS,
+				return new Texture2DUniform(_rd, (int)BufferNames.HEIGHT_MAP,
+					new RDTextureFormat()
+					{
+						Width = (uint)image.GetWidth(),
+						Height = (uint)image.GetHeight(),
+						TextureType = RenderingDevice.TextureType.Type2D,
+						Format = RenderingDevice.DataFormat.R8Unorm,
+						UsageBits = RenderingDevice.TextureUsageBits.StorageBit | RenderingDevice.TextureUsageBits.SamplingBit | RenderingDevice.TextureUsageBits.CanCopyFromBit
+					}, isSampler: true, textureData: image.GetData());
+			}).Invoke(),
+
+			[BufferNames.KEYS] = new Texture2DUniform(_rd, (int)BufferNames.KEYS,
 				 new RDTextureFormat()
 				 {
 					 Width = (uint)(Mathf.Sqrt(PlanetController.PlanetData.MaximumNodes) * 1f / 2f),
@@ -110,7 +124,7 @@ public partial class ComputeCull : ComputeShader<ComputeCull.BufferNames>
 				 }
 			 ),
 
-			[BufferNames.GLOBAL_KEYS_DATA] = new TextureUniform(_rd, (int)BufferNames.GLOBAL_KEYS_DATA,
+			[BufferNames.GLOBAL_KEYS_DATA] = new Texture2DUniform(_rd, (int)BufferNames.GLOBAL_KEYS_DATA,
 				 new RDTextureFormat()
 				 {
 					 Width = 10u,
@@ -159,7 +173,7 @@ public partial class ComputeCull : ComputeShader<ComputeCull.BufferNames>
 
 	private byte[] GetIndicesData()
 	{
-		uint[] indices = _computeShaderUniforms[BufferNames.INDICES].GetData<uint>();
+		uint[] indices = ((StorageBufferUniform)_computeShaderUniforms[BufferNames.INDICES]).GetData<uint>();
 		indices[0] = (indices[0] + 1) % 3; // Read Index
 		indices[1] = (indices[1] + 1) % 3; // Write Index
 		indices[2] = (indices[2] + 1) % 3; // Delete Index
@@ -178,8 +192,8 @@ public partial class ComputeCull : ComputeShader<ComputeCull.BufferNames>
 		{
 			Mathf.DegToRad(PlanetController.CameraController.Fov),
 			PlanetController.PlanetData.SubFactor * PlanetController.PlanetData.Radius,
-			PlanetController.PlanetData.MorphFactor,
-			PlanetController.PlanetData.HeightScale
+			PlanetController.PlanetData.HeightScale,
+			PlanetController.PlanetData.MaximumLOD
 		}).ToArray());
 		return data.ToArray();
 	}

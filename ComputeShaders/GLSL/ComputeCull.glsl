@@ -42,8 +42,8 @@ layout(set = 0, binding = 7, std430) buffer restrict readonly ExternalData {
     mat4 planetTransformMatrix;
     float cameraFOV;     
     float subFactor;
-    float morphFactor;
     float heightScale;
+    float max_lod;
 };
 
 layout(set = 0, binding = 8, std430) buffer restrict Debug {
@@ -344,7 +344,7 @@ bool isUpperLeftChild(uvec2 key) {
     return (3 & key[1]) == 0;
 }
 
-vec4 isTJunction(uvec4 key, Triangle triangle, float lod) {
+vec4 isTJunction(uvec4 key, Triangle parent_triangle, float lod) {
     uint b1b2 = key.y & 0x3;
     vec3 neighbour;
 
@@ -356,60 +356,38 @@ vec4 isTJunction(uvec4 key, Triangle triangle, float lod) {
     vec4 color;
     
     if ((b1b2 >> 1) == 0) { // Check Y neighbour
-        neighbour = triangle.yNeighbor;
+        neighbour = parent_triangle.yNeighbor;
         color = vec4(0,1,0,0);
     }
     else if ((b1b2 >> 1) == 1) { // Check X neighbour
-        neighbour = triangle.xNeighbor;
+        neighbour = parent_triangle.xNeighbor;
         color = vec4(1,0,0,0);
     }
     float neighbour_lod = calculateLODToCam(neighbour, true);
-    return lod - 1 > neighbour_lod ? color : vec4(0,0,0,0);
+    return neighbour_lod < lod - 1 ? color : vec4(0,0,0,0);
 }
 
-uint getJunctionFlags(uvec4 key, Triangle triangle, float lod) {
+uint getJunctionFlags(uvec4 key, Triangle parent_triangle, float lod) {
     uint b1b2 = key.y & 0x3;
     vec3 neighbour;
 
-    if (key.xy == uvec2(0,1))
-    {
+    if (key.xy == uvec2(0,1)) {
         return 4 << 29;
     }
 
     if ((b1b2 >> 1) == 0) // Check Y neighbour
-        neighbour = triangle.yNeighbor;
+        neighbour = parent_triangle.yNeighbor;
     else if ((b1b2 >> 1) == 1) // Check X neighbour
-        neighbour = triangle.xNeighbor;
+        neighbour = parent_triangle.xNeighbor;
     
 
     float neighbour_lod = calculateLODToCam(neighbour, true);
 
-    if (lod - 1 > neighbour_lod)
-    {
+    if (neighbour_lod < lod - 1) {
         return b1b2 << 29;
     }
     return 4 << 29;
    
-}
-
-uint getMorphFlag(vec3 point, uvec2 key) {
-    float currentLod = getLevelInKey(key.xy);
-    float calculatedLod = calculateLODToCam(point, false);
-    float percentage = currentLod - calculatedLod;
-    
-    uint halfFloat = 0;
-    if (percentage >= morphFactor)
-    {
-        uint packedHalf = packHalf2x16(vec2(1, 0.0));
-        halfFloat = packedHalf & 0xFFFF;
-    }
-    else 
-    {
-        uint packedHalf = packHalf2x16(vec2(0, 0.0));
-        halfFloat = packedHalf & 0xFFFF;
-    }
-
-    return halfFloat << 4;
 }
 
 bool PointInFrustum(vec3 point) {
@@ -463,14 +441,13 @@ void main() {
     float parent_target_LOD = calculateLODToCam(parent_triangle.origin, true);
     float target_LOD = calculateLODToCam(triangle.origin, true);
   
-    if (target_LOD > current_LOD && current_LOD < 10) { // subdivide
+    if (target_LOD > current_LOD && current_LOD < max_lod) { // subdivide
         uvec4 children_keys[4] = getChildKeys(key);
         for (int i = 0; i < 4; i++) {
             uint idx = atomicAdd(primCount_full[write_index], 1);
             Triangle child_triangle = leafSpaceToWorldSpace(children_keys[i]);
             
             children_keys[i].w |= getJunctionFlags(children_keys[i], triangle, current_LOD + 1);
-            children_keys[i].w |= getMorphFlag(child_triangle.origin, children_keys[i].xy);
             
             write_full_list[idx] = children_keys[i];
             cull_key(children_keys[i], child_triangle, current_LOD + 1);
@@ -480,7 +457,6 @@ void main() {
             uint idx = atomicAdd(primCount_full[write_index], 1);
 
             parent_key.w |= getJunctionFlags(parent_key, grand_parent_triangle, current_LOD - 1);
-            parent_key.w |= getMorphFlag(parent_triangle.origin, parent_key.xy);
 
             write_full_list[idx] = parent_key;
             cull_key(parent_key, parent_triangle, current_LOD - 1);
@@ -489,7 +465,6 @@ void main() {
         uint idx = atomicAdd(primCount_full[write_index], 1);
 
         key.w |= getJunctionFlags(key, parent_triangle, current_LOD);
-        key.w |= getMorphFlag(triangle.origin, key.xy);
         
         write_full_list[idx] = key;
         cull_key(key, triangle, current_LOD);

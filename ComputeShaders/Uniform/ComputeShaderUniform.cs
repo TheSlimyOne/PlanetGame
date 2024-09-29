@@ -1,5 +1,6 @@
 using Godot;
 using System;
+using Godot.Collections;
 
 namespace Uniform;
 
@@ -18,22 +19,14 @@ public abstract partial class ComputeShaderUniform : GodotObject
 
     public abstract ComputeShaderUniform RebindUniform(RenderingDevice rd, int binding);
 
-    public abstract void UpdateUniform(byte[] data);
+    public abstract void UpdateUniform(byte[] data, uint layer = 0);
+    
+    public abstract byte[] GetByteData(uint layer = 0);
     
     public virtual void FreeRid()
     {
         if (Rid.IsValid) _rd.FreeRid(Rid);
         Uniform.ClearIds();
         _rd = null;
-    }
-
-    public T[] GetData<T>() where T : unmanaged
-    {
-        return Utilities.FromBytes<T>(_rd.BufferGetData(Rid)).ToArray();
-    }
-
-    public virtual byte[] GetByteData()
-    {
-        return _rd.BufferGetData(Rid);
     }
 }

@@ -64,15 +64,16 @@ public partial class SurfaceController : MultiMeshInstance3D
 		CollisionShape3D InnerCollisionShape = InnerCollision.GetChild<CollisionShape3D>(0);
 		CollisionShape3D OuterCollisionShape = OuterCollision.GetChild<CollisionShape3D>(0);
 
-		_shadowCaster.Mesh = new SphereMesh(){ Radius = MINIMUM_RADIUS_SCALE * _planetData.Radius, Height = 2 * MINIMUM_RADIUS_SCALE * _planetData.Radius};
+		_shadowCaster.Mesh = new SphereMesh() { Radius = MINIMUM_RADIUS_SCALE * _planetData.Radius, Height = 2 * MINIMUM_RADIUS_SCALE * _planetData.Radius };
 
 		((SphereShape3D)InnerCollisionShape.Shape).Radius = MINIMUM_RADIUS_SCALE * _planetData.Radius;
 		((SphereShape3D)OuterCollisionShape.Shape).Radius = _planetData.Radius + _planetData.HeightScale;
 	}
 
-    private void InitializeComputeShaders()
-    {
-        Multimesh = _planetData.GenerateMulitMesh();
+	private void InitializeComputeShaders()
+	{
+		Multimesh = _planetData.MultiMesh;
+		_planetData.GenerateMulitMesh();
 
 		_planetData.SetMaterialParameters();
 
@@ -83,39 +84,34 @@ public partial class SurfaceController : MultiMeshInstance3D
 		_computeCullShader.ComputeCopyShader = _computeCopyShader;
 		_computeCullShader.PlanetController = _planetController;
 		_computeCopyShader.ComputeCullShader = _computeCullShader;
-	
+
 		_computeCullShader.CreateUniforms();
 		_computeCopyShader.CreateUniforms();
-		
-		Texture2Drd displayKeyData = _computeCullShader.GetUniform<TextureUniform>(ComputeCull.BufferNames.KEYS).GetTexture2Drd();
-		Texture2Drd globalKeyData = _computeCullShader.GetUniform<TextureUniform>(ComputeCull.BufferNames.GLOBAL_KEYS_DATA).GetTexture2Drd();
-		// Texture2Drd morphDistance = _computeCullShader.GetUniform<TextureUniform>(ComputeCull.BufferNames.KEYS_DISTANCE).GetTexture2Drd();
+
+		Texture2Drd displayKeyData = _computeCullShader.GetUniform<Texture2DUniform>(ComputeCull.BufferNames.KEYS).GetTexture2Drd();
+		Texture2Drd globalKeyData = _computeCullShader.GetUniform<Texture2DUniform>(ComputeCull.BufferNames.GLOBAL_KEYS_DATA).GetTexture2Drd();
 
 		_planetData.ShaderMaterial.SetShaderParameter("key_image", displayKeyData);
 		_planetData.ShaderMaterial.SetShaderParameter("global_key_data", globalKeyData);
-		_planetData.ShaderMaterial.SetShaderParameter("camera_fov", Mathf.DegToRad(_cameraController.Fov));
-		_planetData.ShaderMaterial.SetShaderParameter("sub_factor", _planetData.SubFactor * _planetData.Radius);
-		// _planetData.ShaderMaterial.SetShaderParameter("morph_distance_image", morphDistance);
-		// _cameraController.GetChild(0).GetChild<TextureRect>(1).Texture = morphDistance;
-		
-		Processing = true;
-    }
 
-    public override void _Input(InputEvent @event)
+		Processing = true;
+	}
+
+	public override void _Input(InputEvent @event)
 	{
-		
+
 		if (_cameraController.Locked && @event is InputEventMouseMotion mouseMotionEvent)
 		{
 			_mouseCameraRotation = new Vector2(mouseMotionEvent.Relative.X, -mouseMotionEvent.Relative.Y) * MouseSensitivity;
 		}
-	
+
 		if (@event is InputEventMouseButton mouseEvent)
-        {
-            if (mouseEvent.ButtonIndex == MouseButton.Right && mouseEvent.Pressed)
-            {
+		{
+			if (mouseEvent.ButtonIndex == MouseButton.Right && mouseEvent.Pressed)
+			{
 				MainLightSource.Transform = _planetData.Rotation.Inverse();
-            }
-        }
+			}
+		}
 	}
 
 	public override void _Notification(int what)
@@ -128,7 +124,7 @@ public partial class SurfaceController : MultiMeshInstance3D
 			_computeCullShader.CleanupGPU();
 			_computeCopyShader.CleanupGPU();
 			_rd.Free();
-       		_rd = null;
+			_rd = null;
 		}
 	}
 	int counter = 24;
@@ -137,10 +133,12 @@ public partial class SurfaceController : MultiMeshInstance3D
 		bool locked = Processing;// && HasMoved;
 		ProcessMovement(delta);
 		_planetData.ShaderMaterial.SetShaderParameter("camera_position", _cameraController.GlobalPosition);
+		_planetData.ShaderMaterial.SetShaderParameter("fov", Mathf.DegToRad(_cameraController.Fov));
+		_planetData.ShaderMaterial.SetShaderParameter("sub_factor", _planetData.SubFactor * _planetData.Radius);
 		if (locked)
 		{
-			_computeCullShader.GetUniform<TextureUniform>(ComputeCull.BufferNames.KEYS).ClearTexture(Colors.Black);
-			_computeCullShader.GetUniform<TextureUniform>(ComputeCull.BufferNames.GLOBAL_KEYS_DATA).ClearTexture(Colors.Black);
+			_computeCullShader.GetUniform<Texture2DUniform>(ComputeCull.BufferNames.KEYS).ClearTexture(Colors.Black);
+			_computeCullShader.GetUniform<Texture2DUniform>(ComputeCull.BufferNames.GLOBAL_KEYS_DATA).ClearTexture(Colors.Black);
 			_computeCopyShader.Ready();
 			_rd.Submit();
 			_rd.Sync();
@@ -176,7 +174,7 @@ public partial class SurfaceController : MultiMeshInstance3D
 		_planetData.Rotate(Vector3.Back, by * (_keyCameraRotation.X + _mouseCameraRotation.X));
 
 
-		_planetData.ShaderMaterial.SetShaderParameter("transformations", Utilities.ToProjection(_planetData.GetPlanetTransformMatrix()));
+		_planetData.ShaderMaterial.SetShaderParameter("planet_transform_matrix", Utilities.ToProjection(_planetData.GetPlanetTransformMatrix()));
 
 		// Look up and down rotations
 		_cameraController.Rotation = _cameraController.Rotation with { X = Mathf.Clamp(_cameraController.Rotation.X + (by * (_keyCameraRotation.Y + _mouseCameraRotation.Y)), 0, Mathf.Pi - 0.0001f) };
@@ -190,7 +188,7 @@ public partial class SurfaceController : MultiMeshInstance3D
 
 		_cameraController.DistanceFromSurface += _direction.Y * by * CalculateSpeed(_cameraController.DistanceFromSurface, 0, _planetData.Radius * 2, _cameraController.BaseZoomSpeed);
 		_cameraController.DistanceFromSurface = Mathf.Clamp(_cameraController.DistanceFromSurface, 0, float.MaxValue);
-		
+
 		HasMoved = !_direction.IsZeroApprox() || !_keyCameraRotation.IsZeroApprox() || !_mouseCameraRotation.IsZeroApprox();
 		// Reset or Lerp movement
 		_mouseCameraRotation = Vector2.Zero;
@@ -212,7 +210,7 @@ public partial class SurfaceController : MultiMeshInstance3D
 
 	private void Render()
 	{
-		_cameraController.UIElements.SetCurrentLOD(_computeCullShader.GetUniform<TextureUniform>(ComputeCull.BufferNames.GLOBAL_KEYS_DATA).GetPixel(0, 0).R);
+		_cameraController.UIElements.SetCurrentLOD(_computeCullShader.GetUniform<Texture2DUniform>(ComputeCull.BufferNames.GLOBAL_KEYS_DATA).GetPixel(0, 0).R);
 
 		(int all, int culled) = _computeCullShader.GetPrimitiveCounts();
 		counter = all * 4;
@@ -221,7 +219,9 @@ public partial class SurfaceController : MultiMeshInstance3D
 		if (_planetData.Culling)
 		{
 			InstanceAllTriangles(culled);
-		} else {
+		}
+		else
+		{
 			Key[] keys = _computeCullShader.GetUniformData<Key>(ComputeCull.BufferNames.WRITE_FULL_LIST);
 			InstanceAllTriangles(keys, all);
 		}
@@ -246,5 +246,10 @@ public partial class SurfaceController : MultiMeshInstance3D
 		{
 			Multimesh.SetInstanceTransform(i, transform);
 		}
+	}
+
+	public void GenerateNodeAtlas()
+	{
+
 	}
 }

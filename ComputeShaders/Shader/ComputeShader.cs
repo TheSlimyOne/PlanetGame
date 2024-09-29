@@ -33,7 +33,7 @@ public abstract partial class ComputeShader<TEnum> : GodotObject where TEnum : E
     }
     public T[] GetUniformData<T>(TEnum @enum) where T : unmanaged
     {
-        return GetUniform(@enum).GetData<T>();
+        return ((StorageBufferUniform)GetUniform(@enum)).GetData<T>();
     }
     public byte[] GetUniformByteData(TEnum @enum)
     {
@@ -90,14 +90,14 @@ public abstract partial class ComputeShader<TEnum> : GodotObject where TEnum : E
     public virtual void CleanupGPU()
 	{
 		if (_rd == null) return;
+		_rd.FreeRid(_uniformSet);
+		_rd.FreeRid(_pipeline);
+		_rd.FreeRid(_shader);
 		foreach (ComputeShaderUniform computeShaderUniform in _computeShaderUniforms.Values)
 		{
             computeShaderUniform.FreeRid();
 		}
 
-		_rd.FreeRid(_pipeline);
-		_rd.FreeRid(_uniformSet);
-		_rd.FreeRid(_shader);
         _rd = null;
 	}
 

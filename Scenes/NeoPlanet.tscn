@@ -14,6 +14,8 @@ panorama = ExtResource("3_agj4v")
 sky_material = SubResource("PanoramaSkyMaterial_eodwd")
 
 [sub_resource type="Environment" id="Environment_qqt2a"]
+background_mode = 2
+background_color = Color(1, 1, 1, 1)
 sky = SubResource("Sky_emtpu")
 tonemap_mode = 2
 glow_enabled = true
@@ -104,17 +106,20 @@ InnerCollision = NodePath("../InnerCollision")
 OuterCollision = NodePath("../OuterCollision")
 _shadowCaster = NodePath("../SurfaceAttachment/ShadowCaster")
 BaseOrbitSpeed = 2.0
-OrbitSpeedModifier = 800.0
+OrbitSpeedModifier = 1000.0
 weight = 0.15
 _computeCullShaderPath = "res://ComputeShaders/GLSL/ComputeCull.glsl"
 _computeCopyShaderPath = "res://ComputeShaders/GLSL/Copy.glsl"
 
 [node name="CameraController" type="Camera3D" parent="." node_paths=PackedStringArray("UIElements", "WorldEnvironment", "Frustum")]
+visible = false
+current = true
 near = 0.001
+far = 30000.0
 script = ExtResource("5_0yfbu")
 UIElements = NodePath("CanvasLayer")
 WorldEnvironment = NodePath("../WorldEnvironment")
-DistanceFromSurface = 60.0
+DistanceFromSurface = 4200.0
 Frustum = NodePath("Frustum")
 BaseZoomSpeed = 1000.0
 
@@ -122,18 +127,21 @@ BaseZoomSpeed = 1000.0
 cast_shadow = 0
 skeleton = NodePath("../..")
 
-[node name="CanvasLayer" type="CanvasLayer" parent="CameraController" node_paths=PackedStringArray("_planetController", "_lblTriangleCount", "_lblFPS", "_lblDistance", "_lblLOD", "_btnProcessLod", "_btnColorizeLod", "_btnCubeMode", "_btnCulling", "_btnGenerateNormals")]
+[node name="CanvasLayer" type="CanvasLayer" parent="CameraController" node_paths=PackedStringArray("_planetController", "_lblTriangleCount", "_lblFPS", "_lblDistance", "_lblLOD", "_lblCameraMode", "_btnProcessLod", "_btnColorizeLod", "_btnCubeMode", "_btnCulling", "_btnGenerateNormals", "_btnMorphing", "ImageContainer")]
 script = ExtResource("6_upt2i")
 _planetController = NodePath("../..")
 _lblTriangleCount = NodePath("VBoxContainer/TriangleCount")
 _lblFPS = NodePath("VBoxContainer/FPS")
 _lblDistance = NodePath("VBoxContainer/Distance")
 _lblLOD = NodePath("VBoxContainer/LOD")
+_lblCameraMode = NodePath("VBoxContainer/CameraMode")
 _btnProcessLod = NodePath("VBoxContainer2/btnProcessLod")
 _btnColorizeLod = NodePath("VBoxContainer2/btnColorizeLod")
 _btnCubeMode = NodePath("VBoxContainer2/btnCubeMode")
 _btnCulling = NodePath("VBoxContainer2/btnCulling")
 _btnGenerateNormals = NodePath("VBoxContainer2/btnGenerateNormals")
+_btnMorphing = NodePath("VBoxContainer2/btnMorphing")
+ImageContainer = NodePath("ImageContainer")
 _normalPath = "res://ComputeShaders/GLSL/ComputeNormals.glsl"
 
 [node name="VBoxContainer" type="VBoxContainer" parent="CameraController/CanvasLayer"]
@@ -160,15 +168,10 @@ layout_mode = 2
 text = "Current LOD: X"
 label_settings = SubResource("LabelSettings_jr5mq")
 
-[node name="TextureRect" type="TextureRect" parent="CameraController/CanvasLayer"]
-anchors_preset = 2
-anchor_top = 1.0
-anchor_bottom = 1.0
-offset_left = 156.0
-offset_top = -156.0
-offset_right = 312.0
-grow_vertical = 0
-rotation = 1.5708
+[node name="CameraMode" type="Label" parent="CameraController/CanvasLayer/VBoxContainer"]
+layout_mode = 2
+text = "Camera Mode: X"
+label_settings = SubResource("LabelSettings_jr5mq")
 
 [node name="VBoxContainer2" type="VBoxContainer" parent="CameraController/CanvasLayer"]
 anchors_preset = 1
@@ -202,8 +205,23 @@ text = "Disable Culling"
 
 [node name="btnGenerateNormals" type="Button" parent="CameraController/CanvasLayer/VBoxContainer2"]
 layout_mode = 2
+focus_mode = 0
 button_mask = 2
 text = "Generate Normal"
+
+[node name="btnMorphing" type="Button" parent="CameraController/CanvasLayer/VBoxContainer2"]
+layout_mode = 2
+focus_mode = 0
+text = "Disable Morphing"
+
+[node name="ImageContainer" type="HBoxContainer" parent="CameraController/CanvasLayer"]
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -129.0
+grow_horizontal = 2
+grow_vertical = 0
 
 [node name="SurfaceAttachment" type="Node3D" parent="."]
 
@@ -251,12 +269,10 @@ transform = Transform3D(1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 0, 
 gi_mode = 0
 mesh = SubResource("CylinderMesh_ffecf")
 
-[node name="Node3D" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -112, 77)
-
 [connection signal="pressed" from="CameraController/CanvasLayer/VBoxContainer2/btnProcessLod" to="SurfaceController" method="GenerateNormals"]
 [connection signal="pressed" from="CameraController/CanvasLayer/VBoxContainer2/btnProcessLod" to="CameraController/CanvasLayer" method="EnableOrDisableProcessing"]
 [connection signal="pressed" from="CameraController/CanvasLayer/VBoxContainer2/btnColorizeLod" to="CameraController/CanvasLayer" method="EnableOrDisableLodColorize"]
 [connection signal="pressed" from="CameraController/CanvasLayer/VBoxContainer2/btnCubeMode" to="CameraController/CanvasLayer" method="EnableOrDisableCubeMode"]
 [connection signal="pressed" from="CameraController/CanvasLayer/VBoxContainer2/btnCulling" to="CameraController/CanvasLayer" method="EnableOrDisableCulling"]
 [connection signal="pressed" from="CameraController/CanvasLayer/VBoxContainer2/btnGenerateNormals" to="CameraController/CanvasLayer" method="GenerateNormals"]
+[connection signal="pressed" from="CameraController/CanvasLayer/VBoxContainer2/btnMorphing" to="CameraController/CanvasLayer" method="EnableOrDisableMorphing"]

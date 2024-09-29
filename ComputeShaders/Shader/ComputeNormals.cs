@@ -5,13 +5,15 @@ namespace Shader;
 
 public partial class ComputeNormals : ComputeShader<ComputeNormals.BufferNames>
 {
-    public PlanetController PlanetController { get; set; }
-    
     public enum BufferNames{
         HEIGHT_MAP_DATA,
         HEIGHT_MAP,
         NORMAL_MAP
     }
+
+    public float Radius;
+    public float HeightScale;
+    public Texture2D InputTexture;
 
     public ComputeNormals(string shaderFilePath, ref RenderingDevice rd) : base(shaderFilePath, ref rd)
     {
@@ -23,17 +25,32 @@ public partial class ComputeNormals : ComputeShader<ComputeNormals.BufferNames>
         _computeShaderUniforms = new System.Collections.Generic.Dictionary<BufferNames, ComputeShaderUniform>()
         {
             [BufferNames.HEIGHT_MAP_DATA] = new StorageBufferUniform(_rd, (int)BufferNames.HEIGHT_MAP_DATA, Utilities.ToBytes<float>( new float[] {
-                PlanetController.PlanetData.Radius,
-                PlanetController.PlanetData.HeightScale
+                Radius,
+                HeightScale
             }).ToArray()),
 
-            [BufferNames.HEIGHT_MAP] = new TextureUniform(_rd, (int)BufferNames.HEIGHT_MAP_DATA, PlanetController.PlanetData.HeightMap, imageFormat: Image.Format.L8),
+            [BufferNames.HEIGHT_MAP] = new Func<Texture2DUniform>(() =>
+			{
+				Image image = InputTexture.GetImage();
+				image.ClearMipmaps();
+				image.Convert(Image.Format.L8);
 
-            [BufferNames.NORMAL_MAP] = new TextureUniform(_rd, (int)BufferNames.NORMAL_MAP,
+				return new Texture2DUniform(_rd, (int)BufferNames.HEIGHT_MAP,
+					new RDTextureFormat()
+					{
+						Width = (uint)image.GetWidth(),
+						Height = (uint)image.GetHeight(),
+						TextureType = RenderingDevice.TextureType.Type2D,
+						Format = RenderingDevice.DataFormat.R8Unorm,
+						UsageBits = RenderingDevice.TextureUsageBits.StorageBit | RenderingDevice.TextureUsageBits.SamplingBit | RenderingDevice.TextureUsageBits.CanCopyFromBit
+					}, isSampler: false, textureData: image.GetData());
+			}).Invoke(),
+
+            [BufferNames.NORMAL_MAP] = new Texture2DUniform(_rd, (int)BufferNames.NORMAL_MAP,
 				new RDTextureFormat()
 				{
-					Width = (uint)PlanetController.PlanetData.HeightMap.GetWidth(),
-					Height = (uint)PlanetController.PlanetData.HeightMap.GetHeight(),
+					Width = (uint)InputTexture.GetWidth(),
+					Height = (uint)InputTexture.GetHeight(),
 					TextureType = RenderingDevice.TextureType.Type2D,
 					Format = RenderingDevice.DataFormat.R32G32B32A32Sfloat,
 					UsageBits = RenderingDevice.TextureUsageBits.SamplingBit |
@@ -50,14 +67,12 @@ public partial class ComputeNormals : ComputeShader<ComputeNormals.BufferNames>
 
     public void SaveNormalMap(string path)
     {
-        GetUniform<TextureUniform>(BufferNames.NORMAL_MAP).SaveImage(path, Image.Format.Rgbaf);
+        GetUniform<Texture2DUniform>(BufferNames.NORMAL_MAP).SaveImage(path, Image.Format.Rgbaf);
     }
 
     public override void Ready()
     {
-        Image heightMap = PlanetController.PlanetData.HeightMap.GetImage();
-
-        Vector2I numThreads = new Vector2I(heightMap.GetWidth()/8, heightMap.GetHeight()/8);
+        Vector2I numThreads = new Vector2I(InputTexture.GetWidth()/8, InputTexture.GetHeight()/8);
         long computeList = _rd.ComputeListBegin();
 		_rd.ComputeListBindComputePipeline(computeList, _pipeline);
 		_rd.ComputeListBindUniformSet(computeList, _uniformSet, 0);
