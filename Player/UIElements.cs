@@ -20,12 +20,14 @@ public partial class UIElements : CanvasLayer
 	[Export] private Button _btnCulling;
 	[Export] private Button _btnGenerateNormals;
 	[Export] private Button _btnMorphing;
+	[Export] private Button _btnGenerateCubeMap;
 
 	[ExportGroup("Extra")]
 	[Export] public HBoxContainer ImageContainer;
 
 	[ExportGroup("Compute Shader")]
 	[Export(PropertyHint.File)] private string _normalPath;
+	[Export(PropertyHint.File)] private string _cubeMapPath;
 
 	private int _all_max;
 	private int _culled_max;
@@ -113,7 +115,7 @@ public partial class UIElements : CanvasLayer
 	public void GenerateNormals()
 	{
 		RenderingDevice rd = RenderingServer.CreateLocalRenderingDevice();
-		ComputeNormals computeNormals = new(_normalPath, ref rd)
+		CalculateNormalsDispatcher computeNormals = new(_normalPath, ref rd)
 		{
 			InputTexture = _planetController.PlanetData.HeightMap,
 			Radius = _planetController.PlanetData.Radius,
@@ -123,10 +125,27 @@ public partial class UIElements : CanvasLayer
 		computeNormals.Ready();
 		rd.Submit();
 		rd.Sync();
-		computeNormals.SaveNormalMap("Normal.png");
+		computeNormals.SaveNormalMap("Normal");
 		computeNormals.CleanupGPU();
 		rd.Free();
 		rd = null;
 
+	}
+
+	public void GenerateCubeMap()
+	{
+		RenderingDevice rd = RenderingServer.CreateLocalRenderingDevice();
+		CalculateCubeMapDispatcher computeCubeMap = new(_cubeMapPath, ref rd)
+		{
+			InputTexture = _planetController.PlanetData.AlbedoMap,
+		};
+		computeCubeMap.CreateUniforms();
+		computeCubeMap.Ready();
+		rd.Submit();
+		rd.Sync();
+		computeCubeMap.SaveCubeMap("Cubemap");
+		computeCubeMap.CleanupGPU();
+		rd.Free();
+		rd = null;
 	}
 }

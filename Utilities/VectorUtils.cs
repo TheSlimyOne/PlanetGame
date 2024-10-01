@@ -3,37 +3,26 @@ using Godot;
 
 public static class VectorUtils
 {
-    public static bool IsGreaterVector3(Vector3 vectorA, Vector3 vectorB)
-    {
-        return vectorA.X > vectorB.X && vectorA.Y > vectorB.Y && vectorA.Z > vectorB.Z;
-    }
+    public static bool IsGreaterVector3(Vector3 vectorA, Vector3 vectorB) => vectorA.X > vectorB.X && vectorA.Y > vectorB.Y && vectorA.Z > vectorB.Z;
+    
 
-    public static bool IsLesserVector3(Vector3 vectorA, Vector3 vectorB)
-    {
-        return vectorA.X < vectorB.X && vectorA.Y < vectorB.Y && vectorA.Z < vectorB.Z;
-    }
+    public static bool IsLesserVector3(Vector3 vectorA, Vector3 vectorB) => vectorA.X < vectorB.X && vectorA.Y < vectorB.Y && vectorA.Z < vectorB.Z;
+    
 
-    public static bool IsEqualVector3(Vector3 vectorA, Vector3 vectorB)
-    {
-        return vectorA.X == vectorB.X && vectorA.Y == vectorB.Y && vectorA.Z == vectorB.Z;
-    }
+    public static bool IsEqualVector3(Vector3 vectorA, Vector3 vectorB) => vectorA.X == vectorB.X && vectorA.Y == vectorB.Y && vectorA.Z == vectorB.Z;
+    
 
-    public static bool IsGreaterEqualVector3(Vector3 vectorA, Vector3 vectorB)
-    {
-        return vectorA.X >= vectorB.X && vectorA.Y >= vectorB.Y && vectorA.Z >= vectorB.Z;
-    }
+    public static bool IsGreaterEqualVector3(Vector3 vectorA, Vector3 vectorB) => vectorA.X >= vectorB.X && vectorA.Y >= vectorB.Y && vectorA.Z >= vectorB.Z;
+    
 
-    public static bool IsLesserEqualVector3(Vector3 vectorA, Vector3 vectorB)
-    {
-        return vectorA.X <= vectorB.X && vectorA.Y <= vectorB.Y && vectorA.Z <= vectorB.Z;
-    }
+    public static bool IsLesserEqualVector3(Vector3 vectorA, Vector3 vectorB) => vectorA.X <= vectorB.X && vectorA.Y <= vectorB.Y && vectorA.Z <= vectorB.Z;
 
     public static Vector3 GetCentroid(Vector3[] vectors)
     {
         Vector3 centroid = Vector3.Zero;
         foreach (Vector3 vector in vectors)
             centroid += vector;
-            
+
         return centroid / vectors.Length;
     }
 
@@ -91,34 +80,16 @@ public static class VectorUtils
         return false;
     }
 
-    public static int SignOfNormal(Vector3 vector)
-    {
-        int index = GetIndexOfNormalComponent(vector);
-        
-        return (int)vector[index];
+    public static int SignOfNormal(Vector3 vector)=> (int)vector[GetIndexOfNormalComponent(vector)];
 
-    }
-    
+    public static Vector4 toVector4(Vector3 vector, float padValue) => new(vector.X, vector.Y, vector.Z, padValue);
 
-    public static Vector4 toVector4(Vector3 vector, float padValue)
-    {
-        return new Vector4(vector.X, vector.Y, vector.Z, padValue);
-    }
+    public static Vector3 toVector3(Vector4 vector) => new(vector.X, vector.Y, vector.Z);
 
-    public static Vector3 toVector3(Vector4 vector)
-    {
-        return new Vector3(vector.X, vector.Y, vector.Z);
-    }
+    public static Vector3 toVector3(Vector2 vector, float padding) => new(vector.X, vector.Y, padding);
 
-    public static Vector3 toVector3(Vector2 vector, float padding)
-    {
-        return new Vector3(vector.X, vector.Y, padding);
-    }
-    
-    public static Vector2 toVector2(Vector3 vector)
-    {
-        return new Vector2(vector.X, vector.Y);
-    }
+    public static Vector2 toVector2(Vector3 vector) => new(vector.X, vector.Y);
+
 
     public static Vector3 PointOnCubeToPointOnSphere(Vector3 point)
     {
@@ -142,6 +113,9 @@ public static class VectorUtils
 
         return new Vector2(u, v);
     }
+
+    public static Color ToColor(Vector4 vector) => new(vector.X, vector.Y, vector.Z, vector.W);
+    
 
 }
 

@@ -10,22 +10,29 @@ public abstract partial class ComputeShaderUniform : GodotObject
     public int Binding { get; protected set; }
     public RDUniform Uniform { get; protected set; }
     protected RenderingDevice _rd;
+    public bool Perserved;
 
-    protected ComputeShaderUniform(RenderingDevice renderingDevice, int binding)
+    protected ComputeShaderUniform(RenderingDevice renderingDevice, int binding, bool perserved)
     {
         _rd = renderingDevice;
         Binding = binding;
+        Perserved = perserved;
     }
 
+    // This is supposed to simplify the process of sharing buffers between 2 or more compute shaders
+    // It will either share the data if the rd is the same or clone the buffer to another rd if the rds are different
     public abstract ComputeShaderUniform RebindUniform(RenderingDevice rd, int binding);
 
-    public abstract void UpdateUniform(byte[] data, uint layer = 0);
-    
-    public abstract byte[] GetByteData(uint layer = 0);
-    
-    public virtual void FreeRid()
+    public abstract void UpdateUniform(byte[] data);
+
+    public abstract Array<byte[]> GetByteData();
+
+    public void FreeRid()
     {
-        if (Rid.IsValid) _rd.FreeRid(Rid);
+        foreach (Rid rid in Uniform.GetIds())
+        {
+            _rd.FreeRid(rid);
+        }
         Uniform.ClearIds();
         _rd = null;
     }

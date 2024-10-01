@@ -5,9 +5,9 @@ uniform float radius;
 uniform float grid_size;
 varying float elevation;
 
-uniform sampler2D albedo_map : repeat_disable;
-uniform sampler2D height_map : repeat_disable;
-uniform sampler2D normal_map : repeat_disable;
+uniform sampler2D albedo_map : repeat_disable, source_color;
+uniform sampler2D height_map : repeat_disable, source_color;
+uniform sampler2D normal_map : repeat_disable, source_color;
 
 uniform bool is_colorize_lod;
 uniform bool is_cube;
@@ -255,17 +255,7 @@ vec2 get_polygon_uv(vec3 point, uint polygon_id) {
 	uv = vec2(point[min(inputA, inputB)], point[max(inputA, inputB)]);
 	uv = abs(vec2(0.0, float(flag)) - uv);
 	
-	//return vec2(0, uv.y);
 	return uv;
-	
-	//int inputA = (index + 1) % 3;
-	//int inputB = (index + 2) % 3;
-	//
-	//vec2 uv = vec2(point[min(inputA, inputB)], point[max(inputA, inputB)]);
-	//return vec2(uv.x, 0);
-	
-   
-	
 }
 
 ivec2 getKeyCoordinate(int idx) {
@@ -303,7 +293,7 @@ void vertex() {
 	
 	vec3 morphed_world_position = local_space_to_world_space(morphed_local_position);
 	
-	elevation = textureLod(height_map, point_on_sphere_to_UV(morphed_local_position), 0).r;
+	elevation = textureLod(height_map, point_on_sphere_to_UV(morphed_local_position), 0.0).r;
 	NORMAL = (vec4(morphed_local_position, 1) * get_rotation()).xyz;
 	VERTEX = morphed_world_position + NORMAL * height_scale * elevation;
 }
@@ -315,7 +305,6 @@ void fragment() {
 
 	vec2 sphere_uv_point = point_on_sphere_to_UV(sphere_local_position);
 	vec3 surface_texture = textureLod(albedo_map, is_texture_1D ? vec2(elevation, 0.0) : sphere_uv_point, 0.0).rgb;
-	
 
 	vec2 polygon_uv = get_polygon_uv(cube_local_position, key.z);
 	vec2 cell = floor(polygon_uv * grid_size);
@@ -323,10 +312,12 @@ void fragment() {
 	vec3 color1 = vec3(1);
 	vec3 color2 = vec3(0);
 	
-	debug_color = mix(color1, color2, checker);
+	//debug_color = mix(color1, color2, checker);
+	
 
 	NORMAL = height_to_normal(elevation, normal_strength, VERTEX, NORMAL);
 	ALBEDO = is_colorize_lod ? debug_color : surface_texture;
+	ALBEDO = vec3(elevation,0, 0);
 	
 	
 }

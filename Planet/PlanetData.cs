@@ -208,14 +208,12 @@ public partial class PlanetData : Resource
                 _gridSize = value;
                 EmitChanged();
                 SetMaterialParameters();
-
-                
             }
-            for (int i = 0; i <= _gridSize; i++)
-            {
-                GD.Print(_radius / _gridSize * i);
-            }
-            GD.Print("====================");
+            // for (int i = 0; i <= _gridSize; i++)
+            // {
+            //     GD.Print(_radius / _gridSize * i);
+            // }
+            // GD.Print("====================");
         }
     }
     private int _gridSize = 5;
@@ -317,7 +315,7 @@ public partial class PlanetData : Resource
             }
         }
     }
-    private MultiMesh _multiMesh = new() { Mesh = new PlaceholderMesh(), InstanceCount = 0, TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseCustomData = true, UseColors = true };
+    private MultiMesh _multiMesh = new() { Mesh = new PlaceholderMesh(), InstanceCount = 0, TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseCustomData = true };
 
     public void SetMaterialParameters()
     {

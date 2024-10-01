@@ -5,11 +5,15 @@ using Uniform;
 
 namespace Shader;
 
-public partial class ComputeCollision : ComputeShader<ComputeCopy.BufferNames>
+public partial class ComputeCollisionDispatcher : ComputeShaderDispatcher<ComputeCollisionDispatcher.BufferNames>
 {
+    public enum BufferNames {
+
+    }
+
     public PlanetController PlanetController { get; set; }
 
-    public ComputeCollision(string shaderFilePath, ref RenderingDevice rd) : base(shaderFilePath, ref rd)
+    public ComputeCollisionDispatcher(string shaderFilePath, ref RenderingDevice rd) : base(shaderFilePath, ref rd)
     {
         SetupComputeShader();
     }

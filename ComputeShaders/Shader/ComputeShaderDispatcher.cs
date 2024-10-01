@@ -1,12 +1,11 @@
 using System;
 using Godot;
 using Godot.Collections;
-using System.Collections.Generic;
 using Uniform;
 
 namespace Shader;
 
-public abstract partial class ComputeShader<TEnum> : GodotObject where TEnum : Enum
+public abstract class ComputeShaderDispatcher<TEnum> where TEnum : Enum
 {
     protected RenderingDevice _rd;
     protected string _shaderFilePath;
@@ -17,7 +16,7 @@ public abstract partial class ComputeShader<TEnum> : GodotObject where TEnum : E
 
     protected System.Collections.Generic.Dictionary<TEnum, ComputeShaderUniform> _computeShaderUniforms;
 
-    protected ComputeShader(string shaderFilePath, ref RenderingDevice rd) 
+    protected ComputeShaderDispatcher(string shaderFilePath, ref RenderingDevice rd) 
     {
         _shaderFilePath = shaderFilePath;
         _rd = rd;
@@ -34,10 +33,6 @@ public abstract partial class ComputeShader<TEnum> : GodotObject where TEnum : E
     public T[] GetUniformData<T>(TEnum @enum) where T : unmanaged
     {
         return ((StorageBufferUniform)GetUniform(@enum)).GetData<T>();
-    }
-    public byte[] GetUniformByteData(TEnum @enum)
-    {
-        return GetUniform(@enum).GetByteData();
     }
     public Rid GetUniformRid(TEnum @enum)
     {
@@ -90,11 +85,13 @@ public abstract partial class ComputeShader<TEnum> : GodotObject where TEnum : E
     public virtual void CleanupGPU()
 	{
 		if (_rd == null) return;
+
 		_rd.FreeRid(_uniformSet);
 		_rd.FreeRid(_pipeline);
 		_rd.FreeRid(_shader);
 		foreach (ComputeShaderUniform computeShaderUniform in _computeShaderUniforms.Values)
 		{
+            // if ()
             computeShaderUniform.FreeRid();
 		}
 

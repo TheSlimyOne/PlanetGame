@@ -5,10 +5,10 @@ using Uniform;
 
 namespace Shader;
 
-public partial class ComputeCopy : ComputeShader<ComputeCopy.BufferNames>
+public partial class ComputeCopy : ComputeShaderDispatcher<ComputeCopy.BufferNames>
 {
 
-    public ComputeCull ComputeCullShader { get; set; }
+    public CalculateSurfaceDispatcher ComputeCullShader { get; set; }
 
     public enum BufferNames
 	{
@@ -23,7 +23,7 @@ public partial class ComputeCopy : ComputeShader<ComputeCopy.BufferNames>
         SetupComputeShader();
     }
 
-    public void SetComputeCullShader(ComputeCull computeCullShader)
+    public void SetComputeCullShader(CalculateSurfaceDispatcher computeCullShader)
     {
         ComputeCullShader = computeCullShader;
     }
@@ -32,15 +32,15 @@ public partial class ComputeCopy : ComputeShader<ComputeCopy.BufferNames>
     {
         _computeShaderUniforms = new System.Collections.Generic.Dictionary<BufferNames, ComputeShaderUniform>()
 		{
-			[BufferNames.ATOMIC_COUNTER] = ComputeCullShader.GetUniform(ComputeCull.BufferNames.ATOMIC_COUNTER),
+			[BufferNames.ATOMIC_COUNTER] = ComputeCullShader.GetUniform(CalculateSurfaceDispatcher.BufferNames.ATOMIC_COUNTER),
 			
-			[BufferNames.INDICES] = ComputeCullShader.GetUniform(ComputeCull.BufferNames.INDICES),
+			[BufferNames.INDICES] = ComputeCullShader.GetUniform(CalculateSurfaceDispatcher.BufferNames.INDICES),
 
             [BufferNames.DISPATCH_BUFFER] = new StorageBufferUniform(_rd, (int)BufferNames.DISPATCH_BUFFER,
-				Utilities.ToBytes<uint>(new uint[] { 1, 1, 1 }).ToArray(), 1
+				Utilities.ToBytes<uint>(new uint[] { 1, 1, 1 }).ToArray(), indirect: 1
 			),
 
-			[BufferNames.GLOBAL_KEYS_DATA] = ComputeCullShader.GetUniform(ComputeCull.BufferNames.GLOBAL_KEYS_DATA),
+			[BufferNames.GLOBAL_KEYS_DATA] = ComputeCullShader.GetUniform(CalculateSurfaceDispatcher.BufferNames.GLOBAL_KEYS_DATA),
 		};
 
         CreateUniformSet(); 

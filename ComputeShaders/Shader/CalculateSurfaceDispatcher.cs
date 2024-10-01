@@ -6,7 +6,7 @@ using Godot.Collections;
 using Planet;
 namespace Shader;
 
-public partial class ComputeCull : ComputeShader<ComputeCull.BufferNames>
+public partial class CalculateSurfaceDispatcher : ComputeShaderDispatcher<CalculateSurfaceDispatcher.BufferNames>
 {
 	public PlanetController PlanetController { get; set; }
 	public ComputeCopy ComputeCopyShader { get; set; }
@@ -27,7 +27,7 @@ public partial class ComputeCull : ComputeShader<ComputeCull.BufferNames>
 		KEYS_DISTANCE
 	}
 
-	public ComputeCull(string shaderFilePath, ref RenderingDevice rd) : base(shaderFilePath, ref rd)
+	public CalculateSurfaceDispatcher(string shaderFilePath, ref RenderingDevice rd) : base(shaderFilePath, ref rd)
 	{
 		SetupComputeShader();
 	}
@@ -39,12 +39,12 @@ public partial class ComputeCull : ComputeShader<ComputeCull.BufferNames>
 			// Full      list  0 - 2
 			// Culling   list  3 - 6
 			[BufferNames.ATOMIC_COUNTER] = new StorageBufferUniform(_rd, (int)BufferNames.ATOMIC_COUNTER,
-				 new Func<byte[]>(() =>
-				 {
-					 uint[] primCounts = new uint[2 * 3];
-					 primCounts[0] = 6 * 4;
-					 return Utilities.ToBytes<uint>(primCounts).ToArray();
-				 }).Invoke()
+				new Func<byte[]>(() =>
+				{
+					uint[] primCounts = new uint[2 * 3];
+					primCounts[0] = 6 * 4;
+					return Utilities.ToBytes<uint>(primCounts).ToArray();
+				}).Invoke()
 			 ),
 
 			// 0 Read Index
@@ -52,43 +52,43 @@ public partial class ComputeCull : ComputeShader<ComputeCull.BufferNames>
 			// 2 Delete Index
 			// 3 Max nodes
 			[BufferNames.INDICES] = new StorageBufferUniform(_rd, (int)BufferNames.INDICES,
-				 Utilities.ToBytes<uint>(new uint[] { 0, 1, 2, (uint)PlanetController.PlanetData.MaximumNodes }).ToArray()
-			 ),
+				Utilities.ToBytes<uint>(new uint[] { 0, 1, 2, (uint)PlanetController.PlanetData.MaximumNodes }).ToArray()
+			),
 
 			// key = uvec4(nodeIDMSB, nodeIDLSB, meshPolygonID, flagsAndRootID)
 			[BufferNames.READ_LIST] = new StorageBufferUniform(_rd, (int)BufferNames.READ_LIST,
-				 new Func<byte[]>(() =>
-				 {
-					 Key[] readList = new Key[PlanetController.PlanetData.MaximumNodes];
+			new Func<byte[]>(() =>
+			{
+				Key[] readList = new Key[PlanetController.PlanetData.MaximumNodes];
 
-					 for (int i = 0; i < 6; i++)
-					 {
-						 readList[4 * i + 0] = new Key(0, 1, i, 0);
-						 readList[4 * i + 1] = new Key(0, 1, i, 1);
-						 readList[4 * i + 2] = new Key(0, 1, i, 2);
-						 readList[4 * i + 3] = new Key(0, 1, i, 3);
-					 }
-					 return Utilities.ToBytes<Key>(readList).ToArray();
-				 }).Invoke()
-			 ),
+				for (int i = 0; i < 6; i++)
+				{
+					readList[4 * i + 0] = new Key(0, 1, i, 0);
+					readList[4 * i + 1] = new Key(0, 1, i, 1);
+					readList[4 * i + 2] = new Key(0, 1, i, 2);
+					readList[4 * i + 3] = new Key(0, 1, i, 3);
+				}
+				return Utilities.ToBytes<Key>(readList).ToArray();
+			}).Invoke()
+			),
 
 			[BufferNames.WRITE_FULL_LIST] = new StorageBufferUniform(_rd, (int)BufferNames.WRITE_FULL_LIST,
-				 Utilities.ToBytes<Key>(new Key[PlanetController.PlanetData.MaximumNodes]).ToArray()
-			 ),
+				Utilities.ToBytes<Key>(new Key[PlanetController.PlanetData.MaximumNodes]).ToArray()
+			),
 
 			[BufferNames.WRITE_CULLED_LIST] = new StorageBufferUniform(_rd, (int)BufferNames.WRITE_CULLED_LIST,
-				 Utilities.ToBytes<Key>(new Key[PlanetController.PlanetData.MaximumNodes]).ToArray()
-			 ),
+				Utilities.ToBytes<Key>(new Key[PlanetController.PlanetData.MaximumNodes]).ToArray()
+			),
 
 			[BufferNames.TRIANGLE_COORDINATES] = new StorageBufferUniform(_rd, (int)BufferNames.TRIANGLE_COORDINATES,
-				 Utilities.ToBytes<Vector4>(PlanetData.GenerateTrianglePoints()).ToArray()
-			 ),
+				Utilities.ToBytes<Vector4>(PlanetData.GenerateTrianglePoints()).ToArray()
+			),
 
 			[BufferNames.DEBUG_DATA] = new StorageBufferUniform(_rd, (int)BufferNames.DEBUG_DATA,
-				 new Func<byte[]>(() =>
-				 {
-					 return Utilities.ToBytes<bool>(new bool[] { Engine.IsEditorHint() }).ToArray();
-				 }).Invoke()
+				new Func<byte[]>(() =>
+				{
+					return Utilities.ToBytes<bool>(new bool[] { Engine.IsEditorHint() }).ToArray();
+				}).Invoke()
 			 ),
 
 			[BufferNames.HEIGHT_MAP] = new Func<Texture2DUniform>(() =>
@@ -105,44 +105,44 @@ public partial class ComputeCull : ComputeShader<ComputeCull.BufferNames>
 						TextureType = RenderingDevice.TextureType.Type2D,
 						Format = RenderingDevice.DataFormat.R8Unorm,
 						UsageBits = RenderingDevice.TextureUsageBits.StorageBit | RenderingDevice.TextureUsageBits.SamplingBit | RenderingDevice.TextureUsageBits.CanCopyFromBit
-					}, isSampler: true, textureData: image.GetData());
+					}, RenderingDevice.UniformType.SamplerWithTexture, textureData: new() { image.GetData() });
 			}).Invoke(),
 
 			[BufferNames.KEYS] = new Texture2DUniform(_rd, (int)BufferNames.KEYS,
-				 new RDTextureFormat()
-				 {
-					 Width = (uint)(Mathf.Sqrt(PlanetController.PlanetData.MaximumNodes) * 1f / 2f),
-					 Height = (uint)(Mathf.Sqrt(PlanetController.PlanetData.MaximumNodes) * 1f / 2f),
-					 TextureType = RenderingDevice.TextureType.Type2D,
-					 Format = RenderingDevice.DataFormat.R32G32B32A32Sfloat,
-					 UsageBits = RenderingDevice.TextureUsageBits.SamplingBit |
-								 RenderingDevice.TextureUsageBits.StorageBit |
-								 RenderingDevice.TextureUsageBits.CanUpdateBit |
-								 RenderingDevice.TextureUsageBits.CanCopyToBit |
-								 RenderingDevice.TextureUsageBits.CanCopyFromBit |
-								 RenderingDevice.TextureUsageBits.ColorAttachmentBit
-				 }
-			 ),
+				new RDTextureFormat()
+				{
+					Width = (uint)(Mathf.Sqrt(PlanetController.PlanetData.MaximumNodes) * 1f / 2f),
+					Height = (uint)(Mathf.Sqrt(PlanetController.PlanetData.MaximumNodes) * 1f / 2f),
+					TextureType = RenderingDevice.TextureType.Type2D,
+					Format = RenderingDevice.DataFormat.R32G32B32A32Sfloat,
+					UsageBits = RenderingDevice.TextureUsageBits.SamplingBit |
+								RenderingDevice.TextureUsageBits.StorageBit |
+								RenderingDevice.TextureUsageBits.CanUpdateBit |
+								RenderingDevice.TextureUsageBits.CanCopyToBit |
+								RenderingDevice.TextureUsageBits.CanCopyFromBit |
+								RenderingDevice.TextureUsageBits.ColorAttachmentBit
+				}, RenderingDevice.UniformType.Image
+			),
 
 			[BufferNames.GLOBAL_KEYS_DATA] = new Texture2DUniform(_rd, (int)BufferNames.GLOBAL_KEYS_DATA,
-				 new RDTextureFormat()
-				 {
-					 Width = 10u,
-					 Height = 10u,
-					 TextureType = RenderingDevice.TextureType.Type2D,
-					 Format = RenderingDevice.DataFormat.R32Sfloat,
-					 UsageBits = RenderingDevice.TextureUsageBits.SamplingBit |
-								 RenderingDevice.TextureUsageBits.StorageBit |
-								 RenderingDevice.TextureUsageBits.CanUpdateBit |
-								 RenderingDevice.TextureUsageBits.CanCopyToBit |
-								 RenderingDevice.TextureUsageBits.CanCopyFromBit |
-								 RenderingDevice.TextureUsageBits.ColorAttachmentBit
-				 }
-			 ),
+				new RDTextureFormat()
+				{
+					Width = 10u,
+					Height = 10u,
+					TextureType = RenderingDevice.TextureType.Type2D,
+					Format = RenderingDevice.DataFormat.R32Sfloat,
+					UsageBits = RenderingDevice.TextureUsageBits.SamplingBit |
+								RenderingDevice.TextureUsageBits.StorageBit |
+								RenderingDevice.TextureUsageBits.CanUpdateBit |
+								RenderingDevice.TextureUsageBits.CanCopyToBit |
+								RenderingDevice.TextureUsageBits.CanCopyFromBit |
+								RenderingDevice.TextureUsageBits.ColorAttachmentBit
+				}, RenderingDevice.UniformType.Image
+			),
 
 			[BufferNames.EXTERNAL_DATA] = new StorageBufferUniform(_rd, (int)BufferNames.EXTERNAL_DATA,
-				 GetExternalData()
-			 )
+				GetExternalData()
+			)
 		};
 
 		CreateUniformSet();
@@ -163,7 +163,7 @@ public partial class ComputeCull : ComputeShader<ComputeCull.BufferNames>
 			GetIndicesData()
 		);
 		_computeShaderUniforms[BufferNames.READ_LIST].UpdateUniform(
-			_computeShaderUniforms[BufferNames.WRITE_FULL_LIST].GetByteData()
+			_computeShaderUniforms[BufferNames.WRITE_FULL_LIST].GetByteData()[0]
 		);
 
 		_computeShaderUniforms[BufferNames.EXTERNAL_DATA].UpdateUniform(
