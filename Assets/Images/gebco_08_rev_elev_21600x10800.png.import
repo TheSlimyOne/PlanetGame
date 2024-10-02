@@ -2,7 +2,7 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://b8nluepgt5u0f"
+uid="uid://b4fs0ooswx8qk"
 path="res://.godot/imported/gebco_08_rev_elev_21600x10800.png-991f5d21655c4c3c061a3f6a13086f9c.ctex"
 metadata={
 "vram_texture": false
@@ -21,7 +21,7 @@ compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=false
+mipmaps/generate=true
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""

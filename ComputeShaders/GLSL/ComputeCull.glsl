@@ -294,28 +294,29 @@ float calculateLOD(float dist, float fovy, float factor) {
     return clamp(-log2(num/dom), -1, 31);
 }
 
-
-float distanceFromCam(vec3 from, bool useHeight) {
-    vec3 point = (vec4(from, 1) * planetTransformMatrix).xyz;
-    if (useHeight)
-    {
-        vec2 uv = point_on_sphere_to_UV(from);
-        float height = texture(heightMap, uv).x;
-        mat4 rotationOnly = mat4(
-            vec4(planetTransformMatrix[0].xyz / length(planetTransformMatrix[0].xyz), 0), 
-            vec4(planetTransformMatrix[1].xyz / length(planetTransformMatrix[1].xyz), 0), 
-            vec4(planetTransformMatrix[2].xyz / length(planetTransformMatrix[2].xyz), 0),
-            vec4(0, 0, 0, 1)
-        );
-        vec3 normal = (vec4(from, 1) * rotationOnly).xyz;
-        point += (normal * height * heightScale);
-    }
-    return distance(point, cameraPosition.xyz);
+vec3 localPointToWorldPoint(vec3 point)
+{
+    vec2 uv = point_on_sphere_to_UV(point);
+    float height = texture(heightMap, uv).x;
+    mat4 rotationOnly = mat4(
+        vec4(planetTransformMatrix[0].xyz / length(planetTransformMatrix[0].xyz), 0), 
+        vec4(planetTransformMatrix[1].xyz / length(planetTransformMatrix[1].xyz), 0), 
+        vec4(planetTransformMatrix[2].xyz / length(planetTransformMatrix[2].xyz), 0),
+        vec4(0, 0, 0, 1)
+    );
+    vec3 normal = (vec4(point, 1) * rotationOnly).xyz;
+    vec3 worldPoint = (vec4(point, 1) * planetTransformMatrix).xyz;
+    worldPoint += (normal * height * heightScale);
+    return worldPoint;
 }
 
-float calculateLODToCam(vec3 from, bool useHeight) {
+float distanceFromCam(vec3 from) {
+    return distance(localPointToWorldPoint(from), cameraPosition.xyz);
+}
+
+float calculateLODToCam(vec3 from) {
     return calculateLOD(
-        distanceFromCam(from, useHeight),
+        distanceFromCam(from),
         cameraFOV, // Must be in radians
         subFactor
     );
@@ -363,7 +364,7 @@ vec4 isTJunction(uvec4 key, Triangle parent_triangle, float lod) {
         neighbour = parent_triangle.xNeighbor;
         color = vec4(1,0,0,0);
     }
-    float neighbour_lod = calculateLODToCam(neighbour, true);
+    float neighbour_lod = calculateLODToCam(neighbour);
     return neighbour_lod < lod - 1 ? color : vec4(0,0,0,0);
 }
 
@@ -381,7 +382,7 @@ uint getJunctionFlags(uvec4 key, Triangle parent_triangle, float lod) {
         neighbour = parent_triangle.xNeighbor;
     
 
-    float neighbour_lod = calculateLODToCam(neighbour, true);
+    float neighbour_lod = calculateLODToCam(neighbour);
 
     if (neighbour_lod < lod - 1) {
         return b1b2 << 29;
@@ -390,8 +391,7 @@ uint getJunctionFlags(uvec4 key, Triangle parent_triangle, float lod) {
    
 }
 
-bool PointInFrustum(vec3 point) {
-    point = (vec4(point, 1) * planetTransformMatrix).xyz;
+bool PointInFrustum(vec3 point) { 
     vec4 clipSpacePoint = viewProjectionMatrix * (vec4(point, 1));
     vec3 ndcPoint = clipSpacePoint.xyz / clipSpacePoint.w;
 
@@ -401,9 +401,9 @@ bool PointInFrustum(vec3 point) {
 }
 
 bool TriangleInFrustum(Triangle triangle) {
-    return PointInFrustum(triangle.v0) ||
-           PointInFrustum(triangle.v1) ||
-           PointInFrustum(triangle.v2);
+    return PointInFrustum(localPointToWorldPoint(triangle.v0)) ||
+           PointInFrustum(localPointToWorldPoint(triangle.v1)) ||
+           PointInFrustum(localPointToWorldPoint(triangle.v2));
 }
 
 ivec2 getKeyCoordinate(uint idx) {
@@ -438,8 +438,8 @@ void main() {
 
     float current_LOD = getLevelInKey(key.xy);
 
-    float parent_target_LOD = calculateLODToCam(parent_triangle.origin, true);
-    float target_LOD = calculateLODToCam(triangle.origin, true);
+    float parent_target_LOD = calculateLODToCam(parent_triangle.origin);
+    float target_LOD = calculateLODToCam(triangle.origin);
   
     if (target_LOD > current_LOD && current_LOD < max_lod) { // subdivide
         uvec4 children_keys[4] = getChildKeys(key);

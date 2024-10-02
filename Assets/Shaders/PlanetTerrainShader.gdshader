@@ -6,7 +6,7 @@ uniform float grid_size;
 varying float elevation;
 
 uniform sampler2D albedo_map : repeat_disable, source_color;
-uniform sampler2D height_map : repeat_disable, source_color;
+uniform sampler2D height_map : repeat_disable;
 uniform sampler2D normal_map : repeat_disable, source_color;
 
 uniform bool is_colorize_lod;
@@ -236,15 +236,15 @@ float calculateMorph(vec3 point, uvec2 key) {
 
 vec2 get_polygon_uv(vec3 point, uint polygon_id) {
 	uint vertexBaseIndex = polygon_id * 5u;
-	ivec3 polygon_normal = ivec3(position_list[vertexBaseIndex].xyz);
+	ivec3 normal = ivec3(position_list[vertexBaseIndex].xyz);
 	point = (point + 1.0) / 2.0;
-	
+
 	int index = -4;
 	int flag = 0;
 	for(int i = 0; i < 3; i++) {
-		if (polygon_normal[i] != 0) {
+		if (normal[i] != 0) {
 			index = i;
-			flag = polygon_normal[i] == -1 ? 1 : 0;
+			flag = normal[i] == -1 ? 1 : 0;
 			break;
 		}
 	}
@@ -272,7 +272,7 @@ vec3 hslToRgb(vec3 c) {
 varying flat uvec4 key;
 varying vec3 cube_local_position;
 varying vec3 sphere_local_position;
-
+varying float morph;
 void vertex() {
 	key = is_culling ? floatBitsToUint(texelFetch(key_image, getKeyCoordinate(int(INSTANCE_ID)), 0)) : floatBitsToUint(INSTANCE_CUSTOM);
 	
@@ -283,7 +283,7 @@ void vertex() {
 	vec3 local_position = quad_space_to_local_space(quad_position, key.z, key.w);
 	local_position = is_cube ? local_position : point_on_cube_to_point_on_sphere(local_position);
 	
-	float morph = is_morphing ? calculateMorph(local_position, key.xy) : 0.0;
+	morph = is_morphing ? calculateMorph(local_position, key.xy) : 0.0;
 	vec2 morphed_quad_position = leaf_space_to_quad_space(morphVertex(VERTEX.xy, morph), key.xy);
 	vec3 morphed_local_position = quad_space_to_local_space(morphed_quad_position, key.z, key.w);
 
@@ -301,7 +301,7 @@ void vertex() {
 void fragment() {
 	float msb = float(getLevelInKey(key.xy)) / 12.0;
 	vec3 debug_color = hslToRgb(vec3(msb, 1.0, 1.0));
-	
+	float child = float(key.y & 3u);
 
 	vec2 sphere_uv_point = point_on_sphere_to_UV(sphere_local_position);
 	vec3 surface_texture = textureLod(albedo_map, is_texture_1D ? vec2(elevation, 0.0) : sphere_uv_point, 0.0).rgb;
@@ -313,12 +313,9 @@ void fragment() {
 	vec3 color2 = vec3(0);
 	
 	//debug_color = mix(color1, color2, checker);
-	
-
 	NORMAL = height_to_normal(elevation, normal_strength, VERTEX, NORMAL);
 	ALBEDO = is_colorize_lod ? debug_color : surface_texture;
-	ALBEDO = vec3(elevation,0, 0);
-	
+	//ALBEDO = vec3(morph);
 	
 }
 

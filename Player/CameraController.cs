@@ -35,7 +35,7 @@ public partial class CameraController : Camera3D
 
 		heightMap = _planetController.PlanetData.HeightMap.GetImage();
 
-		_debugPlot.Multimesh = new MultiMesh() { UseColors = true, Mesh = new SphereMesh() { RadialSegments = 8, Rings = 4, Material = new StandardMaterial3D() { VertexColorUseAsAlbedo = true }, Radius = 0.025f, Height = 0.05f}, TransformFormat = MultiMesh.TransformFormatEnum.Transform3D };
+		_debugPlot.Multimesh = new MultiMesh() { UseColors = true, Mesh = new SphereMesh() { RadialSegments = 8, Rings = 4, Material = new StandardMaterial3D() { VertexColorUseAsAlbedo = true }, Radius = 1f, Height = 2f}, TransformFormat = MultiMesh.TransformFormatEnum.Transform3D };
 	}
 
 	public void CalculateRayToPlanet(Vector3 from, Vector3 to)
@@ -92,10 +92,10 @@ public partial class CameraController : Camera3D
 				return;
 		}
 
-		int amount = 30 * Mathf.RoundToInt(start.DistanceTo(end));
-
-		_debugPlot.Multimesh.InstanceCount = 2 * amount;
-		// GD.Print(amount);
+		int amount = 10 * Mathf.RoundToInt(start.DistanceTo(end));
+		_debugPlot.Multimesh.InstanceCount = 2 * amount + 1;
+		// _debugPlot.Multimesh.InstanceCount = 1;
+		Vector3 relativePoint = Vector3.Zero;
 		for (int i = 0; i < amount; i++)
 		{
 
@@ -107,34 +107,35 @@ public partial class CameraController : Camera3D
 			Vector3 directPath = position;
 
 			Vector3 surfacePath = position.Normalized();
+			Vector3 terrainPath = surfacePath;
 			Vector2I size = heightMap.GetSize();
-			Vector2 uv = VectorUtils.PointOnSphereToUV(surfacePath);
+			Vector2 uv = VectorUtils.PointOnSphereToUV(terrainPath);
 
 			float height = heightMap.GetPixelv(new Vector2I(Mathf.RoundToInt(size.X * uv.X), Mathf.RoundToInt(size.Y * uv.Y))).R;
 
-
 			height *= _planetController.PlanetData.HeightScale;
 
-			surfacePath = surfacePath * _planetController.PlanetData.Radius + surfacePath * height;
-			Transform3D directTransform;
-			// if (surfacePath.Length() >= directPath.Length())
-			// {
-			// 	directTransform = new(Basis.Identity, directPath);
-			// 	_debugPlot.Multimesh.SetInstanceColor(0, Colors.Red);
-			// 	_debugPlot.Multimesh.SetInstanceTransform(0, directTransform);
-			// 	return;
-			// }
-			directTransform = new(Basis.Identity, directPath);
-			Transform3D surfaceTransform = new(Basis.Identity, surfacePath);
-
+			terrainPath = terrainPath * _planetController.PlanetData.Radius + terrainPath * height;
+			Transform3D directTransform = new(Basis.Identity, directPath);
+			Transform3D surfaceTransform = new(Basis.Identity, terrainPath);
 
 			_debugPlot.Multimesh.SetInstanceColor(2 * i + 0, Colors.Red);
 			_debugPlot.Multimesh.SetInstanceColor(2 * i + 1, Colors.Blue);
 			_debugPlot.Multimesh.SetInstanceTransform(2 * i + 0, directTransform);
 			_debugPlot.Multimesh.SetInstanceTransform(2 * i + 1, surfaceTransform);
-
+			if (terrainPath.Length() >= directPath.Length())
+			{
+				relativePoint = surfacePath;
+				break;
+			}
 		}
-		// _debugPlot.Multimesh.InstanceCount = 0;
+		if (relativePoint == Vector3.Zero)
+			return;
+
+		Vector3 cubePoint = VectorUtils.PointOnSphereToPointOnCube(relativePoint);
+		_debugPlot.Multimesh.SetInstanceColor(0, Colors.Green);
+		_debugPlot.Multimesh.SetInstanceTransform(0, new Transform3D(Basis.Identity, cubePoint * _planetController.PlanetData.Radius));
+
 
 	}
 

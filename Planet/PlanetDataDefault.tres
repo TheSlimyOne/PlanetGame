@@ -1,7 +1,7 @@
 [gd_resource type="Resource" script_class="PlanetData" load_steps=7 format=4 uid="uid://gwppe7ras2x"]
 
-[ext_resource type="Texture2D" uid="uid://b0xaoom76i6uo" path="res://Assets/Images/4_no_ice_clouds_mts_16k.jpg" id="1_jnkcu"]
-[ext_resource type="Texture2D" uid="uid://b8nluepgt5u0f" path="res://Assets/Images/gebco_08_rev_elev_21600x10800.png" id="2_np0yp"]
+[ext_resource type="Texture2D" uid="uid://b0xaoom76i6uo" path="res://Assets/Images/4_no_ice_clouds_mts_16k.jpg" id="1_dm3ha"]
+[ext_resource type="Texture2D" uid="uid://b4fs0ooswx8qk" path="res://Assets/Images/gebco_08_rev_elev_21600x10800.png" id="2_fy0kq"]
 [ext_resource type="Shader" path="res://Assets/Shaders/PlanetTerrainShader.gdshader" id="2_y4vca"]
 [ext_resource type="Script" path="res://Planet/PlanetData.cs" id="3_6i60t"]
 
@@ -18,32 +18,32 @@ shader_parameter/is_cube = false
 shader_parameter/is_texture_1D = false
 shader_parameter/is_culling = true
 shader_parameter/is_morphing = true
-shader_parameter/height_scale = 15.0
-shader_parameter/normal_strength = 10.0
+shader_parameter/height_scale = 10.0
+shader_parameter/normal_strength = 5.3
 shader_parameter/resolution = 17
 shader_parameter/planet_transform_matrix = null
 shader_parameter/camera_position = null
 shader_parameter/fov = null
 shader_parameter/morph_range = Vector2(0.4, 0.8)
 shader_parameter/sub_factor = 4.0
-shader_parameter/albedo_map = ExtResource("1_jnkcu")
-shader_parameter/height_map = ExtResource("2_np0yp")
+shader_parameter/albedo_map = ExtResource("1_dm3ha")
+shader_parameter/height_map = ExtResource("2_fy0kq")
 shader_parameter/normal_map = SubResource("PlaceholderTexture2D_q1wnt")
 
 [resource]
 script = ExtResource("3_6i60t")
 Radius = 500.0
-HeightScale = 15.0
+HeightScale = 10.0
 Resolution = 17
 MaximumNodes = 40000
-MaximumLOD = 31
+MaximumLOD = 12
 SubFactor = 4.0
 MorphRange = Vector2(0.4, 0.8)
 GridSize = 8
-AlbedoMap = ExtResource("1_jnkcu")
-HeightMap = ExtResource("2_np0yp")
+AlbedoMap = ExtResource("1_dm3ha")
+HeightMap = ExtResource("2_fy0kq")
 NormalMap = SubResource("PlaceholderTexture2D_q1wnt")
-NormalStrength = 10.0
+NormalStrength = 5.3
 ShaderMaterial = SubResource("ShaderMaterial_taf2v")
 ColorizeLod = false
 CubeMode = false

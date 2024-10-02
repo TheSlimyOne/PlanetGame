@@ -104,6 +104,39 @@ public static class VectorUtils
         return new Vector3(x, y, z);
     }
 
+    public static Vector3 PointOnSphereToPointOnCube(Vector3 point)
+    {
+        float xAbs = Mathf.Abs(point.X);
+        float yAbs = Mathf.Abs(point.Y);
+        float zAbs = Mathf.Abs(point.Z);
+
+        Vector3 cubePoint = new Vector3();
+
+        if (xAbs >= yAbs && xAbs >= zAbs)
+        {
+            // Closest to the X face
+            cubePoint.X = point.X > 0 ? 1.0f : -1.0f;
+            cubePoint.Y = point.Y / xAbs;
+            cubePoint.Z = point.Z / xAbs;
+        }
+        else if (yAbs >= xAbs && yAbs >= zAbs)
+        {
+            // Closest to the Y face
+            cubePoint.X = point.X / yAbs;
+            cubePoint.Y = point.Y > 0 ? 1.0f : -1.0f;
+            cubePoint.Z = point.Z / yAbs;
+        }
+        else
+        {
+            // Closest to the Z face
+            cubePoint.X = point.X / zAbs;
+            cubePoint.Y = point.Y / zAbs;
+            cubePoint.Z = point.Z > 0 ? 1.0f : -1.0f;
+        }
+
+        return cubePoint;
+    }
+
     public static Vector2 PointOnSphereToUV(Vector3 point)
     {
         float longitude = Mathf.Atan2(point.X, point.Z);

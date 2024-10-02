@@ -1,6 +1,6 @@
 using Godot;
 using System;
-using Shader;
+using Dispatcher;
 using Uniform;
 using Planet;
 
@@ -32,7 +32,7 @@ public partial class SurfaceController : MultiMeshInstance3D
 	[Export(PropertyHint.File)] private string _computeCopyShaderPath;
 
 	private CalculateSurfaceDispatcher _computeCullShader;
-	private ComputeCopy _computeCopyShader;
+	private CopyKeysDispatcher _computeCopyShader;
 
 	public bool Processing;
 	private RenderingDevice _rd;
@@ -68,8 +68,6 @@ public partial class SurfaceController : MultiMeshInstance3D
 
 		((SphereShape3D)InnerCollisionShape.Shape).Radius = MINIMUM_RADIUS_SCALE * _planetData.Radius;
 		((SphereShape3D)OuterCollisionShape.Shape).Radius = _planetData.Radius + _planetData.HeightScale;
-		
-		GD.PrintS(((SphereShape3D)InnerCollisionShape.Shape).Radius, ((SphereShape3D)OuterCollisionShape.Shape).Radius);
 	}
 
 	private void InitializeComputeShaders()
@@ -81,7 +79,7 @@ public partial class SurfaceController : MultiMeshInstance3D
 
 		_rd = RenderingServer.GetRenderingDevice();
 		_computeCullShader = new CalculateSurfaceDispatcher(_computeCullShaderPath, ref _rd);
-		_computeCopyShader = new ComputeCopy(_computeCopyShaderPath, ref _rd);
+		_computeCopyShader = new CopyKeysDispatcher(_computeCopyShaderPath, ref _rd);
 
 		_computeCullShader.ComputeCopyShader = _computeCopyShader;
 		_computeCullShader.PlanetController = _planetController;
@@ -125,14 +123,12 @@ public partial class SurfaceController : MultiMeshInstance3D
 			_planetData.ShaderMaterial.SetShaderParameter("global_key_data", new PlaceholderTexture2D());
 			_computeCullShader.CleanupGPU();
 			_computeCopyShader.CleanupGPU();
-			_rd.Free();
-			_rd = null;
 		}
 	}
 	int counter = 24;
 	public override void _PhysicsProcess(double delta)
 	{
-		bool locked = Processing;// && HasMoved;
+		bool locked = Processing && HasMoved;
 		ProcessMovement(delta);
 		_planetData.ShaderMaterial.SetShaderParameter("camera_position", _cameraController.GlobalPosition);
 		_planetData.ShaderMaterial.SetShaderParameter("fov", Mathf.DegToRad(_cameraController.Fov));
