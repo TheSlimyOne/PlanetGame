@@ -2,8 +2,8 @@
 #version 450
 #define PI 3.14159265359
 
+// Sebastian Lague
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
-
 
 layout(set = 0, binding = 0) uniform sampler2D InputImage;
 layout(set = 0, binding = 1, rgba32f) uniform image3D CubeMap;

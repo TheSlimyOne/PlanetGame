@@ -52,7 +52,6 @@ layout(set = 0, binding = 8, std430) buffer restrict Debug {
 
 layout(set = 0, binding = 9) uniform sampler2D heightMap;
 layout(set = 0, binding = 10, rgba32f) restrict writeonly uniform image2D DisplayKeys;
-// layout(set = 0, binding = 11, rgba32f) restrict writeonly uniform image2D morphFactorImage;
 
 struct Triangle {
     vec3 v0; // (0, 0)
@@ -289,7 +288,7 @@ uint base4ToHex(uint base4Value) {
 }
 
 float calculateLOD(float dist, float fovy, float factor) {
-    float num = dist * tan(fovy/2);
+    float num = dist * fovy;
     float dom = sqrt2 * factor;
     return clamp(-log2(num/dom), -1, 31);
 }
@@ -317,7 +316,7 @@ float distanceFromCam(vec3 from) {
 float calculateLODToCam(vec3 from) {
     return calculateLOD(
         distanceFromCam(from),
-        cameraFOV, // Must be in radians
+        cameraFOV,
         subFactor
     );
 }

@@ -1,6 +1,7 @@
 using System;
 using Godot;
 using Godot.Collections;
+using Planet;
 
 
 public partial class CameraController : Camera3D
@@ -18,10 +19,12 @@ public partial class CameraController : Camera3D
 
 	[Export] public float BaseZoomSpeed;
 	[Export] public float RayLength = 5000;
+	[Export] public float pointRadius = 0.1f;
 	Image heightMap;
 
 
 	[Export] public bool Locked { get; private set; }
+	private const string POSITION = "position";
 
 	public override void _Ready()
 	{
@@ -35,7 +38,7 @@ public partial class CameraController : Camera3D
 
 		heightMap = _planetController.PlanetData.HeightMap.GetImage();
 
-		_debugPlot.Multimesh = new MultiMesh() { UseColors = true, Mesh = new SphereMesh() { RadialSegments = 8, Rings = 4, Material = new StandardMaterial3D() { VertexColorUseAsAlbedo = true }, Radius = 1f, Height = 2f}, TransformFormat = MultiMesh.TransformFormatEnum.Transform3D };
+		_debugPlot.Multimesh = new MultiMesh() { UseColors = true, Mesh = new SphereMesh() { RadialSegments = 8, Rings = 4, Material = new StandardMaterial3D() { VertexColorUseAsAlbedo = true }, Radius = pointRadius, Height = 2 * pointRadius }, TransformFormat = MultiMesh.TransformFormatEnum.Transform3D };
 	}
 
 	public void CalculateRayToPlanet(Vector3 from, Vector3 to)
@@ -43,28 +46,30 @@ public partial class CameraController : Camera3D
 		PhysicsDirectSpaceState3D spaceState = GetWorld3D().DirectSpaceState;
 		Rid inner = _planetController.SurfaceController.InnerCollision.GetRid();
 		Rid outer = _planetController.SurfaceController.OuterCollision.GetRid();
+		Rid cube = _planetController.SurfaceController.CubicalCollision.GetRid();
+
 		Dictionary[] intersections = new Dictionary[4];
 
 		intersections[0] = spaceState.IntersectRay(new PhysicsRayQueryParameters3D()
 		{
 			To = to,
 			From = from,
-			Exclude = new Array<Rid>() { inner }
+			Exclude = new Array<Rid>() { inner, cube }
 		});
 		intersections[1] = spaceState.IntersectRay(new PhysicsRayQueryParameters3D()
 		{
 			To = to,
 			From = from,
-			Exclude = new Array<Rid>() { outer }
+			Exclude = new Array<Rid>() { outer, cube }
 		});
 		intersections[2] = spaceState.IntersectRay(new PhysicsRayQueryParameters3D()
 		{
 			To = from,
 			From = to,
-			Exclude = new Array<Rid>() { inner }
+			Exclude = new Array<Rid>() { inner, cube }
 		});
 
-		int identity = (intersections[0].ContainsKey("position") ? 1 << 2 : 0) | (intersections[1].ContainsKey("position") ? 1 << 1 : 0) | (intersections[2].ContainsKey("position") ? 1 : 0);
+		int identity = (intersections[0].ContainsKey(POSITION) ? 1 << 2 : 0) | (intersections[1].ContainsKey(POSITION) ? 1 << 1 : 0) | (intersections[2].ContainsKey(POSITION) ? 1 : 0);
 
 		Vector3 start;
 		Vector3 end;
@@ -72,70 +77,65 @@ public partial class CameraController : Camera3D
 		switch (identity)
 		{
 			case 7:
-				start = (Vector3)intersections[0]["position"];
-				end = (Vector3)intersections[1]["position"];
+				start = (Vector3)intersections[0][POSITION];
+				end = (Vector3)intersections[1][POSITION];
 				break;
 			case 5:
-				start = (Vector3)intersections[0]["position"];
-				end = (Vector3)intersections[2]["position"];
+				start = (Vector3)intersections[0][POSITION];
+				end = (Vector3)intersections[2][POSITION];
 				break;
 			case 3:
 				start = from;
-				end = (Vector3)intersections[1]["position"];
+				end = (Vector3)intersections[1][POSITION];
 				break;
 			case 1:
 				start = from;
-				end = (Vector3)intersections[2]["position"];
+				end = (Vector3)intersections[2][POSITION];
 				break;
 			default:
 				_debugPlot.Multimesh.InstanceCount = 0;
 				return;
 		}
 
+		start = _planetController.PlanetData.GetPlanetTRMatrix().Inverse() * start;
+		end = _planetController.PlanetData.GetPlanetTRMatrix().Inverse() * end;
+
 		int amount = 10 * Mathf.RoundToInt(start.DistanceTo(end));
-		_debugPlot.Multimesh.InstanceCount = 2 * amount + 1;
-		// _debugPlot.Multimesh.InstanceCount = 1;
-		Vector3 relativePoint = Vector3.Zero;
+		_debugPlot.Multimesh.InstanceCount = 2 * amount;
+
+		Vector2I size = heightMap.GetSize();
 		for (int i = 0; i < amount; i++)
 		{
+			Vector3 localPosition = start.Lerp(end, i / (amount - 1f));
 
-			Vector3 position = start.Lerp(end, i / (amount - 1f));
+			Vector3 directPath = localPosition;
+			Vector3 terrainPath = localPosition.Normalized();
 
-			position -= _planetController.PlanetData.Translation.Origin;
-			position = _planetController.PlanetData.Rotation.Basis.Transposed() * position;
-
-			Vector3 directPath = position;
-
-			Vector3 surfacePath = position.Normalized();
-			Vector3 terrainPath = surfacePath;
-			Vector2I size = heightMap.GetSize();
 			Vector2 uv = VectorUtils.PointOnSphereToUV(terrainPath);
+			Vector2I pixel = new(Mathf.RoundToInt(size.X * uv.X), Mathf.RoundToInt(size.Y * uv.Y));
+			pixel = pixel.Clamp(Vector2I.Zero, size - Vector2I.One);
+			float height = heightMap.GetPixelv(pixel).R * _planetController.PlanetData.HeightScale;
 
-			float height = heightMap.GetPixelv(new Vector2I(Mathf.RoundToInt(size.X * uv.X), Mathf.RoundToInt(size.Y * uv.Y))).R;
-
-			height *= _planetController.PlanetData.HeightScale;
-
-			terrainPath = terrainPath * _planetController.PlanetData.Radius + terrainPath * height;
-			Transform3D directTransform = new(Basis.Identity, directPath);
-			Transform3D surfaceTransform = new(Basis.Identity, terrainPath);
+			terrainPath *= _planetController.PlanetData.Radius + height;
 
 			_debugPlot.Multimesh.SetInstanceColor(2 * i + 0, Colors.Red);
+			_debugPlot.Multimesh.SetInstanceTransform(2 * i + 0, new(Basis.Identity, directPath));
 			_debugPlot.Multimesh.SetInstanceColor(2 * i + 1, Colors.Blue);
-			_debugPlot.Multimesh.SetInstanceTransform(2 * i + 0, directTransform);
-			_debugPlot.Multimesh.SetInstanceTransform(2 * i + 1, surfaceTransform);
+			_debugPlot.Multimesh.SetInstanceTransform(2 * i + 1, new(Basis.Identity, terrainPath));
+
 			if (terrainPath.Length() >= directPath.Length())
 			{
-				relativePoint = surfacePath;
-				break;
+				return;
 			}
+
 		}
-		if (relativePoint == Vector3.Zero)
-			return;
+		_debugPlot.Multimesh.InstanceCount = 0;
+		
 
-		Vector3 cubePoint = VectorUtils.PointOnSphereToPointOnCube(relativePoint);
-		_debugPlot.Multimesh.SetInstanceColor(0, Colors.Green);
-		_debugPlot.Multimesh.SetInstanceTransform(0, new Transform3D(Basis.Identity, cubePoint * _planetController.PlanetData.Radius));
+		
 
+
+		
 
 	}
 
@@ -197,24 +197,25 @@ public partial class CameraController : Camera3D
 
 		Frustum.Mesh = CreateFrustumMesh(ProjectPoints(new Vector3[] {
 			new(-1, -1, -1), // near-bottom-left
-        	new(1, -1, -1),  // near-bottom-right
-        	new(-1, 1, -1),  // near-top-left
-        	new(1, 1, -1),   // near-top-right
-        	new(-1, -1, 1),  // far-bottom-left
-        	new(1, -1, 1),   // far-bottom-right
-        	new(-1, 1, 1),   // far-top-left
-        	new(1, 1, 1)     // far-top-right
+			new(1, -1, -1),  // near-bottom-right
+			new(-1, 1, -1),  // near-top-left
+			new(1, 1, -1),   // near-top-right
+			new(-1, -1, 1),  // far-bottom-left
+			new(1, -1, 1),   // far-bottom-right
+			new(-1, 1, 1),   // far-top-left
+			new(1, 1, 1)     // far-top-right
 		}, GetCameraProjection()));
+
 
 		// InnerCameraFrustum.Mesh = CreateFrustumMesh(ProjectPoints(new Vector3[] {
 		// 	new(-1, -1, -1), // near-bottom-left
-        // 	new(1, -1, -1),  // near-bottom-right
-        // 	new(-1, 1, -1),  // near-top-left
-        // 	new(1, 1, -1),   // near-top-right
-        // 	new(-1, -1, 1),  // far-bottom-left
-        // 	new(1, -1, 1),   // far-bottom-right
-        // 	new(-1, 1, 1),   // far-top-left
-        // 	new(1, 1, 1)     // far-top-right
+		// 	new(1, -1, -1),  // near-bottom-right
+		// 	new(-1, 1, -1),  // near-top-left
+		// 	new(1, 1, -1),   // near-top-right
+		// 	new(-1, -1, 1),  // far-bottom-left
+		// 	new(1, -1, 1),   // far-bottom-right
+		// 	new(-1, 1, 1),   // far-top-left
+		// 	new(1, 1, 1)     // far-top-right
 		// }, InnerCamera.GetCameraProjection()));
 	}
 
@@ -279,5 +280,13 @@ public partial class CameraController : Camera3D
 	{
 		Input.MouseMode = Input.MouseModeEnum.Visible;
 		Locked = false;
+	}
+
+	public float CalculateLODToCam(Vector3 from)
+	{
+		float distance = from.DistanceTo(_planetController.PlanetData.GetPlanetTRMatrix().Inverse() * GlobalPosition);
+		float num = distance * Mathf.Tan(Mathf.DegToRad(Fov) / 2);
+		float dom = Mathf.Sqrt2 * _planetController.PlanetData.SubFactor * _planetController.PlanetData.Radius;
+		return Mathf.Clamp(-MathF.Log2(num / dom), 0, _planetController.PlanetData.MaximumLOD);
 	}
 }

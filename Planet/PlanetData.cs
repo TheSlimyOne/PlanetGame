@@ -193,6 +193,22 @@ namespace Planet
             }
         }
         private Vector2 _morphRange = new(0, 0);
+
+        [Export(PropertyHint.Range, "1, 256")]
+        public int NodeSize
+        {
+            get => _nodeSize;
+            set
+            {
+                if (_nodeSize != Mathf.Clamp(value, 1, 265))
+                {
+                    _nodeSize = Mathf.Clamp(value, 1, 265);
+                    EmitChanged();
+                    SetMaterialParameters();
+                }
+            }
+        }
+        private int _nodeSize = 16;
         #endregion
 
         #region Surface Settings
@@ -318,6 +334,21 @@ namespace Planet
         }
         private MultiMesh _multiMesh = new() { Mesh = new PlaceholderMesh(), InstanceCount = 0, TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseCustomData = true };
 
+        public NodeAtlas NodeAtlas
+        {
+            get => _nodeAtlas;
+            set
+            {
+                if (_nodeAtlas != value)
+                {
+                    _nodeAtlas = value;
+                    EmitChanged();
+                    SetMaterialParameters();
+                }
+            }
+        }
+        private NodeAtlas _nodeAtlas;
+
         public void SetMaterialParameters()
         {
             if (_shaderMaterial != null)
@@ -338,6 +369,7 @@ namespace Planet
                 _shaderMaterial.SetShaderParameter("is_morphing", _morphing);
                 _shaderMaterial.SetShaderParameter("sub_factor", _subFactor);
                 _shaderMaterial.SetShaderParameter("morph_range", _morphRange);
+                _shaderMaterial.SetShaderParameter("atlas_map", _nodeAtlas?.NodeAtlasImage);
             }
         }
 
@@ -424,6 +456,8 @@ namespace Planet
                 Changed -= action;
             }
         }
+
+        #region Generation
 
         public static Vector4[] GenerateTrianglePoints()
         {
@@ -534,6 +568,13 @@ namespace Planet
             mesh.SurfaceSetMaterial(0, _shaderMaterial);
             _multiMesh.Mesh = mesh;
         }
+
+        public void InitNodeAtlas()
+        {
+            NodeAtlas = new(RenderingServer.GetRenderingDevice(), _gridSize);
+        }
+
+        #endregion
     }
 }
 

@@ -1,4 +1,4 @@
-[gd_scene load_steps=27 format=3 uid="uid://c1roirj1ei3ci"]
+[gd_scene load_steps=28 format=3 uid="uid://c1roirj1ei3ci"]
 
 [ext_resource type="Script" path="res://Planet/PlanetController.cs" id="1_7brg2"]
 [ext_resource type="Resource" uid="uid://gwppe7ras2x" path="res://Planet/PlanetDataDefault.tres" id="2_ap1os"]
@@ -14,20 +14,23 @@ panorama = ExtResource("3_agj4v")
 sky_material = SubResource("PanoramaSkyMaterial_eodwd")
 
 [sub_resource type="Environment" id="Environment_qqt2a"]
-background_mode = 2
-background_color = Color(1, 1, 1, 1)
+background_mode = 1
+background_color = Color(0.29219, 0.29219, 0.29219, 1)
 sky = SubResource("Sky_emtpu")
 tonemap_mode = 2
 glow_enabled = true
-
-[sub_resource type="SphereShape3D" id="SphereShape3D_7pbfy"]
-
-[sub_resource type="SphereShape3D" id="SphereShape3D_tgghh"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_jr5mq"]
 font_size = 28
 outline_size = 5
 outline_color = Color(0.0768358, 0.0768358, 0.0768358, 1)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_wsrnx"]
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_7pbfy"]
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_tgghh"]
+radius = 500.0
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_tkgps"]
 shading_mode = 0
@@ -88,22 +91,13 @@ SurfaceAttachment = NodePath("SurfaceAttachment")
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_qqt2a")
 
-[node name="InnerCollision" type="StaticBody3D" parent="."]
-
-[node name="InnerCollisionShape" type="CollisionShape3D" parent="InnerCollision"]
-shape = SubResource("SphereShape3D_7pbfy")
-
-[node name="OuterCollision" type="StaticBody3D" parent="."]
-
-[node name="OuterCollisionShape3D" type="CollisionShape3D" parent="OuterCollision"]
-shape = SubResource("SphereShape3D_tgghh")
-
-[node name="SurfaceController" type="MultiMeshInstance3D" parent="." node_paths=PackedStringArray("WorldEnvironment", "MainLightSource", "InnerCollision", "OuterCollision", "_shadowCaster")]
+[node name="SurfaceController" type="MultiMeshInstance3D" parent="." node_paths=PackedStringArray("WorldEnvironment", "MainLightSource", "InnerCollision", "OuterCollision", "CubicalCollision", "_shadowCaster")]
 script = ExtResource("3_22w0g")
 WorldEnvironment = NodePath("../WorldEnvironment")
 MainLightSource = NodePath("../SurfaceAttachment/MainLightSource")
-InnerCollision = NodePath("../InnerCollision")
-OuterCollision = NodePath("../OuterCollision")
+InnerCollision = NodePath("../SurfaceAttachment/InnerCollision")
+OuterCollision = NodePath("../SurfaceAttachment/OuterCollision")
+CubicalCollision = NodePath("../SurfaceAttachment/CubicalCollision")
 _shadowCaster = NodePath("../SurfaceAttachment/ShadowCaster")
 BaseOrbitSpeed = 2.0
 OrbitSpeedModifier = 1000.0
@@ -121,6 +115,8 @@ WorldEnvironment = NodePath("../WorldEnvironment")
 DistanceFromSurface = 4200.0
 Frustum = NodePath("Frustum")
 BaseZoomSpeed = 1000.0
+RayLength = 10000.0
+pointRadius = 0.025
 
 [node name="Frustum" type="MeshInstance3D" parent="CameraController"]
 cast_shadow = 0
@@ -231,6 +227,21 @@ grow_horizontal = 2
 grow_vertical = 0
 
 [node name="SurfaceAttachment" type="Node3D" parent="."]
+
+[node name="CubicalCollision" type="StaticBody3D" parent="SurfaceAttachment"]
+
+[node name="CubicalCollisionShape" type="CollisionShape3D" parent="SurfaceAttachment/CubicalCollision"]
+shape = SubResource("BoxShape3D_wsrnx")
+
+[node name="InnerCollision" type="StaticBody3D" parent="SurfaceAttachment"]
+
+[node name="InnerCollisionShape" type="CollisionShape3D" parent="SurfaceAttachment/InnerCollision"]
+shape = SubResource("SphereShape3D_7pbfy")
+
+[node name="OuterCollision" type="StaticBody3D" parent="SurfaceAttachment"]
+
+[node name="OuterCollisionShape3D" type="CollisionShape3D" parent="SurfaceAttachment/OuterCollision"]
+shape = SubResource("SphereShape3D_tgghh")
 
 [node name="ShadowCaster" type="MeshInstance3D" parent="SurfaceAttachment"]
 visible = false

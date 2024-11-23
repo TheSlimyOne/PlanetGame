@@ -1,5 +1,6 @@
 shader_type spatial;
 uniform sampler2D albedo_map : source_color;
+uniform sampler2DArray yt;
 void vertex() {
 	// Called for every vertex the material is visible on.
 	COLOR = vec4(0);

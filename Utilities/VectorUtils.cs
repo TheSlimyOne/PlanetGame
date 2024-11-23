@@ -3,17 +3,17 @@ using Godot;
 
 public static class VectorUtils
 {
+    public const double INVERSE_SQUARE_ROOT_2 = 0.70710677;
+    public const double SQUARE_ROOT_2_2 =  0.707106781187;
+    public const double SQUARE_ROOT_2 =  1.41421356237;
+
     public static bool IsGreaterVector3(Vector3 vectorA, Vector3 vectorB) => vectorA.X > vectorB.X && vectorA.Y > vectorB.Y && vectorA.Z > vectorB.Z;
-    
 
     public static bool IsLesserVector3(Vector3 vectorA, Vector3 vectorB) => vectorA.X < vectorB.X && vectorA.Y < vectorB.Y && vectorA.Z < vectorB.Z;
-    
 
     public static bool IsEqualVector3(Vector3 vectorA, Vector3 vectorB) => vectorA.X == vectorB.X && vectorA.Y == vectorB.Y && vectorA.Z == vectorB.Z;
-    
 
     public static bool IsGreaterEqualVector3(Vector3 vectorA, Vector3 vectorB) => vectorA.X >= vectorB.X && vectorA.Y >= vectorB.Y && vectorA.Z >= vectorB.Z;
-    
 
     public static bool IsLesserEqualVector3(Vector3 vectorA, Vector3 vectorB) => vectorA.X <= vectorB.X && vectorA.Y <= vectorB.Y && vectorA.Z <= vectorB.Z;
 
@@ -24,18 +24,6 @@ public static class VectorUtils
             centroid += vector;
 
         return centroid / vectors.Length;
-    }
-
-    public static float CondenseVector3(Vector3 vectorA)
-    {
-        for (int i = 0; i < 3; i++)
-        {
-            if (vectorA[i] != 0)
-            {
-                return vectorA[i];
-            }
-        }
-        return -1;
     }
 
     public static Vector3 GetTriangularNormal(Vector3[] vertices)
@@ -80,7 +68,7 @@ public static class VectorUtils
         return false;
     }
 
-    public static int SignOfNormal(Vector3 vector)=> (int)vector[GetIndexOfNormalComponent(vector)];
+    public static int SignOfNormal(Vector3 vector) => (int)vector[GetIndexOfNormalComponent(vector)];
 
     public static Vector4 toVector4(Vector3 vector, float padValue) => new(vector.X, vector.Y, vector.Z, padValue);
 
@@ -89,7 +77,6 @@ public static class VectorUtils
     public static Vector3 toVector3(Vector2 vector, float padding) => new(vector.X, vector.Y, padding);
 
     public static Vector2 toVector2(Vector3 vector) => new(vector.X, vector.Y);
-
 
     public static Vector3 PointOnCubeToPointOnSphere(Vector3 point)
     {
@@ -103,38 +90,73 @@ public static class VectorUtils
 
         return new Vector3(x, y, z);
     }
-
+    
     public static Vector3 PointOnSphereToPointOnCube(Vector3 point)
+	{
+		Vector3 cubePoint = Vector3.Zero;
+		double x = point.X;
+		double y = point.Y;
+		double z = point.Z;
+
+		float fx = Math.Abs(point.X);
+		float fy = Math.Abs(point.Y);
+		float fz = Math.Abs(point.Z);
+
+		float signX = x > 0 ? 1 : -1;
+		float signY = y > 0 ? 1 : -1;
+		float signZ = z > 0 ? 1 : -1;
+
+		if (fx >= fy && fx >= fz)
+		{
+			double a2 = y * y * 2.0;
+			double b2 = z * z * 2.0;
+			double inner = -a2 + b2 - 3;
+			double innersqrt = -Math.Sqrt((inner * inner) - 12.0 * a2);
+
+			cubePoint.X = signX;
+			cubePoint.Y = (float)(y == 0.0 || y == -0.0 ? 0.0f : signY * Mathf.Clamp(Math.Sqrt(innersqrt + a2 - b2 + 3.0) * INVERSE_SQUARE_ROOT_2, -1, 1));
+			cubePoint.Z = (float)(z == 0.0 || z == -0.0 ? 0.0f : signZ * Mathf.Clamp(Math.Sqrt(innersqrt - a2 + b2 + 3.0) * INVERSE_SQUARE_ROOT_2, -1, 1));
+		}
+		else if (fy >= fx && fy >= fz)
+		{
+			double a2 = x * x * 2.0;
+			double b2 = z * z * 2.0;
+			double inner = -a2 + b2 - 3;
+			double innersqrt = -Math.Sqrt((inner * inner) - 12.0 * a2);
+
+			cubePoint.X = (float)(x == 0.0 || x == -0.0 ? 0.0f : signX * Mathf.Clamp(Math.Sqrt(innersqrt + a2 - b2 + 3.0) * INVERSE_SQUARE_ROOT_2, -1, 1));
+			cubePoint.Y = signY;
+			cubePoint.Z = (float)(z == 0.0 || z == -0.0 ? 0.0f : signZ * Mathf.Clamp(Math.Sqrt(innersqrt - a2 + b2 + 3.0) * INVERSE_SQUARE_ROOT_2, -1, 1));
+		}
+		else if (fz >= fx && fz >= fy)
+		{
+			double a2 = x * x * 2.0;
+			double b2 = y * y * 2.0;
+			double inner = -a2 + b2 - 3;
+			double innersqrt = -Math.Sqrt((inner * inner) - 12.0 * a2);
+
+			cubePoint.X = (float)(x == 0.0 || x == -0.0 ? 0.0f : signX * Mathf.Clamp(Math.Sqrt(innersqrt + a2 - b2 + 3.0) * INVERSE_SQUARE_ROOT_2, -1, 1));
+			cubePoint.Y = (float)(y == 0.0 || y == -0.0 ? 0.0f : signY * Mathf.Clamp(Math.Sqrt(innersqrt - a2 + b2 + 3.0) * INVERSE_SQUARE_ROOT_2, -1, 1));
+			cubePoint.Z = signZ;
+		}
+		return cubePoint;
+	}
+
+    public static Vector2 PointOnCubeToUV(Vector3 point)
     {
-        float xAbs = Mathf.Abs(point.X);
-        float yAbs = Mathf.Abs(point.Y);
-        float zAbs = Mathf.Abs(point.Z);
+        if (point.X == 1 || point.X == -1) return (new Vector2(point.Y, point.Z) + Vector2.One) / 2;
+        if (point.Y == 1 || point.Y == -1) return (new Vector2(point.X, point.Y) + Vector2.One) / 2;
+        if (point.Z == 1 || point.Z == -1) return (new Vector2(point.X, point.Y) + Vector2.One) / 2;
+        return Vector2.Zero;
+    }
 
-        Vector3 cubePoint = new Vector3();
+    public static Vector3 UVToPointOnCube(Vector3 normal, Vector2 uv)
+    {
+        if (normal.X == 1 || normal.X == -1) return new Vector3(normal.X, uv.X, uv.Y);
+        if (normal.Y == 1 || normal.Y == -1) return new Vector3(uv.X, normal.Y, uv.Y);
+        if (normal.Z == 1 || normal.Z == -1) return new Vector3(uv.X, uv.Y, normal.Z);
+        return Vector3.Zero; 
 
-        if (xAbs >= yAbs && xAbs >= zAbs)
-        {
-            // Closest to the X face
-            cubePoint.X = point.X > 0 ? 1.0f : -1.0f;
-            cubePoint.Y = point.Y / xAbs;
-            cubePoint.Z = point.Z / xAbs;
-        }
-        else if (yAbs >= xAbs && yAbs >= zAbs)
-        {
-            // Closest to the Y face
-            cubePoint.X = point.X / yAbs;
-            cubePoint.Y = point.Y > 0 ? 1.0f : -1.0f;
-            cubePoint.Z = point.Z / yAbs;
-        }
-        else
-        {
-            // Closest to the Z face
-            cubePoint.X = point.X / zAbs;
-            cubePoint.Y = point.Y / zAbs;
-            cubePoint.Z = point.Z > 0 ? 1.0f : -1.0f;
-        }
-
-        return cubePoint;
     }
 
     public static Vector2 PointOnSphereToUV(Vector3 point)
@@ -147,8 +169,26 @@ public static class VectorUtils
         return new Vector2(u, v);
     }
 
+    public static Vector3 IsolateNormal(Vector3 point)
+    {
+        if (point.X == 1 || point.X == -1) return new Vector3(point.X, 0, 0);
+        if (point.Y == 1 || point.Y == -1) return new Vector3(0, point.Y, 0);
+        if (point.Z == 1 || point.Z == -1) return new Vector3(0, 0, point.Z);
+        return Vector3.Zero;
+    }
+
     public static Color ToColor(Vector4 vector) => new(vector.X, vector.Y, vector.Z, vector.W);
     
+    public static Vector2 Rotate45(Vector2 vector)
+    {
+        float cos45 = (float)SQUARE_ROOT_2_2;
+        float sin45 = (float)SQUARE_ROOT_2_2;
+
+        float xNew = vector.X * cos45 - vector.Y * sin45;
+        float yNew = vector.X * sin45 + vector.Y * cos45;
+
+        return new Vector2(xNew, yNew);
+    }
 
 }
 

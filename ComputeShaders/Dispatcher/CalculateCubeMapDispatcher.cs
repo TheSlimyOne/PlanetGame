@@ -75,7 +75,7 @@ namespace Dispatcher
         public override void Ready()
         {
             int cubeFaceSize = InputTexture.GetHeight() / 2;
-            Vector2I numThreads = new Vector2I(cubeFaceSize / INNOVCATIONS, cubeFaceSize / INNOVCATIONS);
+            Vector2I numThreads = new(cubeFaceSize / INNOVCATIONS, cubeFaceSize / INNOVCATIONS);
             long computeList = _rd.ComputeListBegin();
             _rd.ComputeListBindComputePipeline(computeList, _pipeline);
             _rd.ComputeListBindUniformSet(computeList, _uniformSet, 0);

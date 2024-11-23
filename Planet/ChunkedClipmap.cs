@@ -11,4 +11,9 @@ public class ChunkedClipmap
         
         
     }
+
+    public void UpdateChunks()
+    {
+
+    }
 }

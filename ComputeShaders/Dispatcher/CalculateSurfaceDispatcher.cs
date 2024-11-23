@@ -190,7 +190,7 @@ namespace Dispatcher
     		data.AddRange(Utilities.ToBytesSingle(Utilities.ToProjection(PlanetController.PlanetData.GetPlanetTransformMatrix())).ToArray());
     		data.AddRange(Utilities.ToBytes<float>(new float[]
     		{
-    			Mathf.DegToRad(PlanetController.CameraController.Fov),
+    			Mathf.Tan(Mathf.DegToRad(PlanetController.CameraController.Fov) / 2),
     			PlanetController.PlanetData.SubFactor * PlanetController.PlanetData.Radius,
     			PlanetController.PlanetData.HeightScale,
     			PlanetController.PlanetData.MaximumLOD

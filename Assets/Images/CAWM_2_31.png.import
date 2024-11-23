@@ -2,8 +2,8 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://v4dj6dujg1qu"
-path.s3tc="res://.godot/imported/output_g.png-d19be1e1c2e080c9ee30e81420f534a5.s3tc.ctex"
+uid="uid://ci4o7e5r5a1fx"
+path.s3tc="res://.godot/imported/CAWM_2_31.png-c05d76258189774210677bfb6d06dccc.s3tc.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc"],
 "vram_texture": true
@@ -11,8 +11,8 @@ metadata={
 
 [deps]
 
-source_file="res://$python/output/output_g.png"
-dest_files=["res://.godot/imported/output_g.png-d19be1e1c2e080c9ee30e81420f534a5.s3tc.ctex"]
+source_file="res://Assets/Images/CAWM_2_31.png"
+dest_files=["res://.godot/imported/CAWM_2_31.png-c05d76258189774210677bfb6d06dccc.s3tc.ctex"]
 
 [params]
 

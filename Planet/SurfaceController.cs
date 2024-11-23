@@ -17,7 +17,8 @@ public partial class SurfaceController : MultiMeshInstance3D
 	[ExportGroup("Colliders")]
 	[Export] public StaticBody3D InnerCollision;
 	[Export] public StaticBody3D OuterCollision;
-	[Export] private MeshInstance3D _shadowCaster;
+	[Export] public StaticBody3D CubicalCollision;
+	[Export] private MeshInstance3D _shadowCaster; 
 
 	[ExportGroup("Movement Settings")]
 	[Export] private Vector2 MouseSensitivity = new Vector2(0.09f, 0.09f);
@@ -42,7 +43,7 @@ public partial class SurfaceController : MultiMeshInstance3D
 	private Vector3 _direction = Vector3.Zero;
 	public bool HasMoved { get; private set; }
 
-	const float MINIMUM_RADIUS_SCALE = 0.999f;
+	public const float MINIMUM_RADIUS_SCALE = 0.999f;
 
 	public override void _Ready()
 	{
@@ -50,6 +51,8 @@ public partial class SurfaceController : MultiMeshInstance3D
 		_surfaceController = _planetController.SurfaceController;
 		_cameraController = _planetController.CameraController;
 		_planetData = _planetController.PlanetData;
+
+		_planetData.ShaderMaterial.SetShaderParameter("fov", Mathf.Tan(Mathf.DegToRad(_cameraController.Fov) / 2));
 
 		_planetData.Scaled(Vector3.One * _planetData.Radius);
 		_planetData.Translate(Vector3.Back * (1 - _planetData.Radius));
@@ -63,17 +66,20 @@ public partial class SurfaceController : MultiMeshInstance3D
 
 		CollisionShape3D InnerCollisionShape = InnerCollision.GetChild<CollisionShape3D>(0);
 		CollisionShape3D OuterCollisionShape = OuterCollision.GetChild<CollisionShape3D>(0);
+		CollisionShape3D CubicalCollisionShape = CubicalCollision.GetChild<CollisionShape3D>(0);
 
-		_shadowCaster.Mesh = new SphereMesh() { Radius = MINIMUM_RADIUS_SCALE * _planetData.Radius, Height = 2 * MINIMUM_RADIUS_SCALE * _planetData.Radius };
-
+		// _shadowCaster.Mesh = new SphereMesh() { Radius = MINIMUM_RADIUS_SCALE * _planetData.Radius, Height = 2 * MINIMUM_RADIUS_SCALE * _planetData.Radius };
+		
 		((SphereShape3D)InnerCollisionShape.Shape).Radius = MINIMUM_RADIUS_SCALE * _planetData.Radius;
 		((SphereShape3D)OuterCollisionShape.Shape).Radius = _planetData.Radius + _planetData.HeightScale;
+		((BoxShape3D)CubicalCollisionShape.Shape).Size *= 2 * _planetData.Radius;
 	}
 
 	private void InitializeComputeShaders()
 	{
 		Multimesh = _planetData.MultiMesh;
 		_planetData.GenerateMulitMesh();
+		_planetData.InitNodeAtlas();
 
 		_planetData.SetMaterialParameters();
 
@@ -131,8 +137,8 @@ public partial class SurfaceController : MultiMeshInstance3D
 		bool locked = Processing && HasMoved;
 		ProcessMovement(delta);
 		_planetData.ShaderMaterial.SetShaderParameter("camera_position", _cameraController.GlobalPosition);
-		_planetData.ShaderMaterial.SetShaderParameter("fov", Mathf.DegToRad(_cameraController.Fov));
 		_planetData.ShaderMaterial.SetShaderParameter("sub_factor", _planetData.SubFactor * _planetData.Radius);
+
 		if (locked)
 		{
 			_computeCullShader.GetUniform<Texture2DUniform>(CalculateSurfaceDispatcher.BufferNames.KEYS).ClearTexture(Colors.Black);
@@ -180,9 +186,6 @@ public partial class SurfaceController : MultiMeshInstance3D
 		// External Objects that need to rotate to simulate the effect
 		WorldEnvironment.Environment.SkyRotation = _planetData.Rotation.Basis.GetEuler();
 		_planetController.SurfaceAttachment.Transform = _planetData.GetPlanetTRMatrix();
-
-		InnerCollision.Transform = _planetData.Translation;
-		OuterCollision.Transform = _planetData.Translation;
 
 		_cameraController.DistanceFromSurface += _direction.Y * by * CalculateSpeed(_cameraController.DistanceFromSurface, 0, _planetData.Radius * 2, _cameraController.BaseZoomSpeed);
 		_cameraController.DistanceFromSurface = Mathf.Clamp(_cameraController.DistanceFromSurface, 0, float.MaxValue);
@@ -246,8 +249,4 @@ public partial class SurfaceController : MultiMeshInstance3D
 		}
 	}
 
-	public void GenerateNodeAtlas()
-	{
-
-	}
 }

@@ -8,6 +8,7 @@ varying float elevation;
 uniform sampler2D albedo_map : repeat_disable, source_color;
 uniform sampler2D height_map : repeat_disable;
 uniform sampler2D normal_map : repeat_disable, source_color;
+uniform sampler2D atlas_map : repeat_disable, source_color;
 
 uniform bool is_colorize_lod;
 uniform bool is_cube;
@@ -192,7 +193,7 @@ vec2 point_on_sphere_to_UV(vec3 p) {
 }
 
 float calculateLOD(float dist, float fovy, float factor) {
-    float num = dist * tan(fovy/2.0);
+    float num = dist * fovy;
     float dom = sqrt2 * factor;
     return clamp(-log2(num/dom), -1, 31);
 }
@@ -212,7 +213,7 @@ float distanceFromCam(vec3 from, bool useHeight) {
 float calculateLODToCam(vec3 from, bool useHeight) {
     return calculateLOD(
         distanceFromCam(from, useHeight),
-        fov, // Must be in radians
+        fov,
         sub_factor
     );
 }
@@ -234,9 +235,13 @@ float calculateMorph(vec3 point, uvec2 key) {
 	return 0.0;
 }
 
-vec2 get_polygon_uv(vec3 point, uint polygon_id) {
+ivec3 get_init_normal(vec3 point, uint polygon_id) {
 	uint vertexBaseIndex = polygon_id * 5u;
-	ivec3 normal = ivec3(position_list[vertexBaseIndex].xyz);
+	return ivec3(position_list[vertexBaseIndex].xyz);
+}
+
+vec2 get_polygon_uv(vec3 point, uint polygon_id) {
+	ivec3 normal = get_init_normal(point, polygon_id);
 	point = (point + 1.0) / 2.0;
 
 	int index = -4;
@@ -248,6 +253,7 @@ vec2 get_polygon_uv(vec3 point, uint polygon_id) {
 			break;
 		}
 	}
+	
 	vec2 uv = vec2(0);
 	int inputA = (index + 1) % 3;
 	int inputB = (index + 2) % 3;
@@ -274,6 +280,7 @@ varying vec3 cube_local_position;
 varying vec3 sphere_local_position;
 varying float morph;
 void vertex() {
+	
 	key = is_culling ? floatBitsToUint(texelFetch(key_image, getKeyCoordinate(int(INSTANCE_ID)), 0)) : floatBitsToUint(INSTANCE_CUSTOM);
 	
 	uint flags = key.w >> 29u;
@@ -298,23 +305,53 @@ void vertex() {
 	VERTEX = morphed_world_position + NORMAL * height_scale * elevation;
 }
 
+vec2 rotate_uv(vec2 uv, float angle) {
+    float cos_angle = cos(angle);
+    float sin_angle = sin(angle);
+    mat2 rotation_matrix = mat2(vec2(cos_angle, -sin_angle), vec2(sin_angle, cos_angle));
+    return rotation_matrix * uv;
+}
+
 void fragment() {
 	float msb = float(getLevelInKey(key.xy)) / 12.0;
-	vec3 debug_color = hslToRgb(vec3(msb, 1.0, 1.0));
+	vec3 debug_color = hslToRgb(vec3(msb, 1.0, 0.5));
 	float child = float(key.y & 3u);
 
 	vec2 sphere_uv_point = point_on_sphere_to_UV(sphere_local_position);
 	vec3 surface_texture = textureLod(albedo_map, is_texture_1D ? vec2(elevation, 0.0) : sphere_uv_point, 0.0).rgb;
-
-	vec2 polygon_uv = get_polygon_uv(cube_local_position, key.z);
-	vec2 cell = floor(polygon_uv * grid_size);
-	float checker = mod(cell.x + cell.y, 2.0);
-	vec3 color1 = vec3(1);
-	vec3 color2 = vec3(0);
 	
-	//debug_color = mix(color1, color2, checker);
+	vec2 polygon_uv = get_polygon_uv(cube_local_position, key.z);
+	vec2 rotated_uv = rotate_uv(polygon_uv, radians(45.0));
+	rotated_uv *= sqrt(2.0);
+	int level = getLevelInKey(key.xy);
+	//vec2 cell = floor(polygon_uv * (pow(2.0, float(level))));
+	vec2 cell = floor(polygon_uv * grid_size);
+	
+	ivec3 init_normal = get_init_normal(cube_local_position, key.z);
+	int id = 0;
+	for (int i = 0; i < 3; i++) {
+		if (init_normal[i] != 0) {
+			id = i + 3 * (init_normal[i] == 1 ? 0 : 1);
+			break;
+		}
+	}
+	cell = vec2(cell.x + grid_size * float(id), cell.y) / vec2(grid_size * 6.0, grid_size);
+	
+	vec3 color = textureLod(atlas_map, cell, 0).xyz;
+	//color = vec3(cell.x, cell.y, 0.0) / grid_size;
+	float checker = mod(cell.x + cell.y, 2.0);
+	vec3 color1 = mix(vec3(0.5), debug_color, 0.3);
+	vec3 color2 = mix(vec3(0), debug_color, 0.3);
+	
+	debug_color = mix(color1, color2, checker);
+	//debug_color = vec3(float(id)/6.0);
+	debug_color = color;
+	//debug_color = mix(debug_color, vec3(child/3.0), 0.2);
 	NORMAL = height_to_normal(elevation, normal_strength, VERTEX, NORMAL);
+	//NORMAL_MAP = textureLod(normal_map, sphere_uv_point, 0.0).rgb;
+	//NORMAL_MAP_DEPTH = normal_strength;
 	ALBEDO = is_colorize_lod ? debug_color : surface_texture;
+	
 	//ALBEDO = vec3(morph);
 	
 }
