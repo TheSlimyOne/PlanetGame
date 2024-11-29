@@ -1,14 +1,19 @@
 shader_type spatial;
-uniform sampler2D albedo_map : source_color;
-uniform sampler2DArray yt;
+render_mode unshaded;
+uniform float grid_size;
 void vertex() {
 	// Called for every vertex the material is visible on.
-	COLOR = vec4(0);
 }
 
 void fragment() {
-	ALBEDO = textureLod(albedo_map, UV, 0.0).xyz;
-
+	vec2 cell = floor(UV * grid_size);
+	float checker = mod(cell.x + cell.y, 2.0);
+	vec3 color1 = vec3(1);
+	vec3 color2 = vec3(0);
+	ALBEDO = mix(color1, color2, checker);
+	//ALBEDO = vec3(UV.x, UV.y, 0);
+	//ALBEDO = vec3(UV.x, 0, 0);
+	//ALBEDO = vec3(0, UV.y, 0);
 }
 
 //void light() {

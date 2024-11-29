@@ -22,7 +22,7 @@ namespace Uniform
             Uniform.AddId(Rid);
         }
 
-        public StorageBufferUniform(IDispatchable owner, StorageBufferUniform storageBufferUniform, int binding) : base(storageBufferUniform._rd, binding, owner)
+        private StorageBufferUniform(IDispatchable owner, StorageBufferUniform storageBufferUniform, int binding) : base(storageBufferUniform._rd, binding, owner)
         {
             Rid = storageBufferUniform.Rid;
             Indirect = storageBufferUniform.Indirect;
@@ -39,16 +39,23 @@ namespace Uniform
             }
         }
 
+        public void ResizeBuffer(uint size)
+        {
+            Uniform.ClearIds();
+            _rd.FreeRid(Rid);
+            Rid = _rd.StorageBufferCreate(size, new byte[size], usage: (RenderingDevice.StorageBufferUsage)Indirect);
+            Uniform.AddId(Rid);
+        }
+
         public override StorageBufferUniform RebindUniform(IDispatchable owner, RenderingDevice rd, int binding) 
         {
             if (rd == _rd)
-                return new StorageBufferUniform(owner, this, binding);
+                return new StorageBufferUniform(Owner, this, binding);
             else
                 return new StorageBufferUniform(owner, rd, binding, GetByteData()[0], indirect: Indirect);
         }
 
         public T[] GetData<T>() where T : unmanaged => Utilities.FromBytes<T>(_rd.BufferGetData(Rid)).ToArray();
-
 
         public override void UpdateUniform(byte[] data)
         {
@@ -56,8 +63,7 @@ namespace Uniform
         }
 
         public override Array<byte[]> GetByteData() => new() { _rd.BufferGetData(Rid) };
-        // public override Array<byte[]> GetByteData(uint offsetBytes = 0, uint sizeBytes = 0) => new() { _rd.BufferGetData(Rid, offsetBytes, sizeBytes) };
-    
+        
     }
 
 }

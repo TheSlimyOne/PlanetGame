@@ -6,8 +6,6 @@ namespace Planet
     [GlobalClass]
     public partial class PlanetData : Resource
     {
-
-
         #region Planet Settings
         [ExportGroup("Planet Settings")]
         [Export(PropertyHint.Range, "1,8000")]
@@ -125,7 +123,7 @@ namespace Planet
                 {
                     _resolution = Mathf.Clamp(value, 2, 500);
                     EmitChanged();
-                    GenerateMulitMesh();
+                    GenerateMesh();
                     SetMaterialParameters();
                 }
             }
@@ -209,32 +207,74 @@ namespace Planet
             }
         }
         private int _nodeSize = 16;
+        
+        [Export(PropertyHint.Range, "0, 4")]
+        public int StartingLod
+        {
+            get => _startingLod;
+            set
+            {
+                if (_startingLod != Mathf.Clamp(value, 0, 4))
+                {
+                    _startingLod = Mathf.Clamp(value, 0, 4);
+                    EmitChanged();
+                    SetMaterialParameters();
+                }
+            }
+        }
+        private int _startingLod = 1;
         #endregion
 
         #region Surface Settings
         [ExportGroup("Surface Settings")]
     
         [Export(PropertyHint.Range, "1, 100")]
-        public int GridSize
+        public int CenterSize
         {
-            get => _gridSize;
+            get => _centerSize;
             set
             {
-                if (_gridSize != value)
+                if (_centerSize != value)
                 {
-                    _gridSize = value;
+                    _centerSize = value;
                     EmitChanged();
                     SetMaterialParameters();
                 }
-                // for (int i = 0; i <= _gridSize; i++)
-                // {
-                //     GD.Print(_radius / _gridSize * i);
-                // }
-                // GD.Print("====================");
             }
         }
-        private int _gridSize = 5;
+        private int _centerSize = 2;
+        
+        [Export(PropertyHint.Range, "0, 100")]
+        public int BorderSize
+        {
+            get => _borderSize;
+            set
+            {
+                if (_borderSize != value)
+                {
+                    _borderSize = value;
+                    EmitChanged();
+                    SetMaterialParameters();
+                }
+            }
+        }
+        private int _borderSize = 1;
 
+        [Export(PropertyHint.Range, "128, 8192")]
+        public int DesiredChunkSize
+        {
+            get => _desiredChunkSize;
+            set
+            {
+                if (_desiredChunkSize != value)
+                {
+                    _desiredChunkSize = value;
+                    EmitChanged();
+                    SetMaterialParameters();
+                }
+            }
+        }
+        private int _desiredChunkSize = 512;
 
         [Export]
         public Texture2D AlbedoMap
@@ -319,42 +359,26 @@ namespace Planet
         }
         private ShaderMaterial _shaderMaterial;
 
-        public MultiMesh MultiMesh
-        {
-            get => _multiMesh;
-            set
-            {
-                if (_multiMesh != value)
-                {
-                    _multiMesh = value;
-                    EmitChanged();
-                    SetMaterialParameters();
-                }
-            }
-        }
-        private MultiMesh _multiMesh = new() { Mesh = new PlaceholderMesh(), InstanceCount = 0, TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseCustomData = true };
-
-        public NodeAtlas NodeAtlas
-        {
-            get => _nodeAtlas;
-            set
-            {
-                if (_nodeAtlas != value)
-                {
-                    _nodeAtlas = value;
-                    EmitChanged();
-                    SetMaterialParameters();
-                }
-            }
-        }
-        private NodeAtlas _nodeAtlas;
+        // public MultiMesh MultiMesh
+        // {
+        //     get => _multiMesh;
+        //     set
+        //     {
+        //         if (_multiMesh != value)
+        //         {
+        //             _multiMesh = value;
+        //             EmitChanged();
+        //             SetMaterialParameters();
+        //         }
+        //     }
+        // }
+        // private MultiMesh _multiMesh = new() { Mesh = new PlaceholderMesh(), InstanceCount = 0, TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseCustomData = true };
 
         public void SetMaterialParameters()
         {
             if (_shaderMaterial != null)
             {
                 _shaderMaterial.SetShaderParameter("radius", _radius);
-                _shaderMaterial.SetShaderParameter("grid_size", _gridSize);
                 _shaderMaterial.SetShaderParameter("position_list", GenerateTrianglePoints());
                 _shaderMaterial.SetShaderParameter("albedo_map", _albedoMap);
                 _shaderMaterial.SetShaderParameter("is_texture_1D", _albedoMap is GradientTexture1D);
@@ -369,7 +393,9 @@ namespace Planet
                 _shaderMaterial.SetShaderParameter("is_morphing", _morphing);
                 _shaderMaterial.SetShaderParameter("sub_factor", _subFactor);
                 _shaderMaterial.SetShaderParameter("morph_range", _morphRange);
-                _shaderMaterial.SetShaderParameter("atlas_map", _nodeAtlas?.NodeAtlasImage);
+                _shaderMaterial.SetShaderParameter("border_size", _borderSize);
+                _shaderMaterial.SetShaderParameter("center_size", _centerSize);
+                _shaderMaterial.SetShaderParameter("desired_chunk_size", _desiredChunkSize);
             }
         }
 
@@ -489,7 +515,10 @@ namespace Planet
             return trianglePoints;
         }
 
-        public void GenerateMulitMesh()
+
+        public ArrayMesh TriangleMesh { get; private set; } = new();
+
+        public void GenerateMesh()
         {
             Vector3[] vertices = new Vector3[_resolution * (_resolution + 1) / 2];
             Vector3[] normals = new Vector3[_resolution * (_resolution + 1) / 2];
@@ -557,22 +586,19 @@ namespace Planet
             // s = s.Remove(s.Length - 2) + "]";
             // GD.Print(s);
 
-            ArrayMesh mesh = new();
             Godot.Collections.Array arrays = new();
             arrays.Resize((int)Mesh.ArrayType.Max);
             arrays[(int)Mesh.ArrayType.Vertex] = vertices;
             arrays[(int)Mesh.ArrayType.Index] = triangles;
             arrays[(int)Mesh.ArrayType.Normal] = normals;
             arrays[(int)Mesh.ArrayType.TexUV] = uvs;
-            mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
-            mesh.SurfaceSetMaterial(0, _shaderMaterial);
-            _multiMesh.Mesh = mesh;
+
+            TriangleMesh.ClearSurfaces();
+            TriangleMesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
+            
+            TriangleMesh.SurfaceSetMaterial(0, _shaderMaterial);     
         }
 
-        public void InitNodeAtlas()
-        {
-            NodeAtlas = new(RenderingServer.GetRenderingDevice(), _gridSize);
-        }
 
         #endregion
     }

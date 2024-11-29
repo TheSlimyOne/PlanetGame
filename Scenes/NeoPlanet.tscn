@@ -1,11 +1,12 @@
-[gd_scene load_steps=28 format=3 uid="uid://c1roirj1ei3ci"]
+[gd_scene load_steps=29 format=3 uid="uid://c1roirj1ei3ci"]
 
-[ext_resource type="Script" path="res://Planet/PlanetController.cs" id="1_7brg2"]
+[ext_resource type="Script" uid="uid://b4tv1heidhb4j" path="res://Planet/PlanetController.cs" id="1_7brg2"]
 [ext_resource type="Resource" uid="uid://gwppe7ras2x" path="res://Planet/PlanetDataDefault.tres" id="2_ap1os"]
-[ext_resource type="Script" path="res://Planet/SurfaceController.cs" id="3_22w0g"]
+[ext_resource type="Script" uid="uid://b0ouf0wmawpph" path="res://Planet/SurfaceController.cs" id="3_22w0g"]
 [ext_resource type="Texture2D" uid="uid://ejlq5akl3icw" path="res://Assets/Images/panorama_image.png" id="3_agj4v"]
-[ext_resource type="Script" path="res://Player/CameraController.cs" id="5_0yfbu"]
-[ext_resource type="Script" path="res://Player/UIElements.cs" id="6_upt2i"]
+[ext_resource type="Script" uid="uid://b6ndo6pet2jv4" path="res://Player/CameraController.cs" id="5_0yfbu"]
+[ext_resource type="Script" uid="uid://dmhjqmw6g7d2t" path="res://Player/UIElements.cs" id="6_upt2i"]
+[ext_resource type="PackedScene" uid="uid://1n2ai6k6m8iy" path="res://Scenes/DebugCamera.tscn" id="7_q5r8e"]
 
 [sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_eodwd"]
 panorama = ExtResource("3_agj4v")
@@ -91,7 +92,7 @@ SurfaceAttachment = NodePath("SurfaceAttachment")
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_qqt2a")
 
-[node name="SurfaceController" type="MultiMeshInstance3D" parent="." node_paths=PackedStringArray("WorldEnvironment", "MainLightSource", "InnerCollision", "OuterCollision", "CubicalCollision", "_shadowCaster")]
+[node name="SurfaceController" type="Node3D" parent="." node_paths=PackedStringArray("WorldEnvironment", "MainLightSource", "InnerCollision", "OuterCollision", "CubicalCollision", "_shadowCaster")]
 script = ExtResource("3_22w0g")
 WorldEnvironment = NodePath("../WorldEnvironment")
 MainLightSource = NodePath("../SurfaceAttachment/MainLightSource")
@@ -102,8 +103,9 @@ _shadowCaster = NodePath("../SurfaceAttachment/ShadowCaster")
 BaseOrbitSpeed = 2.0
 OrbitSpeedModifier = 1000.0
 weight = 0.15
-_computeCullShaderPath = "res://ComputeShaders/GLSL/ComputeCull.glsl"
-_computeCopyShaderPath = "res://ComputeShaders/GLSL/Copy.glsl"
+_renderSurfaceShaderPath = "uid://b56oykpmj0br0"
+_copyKeysShaderPath = "uid://b1aoaqwgb51hm"
+_updateCommandBufferShaderPath = "uid://b3rgcgm3pha6m"
 
 [node name="CameraController" type="Camera3D" parent="." node_paths=PackedStringArray("UIElements", "WorldEnvironment", "Frustum")]
 current = true
@@ -119,6 +121,7 @@ RayLength = 10000.0
 pointRadius = 0.025
 
 [node name="Frustum" type="MeshInstance3D" parent="CameraController"]
+visible = false
 cast_shadow = 0
 skeleton = NodePath("../..")
 
@@ -217,6 +220,16 @@ layout_mode = 2
 focus_mode = 0
 text = "Disable Morphing"
 
+[node name="btnGenerateChunks" type="Button" parent="CameraController/CanvasLayer/VBoxContainer2"]
+layout_mode = 2
+focus_mode = 0
+text = "Generate Chunks"
+
+[node name="btnGenerateIndirectionTable" type="Button" parent="CameraController/CanvasLayer/VBoxContainer2"]
+layout_mode = 2
+focus_mode = 0
+text = "Generate Indirection Table"
+
 [node name="ImageContainer" type="HBoxContainer" parent="CameraController/CanvasLayer"]
 anchors_preset = 12
 anchor_top = 1.0
@@ -286,7 +299,8 @@ transform = Transform3D(1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 0, 
 gi_mode = 0
 mesh = SubResource("CylinderMesh_ffecf")
 
-[connection signal="pressed" from="CameraController/CanvasLayer/VBoxContainer2/btnProcessLod" to="SurfaceController" method="GenerateNormals"]
+[node name="DebugCamera" parent="." instance=ExtResource("7_q5r8e")]
+
 [connection signal="pressed" from="CameraController/CanvasLayer/VBoxContainer2/btnProcessLod" to="CameraController/CanvasLayer" method="EnableOrDisableProcessing"]
 [connection signal="pressed" from="CameraController/CanvasLayer/VBoxContainer2/btnColorizeLod" to="CameraController/CanvasLayer" method="EnableOrDisableLodColorize"]
 [connection signal="pressed" from="CameraController/CanvasLayer/VBoxContainer2/btnCubeMode" to="CameraController/CanvasLayer" method="EnableOrDisableCubeMode"]
@@ -294,3 +308,5 @@ mesh = SubResource("CylinderMesh_ffecf")
 [connection signal="pressed" from="CameraController/CanvasLayer/VBoxContainer2/btnGenerateNormals" to="CameraController/CanvasLayer" method="GenerateNormals"]
 [connection signal="pressed" from="CameraController/CanvasLayer/VBoxContainer2/btnGenerateCubeMap" to="CameraController/CanvasLayer" method="GenerateCubeMap"]
 [connection signal="pressed" from="CameraController/CanvasLayer/VBoxContainer2/btnMorphing" to="CameraController/CanvasLayer" method="EnableOrDisableMorphing"]
+[connection signal="pressed" from="CameraController/CanvasLayer/VBoxContainer2/btnGenerateChunks" to="CameraController/CanvasLayer" method="GenerateChunks"]
+[connection signal="pressed" from="CameraController/CanvasLayer/VBoxContainer2/btnGenerateIndirectionTable" to="CameraController/CanvasLayer" method="GenerateIndirectionTable"]

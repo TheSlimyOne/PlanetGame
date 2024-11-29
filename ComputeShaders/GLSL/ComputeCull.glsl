@@ -1,6 +1,8 @@
 #[compute]
 #version 450
 #extension GL_EXT_shader_atomic_float2 : require
+#extension GL_NV_compute_shader_derivatives : enable
+
 #define sqrt2   1.414213562
 #define PI      3.141592653
 
@@ -28,15 +30,11 @@ layout(set = 0, binding = 4, std430) buffer restrict writeonly WriteFullList {
     uvec4 write_full_list[];
 };
 
-layout(set = 0, binding = 5, std430) buffer restrict writeonly WriteCulledList {
-    uvec4 write_culled_list[];
-};
-
-layout(set = 0, binding = 6, std430) buffer restrict readonly BaseTriangles {
+layout(set = 0, binding = 5, std430) buffer restrict readonly BaseTriangles {
     vec4 base_triangles[];
 };
 
-layout(set = 0, binding = 7, std430) buffer restrict readonly ExternalData {
+layout(set = 0, binding = 6, std430) buffer restrict readonly ExternalData {
     mat4 viewProjectionMatrix;         // 16 * 4 = 64 bytes
     vec4 cameraPosition;
     mat4 planetTransformMatrix;
@@ -44,14 +42,15 @@ layout(set = 0, binding = 7, std430) buffer restrict readonly ExternalData {
     float subFactor;
     float heightScale;
     float max_lod;
+    float radius;
 };
 
-layout(set = 0, binding = 8, std430) buffer restrict Debug {
-    bool renderAll;
+layout(set = 0, binding = 7, std430) buffer restrict Debug {
+    bool culling;
 };
 
-layout(set = 0, binding = 9) uniform sampler2D heightMap;
-layout(set = 0, binding = 10, rgba32f) restrict writeonly uniform image2D DisplayKeys;
+layout(set = 0, binding = 8) uniform sampler2D heightMap;
+layout(set = 0, binding = 9, std430) buffer restrict OutputBuffer { float data[]; } output_buffer;
 
 struct Triangle {
     vec3 v0; // (0, 0)
@@ -188,7 +187,7 @@ vec3 localPointToWorldPointSpherical(vec2 point, vec3 vertexA, vec3 vertexB, vec
     +-------+-------+
 */
 Triangle createTriangle(mat3 transform_matrix, uint meshPolygonID, uint rootID) {
-    vec2 point_a = (vec3(0.5, 0.5, 1) * transform_matrix).xy;
+    vec2 point_a = (vec3(0.3, 0.3, 1) * transform_matrix).xy;
     vec2 point_b = (vec3(0.5, -0.5, 1) * transform_matrix).xy;
     vec2 point_c = (vec3(-0.5, 0.5, 1) * transform_matrix).xy;
 
@@ -405,16 +404,46 @@ bool TriangleInFrustum(Triangle triangle) {
            PointInFrustum(localPointToWorldPoint(triangle.v2));
 }
 
-ivec2 getKeyCoordinate(uint idx) {
-    ivec2 image_size = imageSize(DisplayKeys);
-    return ivec2(idx % image_size.x, idx / image_size.y);
+void set_multimesh_data(uint index, uvec4 key)
+{
+    output_buffer.data[20 * index + 0] = 1.0;
+    output_buffer.data[20 * index + 1] = 0.0;
+    output_buffer.data[20 * index + 2] = 0.0;
+    // output_buffer.data[20 * index + 3] = triangle.origin.x * radius;
+
+    output_buffer.data[20 * index + 4] = 0.0;
+    output_buffer.data[20 * index + 5] = 1.0;
+    output_buffer.data[20 * index + 6] = 0.0;
+    // output_buffer.data[20 * index + 7] = triangle.origin.y * radius;
+
+    output_buffer.data[20 * index + 8] = 0.0;
+    output_buffer.data[20 * index + 9] = 0.0;
+    output_buffer.data[20 * index + 10]= 1.0;
+    // output_buffer.data[20 * index + 11] = triangle.origin.z * radius;
+
+    // Not currently using
+    output_buffer.data[20 * index + 12] = 1.0;
+    output_buffer.data[20 * index + 13] = 0.0;
+    output_buffer.data[20 * index + 14] = 0.0;
+    output_buffer.data[20 * index + 15] = 1.0;
+
+    // Setting the key data
+    output_buffer.data[20 * index + 16] = uintBitsToFloat(key.x);
+    output_buffer.data[20 * index + 17] = uintBitsToFloat(key.y);
+    output_buffer.data[20 * index + 18] = uintBitsToFloat(key.z);
+    output_buffer.data[20 * index + 19] = uintBitsToFloat(key.w);
+
+    // 
 }
 
 void cull_key(uvec4 key, Triangle triangle, float lod) {
-    if (TriangleInFrustum(triangle)) {
+    if (culling && TriangleInFrustum(triangle)) {
         uint write_culled_index = atomicAdd(primCount_culled[write_index], 1);
-        write_culled_list[write_culled_index] = key;
-        imageStore(DisplayKeys, getKeyCoordinate(write_culled_index), uintBitsToFloat(key));
+        set_multimesh_data(write_culled_index, key);
+    } else if (!culling)
+    {
+        uint write_culled_index = atomicAdd(primCount_culled[write_index], 1);
+        set_multimesh_data(write_culled_index, key);
     }
     imageAtomicMax(GlobalKeyData, ivec2(0, 0), getLevelInKey(key.xy));
 }
@@ -443,29 +472,34 @@ void main() {
     if (target_LOD > current_LOD && current_LOD < max_lod) { // subdivide
         uvec4 children_keys[4] = getChildKeys(key);
         for (int i = 0; i < 4; i++) {
-            uint idx = atomicAdd(primCount_full[write_index], 1);
+            uint write_full_index = atomicAdd(primCount_full[write_index], 1);
             Triangle child_triangle = leafSpaceToWorldSpace(children_keys[i]);
             
             children_keys[i].w |= getJunctionFlags(children_keys[i], triangle, current_LOD + 1);
             
-            write_full_list[idx] = children_keys[i];
+            write_full_list[write_full_index] = children_keys[i];
+     
             cull_key(children_keys[i], child_triangle, current_LOD + 1);
+
         }
     } else if (parent_target_LOD < current_LOD - 1 && current_LOD > 0) { // merging
         if (isUpperLeftChild(key.xy)) {
-            uint idx = atomicAdd(primCount_full[write_index], 1);
+            uint write_full_index = atomicAdd(primCount_full[write_index], 1);
 
             parent_key.w |= getJunctionFlags(parent_key, grand_parent_triangle, current_LOD - 1);
+            write_full_list[write_full_index] = parent_key;
 
-            write_full_list[idx] = parent_key;
             cull_key(parent_key, parent_triangle, current_LOD - 1);
+
         }
     } else {
-        uint idx = atomicAdd(primCount_full[write_index], 1);
+        uint write_full_index = atomicAdd(primCount_full[write_index], 1);
 
         key.w |= getJunctionFlags(key, parent_triangle, current_LOD);
+        write_full_list[write_full_index] = key;
         
-        write_full_list[idx] = key;
+     
         cull_key(key, triangle, current_LOD);
+ 
     }
 }

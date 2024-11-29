@@ -2,13 +2,17 @@ shader_type spatial;
 #define sqrt2 1.414213562
 uniform vec4[30] position_list;
 uniform float radius;
+uniform float border_size;
+uniform float center_size;
+uniform int total_texture_subdivisions;
 uniform float grid_size;
+uniform int desired_chunk_size;
 varying float elevation;
 
 uniform sampler2D albedo_map : repeat_disable, source_color;
 uniform sampler2D height_map : repeat_disable;
 uniform sampler2D normal_map : repeat_disable, source_color;
-uniform sampler2D atlas_map : repeat_disable, source_color;
+uniform sampler2DArray indirection_table : repeat_disable, source_color;
 
 uniform bool is_colorize_lod;
 uniform bool is_cube;
@@ -21,8 +25,6 @@ uniform float normal_strength;
 uniform int resolution;
 uniform mat4 planet_transform_matrix;
 
-uniform sampler2D key_image : repeat_disable;
-
 uniform vec3 camera_position;
 uniform float fov;
 uniform vec2 morph_range;
@@ -30,8 +32,8 @@ uniform float sub_factor;
 
 mat4 get_rotation() {
 	return mat4(
-		vec4(planet_transform_matrix[0].xyz / length(planet_transform_matrix[0].xyz), 0), 
-		vec4(planet_transform_matrix[1].xyz / length(planet_transform_matrix[1].xyz), 0), 
+		vec4(planet_transform_matrix[0].xyz / length(planet_transform_matrix[0].xyz), 0),
+		vec4(planet_transform_matrix[1].xyz / length(planet_transform_matrix[1].xyz), 0),
 		vec4(planet_transform_matrix[2].xyz / length(planet_transform_matrix[2].xyz), 0),
 		vec4(0, 0, 0, 1)
 	);
@@ -218,17 +220,23 @@ float calculateLODToCam(vec3 from, bool useHeight) {
     );
 }
 
-float calculateMorph(vec3 point, uvec2 key) {
+float getPercentage(vec3 point, uvec2 key)
+{
 	float current_lod = float(getLevelInKey(key));
 	// Ensure the lod calculated is in the range of the key's lod
 	float calculated_lod = clamp(calculateLODToCam(point, true), current_lod - 1.0, current_lod);
-	float percentage = current_lod - calculated_lod;
+
+	return current_lod - calculated_lod;
+}
+
+float calculateMorph(vec3 point, uvec2 key) {
+	float percentage = getPercentage(point, key);
 
 	if (percentage < morph_range.x)
 		return 0.0;
 	if (percentage > morph_range.y)
 		return 1.0;
-		
+
 	if (percentage >= morph_range.x && percentage <= morph_range.y)
 		return (percentage - morph_range.x) / (morph_range.y - morph_range.x);
 
@@ -253,20 +261,15 @@ vec2 get_polygon_uv(vec3 point, uint polygon_id) {
 			break;
 		}
 	}
-	
+
 	vec2 uv = vec2(0);
 	int inputA = (index + 1) % 3;
 	int inputB = (index + 2) % 3;
-	
+
 	uv = vec2(point[min(inputA, inputB)], point[max(inputA, inputB)]);
 	uv = abs(vec2(0.0, float(flag)) - uv);
-	
-	return uv;
-}
 
-ivec2 getKeyCoordinate(int idx) {
-	ivec2 image_size = ivec2(textureSize(key_image, 0));
-	return ivec2(idx % image_size.x, idx / image_size.y);
+	return uv;
 }
 
 vec3 hslToRgb(vec3 c) {
@@ -280,16 +283,16 @@ varying vec3 cube_local_position;
 varying vec3 sphere_local_position;
 varying float morph;
 void vertex() {
-	
-	key = is_culling ? floatBitsToUint(texelFetch(key_image, getKeyCoordinate(int(INSTANCE_ID)), 0)) : floatBitsToUint(INSTANCE_CUSTOM);
-	
+
+	key = floatBitsToUint(INSTANCE_CUSTOM);
+
 	uint flags = key.w >> 29u;
 	key.w &= 0xFu;
-	
+
 	vec2 quad_position = leaf_space_to_quad_space(VERTEX, key.xy);
 	vec3 local_position = quad_space_to_local_space(quad_position, key.z, key.w);
 	local_position = is_cube ? local_position : point_on_cube_to_point_on_sphere(local_position);
-	
+
 	morph = is_morphing ? calculateMorph(local_position, key.xy) : 0.0;
 	vec2 morphed_quad_position = leaf_space_to_quad_space(morphVertex(VERTEX.xy, morph), key.xy);
 	vec3 morphed_local_position = quad_space_to_local_space(morphed_quad_position, key.z, key.w);
@@ -297,9 +300,9 @@ void vertex() {
 	cube_local_position = morphed_local_position;
 	sphere_local_position = point_on_cube_to_point_on_sphere(morphed_local_position);
 	morphed_local_position = is_cube ? cube_local_position : sphere_local_position;
-	
+
 	vec3 morphed_world_position = local_space_to_world_space(morphed_local_position);
-	
+
 	elevation = textureLod(height_map, point_on_sphere_to_UV(morphed_local_position), 0.0).r;
 	NORMAL = (vec4(morphed_local_position, 1) * get_rotation()).xyz;
 	VERTEX = morphed_world_position + NORMAL * height_scale * elevation;
@@ -319,31 +322,42 @@ void fragment() {
 
 	vec2 sphere_uv_point = point_on_sphere_to_UV(sphere_local_position);
 	vec3 surface_texture = textureLod(albedo_map, is_texture_1D ? vec2(elevation, 0.0) : sphere_uv_point, 0.0).rgb;
-	
+
 	vec2 polygon_uv = get_polygon_uv(cube_local_position, key.z);
 	vec2 rotated_uv = rotate_uv(polygon_uv, radians(45.0));
 	rotated_uv *= sqrt(2.0);
 	int level = getLevelInKey(key.xy);
 	//vec2 cell = floor(polygon_uv * (pow(2.0, float(level))));
-	vec2 cell = floor(polygon_uv * grid_size);
-	
+	vec2 cell = floor(polygon_uv * grid_size) / grid_size;
+
 	ivec3 init_normal = get_init_normal(cube_local_position, key.z);
-	int id = 0;
+	int texture_idx = 0;
 	for (int i = 0; i < 3; i++) {
 		if (init_normal[i] != 0) {
-			id = i + 3 * (init_normal[i] == 1 ? 0 : 1);
+			texture_idx = i + 3 * (init_normal[i] == 1 ? 0 : 1);
 			break;
 		}
 	}
-	cell = vec2(cell.x + grid_size * float(id), cell.y) / vec2(grid_size * 6.0, grid_size);
-	
-	vec3 color = textureLod(atlas_map, cell, 0).xyz;
-	//color = vec3(cell.x, cell.y, 0.0) / grid_size;
-	float checker = mod(cell.x + cell.y, 2.0);
-	vec3 color1 = mix(vec3(0.5), debug_color, 0.3);
-	vec3 color2 = mix(vec3(0), debug_color, 0.3);
-	
-	debug_color = mix(color1, color2, checker);
+
+
+	//cell = vec2(cell.x + float(id) * grid_size, cell.y) / vec2(grid_size * 6.0, grid_size);
+	//cell = cell / grid_size;
+
+	//vec3 color = textureLod(indirection_table, vec3(cell.x, cell.y, float(id)), 0).xyz;
+
+	int lod = int(calculateLODToCam(sphere_local_position, true));
+	//vec3 color = vec3(float(f & 1),float(f & 2),float(f & 4));
+
+	texture_idx = total_texture_subdivisions * texture_idx + (lod % total_texture_subdivisions);
+	//color = vec3(cell.x, cell.y, float(f & 1));
+	vec3 color = textureLod(indirection_table, vec3(0, 0, float(texture_idx)), 0.0).xyz;
+	//float checker = mod(cell.x + cell.y, 2.0);
+	//vec3 color1 = mix(vec3(0.5), debug_color, 0.3);
+	//vec3 color2 = mix(vec3(0), debug_color, 0.3);
+//
+	//debug_color = mix(color1, color2, checker);
+	//debug_color = vec3(float(texture_idx)/18.0, 0, 0);
+	//debug_color = vec3(float((texture_idx & 4) >> 2),float((texture_idx & 2) >> 1),float(texture_idx & 1));
 	//debug_color = vec3(float(id)/6.0);
 	debug_color = color;
 	//debug_color = mix(debug_color, vec3(child/3.0), 0.2);
@@ -351,8 +365,7 @@ void fragment() {
 	//NORMAL_MAP = textureLod(normal_map, sphere_uv_point, 0.0).rgb;
 	//NORMAL_MAP_DEPTH = normal_strength;
 	ALBEDO = is_colorize_lod ? debug_color : surface_texture;
-	
-	//ALBEDO = vec3(morph);
-	
-}
 
+	//ALBEDO = vec3(morph);
+
+}

@@ -1,6 +1,6 @@
 ﻿Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2012
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Planet Game", "Planet Game.csproj", "{29F4E3E1-2184-4165-B62A-31AE4C20F1C3}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Planet Game", "Planet Game.csproj", "{A444DE23-4F41-41D3-B2E2-7CE56B68CDFA}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -9,11 +9,11 @@ Global
 	ExportRelease|Any CPU = ExportRelease|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{29F4E3E1-2184-4165-B62A-31AE4C20F1C3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{29F4E3E1-2184-4165-B62A-31AE4C20F1C3}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{29F4E3E1-2184-4165-B62A-31AE4C20F1C3}.ExportDebug|Any CPU.ActiveCfg = ExportDebug|Any CPU
-		{29F4E3E1-2184-4165-B62A-31AE4C20F1C3}.ExportDebug|Any CPU.Build.0 = ExportDebug|Any CPU
-		{29F4E3E1-2184-4165-B62A-31AE4C20F1C3}.ExportRelease|Any CPU.ActiveCfg = ExportRelease|Any CPU
-		{29F4E3E1-2184-4165-B62A-31AE4C20F1C3}.ExportRelease|Any CPU.Build.0 = ExportRelease|Any CPU
+		{A444DE23-4F41-41D3-B2E2-7CE56B68CDFA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A444DE23-4F41-41D3-B2E2-7CE56B68CDFA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A444DE23-4F41-41D3-B2E2-7CE56B68CDFA}.ExportDebug|Any CPU.ActiveCfg = ExportDebug|Any CPU
+		{A444DE23-4F41-41D3-B2E2-7CE56B68CDFA}.ExportDebug|Any CPU.Build.0 = ExportDebug|Any CPU
+		{A444DE23-4F41-41D3-B2E2-7CE56B68CDFA}.ExportRelease|Any CPU.ActiveCfg = ExportRelease|Any CPU
+		{A444DE23-4F41-41D3-B2E2-7CE56B68CDFA}.ExportRelease|Any CPU.Build.0 = ExportRelease|Any CPU
 	EndGlobalSection
 EndGlobal

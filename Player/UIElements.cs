@@ -21,6 +21,7 @@ public partial class UIElements : CanvasLayer
 	[Export] private Button _btnGenerateNormals;
 	[Export] private Button _btnMorphing;
 	[Export] private Button _btnGenerateCubeMap;
+	[Export] private Button _btnGenerateChunks;
 
 	[ExportGroup("Extra")]
 	[Export] public HBoxContainer ImageContainer;
@@ -80,6 +81,11 @@ public partial class UIElements : CanvasLayer
 		_planetController.PlanetData.SetMaterialParameters();
 	}
 
+	public void UpdateProcessingText()
+	{
+		_btnProcessLod.Text = _planetController.SurfaceController.Processing ? "Stop Processing LOD" : "Start Processing LOD";
+	}
+
 	public void EnableOrDisableLodColorize()
 	{
 		bool currentSetting = !_planetController.PlanetData.ColorizeLod;
@@ -128,8 +134,6 @@ public partial class UIElements : CanvasLayer
 		computeNormals.SaveNormalMap("Normal");
 		computeNormals.CleanupGPU();
 		rd.Free();
-		rd = null;
-
 	}
 
 	public void GenerateCubeMap()
@@ -146,6 +150,43 @@ public partial class UIElements : CanvasLayer
 		computeCubeMap.SaveCubeMap("Cubemap");
 		computeCubeMap.CleanupGPU();
 		rd.Free();
-		rd = null;
+	}
+
+	private ChunkedClipmap chunkedClipmap;
+	private IndirectionTable indirectionTable;
+	public void GenerateChunks()
+	{
+		if (chunkedClipmap == null) return;
+		chunkedClipmap.GenerateImageChunks("My_Planet");
+	}
+
+	public void GenerateIndirectionTable()
+	{
+		chunkedClipmap = new(_planetController.PlanetData.DesiredChunkSize, _planetController.PlanetData.CenterSize, _planetController.PlanetData.BorderSize, "res://test-image.png");
+		int gridSize = chunkedClipmap.ImageSize.Y / chunkedClipmap.DesiredChunkSize;
+
+		indirectionTable = new(RenderingServer.GetRenderingDevice(), gridSize, chunkedClipmap.TotalSubdivisions);
+		for (int i = 0; i < chunkedClipmap.TotalSubdivisions * 6; i++)
+		{
+			InsertImage(indirectionTable.Table.GetLayerData(i));
+		}
+		
+		_planetController.PlanetData.SetMaterialParameters();
+		_planetController.PlanetData.ShaderMaterial.SetShaderParameter("indirection_table", indirectionTable.Table);
+		_planetController.PlanetData.ShaderMaterial.SetShaderParameter("grid_size", gridSize);
+		_planetController.PlanetData.ShaderMaterial.SetShaderParameter("total_texture_subdivisions", chunkedClipmap.TotalSubdivisions);
+	}
+
+	public void InsertImage(Image image)
+	{
+		TextureRect textureRect = new();
+		ImageTexture imageTexture = new();
+		imageTexture.SetImage(image);
+		textureRect.Texture = imageTexture;
+		textureRect.ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize;
+		textureRect.StretchMode = TextureRect.StretchModeEnum.KeepAspect;
+		textureRect.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+
+		ImageContainer.AddChild(textureRect);
 	}
 }

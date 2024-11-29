@@ -28,7 +28,6 @@ public partial class CameraController : Camera3D
 
 	public override void _Ready()
 	{
-
 		_planetController = (PlanetController)GetParent();
 		_planetController.SurfaceAttachment.CallDeferred("add_child", _planetLine);
 		_planetController.SurfaceAttachment.CallDeferred("add_child", _debugPlot);
@@ -139,18 +138,6 @@ public partial class CameraController : Camera3D
 
 	}
 
-	float CalculateSpeed(float distanceFromSurface, float d_min, float d_max, float v_max)
-	{
-		// Ensure the distance is within the min and max range
-		distanceFromSurface = Mathf.Clamp(distanceFromSurface, d_min, d_max);
-
-		// Inverse relationship: speed decreases as distance decreases
-		float t = (distanceFromSurface - d_min) / (d_max - d_min);
-
-		// Calculate the speed
-		return Mathf.Lerp(0.001f, v_max, t);
-	}
-
 	public override void _Input(InputEvent @event)
 	{
 		if (Input.IsActionJustReleased("cam_exit"))
@@ -187,6 +174,11 @@ public partial class CameraController : Camera3D
 				Vector3 rayEnd = rayOrigin + ProjectRayNormal(mousePosition) * RayLength;
 				CalculateRayToPlanet(rayOrigin, rayEnd);
 			}
+		}
+
+		if (Input.IsActionJustPressed("switch_to_debug_cam"))
+		{
+			Current = !Current;
 		}
 	}
 
@@ -232,7 +224,6 @@ public partial class CameraController : Camera3D
 		return projectedPoints;
 	}
 
-	// Function to create the frustum mesh
 	private static Mesh CreateFrustumMesh(Vector3[] frustumPoints)
 	{
 		ArrayMesh frustumMesh = new();

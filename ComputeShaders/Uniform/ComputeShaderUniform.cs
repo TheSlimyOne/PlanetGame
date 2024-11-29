@@ -1,7 +1,7 @@
 using Godot;
 using System;
-using Godot.Collections;
 using Dispatcher;
+using Godot.Collections;
 
 namespace Uniform
 {
@@ -11,13 +11,13 @@ namespace Uniform
         public int Binding { get; protected set; }
         public RDUniform Uniform { get; protected set; }
         protected RenderingDevice _rd;
-        public readonly int OwnerID;
+        public IDispatchable Owner { get; protected set; }
 
         protected ComputeShaderUniform(RenderingDevice renderingDevice, int binding, IDispatchable owner)
         {
             _rd = renderingDevice;
             Binding = binding;
-            OwnerID = owner?.GetHashCode() ?? -1;
+            Owner = owner;
         }
 
         // This is supposed to simplify the process of sharing buffers between 2 or more compute shaders
@@ -28,7 +28,7 @@ namespace Uniform
 
         public abstract Array<byte[]> GetByteData();
 
-        public void FreeRid()
+        public virtual void FreeRids()
         {
             if (_rd == null) return;
             foreach (Rid rid in Uniform.GetIds())
@@ -36,12 +36,11 @@ namespace Uniform
                 _rd.FreeRid(rid);
             }
             Uniform.ClearIds();
-            _rd = null;
         }
 
         public bool HasOwner()
         {
-            return OwnerID != -1;
+            return Owner != null;
         }
     }
 

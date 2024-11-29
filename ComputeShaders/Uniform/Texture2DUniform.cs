@@ -82,7 +82,7 @@ namespace Uniform
         public override Texture2DUniform RebindUniform(IDispatchable owner, RenderingDevice rd, int binding)
         {
             if (rd == _rd)
-                return new Texture2DUniform(owner, this, binding);
+                return new Texture2DUniform(Owner, this, binding);
             else
             {
                 return new Texture2DUniform(owner, rd, binding, TextureFormat, Uniform.UniformType, GetByteData());

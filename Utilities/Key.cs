@@ -6,17 +6,17 @@ public struct Key
     readonly public uint MSB;
     readonly public uint LSB;
     readonly public uint MeshPolygonID;
-    readonly public uint LocalKeyData; // FFF0000000000000000000000000RRRR
+    readonly public uint RootID; // FFF0000000000000000000000000RRRR
 
     public Key(Color color) : this(color.R, color.G, color.B, color.A) { }
-    public Key(float msb, float lsb, float meshPolygonID, float localKeyData) : this(BitConverter.SingleToUInt32Bits(msb), BitConverter.SingleToUInt32Bits(lsb), BitConverter.SingleToUInt32Bits(meshPolygonID), BitConverter.SingleToUInt32Bits(localKeyData)) { }
-    public Key(int msb, int lsb, int meshPolygonID, int localKeyData) : this((uint)msb, (uint)lsb, (uint)meshPolygonID, (uint)localKeyData) { }
-    public Key(uint msb, uint lsb, uint meshPolygonID, uint localKeyData)
+    private Key(float msb, float lsb, float meshPolygonID, float rootID) : this(BitConverter.SingleToUInt32Bits(msb), BitConverter.SingleToUInt32Bits(lsb), BitConverter.SingleToUInt32Bits(meshPolygonID), BitConverter.SingleToUInt32Bits(rootID)) { }
+    public Key(int msb, int lsb, int meshPolygonID, int rootID) : this((uint)msb, (uint)lsb, (uint)meshPolygonID, (uint)rootID) { }
+    public Key(uint msb, uint lsb, uint meshPolygonID, uint rootID)
     {
         MSB = msb;
         LSB = lsb;
         MeshPolygonID = meshPolygonID;
-        LocalKeyData = localKeyData;
+        RootID = rootID;
     }
 
     public readonly uint[] GetNodeID()
@@ -30,7 +30,7 @@ public struct Key
             BitConverter.UInt32BitsToSingle(MSB),
             BitConverter.UInt32BitsToSingle(LSB),
             BitConverter.UInt32BitsToSingle(MeshPolygonID),
-            BitConverter.UInt32BitsToSingle(LocalKeyData)
+            BitConverter.UInt32BitsToSingle(RootID)
         );
     }
 
@@ -41,25 +41,14 @@ public struct Key
             BitConverter.UInt32BitsToSingle(MSB),
             BitConverter.UInt32BitsToSingle(LSB),
             BitConverter.UInt32BitsToSingle(MeshPolygonID),
-            BitConverter.UInt32BitsToSingle(LocalKeyData)
+            BitConverter.UInt32BitsToSingle(RootID)
         };
-    }
-
-    public readonly uint GetFlag()
-    {
-        return LocalKeyData >> 29;
     }
 
     public readonly uint GetRootID()
     {
-        return LocalKeyData & 0xF;
+        return RootID;
     }
-
-    public readonly Half GetMorphFactor()
-    {
-        return BitConverter.UInt16BitsToHalf((ushort)((LocalKeyData & 0xFFFF0u) >> 4));
-    }
-
 
     public int GetLevelInKey()
     {
@@ -284,11 +273,29 @@ public struct Key
         return vertexA * point.X + vertexB * point.Y + vertexC * (1 - point.X - point.Y);
     }
 
+    public static Key[] GenerateFullFace(int lod, int meshPolygonID)
+    {
+        if (lod > 7 || lod < 0) throw new ArgumentException($"Lod of {lod} is out of bounds.");
+
+        int amount = (int)Mathf.Pow(4.0, lod);
+        Key[] keys = new Key[4 * amount];
+
+        int index = 0;
+        for (int i = 0; i < amount; i++)
+        {
+            for (int j = 0; j < 4; j++)
+            {
+                keys[index++] = new Key(0, amount + i, meshPolygonID, j);
+            }
+        }
+
+
+        return keys;
+    }
+
     public override string ToString()
     {
-        uint flag = GetFlag();
-        Half morphFactor = GetMorphFactor();
         uint rootID = GetRootID();
-        return $"{Convert.ToString(MSB, 2).PadZeros(32)}, {Convert.ToString(LSB, 2).PadZeros(32)}, {MeshPolygonID,-4}, {Convert.ToString(flag, 2).PadZeros(3)}, {morphFactor}, {rootID}";
+        return $"{Convert.ToString(MSB, 2).PadZeros(32)}, {Convert.ToString(LSB, 2).PadZeros(32)}, {MeshPolygonID,-4}, {rootID}";
     }
 }
