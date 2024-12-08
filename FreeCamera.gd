@@ -34,7 +34,7 @@ func _process(delta):
 		
 	var direction = Vector3(
 		float(Input.is_physical_key_pressed(KEY_KP_6)) - float(Input.is_physical_key_pressed(KEY_KP_4)),
-		float(Input.is_physical_key_pressed(KEY_KP_9)) - float(Input.is_physical_key_pressed(KEY_KP_7)), 
+		float(Input.is_physical_key_pressed(KEY_KP_7)) - float(Input.is_physical_key_pressed(KEY_KP_1)), 
 		float(Input.is_physical_key_pressed(KEY_KP_5)) - float(Input.is_physical_key_pressed(KEY_KP_8))
 	).normalized()
 	

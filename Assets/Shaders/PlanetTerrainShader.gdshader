@@ -1,5 +1,5 @@
-shader_type spatial;
 #define sqrt2 1.414213562
+shader_type spatial;
 uniform vec4[30] position_list;
 uniform float radius;
 uniform float border_size;
@@ -10,8 +10,9 @@ uniform int desired_chunk_size;
 varying float elevation;
 
 uniform sampler2D albedo_map : repeat_disable, source_color;
-uniform sampler2D height_map : repeat_disable;
+uniform sampler2D height_map : repeat_disable, source_color;
 uniform sampler2D normal_map : repeat_disable, source_color;
+uniform sampler2D tile_cache : repeat_disable, source_color;
 uniform sampler2DArray indirection_table : repeat_disable, source_color;
 
 uniform bool is_colorize_lod;
@@ -200,6 +201,13 @@ float calculateLOD(float dist, float fovy, float factor) {
     return clamp(-log2(num/dom), -1, 31);
 }
 
+int get_normal_id(ivec3 normal)
+{
+	ivec3 p = ivec3(bvec3(normal.x == 1, normal.y == 1, normal.z == 1));
+	ivec3 n = ivec3(bvec3(normal.x == -1, normal.y == -1, normal.z == -1));
+	return p.x * 0 + p.y * 1 + p.z * 2 + n.x * 3 + n.y * 4 + n.z * 5;
+}
+
 float distanceFromCam(vec3 from, bool useHeight) {
     vec3 point = local_space_to_world_space(from);
     if (useHeight)
@@ -243,13 +251,13 @@ float calculateMorph(vec3 point, uvec2 key) {
 	return 0.0;
 }
 
-ivec3 get_init_normal(vec3 point, uint polygon_id) {
+ivec3 get_init_normal(uint polygon_id) {
 	uint vertexBaseIndex = polygon_id * 5u;
 	return ivec3(position_list[vertexBaseIndex].xyz);
 }
 
-vec2 get_polygon_uv(vec3 point, uint polygon_id) {
-	ivec3 normal = get_init_normal(point, polygon_id);
+vec2 get_polygon_uv(vec3 point, ivec3 normal) {
+
 	point = (point + 1.0) / 2.0;
 
 	int index = -4;
@@ -323,49 +331,36 @@ void fragment() {
 	vec2 sphere_uv_point = point_on_sphere_to_UV(sphere_local_position);
 	vec3 surface_texture = textureLod(albedo_map, is_texture_1D ? vec2(elevation, 0.0) : sphere_uv_point, 0.0).rgb;
 
-	vec2 polygon_uv = get_polygon_uv(cube_local_position, key.z);
-	vec2 rotated_uv = rotate_uv(polygon_uv, radians(45.0));
-	rotated_uv *= sqrt(2.0);
-	int level = getLevelInKey(key.xy);
-	//vec2 cell = floor(polygon_uv * (pow(2.0, float(level))));
-	vec2 cell = floor(polygon_uv * grid_size) / grid_size;
+	ivec3 init_normal = get_init_normal(key.z);
+	vec2 polygon_uv = get_polygon_uv(cube_local_position, init_normal);
 
-	ivec3 init_normal = get_init_normal(cube_local_position, key.z);
-	int texture_idx = 0;
-	for (int i = 0; i < 3; i++) {
-		if (init_normal[i] != 0) {
-			texture_idx = i + 3 * (init_normal[i] == 1 ? 0 : 1);
-			break;
-		}
-	}
+	int lod = int(calculateLODToCam(sphere_local_position, false));
 
+	// clamp lods out of bounds
+	int lod_ratio = min(lod / total_texture_subdivisions, total_texture_subdivisions - 1);
 
-	//cell = vec2(cell.x + float(id) * grid_size, cell.y) / vec2(grid_size * 6.0, grid_size);
-	//cell = cell / grid_size;
+	float lod_grid_size = grid_size / pow(2.0, float(total_texture_subdivisions - 1 - lod_ratio));
+	int texture_idx = total_texture_subdivisions * get_normal_id(init_normal) + lod_ratio;
 
-	//vec3 color = textureLod(indirection_table, vec3(cell.x, cell.y, float(id)), 0).xyz;
+	vec2 cell_uv = (fract(polygon_uv * lod_grid_size));
+	vec3 cell_id = vec3((floor(polygon_uv * lod_grid_size) + vec2(0.5)) / lod_grid_size, float(texture_idx));
 
-	int lod = int(calculateLODToCam(sphere_local_position, true));
-	//vec3 color = vec3(float(f & 1),float(f & 2),float(f & 4));
+	vec3 indirection_id = textureLod(indirection_table, cell_id, 0.0).xyz;
 
-	texture_idx = total_texture_subdivisions * texture_idx + (lod % total_texture_subdivisions);
-	//color = vec3(cell.x, cell.y, float(f & 1));
-	vec3 color = textureLod(indirection_table, vec3(0, 0, float(texture_idx)), 0.0).xyz;
-	//float checker = mod(cell.x + cell.y, 2.0);
-	//vec3 color1 = mix(vec3(0.5), debug_color, 0.3);
-	//vec3 color2 = mix(vec3(0), debug_color, 0.3);
-//
-	//debug_color = mix(color1, color2, checker);
-	//debug_color = vec3(float(texture_idx)/18.0, 0, 0);
-	//debug_color = vec3(float((texture_idx & 4) >> 2),float((texture_idx & 2) >> 1),float(texture_idx & 1));
-	//debug_color = vec3(float(id)/6.0);
-	debug_color = color;
-	//debug_color = mix(debug_color, vec3(child/3.0), 0.2);
+	vec2 cell_uv_min = indirection_id.xy;
+	vec2 cell_uv_max = cell_uv_min.xy + (1.0 / (grid_size));
+
+	vec2 grid_uv = cell_uv_min + (cell_uv_max - cell_uv_min) * cell_uv;
+
+	// debug_color = textureLod(tile_cache, grid_uv, 0.0).rgb;
+	//debug_color = vec3(indirection_id.xy, 0);
 	NORMAL = height_to_normal(elevation, normal_strength, VERTEX, NORMAL);
-	//NORMAL_MAP = textureLod(normal_map, sphere_uv_point, 0.0).rgb;
-	//NORMAL_MAP_DEPTH = normal_strength;
 	ALBEDO = is_colorize_lod ? debug_color : surface_texture;
 
-	//ALBEDO = vec3(morph);
-
+	//ALBEDO = vec3(0);
+	//if (get_normal_id(init_normal) == 2)
+	//{
+		//ALBEDO = is_colorize_lod ? textureLod(tile_cache, grid_uv, 0.0).rgb : vec3(cell_uv_min, 0);
+//
+	//}
 }

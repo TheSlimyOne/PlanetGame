@@ -6,7 +6,7 @@ using Godot.Collections;
 using Planet;
 namespace Dispatcher
 {
-	public partial class RenderSurfaceDispatcher : ComputeShaderDispatcher<RenderSurfaceDispatcher.BufferNames>
+	public class RenderSurfaceDispatcher : ComputeShaderDispatcher<RenderSurfaceDispatcher.BufferNames>
 	{
 		public PlanetController PlanetController { get; set; }
 		public CopyKeysDispatcher CopyKeysDispatcher { get; set; }
@@ -18,11 +18,13 @@ namespace Dispatcher
 			READ_LIST,
 			GLOBAL_KEYS_DATA,
 			WRITE_FULL_LIST,
-			TRIANGLE_COORDINATES,
+			BASE_TRIANGLES,
 			EXTERNAL_DATA,
-			DEBUG_DATA,
 			HEIGHT_MAP,
 			MULTIMESH_BUFFER,
+			CULLING,
+			// PAGE_BUFFER,
+			// PAGING,
 		}
 
 		public RenderSurfaceDispatcher(string shaderFilePath, ref RenderingDevice rd) : base(shaderFilePath, ref rd)
@@ -64,7 +66,6 @@ namespace Dispatcher
 						Key[] faceData = Key.GenerateFullFace(PlanetController.PlanetData.StartingLod, i);
 						System.Array.Copy(faceData, 0, readList, i * faceData.Length, faceData.Length);
 					}
-
 					return Utilities.ToBytes<Key>(readList).ToArray();
 				}).Invoke()
 				),
@@ -73,16 +74,9 @@ namespace Dispatcher
 					Utilities.ToBytes<Key>(new Key[PlanetController.PlanetData.MaximumNodes]).ToArray()
 				),
 
-				[BufferNames.TRIANGLE_COORDINATES] = new StorageBufferUniform(this, _rd, (int)BufferNames.TRIANGLE_COORDINATES,
+				[BufferNames.BASE_TRIANGLES] = new StorageBufferUniform(this, _rd, (int)BufferNames.BASE_TRIANGLES,
 					Utilities.ToBytes<Vector4>(PlanetData.GenerateTrianglePoints()).ToArray()
 				),
-
-				[BufferNames.DEBUG_DATA] = new StorageBufferUniform(this, _rd, (int)BufferNames.DEBUG_DATA,
-					new Func<byte[]>(() =>
-					{
-						return Utilities.ToBytes<bool>(new bool[] { PlanetController.PlanetData.Culling }).ToArray();
-					}).Invoke()
-				 ),
 
 				[BufferNames.HEIGHT_MAP] = new Func<Texture2DUniform>(() =>
 				{
@@ -128,10 +122,13 @@ namespace Dispatcher
 						RenderingServer.InstanceCreate(),
 						PlanetController.PlanetData.MaximumNodes,
 						2 * PlanetController.PlanetData.Radius
-						),
+					),
 					(int)BufferNames.MULTIMESH_BUFFER,
 					false
-				)
+				),
+
+				[BufferNames.CULLING] = new StorageBufferUniform(this, _rd, (int)BufferNames.CULLING,
+					Utilities.ToBytes<bool>(new bool[] { PlanetController.PlanetData.Culling, false }).ToArray()),
 			};
 
 			CreateUniformSet();
@@ -157,43 +154,40 @@ namespace Dispatcher
 				GetExternalData()
 			);
 
-			_computeShaderUniforms[BufferNames.DEBUG_DATA].UpdateUniform(
-				Utilities.ToBytesSingle(PlanetController.PlanetData.Culling).ToArray()
-			);
-
-			_computeShaderUniforms[BufferNames.INDICES].UpdateUniform(
-				GetIndicesData()
+			_computeShaderUniforms[BufferNames.CULLING].UpdateUniform(
+				Utilities.ToBytes<bool>(new bool[] { PlanetController.PlanetData.Culling, false }).ToArray()
 			);
 		}
 
+		//TODO make this push-constants
 		private byte[] GetExternalData()
 		{
 			Array<byte> data = new();
 
 			data.AddRange(Utilities.ToBytesSingle(PlanetController.CameraController.GetViewProjectionMatrix()).ToArray());
-			data.AddRange(Utilities.ToBytesSingle(VectorUtils.toVector4(PlanetController.CameraController.GlobalPosition, 0)).ToArray());
 			data.AddRange(Utilities.ToBytesSingle(Utilities.ToProjection(PlanetController.PlanetData.GetPlanetTransformMatrix())).ToArray());
+			data.AddRange(Utilities.ToBytesSingle(VectorUtils.toVector4(PlanetController.CameraController.GlobalPosition, 0)).ToArray());
 			data.AddRange(Utilities.ToBytes<float>(new float[]
 			{
 				Mathf.Tan(Mathf.DegToRad(PlanetController.CameraController.Fov) / 2),
 				PlanetController.PlanetData.SubFactor * PlanetController.PlanetData.Radius,
 				PlanetController.PlanetData.HeightScale,
 				PlanetController.PlanetData.MaximumLOD,
-				PlanetController.PlanetData.Radius
+				PlanetController.PlanetData.Radius,
+
+				PlanetController.PlanetData.Bias1,
+				PlanetController.PlanetData.Bias2,
+				0, 0
 			}).ToArray());
 			return data.ToArray();
 		}
 
-		private byte[] GetIndicesData()
-		{
-			uint[] indices = ((StorageBufferUniform)_computeShaderUniforms[BufferNames.INDICES]).GetData<uint>();
-			indices[0] = (indices[0] + 1) % 3; // Read Index
-			indices[1] = (indices[1] + 1) % 3; // Write Index
-			indices[2] = (indices[2] + 1) % 3; // Delete Index
-			indices[3] = (uint)PlanetController.PlanetData.MaximumNodes;
-			return Utilities.ToBytes<uint>(indices).ToArray();
-		}
-
+		// public void ComputePages()
+		// {
+		// 	_computeShaderUniforms[BufferNames.PAGING].UpdateUniform(
+		// 		Utilities.ToBytesSingle(true).ToArray()
+		// 	);
+		// }
 
 		public void ResizeReadList()
 		{
@@ -208,11 +202,10 @@ namespace Dispatcher
 		{
 			uint[] indices = GetUniformData<uint>(BufferNames.INDICES);
 			uint[] primCounts = GetUniformData<uint>(BufferNames.ATOMIC_COUNTER);
-			GD.Print("==================================");
-			GD.PrintS("FULL", primCounts[0], primCounts[1], primCounts[2]);
-			GD.PrintS("CULL", primCounts[3], primCounts[4], primCounts[5]);
-			GD.Print(indices[3]);
-			return ((int)primCounts[indices[1]], (int)primCounts[indices[1] + 3]);
+
+			
+			return ((int)primCounts[indices[0]], (int)primCounts[indices[0] + 3]);
 		}
-	}
+
+    }
 }

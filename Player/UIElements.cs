@@ -152,29 +152,33 @@ public partial class UIElements : CanvasLayer
 		rd.Free();
 	}
 
-	private ChunkedClipmap chunkedClipmap;
-	private IndirectionTable indirectionTable;
+	
+	// convert to compressed textures
+	// look into resource loader
 	public void GenerateChunks()
 	{
-		if (chunkedClipmap == null) return;
-		chunkedClipmap.GenerateImageChunks("My_Planet");
+		// if (chunkedClipmap == null) return;
+		// // chunkedClipmap.GenerateImageChunks("My_Planet");
+		// tileCache.UpdateCache(_planetController);
+		// ClearImages();
+		// InsertImage(tileCache.Cache);
+		// for (int i = 0; i < chunkedClipmap.TotalSubdivisions * 6; i++)
+		// {
+		// 	InsertImage(_planetController.PlanetData.IndirectionTable.Table[i]);
+		// }
+		// _planetController.PlanetData.ShaderMaterial.SetShaderParameter("indirection_table", _planetController.PlanetData.IndirectionTable.ToTexture2DArray());
+		// _planetController.PlanetData.ShaderMaterial.SetShaderParameter("tile_cache", tileCache.GetTexture());
+
 	}
 
-	public void GenerateIndirectionTable()
+	public async void GenerateIndirectionTable()
 	{
-		chunkedClipmap = new(_planetController.PlanetData.DesiredChunkSize, _planetController.PlanetData.CenterSize, _planetController.PlanetData.BorderSize, "res://test-image.png");
-		int gridSize = chunkedClipmap.ImageSize.Y / chunkedClipmap.DesiredChunkSize;
-
-		indirectionTable = new(RenderingServer.GetRenderingDevice(), gridSize, chunkedClipmap.TotalSubdivisions);
-		for (int i = 0; i < chunkedClipmap.TotalSubdivisions * 6; i++)
-		{
-			InsertImage(indirectionTable.Table.GetLayerData(i));
-		}
+		Viewport viewport = _planetController.CameraController.GetViewport();
+		await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
+		ViewportTexture viewportTexture = viewport.GetTexture();
 		
-		_planetController.PlanetData.SetMaterialParameters();
-		_planetController.PlanetData.ShaderMaterial.SetShaderParameter("indirection_table", indirectionTable.Table);
-		_planetController.PlanetData.ShaderMaterial.SetShaderParameter("grid_size", gridSize);
-		_planetController.PlanetData.ShaderMaterial.SetShaderParameter("total_texture_subdivisions", chunkedClipmap.TotalSubdivisions);
+		var image = viewportTexture.GetImage();
+		image.SavePng("user://Screenshot.png");
 	}
 
 	public void InsertImage(Image image)
@@ -186,7 +190,15 @@ public partial class UIElements : CanvasLayer
 		textureRect.ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize;
 		textureRect.StretchMode = TextureRect.StretchModeEnum.KeepAspect;
 		textureRect.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+		textureRect.TextureFilter = CanvasItem.TextureFilterEnum.Nearest;
 
 		ImageContainer.AddChild(textureRect);
+	}
+	public void ClearImages()
+	{
+		foreach (var image in ImageContainer.GetChildren())
+		{
+			image.QueueFree();
+		}
 	}
 }

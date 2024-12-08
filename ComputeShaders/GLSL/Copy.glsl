@@ -22,7 +22,13 @@ layout (set = 0, binding = 2, std430) buffer writeonly restrict DispatchOut {
 
 layout(set = 0, binding = 3, r8) restrict uniform image2D GlobalKeyData;
 
+layout(set = 0, binding = 4, std430) buffer restrict CommandBuffer { int data[]; } command_buffer;
+
 void main() {
+    read_index = (read_index + 1) % 3;
+    write_index = (write_index + 1) % 3;
+    delete_index = (delete_index + 1) % 3;
+    
     uint full_count = primCount_full[read_index];
     uint culled_count = primCount_culled[read_index];
 
@@ -32,4 +38,6 @@ void main() {
     primCount_culled[delete_index] = 0;
 
     imageStore(GlobalKeyData, ivec2(0, 0), vec4(0, 0, 0, 0));
+
+    command_buffer.data[1] = int(culled_count);
 }

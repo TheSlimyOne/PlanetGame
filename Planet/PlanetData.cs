@@ -108,6 +108,10 @@ namespace Planet
         {
             return _translation * _rotation;
         }
+        public Vector3 TransformPoint(Vector3 point)
+        {
+            return GetPlanetTRMatrix().Inverse() * point;
+        }
 
         #endregion
 
@@ -144,7 +148,7 @@ namespace Planet
             }
         }
         private int _maximumNodes = 40000;
-    
+
         [Export(PropertyHint.Range, "0, 31")]
         public int MaximumLOD
         {
@@ -207,7 +211,7 @@ namespace Planet
             }
         }
         private int _nodeSize = 16;
-        
+
         [Export(PropertyHint.Range, "0, 4")]
         public int StartingLod
         {
@@ -227,7 +231,7 @@ namespace Planet
 
         #region Surface Settings
         [ExportGroup("Surface Settings")]
-    
+
         [Export(PropertyHint.Range, "1, 100")]
         public int CenterSize
         {
@@ -243,7 +247,7 @@ namespace Planet
             }
         }
         private int _centerSize = 2;
-        
+
         [Export(PropertyHint.Range, "0, 100")]
         public int BorderSize
         {
@@ -295,7 +299,7 @@ namespace Planet
         [Export]
         public Texture2D HeightMap
         {
-            get =>_heightMap;
+            get => _heightMap;
             set
             {
                 if (_heightMap != value)
@@ -341,6 +345,27 @@ namespace Planet
         private float _normalStrength = 5;
         #endregion
 
+        #region Virtual Texturing Settings
+
+        public IndirectionTable IndirectionTable { get; private set; }
+        public ChunkedClipmap ChunkedClipmap { get; private set; }
+        public TileCache TileCache { get; private set; }
+
+        public void InitializeVirtualTextures()
+	    {
+            ChunkedClipmap = new(DesiredChunkSize, CenterSize, BorderSize, "res://Assets/Images/test-image.png");
+            int gridSize = ChunkedClipmap.ImageSize.Y / DesiredChunkSize;
+            IndirectionTable = new(RenderingServer.GetRenderingDevice(), gridSize, ChunkedClipmap.TotalSubdivisions);
+            TileCache = new(IndirectionTable, DesiredChunkSize, ChunkedClipmap);
+
+            ShaderMaterial.SetShaderParameter("indirection_table", IndirectionTable.ToTexture2DArray());
+            ShaderMaterial.SetShaderParameter("grid_size", gridSize);
+            ShaderMaterial.SetShaderParameter("total_texture_subdivisions", ChunkedClipmap.TotalSubdivisions);
+            ShaderMaterial.SetShaderParameter("tile_cache", TileCache.GetTexture());
+	    }
+
+        #endregion
+
         #region Material Settings
         [ExportGroup("Material Settings")]
         [Export]
@@ -358,21 +383,6 @@ namespace Planet
             }
         }
         private ShaderMaterial _shaderMaterial;
-
-        // public MultiMesh MultiMesh
-        // {
-        //     get => _multiMesh;
-        //     set
-        //     {
-        //         if (_multiMesh != value)
-        //         {
-        //             _multiMesh = value;
-        //             EmitChanged();
-        //             SetMaterialParameters();
-        //         }
-        //     }
-        // }
-        // private MultiMesh _multiMesh = new() { Mesh = new PlaceholderMesh(), InstanceCount = 0, TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseCustomData = true };
 
         public void SetMaterialParameters()
         {
@@ -466,6 +476,55 @@ namespace Planet
             }
         }
         private bool _morphing = true;
+
+        [Export]
+        public float Bias1
+        {
+            get => _bias1;
+            set
+            {
+                if (_bias1 != value)
+                {
+                    _bias1 = value;
+                    EmitChanged();
+                    SetMaterialParameters();
+                }
+            }
+        }
+        private float _bias1;
+
+        [Export]
+        public float Bias2
+        {
+            get => _bias2;
+            set
+            {
+                if (_bias2 != value)
+                {
+                    _bias2 = value;
+                    EmitChanged();
+                    SetMaterialParameters();
+                }
+            }
+        }
+        private float _bias2;
+
+        [Export]
+        public float Bias3
+        {
+            get => _bias3;
+            set
+            {
+                if (_bias3 != value)
+                {
+                    _bias3 = value;
+                    EmitChanged();
+                    SetMaterialParameters();
+                }
+            }
+        }
+        private float _bias3;
+
         #endregion
 
         public void ConnectChanged(Action action)
@@ -504,7 +563,7 @@ namespace Planet
                 Vector3 axisA = new(normal.Y, normal.Z, normal.X);
                 Vector3 axisB = normal.Cross(axisA);
                 // if (i < 3) {
-                
+
                 trianglePoints[5 * i + 0] = VectorUtils.toVector4(normal, 1);
                 trianglePoints[5 * i + 1] = VectorUtils.toVector4(-axisA + axisB + normal, 1);
                 trianglePoints[5 * i + 2] = VectorUtils.toVector4(-axisA - axisB + normal, 1);
@@ -524,7 +583,7 @@ namespace Planet
             Vector3[] normals = new Vector3[_resolution * (_resolution + 1) / 2];
             Vector2[] uvs = new Vector2[_resolution * (_resolution + 1) / 2];
             int[] triangles = new int[(_resolution - 1) * (_resolution - 1) * 6 / 2];
-        
+
             Vector3 normal = Vector3.Back;
             Vector3 axisA = new(normal.Y, normal.Z, normal.X);
             Vector3 axisB = normal.Cross(axisA).Abs();
@@ -595,8 +654,8 @@ namespace Planet
 
             TriangleMesh.ClearSurfaces();
             TriangleMesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
-            
-            TriangleMesh.SurfaceSetMaterial(0, _shaderMaterial);     
+
+            TriangleMesh.SurfaceSetMaterial(0, _shaderMaterial);
         }
 
 

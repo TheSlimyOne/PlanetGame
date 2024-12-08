@@ -32,11 +32,9 @@ public partial class SurfaceController : Node3D
 	[ExportGroup("Shaders")]
 	[Export(PropertyHint.File, "*.glsl")] private string _renderSurfaceShaderPath;
 	[Export(PropertyHint.File, "*.glsl")] private string _copyKeysShaderPath;
-	[Export(PropertyHint.File, "*.glsl")] private string _updateCommandBufferShaderPath;
 
 	private RenderSurfaceDispatcher _renderSurface;
 	private CopyKeysDispatcher _copyKeys;
-	private UpdateCommandBufferDispatcher _updateCommandBuffer;
 
 	public bool Processing { get; set; }
 	private RenderingDevice _rd;
@@ -50,7 +48,6 @@ public partial class SurfaceController : Node3D
 
 	private Callable _executeRenderSurface;
 	private Callable _executeCopyKeys;
-	private Callable _executeUpdateCommandBuffer;
 
 	public override void _Ready()
 	{
@@ -64,7 +61,10 @@ public partial class SurfaceController : Node3D
 		_planetData.Scaled(Vector3.One * _planetData.Radius);
 		_planetData.Translate(Vector3.Back * (1 - _planetData.Radius));
 		UpdateColliders();
+		_planetData.InitializeVirtualTextures();
 		InitializeComputeShaders();
+		InvokeComputeShaders();
+		Processing = true;
 	}
 
 	public void UpdateColliders()
@@ -83,25 +83,20 @@ public partial class SurfaceController : Node3D
 	private void InitializeComputeShaders()
 	{
 		_rd = RenderingServer.GetRenderingDevice();
-		
+
 		SetUpMultimesh();
 
 		_copyKeys = new CopyKeysDispatcher(_copyKeysShaderPath, ref _rd);
 		_renderSurface = new RenderSurfaceDispatcher(_renderSurfaceShaderPath, ref _rd);
-		_updateCommandBuffer = new UpdateCommandBufferDispatcher(_updateCommandBufferShaderPath, ref _rd);
 
 		_copyKeys.RenderSurfaceDispatcher = _renderSurface;
-		
+		_copyKeys.PlanetController = _planetController;
+
 		_renderSurface.CopyKeysDispatcher = _copyKeys;
 		_renderSurface.PlanetController = _planetController;
 
-		_updateCommandBuffer.PlanetController = _planetController;
-		_updateCommandBuffer.RenderSurfaceDispatcher = _renderSurface;
-		_updateCommandBuffer.CopyKeysDispatcher = _copyKeys;
-
 		_renderSurface.CreateUniforms();
 		_copyKeys.CreateUniforms();
-		_updateCommandBuffer.CreateUniforms();
 
 		Texture2Drd globalKeyData = _renderSurface.GetUniform<Texture2DUniform>(RenderSurfaceDispatcher.BufferNames.GLOBAL_KEYS_DATA).GetTexture2Drd();
 
@@ -109,9 +104,6 @@ public partial class SurfaceController : Node3D
 
 		_executeRenderSurface = Callable.From(() => { _renderSurface.Ready(); });
 		_executeCopyKeys = Callable.From(() => { _copyKeys.Ready(); });
-		_executeUpdateCommandBuffer = Callable.From(() => { _updateCommandBuffer.Ready(); });
-
-		Processing = true;
 	}
 
 	private void SetUpMultimesh()
@@ -205,32 +197,41 @@ public partial class SurfaceController : Node3D
 
 			_planetData.ShaderMaterial.SetShaderParameter("global_key_data", new PlaceholderTexture2D());
 			_copyKeys.CleanupGPU();
-			_updateCommandBuffer.CleanupGPU();
 			_renderSurface.CleanupGPU();
 		}
 	}
 
 	public bool Locked { get; private set; }
-	public override async void _PhysicsProcess(double delta)
+	public override void _PhysicsProcess(double delta)
 	{
 		ProcessMovement(delta);
-		Locked = Processing && HasMoved;
+		Locked = Processing;// && HasMoved;
 		_planetData.ShaderMaterial.SetShaderParameter("camera_position", _cameraController.GlobalPosition);
 		_planetData.ShaderMaterial.SetShaderParameter("sub_factor", _planetData.SubFactor * _planetData.Radius);
 
 		if (Locked)
 		{
-			_renderSurface.GetUniform<Texture2DUniform>(RenderSurfaceDispatcher.BufferNames.GLOBAL_KEYS_DATA).ClearTexture(Colors.Black);
-
-			RenderingServer.CallOnRenderThread(_executeCopyKeys);
-			RenderingServer.CallOnRenderThread(_executeRenderSurface);
-			RenderingServer.CallOnRenderThread(_executeUpdateCommandBuffer);
+			
+			
+			for (int i = 0; i < 3; i++)
+			{
+				
+				InvokeComputeShaders();
+			}
 
 			Render();
-			_renderSurface.UpdateUniforms();
 			_planetController.CameraController.UIElements.UpdateProcessingText();
 			Locked = false;
+			// Processing = false;
 		}
+	}
+
+	public void InvokeComputeShaders()
+	{
+		_renderSurface.GetUniform<Texture2DUniform>(RenderSurfaceDispatcher.BufferNames.GLOBAL_KEYS_DATA).ClearTexture(Colors.Black);
+		RenderingServer.CallOnRenderThread(_executeRenderSurface);
+		RenderingServer.CallOnRenderThread(_executeCopyKeys);
+		_renderSurface.UpdateUniforms();
 	}
 
 	private void Render()

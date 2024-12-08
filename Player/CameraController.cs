@@ -178,7 +178,14 @@ public partial class CameraController : Camera3D
 
 		if (Input.IsActionJustPressed("switch_to_debug_cam"))
 		{
-			Current = !Current;
+			if (!Current)
+			{
+				MakeCurrent();
+			} 
+			else 
+			{
+				_planetController.DebugCamera.MakeCurrent();
+			}
 		}
 	}
 
@@ -248,8 +255,8 @@ public partial class CameraController : Camera3D
 
 	public Projection GetViewProjectionMatrix()
 	{
-		Transform3D viewMatrix = GlobalTransform.AffineInverse();
-		Projection projectionMatrix = GetCameraProjection();
+		Transform3D viewMatrix = InnerCamera.GlobalTransform.AffineInverse();
+		Projection projectionMatrix = InnerCamera.GetCameraProjection();
 
 		Projection viewMatrix4 = new(
 			new Vector4(viewMatrix[0].X, viewMatrix[0].Y, viewMatrix[0].Z, 0),
@@ -279,5 +286,10 @@ public partial class CameraController : Camera3D
 		float num = distance * Mathf.Tan(Mathf.DegToRad(Fov) / 2);
 		float dom = Mathf.Sqrt2 * _planetController.PlanetData.SubFactor * _planetController.PlanetData.Radius;
 		return Mathf.Clamp(-MathF.Log2(num / dom), 0, _planetController.PlanetData.MaximumLOD);
+	}
+
+	public float CalculateDistanceToCam(Vector3 from)
+	{
+		return from.DistanceTo(GlobalPosition);
 	}
 }

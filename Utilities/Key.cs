@@ -228,45 +228,45 @@ public struct Key
         return new Color(a, b, c);
     }
 
-    public Triangle CreateTriangle(float radius, Vector4[] position_list, Vector3 origin, bool isCube = false)
-    {
-        Basis transform_matrix = LeafSpaceToWorldSpace();
+    // public Triangle CreateTriangle(float radius, Vector4[] position_list, Vector3 origin, bool isCube = false)
+    // {
+    //     Basis transform_matrix = LeafSpaceToWorldSpace();
 
-        Vector2 point_a = VectorUtils.toVector2(new Vector3(0, 0, 1) * transform_matrix);
-        Vector2 point_b = VectorUtils.toVector2(new Vector3(0, 1, 1) * transform_matrix);
-        Vector2 point_c = VectorUtils.toVector2(new Vector3(1, 0, 1) * transform_matrix);
+    //     Vector2 point_a = VectorUtils.toVector2(new Vector3(0, 0, 1) * transform_matrix);
+    //     Vector2 point_b = VectorUtils.toVector2(new Vector3(0, 1, 1) * transform_matrix);
+    //     Vector2 point_c = VectorUtils.toVector2(new Vector3(1, 0, 1) * transform_matrix);
 
-        Vector2 point_d = VectorUtils.toVector2(new Vector3(0.5f, 0.5f, 1) * transform_matrix);
+    //     Vector2 point_d = VectorUtils.toVector2(new Vector3(0.5f, 0.5f, 1) * transform_matrix);
 
-        Vector2 point_e = VectorUtils.toVector2(new Vector3(-0.5f, 0.5f, 1) * transform_matrix);
-        Vector2 point_f = VectorUtils.toVector2(new Vector3(0.5f, -0.5f, 1) * transform_matrix);
+    //     Vector2 point_e = VectorUtils.toVector2(new Vector3(-0.5f, 0.5f, 1) * transform_matrix);
+    //     Vector2 point_f = VectorUtils.toVector2(new Vector3(0.5f, -0.5f, 1) * transform_matrix);
 
-        uint rootID = GetRootID();
-        uint vertexBaseIndex = MeshPolygonID * 5;
-        uint vertexKeyA = rootID;
-        uint vertexKeyB = ((rootID >> 1) ^ 1) + ((rootID & 1) << 1);
+    //     uint rootID = GetRootID();
+    //     uint vertexBaseIndex = MeshPolygonID * 5;
+    //     uint vertexKeyA = rootID;
+    //     uint vertexKeyB = ((rootID >> 1) ^ 1) + ((rootID & 1) << 1);
 
-        Vector3 base_Triangle_a = VectorUtils.toVector3(position_list[vertexBaseIndex + vertexKeyA + 1]);
-        Vector3 base_Triangle_b = VectorUtils.toVector3(position_list[vertexBaseIndex + vertexKeyB + 1]);
-        Vector3 base_Triangle_c = VectorUtils.toVector3(position_list[vertexBaseIndex]);
+    //     Vector3 base_Triangle_a = VectorUtils.toVector3(position_list[vertexBaseIndex + vertexKeyA + 1]);
+    //     Vector3 base_Triangle_b = VectorUtils.toVector3(position_list[vertexBaseIndex + vertexKeyB + 1]);
+    //     Vector3 base_Triangle_c = VectorUtils.toVector3(position_list[vertexBaseIndex]);
 
-        Vector3 point_A = LocalPointToWorldPoint(point_a, base_Triangle_a, base_Triangle_b, base_Triangle_c);
-        Vector3 point_B = LocalPointToWorldPoint(point_b, base_Triangle_a, base_Triangle_b, base_Triangle_c);
-        Vector3 point_C = LocalPointToWorldPoint(point_c, base_Triangle_a, base_Triangle_b, base_Triangle_c);
-        Vector3 point_D = LocalPointToWorldPoint(point_d, base_Triangle_a, base_Triangle_b, base_Triangle_c);
+    //     Vector3 point_A = LocalPointToWorldPoint(point_a, base_Triangle_a, base_Triangle_b, base_Triangle_c);
+    //     Vector3 point_B = LocalPointToWorldPoint(point_b, base_Triangle_a, base_Triangle_b, base_Triangle_c);
+    //     Vector3 point_C = LocalPointToWorldPoint(point_c, base_Triangle_a, base_Triangle_b, base_Triangle_c);
+    //     Vector3 point_D = LocalPointToWorldPoint(point_d, base_Triangle_a, base_Triangle_b, base_Triangle_c);
 
-        Vector3 point_E = LocalPointToWorldPoint(point_e, base_Triangle_a, base_Triangle_b, base_Triangle_c);
-        Vector3 point_F = LocalPointToWorldPoint(point_f, base_Triangle_a, base_Triangle_b, base_Triangle_c);
+    //     Vector3 point_E = LocalPointToWorldPoint(point_e, base_Triangle_a, base_Triangle_b, base_Triangle_c);
+    //     Vector3 point_F = LocalPointToWorldPoint(point_f, base_Triangle_a, base_Triangle_b, base_Triangle_c);
 
-        Triangle t = new Triangle(new Vector3[] {
-            (isCube ? point_A : VectorUtils.PointOnCubeToPointOnSphere(point_A)) * radius,
-            (isCube ? point_B : VectorUtils.PointOnCubeToPointOnSphere(point_B)) * radius,
-            (isCube ? point_C : VectorUtils.PointOnCubeToPointOnSphere(point_C)) * radius
-        }, origin
-        );
+    //     Triangle t = new Triangle(new Vector3[] {
+    //         (isCube ? point_A : VectorUtils.PointOnCubeToPointOnSphere(point_A)) * radius,
+    //         (isCube ? point_B : VectorUtils.PointOnCubeToPointOnSphere(point_B)) * radius,
+    //         (isCube ? point_C : VectorUtils.PointOnCubeToPointOnSphere(point_C)) * radius
+    //     }, origin
+    //     );
 
-        return t;
-    }
+    //     return t;
+    // }
 
     public static Vector3 LocalPointToWorldPoint(Vector2 point, Vector3 vertexA, Vector3 vertexB, Vector3 vertexC)
     {
@@ -288,7 +288,6 @@ public struct Key
                 keys[index++] = new Key(0, amount + i, meshPolygonID, j);
             }
         }
-
 
         return keys;
     }

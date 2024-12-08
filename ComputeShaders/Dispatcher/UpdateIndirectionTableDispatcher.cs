@@ -6,7 +6,7 @@ using Godot.Collections;
 using Planet;
 namespace Dispatcher
 {
-    public partial class UpdateIndirectionTableDispatcher : ComputeShaderDispatcher<UpdateIndirectionTableDispatcher.BufferNames>
+    public class UpdateIndirectionTableDispatcher : ComputeShaderDispatcher<UpdateIndirectionTableDispatcher.BufferNames>
     {
     	public PlanetController PlanetController { get; set; }
 		public RenderSurfaceDispatcher RenderSurfaceDispatcher { get; set; }

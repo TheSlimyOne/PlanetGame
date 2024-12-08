@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="PlanetData" load_steps=7 format=4 uid="uid://gwppe7ras2x"]
+[gd_resource type="Resource" script_class="PlanetData" load_steps=7 format=4 uid="uid://bulxpgk85g4tq"]
 
 [ext_resource type="Texture2D" uid="uid://b0xaoom76i6uo" path="res://Assets/Images/4_no_ice_clouds_mts_16k.jpg" id="1_ej6kt"]
 [ext_resource type="Texture2D" uid="uid://b4fs0ooswx8qk" path="res://Assets/Images/gebco_08_rev_elev_21600x10800.png" id="2_ej6kt"]
@@ -11,7 +11,7 @@
 render_priority = 0
 shader = ExtResource("3_ej6kt")
 shader_parameter/position_list = PackedVector4Array(0, 1, 0, 1, -1, 1, -1, 1, -1, 1, 1, 1, 1, 1, -1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, -1, -1, 1, 1, 1, -1, 1, 1, -1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, -1, -1, 1, 1, 1, -1, 1, 1, -1, 1, 1, 1, 1, 1, 1, 1, 0, -1, 0, 1, 1, -1, -1, 1, 1, -1, 1, 1, -1, -1, -1, 1, -1, -1, 1, 1, -1, 0, 0, 1, -1, -1, 1, 1, -1, 1, 1, 1, -1, -1, -1, 1, -1, 1, -1, 1, 0, 0, -1, 1, -1, 1, -1, 1, 1, 1, -1, 1, -1, -1, -1, 1, 1, -1, -1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-shader_parameter/radius = 1002.0
+shader_parameter/radius = 1000.0
 shader_parameter/border_size = null
 shader_parameter/center_size = null
 shader_parameter/total_texture_subdivisions = null
@@ -36,7 +36,7 @@ shader_parameter/sub_factor = 4.0
 
 [resource]
 script = ExtResource("3_6i60t")
-Radius = 1002.0
+Radius = 1000.0
 HeightScale = 12.0
 Resolution = 9
 MaximumNodes = 20000
@@ -46,7 +46,7 @@ MorphRange = Vector2(0.4, 0.8)
 NodeSize = 16
 StartingLod = 1
 CenterSize = 2
-BorderSize = 1
+BorderSize = 0
 DesiredChunkSize = 512
 AlbedoMap = ExtResource("1_ej6kt")
 HeightMap = ExtResource("2_ej6kt")
@@ -57,3 +57,6 @@ ColorizeLod = false
 CubeMode = false
 Culling = true
 Morphing = true
+Bias1 = 0.3
+Bias2 = 0.0
+Bias3 = 0.0

@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using Godot;
 using Planet;
+
+// TODO check if image supplied is 2:1
 
 public class ChunkedClipmap
 {
@@ -9,7 +12,7 @@ public class ChunkedClipmap
     public int CenterSize { get; private set; }
     public int BorderSize { get; private set; }
     public string ImagePath { get; private set; }
-    
+
     public Vector2I ImageSize { get; private set; }
     public int TotalSubdivisions { get; private set; }
 
@@ -23,11 +26,11 @@ public class ChunkedClipmap
 
         Image image = LoadImage();
         ImageSize = image.GetSize();
-        
-        (DesiredChunkSize, TotalSubdivisions) = GetRatio(desiredChunkSize, ImageSize.X);
+
+        (DesiredChunkSize, TotalSubdivisions) = GetRatio(desiredChunkSize, ImageSize.Y);
         if (DesiredChunkSize != desiredChunkSize)
             GD.PushWarning($"Image does not scale down evenly to chunk size of {desiredChunkSize}. Falling back to size of {DesiredChunkSize}.");
-        
+
     }
 
     public void GenerateImageChunks(string destination)
@@ -47,51 +50,53 @@ public class ChunkedClipmap
 
         GD.Print($"Grid size should be {2 * BorderSize + CenterSize}");
 
-        for (int i = 0; i < mipmaps.Length; i++)
+        for (int mipIndex = 0; mipIndex < mipmaps.Length; mipIndex++)
         {
-            Vector2I mipSize = mipmaps[i].GetSize();
-            for (int j = 0; j < mipSize.X; j += centerChunkSize)
+            Vector2I mipSize = mipmaps[mipIndex].GetSize();
+            for (int y = 0; y < mipSize.Y; y += centerChunkSize)
             {
-                for (int k = 0; k < mipSize.Y; k += centerChunkSize)
+                for (int x = 0; x < mipSize.X; x += centerChunkSize)
                 {
                     int fullSize = centerChunkSize + 2 * borderPixelSize;
                     Image chunk = Image.CreateEmpty(fullSize, fullSize, false, image.GetFormat());
                     chunk.Fill(new Color(0, 0, 0, 0));
-                    Rect2I chunkDim = new(j, k, centerChunkSize, centerChunkSize);
-                    chunk.BlitRect(mipmaps[i], chunkDim, new Vector2I(borderPixelSize, borderPixelSize));
+                    Rect2I chunkDim = new(x, y, centerChunkSize, centerChunkSize);
+                    chunk.BlitRect(mipmaps[mipIndex], chunkDim, new Vector2I(borderPixelSize, borderPixelSize));
 
-                    // Image leftSection = Image.CreateEmpty(borderPixelSize, fullSize, false, image.GetFormat());
-                    // Image rightSection = Image.CreateEmpty(borderPixelSize, fullSize, false, image.GetFormat());
-                    // Image downSection = Image.CreateEmpty(CenterSize * borderPixelSize, borderPixelSize, false, image.GetFormat());
-                    // Image upSection = Image.CreateEmpty(CenterSize * borderPixelSize, borderPixelSize, false, image.GetFormat());
+                    if (borderPixelSize > 0)
+                    {
+                        Image leftSection = Image.CreateEmpty(borderPixelSize, fullSize, false, image.GetFormat());
+                        Image rightSection = Image.CreateEmpty(borderPixelSize, fullSize, false, image.GetFormat());
+                        Image downSection = Image.CreateEmpty(CenterSize * borderPixelSize, borderPixelSize, false, image.GetFormat());
+                        Image upSection = Image.CreateEmpty(CenterSize * borderPixelSize, borderPixelSize, false, image.GetFormat());
 
-                    // Rect2I leftSectionChunkDim = new(j - borderPixelSize, k - borderPixelSize, borderPixelSize, fullSize);
-                    // Rect2I rightSectionChunkDim = new(j + centerChunkSize, k - borderPixelSize, borderPixelSize, fullSize);
-                    // Rect2I downSectionChunkDim = new(j, k + centerChunkSize,  CenterSize * borderPixelSize, borderPixelSize);
-                    // Rect2I upSectionChunkDim = new(j, k - borderPixelSize,  CenterSize * borderPixelSize, borderPixelSize);
+                        Rect2I leftSectionChunkDim = new(x - borderPixelSize, y - borderPixelSize, borderPixelSize, fullSize);
+                        Rect2I rightSectionChunkDim = new(x + centerChunkSize, y - borderPixelSize, borderPixelSize, fullSize);
+                        Rect2I downSectionChunkDim = new(x, y + centerChunkSize, CenterSize * borderPixelSize, borderPixelSize);
+                        Rect2I upSectionChunkDim = new(x, y - borderPixelSize, CenterSize * borderPixelSize, borderPixelSize);
 
-                    // leftSection.BlitRect(mipmaps[i], leftSectionChunkDim, new Vector2I(0, 0));
-                    // rightSection.BlitRect(mipmaps[i], rightSectionChunkDim, new Vector2I(0, 0));
-                    // downSection.BlitRect(mipmaps[i], downSectionChunkDim, new Vector2I(0, 0));
-                    // upSection.BlitRect(mipmaps[i], upSectionChunkDim, new Vector2I(0, 0));
+                        leftSection.BlitRect(mipmaps[mipIndex], leftSectionChunkDim, new Vector2I(0, 0));
+                        rightSection.BlitRect(mipmaps[mipIndex], rightSectionChunkDim, new Vector2I(0, 0));
+                        downSection.BlitRect(mipmaps[mipIndex], downSectionChunkDim, new Vector2I(0, 0));
+                        upSection.BlitRect(mipmaps[mipIndex], upSectionChunkDim, new Vector2I(0, 0));
 
-                    // chunk.BlitRect(leftSection, new Rect2I(0, 0, leftSection.GetSize()), new Vector2I(0, 0));
-                    // chunk.BlitRect(rightSection, new Rect2I(0, 0, rightSection.GetSize()), new Vector2I(centerChunkSize + borderPixelSize, 0));
-                    // chunk.BlitRect(downSection, new Rect2I(0, 0, downSection.GetSize()), new Vector2I(borderPixelSize, centerChunkSize + borderPixelSize));
-                    // chunk.BlitRect(upSection, new Rect2I(0, 0, upSection.GetSize()), new Vector2I(borderPixelSize, 0));
+                        chunk.BlitRect(leftSection, new Rect2I(0, 0, leftSection.GetSize()), new Vector2I(0, 0));
+                        chunk.BlitRect(rightSection, new Rect2I(0, 0, rightSection.GetSize()), new Vector2I(centerChunkSize + borderPixelSize, 0));
+                        chunk.BlitRect(downSection, new Rect2I(0, 0, downSection.GetSize()), new Vector2I(borderPixelSize, centerChunkSize + borderPixelSize));
+                        chunk.BlitRect(upSection, new Rect2I(0, 0, upSection.GetSize()), new Vector2I(borderPixelSize, 0));
+                    }
 
-                    chunk.SavePng($"res://mips/{destination}/{i}-{j}{k}.png");
+
+                    string directory = $"res://mips/{destination}/{mipIndex}-{x / centerChunkSize}-{y / centerChunkSize}.png";
+                    chunk.SavePng(directory);
                 }
             }
         }
-
-
     }
 
     private static Image[] GetMipmaps(Image image, int target)
     {
-        int closestNumber = image.GetSize().Y;
-        int closestDifference = Math.Abs(target - closestNumber);
+        int closestDifference = Math.Abs(target - image.GetSize().Y);
         int mipMapCount = image.GetMipmapCount();
 
         int bytesPerPixel = FormatConverter.GetBytes(image.GetFormat());
@@ -105,10 +110,7 @@ public class ChunkedClipmap
             int difference = Math.Abs(target - height);
 
             if (difference <= closestDifference)
-            {
-                closestNumber = height;
                 closestDifference = difference;
-            }
             else
                 break;
 
@@ -119,20 +121,23 @@ public class ChunkedClipmap
             Image mip = Image.CreateFromData(width, height, false, image.GetFormat(), buffer);
             mipmaps.Add(mip);
         }
+
+        // Remove last mip image
+        mipmaps.RemoveAt(mipmaps.Count - 1);
         return mipmaps.ToArray();
     }
 
-    public static (int, int) GetRatio(int desiredChunkSize, int imageWidth)
+    //TODO Can do a lot of checks here
+    public static (int, int) GetRatio(int desiredChunkSize, int imageSize)
     {
-        int amount = 0;
-        while(true)
+        for (int amount = 0; amount < 16; amount++)
         {
-            int current =  imageWidth / (int)Mathf.Pow(2, amount);
+            int current = imageSize / (int)Mathf.Pow(2, amount);
             if (current <= desiredChunkSize)
-                break;
-            amount++;
+                return (current, amount);
         }
-        return (imageWidth / (int)Mathf.Pow(2, amount), amount);
+        // Removing the count for the last mip
+        throw new ArgumentOutOfRangeException(nameof(desiredChunkSize));
     }
 
     private Image LoadImage()
@@ -144,6 +149,14 @@ public class ChunkedClipmap
             GD.PrintErr($"Failed to load image: {error}");
             return null;
         }
+        return image;
+    }
+
+
+    public Image LoadTile(string path)
+    {
+        Image image = Image.LoadFromFile(path);
+        image.Convert(Image.Format.Rgbaf);
         return image;
     }
 }

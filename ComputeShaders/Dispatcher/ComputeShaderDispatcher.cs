@@ -48,7 +48,7 @@ public abstract class ComputeShaderDispatcher<TEnum> : IDispatchable where TEnum
         return _rd.ShaderCreateFromSpirV(spirV);
     }
 
-    private Rid CreatePipeline(Rid shader) => _rd.ComputePipelineCreate(shader);
+    protected virtual Rid CreatePipeline(Rid shader) => _rd.ComputePipelineCreate(shader);
 
     protected void CreateUniformSet()
     {

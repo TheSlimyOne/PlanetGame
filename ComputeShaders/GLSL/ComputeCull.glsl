@@ -1,7 +1,6 @@
 #[compute]
 #version 450
 #extension GL_EXT_shader_atomic_float2 : require
-#extension GL_NV_compute_shader_derivatives : enable
 
 #define sqrt2   1.414213562
 #define PI      3.141592653
@@ -36,21 +35,29 @@ layout(set = 0, binding = 5, std430) buffer restrict readonly BaseTriangles {
 
 layout(set = 0, binding = 6, std430) buffer restrict readonly ExternalData {
     mat4 viewProjectionMatrix;         // 16 * 4 = 64 bytes
-    vec4 cameraPosition;
     mat4 planetTransformMatrix;
+    vec4 cameraPosition;
     float cameraFOV;     
     float subFactor;
     float heightScale;
     float max_lod;
     float radius;
+
+    float bias1;
+    float bias2;
+    float padding[2];
 };
 
-layout(set = 0, binding = 7, std430) buffer restrict Debug {
+layout(set = 0, binding = 7) uniform sampler2D heightMap;
+
+layout(set = 0, binding = 8, std430) buffer restrict OutputBuffer { 
+    float data[]; 
+} output_buffer;
+
+layout(set = 0, binding = 9, std430) buffer restrict readonly Culling { 
     bool culling;
+    bool paddingz;
 };
-
-layout(set = 0, binding = 8) uniform sampler2D heightMap;
-layout(set = 0, binding = 9, std430) buffer restrict OutputBuffer { float data[]; } output_buffer;
 
 struct Triangle {
     vec3 v0; // (0, 0)
@@ -63,7 +70,7 @@ struct Triangle {
     vec3 yNeighbor; // (-0.5, 0.5)
 };
 
-vec3 point_on_cube_to_point_on_sphere(vec3 p) {
+vec3 pointOnCubeToPointOnSphere(vec3 p) {
     vec3 square = p * p;
 	return p * sqrt(1.0 - (square.yxx + square.zzy) / 2.0 + square.yxx * square.zzy / 3.0);
 }
@@ -168,12 +175,12 @@ int findMSB64(uvec2 key) {
     return (key.x == 0) ? findMSB(key.y) : (findMSB(key.x) + 32);
 }
 
-vec3 localPointToWorldPointCubical(vec2 point, vec3 vertexA, vec3 vertexB, vec3 vertexC) {
-    return vertexA * point.x + vertexB * point.y + vertexC * (1 - point.x - point.y);
-}
+// vec3 polygonSpaceToObjectSpaceCubical(vec2 point, vec3 vertexA, vec3 vertexB, vec3 vertexC) {
+//     return vertexA * point.x + vertexB * point.y + vertexC * (1 - point.x - point.y);
+// }
 
-vec3 localPointToWorldPointSpherical(vec2 point, vec3 vertexA, vec3 vertexB, vec3 vertexC) {
-    return point_on_cube_to_point_on_sphere(vertexA * point.x + vertexB * point.y + vertexC * (1 - point.x - point.y));
+vec3 quadtreeSpaceToPolygonSpace(vec2 point, vec3 vertexA, vec3 vertexB, vec3 vertexC) {
+    return vertexA * point.x + vertexB * point.y + vertexC * (1 - point.x - point.y);
 }
 
 /*
@@ -204,18 +211,18 @@ Triangle createTriangle(mat3 transform_matrix, uint meshPolygonID, uint rootID) 
     vec3 base_Triangle_c = (base_triangles[vertexBaseIndex]).xyz;
     
     Triangle t;
-    t.v0 = localPointToWorldPointSpherical(point_v0, base_Triangle_a, base_Triangle_b, base_Triangle_c);
-    t.v1 = localPointToWorldPointSpherical(point_v1, base_Triangle_a, base_Triangle_b, base_Triangle_c);
-    t.v2 = localPointToWorldPointSpherical(point_v2, base_Triangle_a, base_Triangle_b, base_Triangle_c);
+    t.v0 = quadtreeSpaceToPolygonSpace(point_v0, base_Triangle_a, base_Triangle_b, base_Triangle_c);
+    t.v1 = quadtreeSpaceToPolygonSpace(point_v1, base_Triangle_a, base_Triangle_b, base_Triangle_c);
+    t.v2 = quadtreeSpaceToPolygonSpace(point_v2, base_Triangle_a, base_Triangle_b, base_Triangle_c);
     
-    t.origin = localPointToWorldPointSpherical(point_a, base_Triangle_a, base_Triangle_b, base_Triangle_c);
-    t.xNeighbor = localPointToWorldPointSpherical(point_b, base_Triangle_a, base_Triangle_b, base_Triangle_c);
-    t.yNeighbor = localPointToWorldPointSpherical(point_c, base_Triangle_a, base_Triangle_b, base_Triangle_c);
+    t.origin = quadtreeSpaceToPolygonSpace(point_a, base_Triangle_a, base_Triangle_b, base_Triangle_c);
+    t.xNeighbor = quadtreeSpaceToPolygonSpace(point_b, base_Triangle_a, base_Triangle_b, base_Triangle_c);
+    t.yNeighbor = quadtreeSpaceToPolygonSpace(point_c, base_Triangle_a, base_Triangle_b, base_Triangle_c);
 
     return t;
 }
 
-Triangle leafSpaceToWorldSpace(uvec4 key) { 
+Triangle leafSpaceToPolygonSpace(uvec4 key) { 
     int msb = findMSB64(key.xy);
     vec2 translation = vec2(0,0);
     vec2 temp;
@@ -292,8 +299,18 @@ float calculateLOD(float dist, float fovy, float factor) {
     return clamp(-log2(num/dom), -1, 31);
 }
 
-vec3 localPointToWorldPoint(vec3 point)
-{
+vec3 applyRotation(vec3 point){
+    mat4 rotationOnly = mat4(
+        vec4(planetTransformMatrix[0].xyz / length(planetTransformMatrix[0].xyz), 0), 
+        vec4(planetTransformMatrix[1].xyz / length(planetTransformMatrix[1].xyz), 0), 
+        vec4(planetTransformMatrix[2].xyz / length(planetTransformMatrix[2].xyz), 0),
+        vec4(0, 0, 0, 1)
+    );
+
+    return (vec4(point, 1) * rotationOnly).xyz;
+}
+
+vec3 polygonSpaceToObjectSpace(vec3 point) {
     vec2 uv = point_on_sphere_to_UV(point);
     float height = texture(heightMap, uv).x;
     mat4 rotationOnly = mat4(
@@ -303,18 +320,33 @@ vec3 localPointToWorldPoint(vec3 point)
         vec4(0, 0, 0, 1)
     );
     vec3 normal = (vec4(point, 1) * rotationOnly).xyz;
-    vec3 worldPoint = (vec4(point, 1) * planetTransformMatrix).xyz;
-    worldPoint += (normal * height * heightScale);
-    return worldPoint;
+    vec3 objectPoint = (vec4(point, 1) * planetTransformMatrix).xyz;
+    objectPoint += (normal * height * heightScale);
+    return objectPoint;
+}
+
+vec3 polygonSpaceToObjectSpaceIgnoreHeight(vec3 point) {
+    mat4 rotationOnly = mat4(
+        vec4(planetTransformMatrix[0].xyz / length(planetTransformMatrix[0].xyz), 0), 
+        vec4(planetTransformMatrix[1].xyz / length(planetTransformMatrix[1].xyz), 0), 
+        vec4(planetTransformMatrix[2].xyz / length(planetTransformMatrix[2].xyz), 0),
+        vec4(0, 0, 0, 1)
+    );
+    return (vec4(point, 1) * planetTransformMatrix).xyz;
+}
+
+float distanceFromCamIgnoreHeight(vec3 from) {
+    return distance(polygonSpaceToObjectSpaceIgnoreHeight(from), cameraPosition.xyz);
 }
 
 float distanceFromCam(vec3 from) {
-    return distance(localPointToWorldPoint(from), cameraPosition.xyz);
+    return distance(polygonSpaceToObjectSpace(from), cameraPosition.xyz);
 }
 
 float calculateLODToCam(vec3 from) {
+
     return calculateLOD(
-        distanceFromCam(from),
+        distanceFromCam(pointOnCubeToPointOnSphere(from)),
         cameraFOV,
         subFactor
     );
@@ -390,7 +422,9 @@ uint getJunctionFlags(uvec4 key, Triangle parent_triangle, float lod) {
 }
 
 bool PointInFrustum(vec3 point) { 
-    vec4 clipSpacePoint = viewProjectionMatrix * (vec4(point, 1));
+
+
+    vec4 clipSpacePoint = viewProjectionMatrix * vec4(point, 1);
     vec3 ndcPoint = clipSpacePoint.xyz / clipSpacePoint.w;
 
     return ndcPoint.x >= -1.0 && ndcPoint.x <= 1.0 &&
@@ -398,28 +432,60 @@ bool PointInFrustum(vec3 point) {
            ndcPoint.z >= -1.0 && ndcPoint.z <= 1.0;
 }
 
-bool TriangleInFrustum(Triangle triangle) {
-    return PointInFrustum(localPointToWorldPoint(triangle.v0)) ||
-           PointInFrustum(localPointToWorldPoint(triangle.v1)) ||
-           PointInFrustum(localPointToWorldPoint(triangle.v2));
+vec3 getPlanetOrigin() {
+    return planetTransformMatrix[3].xyz;
 }
 
-void set_multimesh_data(uint index, uvec4 key)
-{
+ivec3 getInitNormal(uint polygon_id) {
+	uint vertexBaseIndex = polygon_id * 5u;
+	return ivec3(base_triangles[vertexBaseIndex].xyz);
+}
+
+vec3 getCameraForward() {
+    return normalize(-vec3(viewProjectionMatrix[0][2], viewProjectionMatrix[1][2], viewProjectionMatrix[2][2]));
+}
+
+bool InHorizon(vec3 point) {
+    vec3 sphericalPoint = pointOnCubeToPointOnSphere(point);
+    float distanceFromPlanet = distanceFromCamIgnoreHeight(getPlanetOrigin());
+    float distanceFromHorizon = sqrt(pow(distanceFromPlanet, 2) - pow(radius, 2));
+    vec3 toPlanetFromCam = getPlanetOrigin() - cameraPosition.xyz;
+    vec3 objectPointIgnoreHeight = polygonSpaceToObjectSpaceIgnoreHeight(sphericalPoint);
+    vec3 objectPoint = polygonSpaceToObjectSpace(sphericalPoint);
+    vec3 toPointOnSphereFromCam = objectPointIgnoreHeight - cameraPosition.xyz;
+    float angleOfHorizon = acos(distanceFromHorizon / distanceFromPlanet);
+    float angleFromPointToCamToPlanet = acos(dot(normalize(toPointOnSphereFromCam), normalize(toPlanetFromCam)));
+    
+    // if within view
+    // if within horizon's circle
+    // if within horizon
+    bool b0 = PointInFrustum(objectPointIgnoreHeight) || PointInFrustum(objectPoint);
+    bool b1 = (distanceFromHorizon + (radius/2.0) * bias1) >= length(toPointOnSphereFromCam);
+    bool b2 = angleFromPointToCamToPlanet + bias2 <= angleOfHorizon;
+    if ((b0 && b1 && b2) || (b0 && b1) || (b0 && !b2))
+        return true;
+    return false;
+}
+
+bool TriangleInFrustum(Triangle triangle) {
+    return InHorizon(triangle.v0) || InHorizon(triangle.v1) || InHorizon(triangle.v2) || InHorizon(triangle.origin);
+}
+
+void set_multimesh_data(uint index, uvec4 key) {
     output_buffer.data[20 * index + 0] = 1.0;
     output_buffer.data[20 * index + 1] = 0.0;
     output_buffer.data[20 * index + 2] = 0.0;
-    // output_buffer.data[20 * index + 3] = triangle.origin.x * radius;
+    output_buffer.data[20 * index + 3] = 0.0;
 
     output_buffer.data[20 * index + 4] = 0.0;
     output_buffer.data[20 * index + 5] = 1.0;
     output_buffer.data[20 * index + 6] = 0.0;
-    // output_buffer.data[20 * index + 7] = triangle.origin.y * radius;
+    output_buffer.data[20 * index + 7] = 0.0;
 
     output_buffer.data[20 * index + 8] = 0.0;
     output_buffer.data[20 * index + 9] = 0.0;
-    output_buffer.data[20 * index + 10]= 1.0;
-    // output_buffer.data[20 * index + 11] = triangle.origin.z * radius;
+    output_buffer.data[20 * index + 10] = 1.0;
+    output_buffer.data[20 * index + 11] = 0.0;
 
     // Not currently using
     output_buffer.data[20 * index + 12] = 1.0;
@@ -437,15 +503,23 @@ void set_multimesh_data(uint index, uvec4 key)
 }
 
 void cull_key(uvec4 key, Triangle triangle, float lod) {
+
     if (culling && TriangleInFrustum(triangle)) {
         uint write_culled_index = atomicAdd(primCount_culled[write_index], 1);
         set_multimesh_data(write_culled_index, key);
-    } else if (!culling)
+
+        // if (paging)
+        // {
+            
+        // }
+    }
+    else if (!culling)
     {
         uint write_culled_index = atomicAdd(primCount_culled[write_index], 1);
         set_multimesh_data(write_culled_index, key);
     }
-    imageAtomicMax(GlobalKeyData, ivec2(0, 0), getLevelInKey(key.xy));
+    imageAtomicMax(GlobalKeyData, ivec2(0, 0), culling ? 0 : 1);
+    // imageAtomicMax(GlobalKeyData, ivec2(0, 0), getLevelInKey(key.xy));
 }
 
 void main() {
@@ -460,9 +534,9 @@ void main() {
     uvec4 parent_key = getParentKey(key);
     uvec4 grand_parent_key = getParentKey(parent_key);
 
-    Triangle triangle = leafSpaceToWorldSpace(key);
-    Triangle parent_triangle = leafSpaceToWorldSpace(parent_key);
-    Triangle grand_parent_triangle = leafSpaceToWorldSpace(grand_parent_key);
+    Triangle triangle = leafSpaceToPolygonSpace(key);
+    Triangle parent_triangle = leafSpaceToPolygonSpace(parent_key);
+    Triangle grand_parent_triangle = leafSpaceToPolygonSpace(grand_parent_key);
 
     float current_LOD = getLevelInKey(key.xy);
 
@@ -473,7 +547,7 @@ void main() {
         uvec4 children_keys[4] = getChildKeys(key);
         for (int i = 0; i < 4; i++) {
             uint write_full_index = atomicAdd(primCount_full[write_index], 1);
-            Triangle child_triangle = leafSpaceToWorldSpace(children_keys[i]);
+            Triangle child_triangle = leafSpaceToPolygonSpace(children_keys[i]);
             
             children_keys[i].w |= getJunctionFlags(children_keys[i], triangle, current_LOD + 1);
             
