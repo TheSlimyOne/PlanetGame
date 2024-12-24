@@ -4,19 +4,15 @@
       {
         "label": "build",
         "command": "dotnet",
-        "type": "process",
+        "type": "shell",
         "args": [
-          "build"
+          "build",
         ],
-        "problemMatcher": "$msCompile",
+        "group": "build",
         "presentation": {
-          "echo": true,
-          "reveal": "silent",
-          "focus": false,
-          "panel": "shared",
-          "showReuseMessage": true,
-          "clear": false
-        }
+          "reveal": "silent"
+        },
+        "problemMatcher": "$msCompile",
       }
     ]
   }
