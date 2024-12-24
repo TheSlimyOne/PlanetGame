@@ -9,8 +9,8 @@
 layout(local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
 
 layout(set = 0, binding = 0, std430) buffer restrict AtomicCounterBuffer {
-    uint primCount_full[3];
-    uint primCount_culled[3];
+    uint primitive_count_full[3];
+    uint primitive_count_culled[3];
 };
 
 layout(set = 0, binding = 1, std430) buffer restrict readonly IndicesBlock {
@@ -33,31 +33,26 @@ layout(set = 0, binding = 5, std430) buffer restrict readonly BaseTriangles {
     vec4 base_triangles[];
 };
 
-layout(set = 0, binding = 6, std430) buffer restrict readonly ExternalData {
-    mat4 viewProjectionMatrix;         // 16 * 4 = 64 bytes
-    mat4 planetTransformMatrix;
-    vec4 cameraPosition;
-    float cameraFOV;     
-    float subFactor;
-    float heightScale;
-    float max_lod;
-    float radius;
+layout(set = 0, binding = 6, std430) buffer restrict readonly external_data {
+    mat4 view_projection_matrix;  
+    mat4 planet_transform_matrix; 
+    vec4 camera_position;         
+    float fovy;                   
+    float sub_factor;             
+    float height_scale;           
+    float max_lod;                
+    float radius;                 
 
-    float bias1;
-    float bias2;
-    float padding[2];
+    float bias1;                  
+    float bias2;                  
+    float culling;
+    float _padding;
 };
 
-layout(set = 0, binding = 7) uniform sampler2D heightMap;
-
-layout(set = 0, binding = 8, std430) buffer restrict OutputBuffer { 
+layout(set = 0, binding = 7, std430) buffer restrict OutputBuffer { 
     float data[]; 
 } output_buffer;
 
-layout(set = 0, binding = 9, std430) buffer restrict readonly Culling { 
-    bool culling;
-    bool paddingz;
-};
 
 struct Triangle {
     vec3 v0; // (0, 0)
@@ -69,34 +64,6 @@ struct Triangle {
     vec3 xNeighbor; // (0.5, -0.5)
     vec3 yNeighbor; // (-0.5, 0.5)
 };
-
-vec3 pointOnCubeToPointOnSphere(vec3 p) {
-    vec3 square = p * p;
-	return p * sqrt(1.0 - (square.yxx + square.zzy) / 2.0 + square.yxx * square.zzy / 3.0);
-}
-
-vec2 point_on_sphere_to_UV(vec3 p) {
-    p = normalize(p);
-    float longitude = atan(p.x, p.z);
-    float latitude = asin(-p.y);
-    float u = (longitude / PI + 1) * 0.5;
-    float v = latitude / PI + 0.5;
-    return vec2(u, v);
-}
-
-vec2 getTranslation(uint b1) {
-    vec2 translation;
-    translation.x = float(b1 & 0x1); 
-    translation.y = float(b1 ^ 0x1);
-    return translation * 0.5;
-}
-
-int getRotation(uint b1b2, uint b1, uint b2) {
-    uint a = (b1b2 ^ 0x2);
-    uint b = (a | 0x1);
-    uint c = (b1 ^ b2);
-    return int(b * c);
-}
 
 /*
     +--+-------------+------------+------------+---------+--------+-----------------------+---------------------+
@@ -118,6 +85,87 @@ ivec2 quickPI_2(uint a) {
     return ivec2(c, s);
 }
 
+int find_msb_64(uvec2 key) {
+    return (key.x == 0) ? findMSB(key.y) : (findMSB(key.x) + 32);
+}
+
+uvec2 left_shift_64(uvec2 nodeID, uint shift) {
+    uvec2 result;
+    if (shift == 0) return nodeID;
+
+    if (shift < 32) {
+        result.x = (nodeID.x << shift) | (nodeID.y >> (32 - shift));
+        result.y = nodeID.y << shift;
+    } else {
+        result.x = nodeID.y << (shift - 32);
+        result.y = 0u;
+    }
+    return result;
+}
+
+uvec2 right_shift_64(uvec2 nodeID, uint shift) {
+    uvec2 result;
+    if (shift == 0) return nodeID;
+
+    if (shift < 32) {
+        result.y = (nodeID.y >> shift) | (nodeID.x << (32 - shift));
+        result.x = nodeID.x >> shift;
+    } else {
+        result.y = nodeID.x >> (shift - 32);
+        result.x = 0u;
+    }
+
+    return result;
+}
+
+vec3 apply_rotation(vec3 point){
+    mat4 rotationOnly = mat4(
+        vec4(normalize(planet_transform_matrix[0].xyz), 0),
+        vec4(normalize(planet_transform_matrix[1].xyz), 0),
+        vec4(normalize(planet_transform_matrix[2].xyz), 0),
+        vec4(0, 0, 0, 1)
+    );
+
+    return (vec4(point, 1) * rotationOnly).xyz;
+}
+
+/*
+    msb - 2 => is the offset to ignore the leading 01
+    level * 2 => level is used as an index. Used to tell how much to shift over to get the bits in question. 
+    Multiplied by 2 so to shift over two each time.
+*/
+uint get_branching(uvec2 key, int level, int msb) {
+    return (right_shift_64(key, (msb - 2) - (level * 2)).y & 0x3); 
+}
+
+vec3 point_on_cube_to_point_on_sphere(vec3 p) {
+    vec3 square = p * p;
+	return p * sqrt(1.0 - (square.yxx + square.zzy) / 2.0 + square.yxx * square.zzy / 3.0);
+}
+
+vec2 point_on_sphere_to_uv(vec3 p) {
+    p = normalize(p);
+    float longitude = atan(p.x, p.z);
+    float latitude = asin(-p.y);
+    float u = (longitude / PI + 1) * 0.5;
+    float v = latitude / PI + 0.5;
+    return vec2(u, v);
+}
+
+vec2 get_translation(uint b1) {
+    vec2 translation;
+    translation.x = float(b1 & 0x1); 
+    translation.y = float(b1 ^ 0x1);
+    return translation * 0.5;
+}
+
+int get_rotation(uint b1b2, uint b1, uint b2) {
+    uint a = (b1b2 ^ 0x2);
+    uint b = (a | 0x1);
+    uint c = (b1 ^ b2);
+    return int(b * c);
+}
+
 vec2 rotate(uint rotationIndex, vec2 translation) {
     vec2 r;
     ivec2 trig = quickPI_2(rotationIndex);
@@ -126,61 +174,48 @@ vec2 rotate(uint rotationIndex, vec2 translation) {
     return r;
 }
 
-uvec2 leftShift64(uvec2 nodeID, uint shift) {
-    uvec2 result;
-    if (shift == 0) return nodeID;
+mat3 leaf_space_to_quadtree_space(uvec2 key) { 
+    int msb = find_msb_64(key);
+    vec2 translation = vec2(0,0);
+    vec2 temp;
+    int theta = 0;
+    float scale = 1.0;
 
-    if (shift < 32)
-    {
-        result.x = (nodeID.x << shift) | (nodeID.y >> (32 - shift));
-        result.y = nodeID.y << shift;
-    }
-    else
-    {
-        result.x = nodeID.y << (shift - 32);
-        result.y = 0u;
-    }
+    for (int i = 0; i < msb / 2; i++) {
+        uint b1b2 = get_branching(key, i, msb);
+        uint b1 = b1b2 >> 1;
+        uint b2 = b1b2 & 1;
+        temp = scale * get_translation(b1);
 
-    return result;
+        translation += rotate(theta, temp);
+        theta += get_rotation(b1b2, b1, b2);
+        scale *= 0.5;
+    }
+    
+    ivec2 trig = quickPI_2(theta);
+    mat3 transform_matrix = mat3(
+        vec3(float(trig.x) * scale, float(-trig.y) * scale, translation.x),
+        vec3(float(trig.y) * scale, float(trig.x)  * scale, translation.y),
+        vec3(0.0,                   0.0,                    1.0)
+    );
+    return transform_matrix;
 }
 
-uvec2 rightShift64(uvec2 nodeID, uint shift) {
-    uvec2 result;
-    if (shift == 0) return nodeID;
-
-    if (shift < 32)
-    {
-        result.y = (nodeID.y >> shift) | (nodeID.x << (32 - shift));
-        result.x = nodeID.x >> shift;
-    }
-    else
-    {
-        result.y = nodeID.x >> (shift - 32);
-        result.x = 0u;
-    }
-
-    return result;
+mat3 quadtree_space_to_polygon_space(vec3 vertex_a, vec3 vertex_b, vec3 vertex_c) {
+    return mat3(vertex_a, vertex_b, vertex_c);
 }
 
-/*
-    msb - 2 => is the offset to ignore the leading 01
-    level * 2 => level is used as an index. Used to tell how much to shift over to get the bits in question. 
-    Multiplied by 2 so to shift over two each time.
-*/
-uint getBranching(uvec2 key, int level, int msb) {
-    return (rightShift64(key, (msb - 2) - (level * 2)).y & 0x3); 
+vec3 polygon_space_to_world_space(vec3 point) {
+    point = (vec4(point, 1) * planet_transform_matrix).xyz;
+    return point;
 }
 
-int findMSB64(uvec2 key) {
-    return (key.x == 0) ? findMSB(key.y) : (findMSB(key.x) + 32);
+vec2 get_quadtree_point(vec2 point, mat3 quadtree_space_matrix) {
+    return (vec3(point, 1) * quadtree_space_matrix).xy;
 }
 
-// vec3 polygonSpaceToObjectSpaceCubical(vec2 point, vec3 vertexA, vec3 vertexB, vec3 vertexC) {
-//     return vertexA * point.x + vertexB * point.y + vertexC * (1 - point.x - point.y);
-// }
-
-vec3 quadtreeSpaceToPolygonSpace(vec2 point, vec3 vertexA, vec3 vertexB, vec3 vertexC) {
-    return vertexA * point.x + vertexB * point.y + vertexC * (1 - point.x - point.y);
+vec3 get_polygon_space_point(vec2 point, mat3 polygon_space_matrix) {
+    return polygon_space_matrix * vec3(point, 1 - point.x - point.y);
 }
 
 /*
@@ -193,212 +228,82 @@ vec3 quadtreeSpaceToPolygonSpace(vec2 point, vec3 vertexA, vec3 vertexB, vec3 ve
     |     3 |     2 |
     +-------+-------+
 */
-Triangle createTriangle(mat3 transform_matrix, uint meshPolygonID, uint rootID) {
-    vec2 point_a = (vec3(0.3, 0.3, 1) * transform_matrix).xy;
-    vec2 point_b = (vec3(0.5, -0.5, 1) * transform_matrix).xy;
-    vec2 point_c = (vec3(-0.5, 0.5, 1) * transform_matrix).xy;
+Triangle create_triangle(uvec4 key) {
+    mat3 quadtree_space = leaf_space_to_quadtree_space(key.xy);
 
-    vec2 point_v0 = (vec3(0, 0, 1) * transform_matrix).xy;
-    vec2 point_v1 = (vec3(0, 1, 1) * transform_matrix).xy;
-    vec2 point_v2 = (vec3(1, 0, 1) * transform_matrix).xy;
+    vec2 point_a = get_quadtree_point(vec2(0.5, 0.5), quadtree_space);
+    vec2 point_b = get_quadtree_point(vec2(0.5, -0.5), quadtree_space);
+    vec2 point_c = get_quadtree_point(vec2(-0.5, 0.5), quadtree_space);
 
-    uint vertexBaseIndex = meshPolygonID * 5;
-    uint vertexKeyA = rootID;
-    uint vertexKeyB = ((rootID >> 1) ^ 1) + ((rootID & 1) << 1);
+    vec2 point_v0 = get_quadtree_point(vec2(0, 0), quadtree_space);
+    vec2 point_v1 = get_quadtree_point(vec2(0, 1), quadtree_space);
+    vec2 point_v2 = get_quadtree_point(vec2(1, 0), quadtree_space);
 
-    vec3 base_Triangle_a = (base_triangles[vertexBaseIndex + vertexKeyA + 1]).xyz;
-    vec3 base_Triangle_b = (base_triangles[vertexBaseIndex + vertexKeyB + 1]).xyz;
-    vec3 base_Triangle_c = (base_triangles[vertexBaseIndex]).xyz;
+    uint vertex_base_index = key.z * 5;
+    uint vertex_key_a = key.w;
+    uint vertex_key_b = ((key.w >> 1) ^ 1) + ((key.w & 1) << 1);
+
+    vec3 base_triangle_a = (base_triangles[vertex_base_index + vertex_key_a + 1]).xyz;
+    vec3 base_triangle_b = (base_triangles[vertex_base_index + vertex_key_b + 1]).xyz;
+    vec3 base_triangle_c = (base_triangles[vertex_base_index]).xyz;
+
+    mat3 polygon_space = quadtree_space_to_polygon_space(base_triangle_a, base_triangle_b, base_triangle_c);
     
     Triangle t;
-    t.v0 = quadtreeSpaceToPolygonSpace(point_v0, base_Triangle_a, base_Triangle_b, base_Triangle_c);
-    t.v1 = quadtreeSpaceToPolygonSpace(point_v1, base_Triangle_a, base_Triangle_b, base_Triangle_c);
-    t.v2 = quadtreeSpaceToPolygonSpace(point_v2, base_Triangle_a, base_Triangle_b, base_Triangle_c);
+
+    t.v0 = get_polygon_space_point(point_v0, polygon_space);
+    t.v1 = get_polygon_space_point(point_v1, polygon_space);
+    t.v2 = get_polygon_space_point(point_v2, polygon_space);
     
-    t.origin = quadtreeSpaceToPolygonSpace(point_a, base_Triangle_a, base_Triangle_b, base_Triangle_c);
-    t.xNeighbor = quadtreeSpaceToPolygonSpace(point_b, base_Triangle_a, base_Triangle_b, base_Triangle_c);
-    t.yNeighbor = quadtreeSpaceToPolygonSpace(point_c, base_Triangle_a, base_Triangle_b, base_Triangle_c);
+    t.origin = get_polygon_space_point(point_a, polygon_space);
+    t.xNeighbor = get_polygon_space_point(point_b, polygon_space);
+    t.yNeighbor = get_polygon_space_point(point_c, polygon_space);
 
     return t;
 }
 
-Triangle leafSpaceToPolygonSpace(uvec4 key) { 
-    int msb = findMSB64(key.xy);
-    vec2 translation = vec2(0,0);
-    vec2 temp;
-    int theta = 0;
-    float scale = 1.0;
-
-    for (int i = 0; i < msb / 2; i++) {
-        uint b1b2 = getBranching(key.xy, i, msb);
-        uint b1 = b1b2 >> 1;
-        uint b2 = b1b2 & 1;
-        temp = scale * getTranslation(b1);
-
-        translation += rotate(theta, temp);
-        theta += getRotation(b1b2, b1, b2);
-        scale *= 0.5;
-    }
-    
-    ivec2 trig = quickPI_2(theta);
-    mat3 transform_matrix = mat3(
-        vec3(float(trig.x) * scale, float(-trig.y) * scale, translation.x),
-        vec3(float(trig.y) * scale, float(trig.x)  * scale, translation.y),
-        vec3(0.0,                   0.0,                    1.0)
-    );
-
-    return createTriangle(transform_matrix, key.z, key.w);   
+float calculate_distance(float lod) {
+    return sub_factor * radius * pow(2, 0.5 - lod) / fovy;
 }
 
-vec4 getTransformation(uvec4 key) {
-    int msb = findMSB64(key.xy);
-    vec2 translation = vec2(0,0);
-    vec2 temp;
-    uint theta = 0;
-    float scale = 1.0;
-
-    for (int i = 0; i < msb / 2; i++) {
-        uint b1b2 = getBranching(key.xy, i, msb);
-        uint b1 = b1b2 >> 1;
-        uint b2 = b1b2 & 1;
-        temp.xy = scale * getTranslation(b1);
-
-        translation += rotate(theta, temp.xy);
-        theta += getRotation(b1b2, b1, b2);
-        scale *= 0.5;
-    }
-
-    return vec4(theta, scale, translation);
-}
-
-float getScale(uvec4 key) {
-    return pow(0.5, findMSB64(key.xy) / 2);
-}
-
-float getScale(float idx) {
-	return 1.0 / pow(2, idx);
-}
-
-uint base4ToHex(uint base4Value) {
-    uint result = 0u;
-    uint base = 1u;
-    
-    while (base4Value != 0u) {
-        uint digit = base4Value % 10u; // Extract the last digit
-        result += digit * base;        // Multiply the digit by the current base and add to the result
-        base *= 4u;                    // Increase the base by a power of 4
-        base4Value /= 10u;             // Move to the next digit
-    }
-
-    return result;
-}
-
-float calculateLOD(float dist, float fovy, float factor) {
+float calculate_lod(float dist) {
     float num = dist * fovy;
-    float dom = sqrt2 * factor;
+    float dom = sqrt2 * sub_factor * radius;
     return clamp(-log2(num/dom), -1, 31);
 }
 
-vec3 applyRotation(vec3 point){
-    mat4 rotationOnly = mat4(
-        vec4(planetTransformMatrix[0].xyz / length(planetTransformMatrix[0].xyz), 0), 
-        vec4(planetTransformMatrix[1].xyz / length(planetTransformMatrix[1].xyz), 0), 
-        vec4(planetTransformMatrix[2].xyz / length(planetTransformMatrix[2].xyz), 0),
-        vec4(0, 0, 0, 1)
-    );
-
-    return (vec4(point, 1) * rotationOnly).xyz;
+float distance_from_cam(vec3 from) {
+    return distance(polygon_space_to_world_space(from), camera_position.xyz);
 }
 
-vec3 polygonSpaceToObjectSpace(vec3 point) {
-    vec2 uv = point_on_sphere_to_UV(point);
-    float height = texture(heightMap, uv).x;
-    mat4 rotationOnly = mat4(
-        vec4(planetTransformMatrix[0].xyz / length(planetTransformMatrix[0].xyz), 0), 
-        vec4(planetTransformMatrix[1].xyz / length(planetTransformMatrix[1].xyz), 0), 
-        vec4(planetTransformMatrix[2].xyz / length(planetTransformMatrix[2].xyz), 0),
-        vec4(0, 0, 0, 1)
-    );
-    vec3 normal = (vec4(point, 1) * rotationOnly).xyz;
-    vec3 objectPoint = (vec4(point, 1) * planetTransformMatrix).xyz;
-    objectPoint += (normal * height * heightScale);
-    return objectPoint;
+float calculate_lod_to_cam(vec3 from) {
+    return calculate_lod(distance_from_cam(point_on_cube_to_point_on_sphere(from)));
 }
 
-vec3 polygonSpaceToObjectSpaceIgnoreHeight(vec3 point) {
-    mat4 rotationOnly = mat4(
-        vec4(planetTransformMatrix[0].xyz / length(planetTransformMatrix[0].xyz), 0), 
-        vec4(planetTransformMatrix[1].xyz / length(planetTransformMatrix[1].xyz), 0), 
-        vec4(planetTransformMatrix[2].xyz / length(planetTransformMatrix[2].xyz), 0),
-        vec4(0, 0, 0, 1)
-    );
-    return (vec4(point, 1) * planetTransformMatrix).xyz;
+int get_lod_of_key(uvec2 key) {
+    return find_msb_64(key) / 2;
 }
 
-float distanceFromCamIgnoreHeight(vec3 from) {
-    return distance(polygonSpaceToObjectSpaceIgnoreHeight(from), cameraPosition.xyz);
+uvec4 get_parent_key(uvec4 key) {
+    return uvec4(right_shift_64(key.xy, 2u), key.zw);
 }
 
-float distanceFromCam(vec3 from) {
-    return distance(polygonSpaceToObjectSpace(from), cameraPosition.xyz);
-}
-
-float calculateLODToCam(vec3 from) {
-
-    return calculateLOD(
-        distanceFromCam(pointOnCubeToPointOnSphere(from)),
-        cameraFOV,
-        subFactor
-    );
-}
-
-int getLevelInKey(uvec2 key) {
-    return findMSB64(key) / 2;
-}
-
-uvec4 getParentKey(uvec4 key) {
-    return uvec4(rightShift64(key.xy, 2u), key.zw);
-}
-
-uvec4[4] getChildKeys(uvec4 key) {
-    uvec2 baseKey = leftShift64(key.xy, 2u);
+uvec4[4] get_child_keys(uvec4 key) {
+    uvec2 base_key = left_shift_64(key.xy, 2u);
     uvec4[] keys = {
-        uvec4(baseKey.x, baseKey.y | 0, key.zw),
-        uvec4(baseKey.x, baseKey.y | 1, key.zw),
-        uvec4(baseKey.x, baseKey.y | 2, key.zw),
-        uvec4(baseKey.x, baseKey.y | 3, key.zw)
+        uvec4(base_key.x, base_key.y | 0, key.zw),
+        uvec4(base_key.x, base_key.y | 1, key.zw),
+        uvec4(base_key.x, base_key.y | 2, key.zw),
+        uvec4(base_key.x, base_key.y | 3, key.zw)
     };
     return keys;
 }
 
-bool isUpperLeftChild(uvec2 key) {
+bool is_upper_left_child(uvec2 key) {
     return (3 & key[1]) == 0;
 }
 
-vec4 isTJunction(uvec4 key, Triangle parent_triangle, float lod) {
-    uint b1b2 = key.y & 0x3;
-    vec3 neighbour;
-
-    if (key.xy == uvec2(0,1))
-    {
-        return vec4(0,0,0,0);
-    }
-
-    vec4 color;
-    
-    if ((b1b2 >> 1) == 0) { // Check Y neighbour
-        neighbour = parent_triangle.yNeighbor;
-        color = vec4(0,1,0,0);
-    }
-    else if ((b1b2 >> 1) == 1) { // Check X neighbour
-        neighbour = parent_triangle.xNeighbor;
-        color = vec4(1,0,0,0);
-    }
-    float neighbour_lod = calculateLODToCam(neighbour);
-    return neighbour_lod < lod - 1 ? color : vec4(0,0,0,0);
-}
-
-uint getJunctionFlags(uvec4 key, Triangle parent_triangle, float lod) {
+uint get_junction_flags(uvec4 key, Triangle parent_triangle, float lod) {
     uint b1b2 = key.y & 0x3;
     vec3 neighbour;
 
@@ -406,25 +311,25 @@ uint getJunctionFlags(uvec4 key, Triangle parent_triangle, float lod) {
         return 4 << 29;
     }
 
-    if ((b1b2 >> 1) == 0) // Check Y neighbour
+    if ((b1b2 >> 1) == 0) { // Check parent's Y neighbour
         neighbour = parent_triangle.yNeighbor;
-    else if ((b1b2 >> 1) == 1) // Check X neighbour
+    }
+    else if ((b1b2 >> 1) == 1) { // Check parent's X neighbour
         neighbour = parent_triangle.xNeighbor;
-    
+    }
 
-    float neighbour_lod = calculateLODToCam(neighbour);
+    float neighbour_lod = calculate_lod_to_cam(neighbour);
 
     if (neighbour_lod < lod - 1) {
         return b1b2 << 29;
     }
+
     return 4 << 29;
    
 }
 
-bool PointInFrustum(vec3 point) { 
-
-
-    vec4 clipSpacePoint = viewProjectionMatrix * vec4(point, 1);
+bool point_in_frustum(vec3 point) { 
+    vec4 clipSpacePoint = view_projection_matrix * vec4(point, 1);
     vec3 ndcPoint = clipSpacePoint.xyz / clipSpacePoint.w;
 
     return ndcPoint.x >= -1.0 && ndcPoint.x <= 1.0 &&
@@ -432,34 +337,26 @@ bool PointInFrustum(vec3 point) {
            ndcPoint.z >= -1.0 && ndcPoint.z <= 1.0;
 }
 
-vec3 getPlanetOrigin() {
-    return planetTransformMatrix[3].xyz;
-}
-
-ivec3 getInitNormal(uint polygon_id) {
-	uint vertexBaseIndex = polygon_id * 5u;
-	return ivec3(base_triangles[vertexBaseIndex].xyz);
-}
-
-vec3 getCameraForward() {
-    return normalize(-vec3(viewProjectionMatrix[0][2], viewProjectionMatrix[1][2], viewProjectionMatrix[2][2]));
+vec3 get_planet_origin() {
+    return planet_transform_matrix[3].xyz;
 }
 
 bool InHorizon(vec3 point) {
-    vec3 sphericalPoint = pointOnCubeToPointOnSphere(point);
-    float distanceFromPlanet = distanceFromCamIgnoreHeight(getPlanetOrigin());
+    vec3 sphericalPoint = point_on_cube_to_point_on_sphere(point);
+    float distanceFromPlanet = distance_from_cam(get_planet_origin());
     float distanceFromHorizon = sqrt(pow(distanceFromPlanet, 2) - pow(radius, 2));
-    vec3 toPlanetFromCam = getPlanetOrigin() - cameraPosition.xyz;
-    vec3 objectPointIgnoreHeight = polygonSpaceToObjectSpaceIgnoreHeight(sphericalPoint);
-    vec3 objectPoint = polygonSpaceToObjectSpace(sphericalPoint);
-    vec3 toPointOnSphereFromCam = objectPointIgnoreHeight - cameraPosition.xyz;
+    vec3 toPlanetFromCam = get_planet_origin() - camera_position.xyz;
+    vec3 objectPointIgnoreHeight = polygon_space_to_world_space(sphericalPoint);
+
+    vec3 toPointOnSphereFromCam = objectPointIgnoreHeight - camera_position.xyz;
     float angleOfHorizon = acos(distanceFromHorizon / distanceFromPlanet);
     float angleFromPointToCamToPlanet = acos(dot(normalize(toPointOnSphereFromCam), normalize(toPlanetFromCam)));
     
     // if within view
     // if within horizon's circle
     // if within horizon
-    bool b0 = PointInFrustum(objectPointIgnoreHeight) || PointInFrustum(objectPoint);
+    
+    bool b0 = point_in_frustum(objectPointIgnoreHeight);
     bool b1 = (distanceFromHorizon + (radius/2.0) * bias1) >= length(toPointOnSphereFromCam);
     bool b2 = angleFromPointToCamToPlanet + bias2 <= angleOfHorizon;
     if ((b0 && b1 && b2) || (b0 && b1) || (b0 && !b2))
@@ -467,7 +364,7 @@ bool InHorizon(vec3 point) {
     return false;
 }
 
-bool TriangleInFrustum(Triangle triangle) {
+bool triangle_in_frustum(Triangle triangle) {
     return InHorizon(triangle.v0) || InHorizon(triangle.v1) || InHorizon(triangle.v2) || InHorizon(triangle.origin);
 }
 
@@ -488,42 +385,33 @@ void set_multimesh_data(uint index, uvec4 key) {
     output_buffer.data[20 * index + 11] = 0.0;
 
     // Not currently using
-    output_buffer.data[20 * index + 12] = 1.0;
+    output_buffer.data[20 * index + 12] = 0.0;
     output_buffer.data[20 * index + 13] = 0.0;
     output_buffer.data[20 * index + 14] = 0.0;
-    output_buffer.data[20 * index + 15] = 1.0;
+    output_buffer.data[20 * index + 15] = 0.0;
 
     // Setting the key data
     output_buffer.data[20 * index + 16] = uintBitsToFloat(key.x);
     output_buffer.data[20 * index + 17] = uintBitsToFloat(key.y);
     output_buffer.data[20 * index + 18] = uintBitsToFloat(key.z);
     output_buffer.data[20 * index + 19] = uintBitsToFloat(key.w);
-
-    // 
 }
 
 void cull_key(uvec4 key, Triangle triangle, float lod) {
-
-    if (culling && TriangleInFrustum(triangle)) {
-        uint write_culled_index = atomicAdd(primCount_culled[write_index], 1);
-        set_multimesh_data(write_culled_index, key);
-
-        // if (paging)
-        // {
-            
-        // }
-    }
-    else if (!culling)
-    {
-        uint write_culled_index = atomicAdd(primCount_culled[write_index], 1);
-        set_multimesh_data(write_culled_index, key);
-    }
-    imageAtomicMax(GlobalKeyData, ivec2(0, 0), culling ? 0 : 1);
-    // imageAtomicMax(GlobalKeyData, ivec2(0, 0), getLevelInKey(key.xy));
+    // bool isCulling = culling == 1;
+    // if (isCulling && triangle_in_frustum(triangle)) {
+    uint write_culled_index = atomicAdd(primitive_count_culled[write_index], 1);
+    set_multimesh_data(write_culled_index, key);
+    // } else if (!isCulling) {
+    //     uint write_culled_index = atomicAdd(primitive_count_culled[write_index], 1);
+    //     set_multimesh_data(write_culled_index, key);
+    // }
+    // imageAtomicMax(GlobalKeyData, ivec2(0, 0), culling);
+    imageAtomicMax(GlobalKeyData, ivec2(0, 0), get_lod_of_key(key.xy));
 }
 
 void main() {
-    uint leaf_count = uint(atomicExchange(primCount_full[read_index], primCount_full[read_index]));
+    uint leaf_count = uint(atomicExchange(primitive_count_full[read_index], primitive_count_full[read_index]));
     uint invocationID = gl_GlobalInvocationID.x;
     if (invocationID >= leaf_count)
         return;
@@ -531,47 +419,45 @@ void main() {
     uvec4 key = read_list[invocationID];
     key.w &= 0xFu;
 
-    uvec4 parent_key = getParentKey(key);
-    uvec4 grand_parent_key = getParentKey(parent_key);
+    uvec4 parent_key = get_parent_key(key);
+    uvec4 grand_parent_key = get_parent_key(parent_key);
 
-    Triangle triangle = leafSpaceToPolygonSpace(key);
-    Triangle parent_triangle = leafSpaceToPolygonSpace(parent_key);
-    Triangle grand_parent_triangle = leafSpaceToPolygonSpace(grand_parent_key);
+    Triangle triangle = create_triangle(key);
+    Triangle parent_triangle = create_triangle(parent_key);
+    Triangle grand_parent_triangle = create_triangle(grand_parent_key);
 
-    float current_LOD = getLevelInKey(key.xy);
-
-    float parent_target_LOD = calculateLODToCam(parent_triangle.origin);
-    float target_LOD = calculateLODToCam(triangle.origin);
+    float current_LOD = get_lod_of_key(key.xy);
+    float parent_target_LOD = calculate_lod_to_cam(parent_triangle.origin);
+    float target_LOD = calculate_lod_to_cam(triangle.origin);
   
     if (target_LOD > current_LOD && current_LOD < max_lod) { // subdivide
-        uvec4 children_keys[4] = getChildKeys(key);
+        uvec4 children_keys[4] = get_child_keys(key);
         for (int i = 0; i < 4; i++) {
-            uint write_full_index = atomicAdd(primCount_full[write_index], 1);
-            Triangle child_triangle = leafSpaceToPolygonSpace(children_keys[i]);
+            uint write_full_index = atomicAdd(primitive_count_full[write_index], 1);
+            Triangle child_triangle = create_triangle(children_keys[i]);
             
-            children_keys[i].w |= getJunctionFlags(children_keys[i], triangle, current_LOD + 1);
-            
+            children_keys[i].w |= get_junction_flags(children_keys[i], triangle, current_LOD + 1);
             write_full_list[write_full_index] = children_keys[i];
-     
+            
             cull_key(children_keys[i], child_triangle, current_LOD + 1);
+     
 
         }
     } else if (parent_target_LOD < current_LOD - 1 && current_LOD > 0) { // merging
-        if (isUpperLeftChild(key.xy)) {
-            uint write_full_index = atomicAdd(primCount_full[write_index], 1);
+        if (is_upper_left_child(key.xy)) {
+            uint write_full_index = atomicAdd(primitive_count_full[write_index], 1);
 
-            parent_key.w |= getJunctionFlags(parent_key, grand_parent_triangle, current_LOD - 1);
+            parent_key.w |= get_junction_flags(parent_key, grand_parent_triangle, current_LOD - 1);
             write_full_list[write_full_index] = parent_key;
 
             cull_key(parent_key, parent_triangle, current_LOD - 1);
 
         }
     } else {
-        uint write_full_index = atomicAdd(primCount_full[write_index], 1);
+        uint write_full_index = atomicAdd(primitive_count_full[write_index], 1);
 
-        key.w |= getJunctionFlags(key, parent_triangle, current_LOD);
+        key.w |= get_junction_flags(key, parent_triangle, current_LOD);
         write_full_list[write_full_index] = key;
-        
      
         cull_key(key, triangle, current_LOD);
  

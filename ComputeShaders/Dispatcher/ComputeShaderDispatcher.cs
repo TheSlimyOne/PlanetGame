@@ -72,7 +72,7 @@ public abstract class ComputeShaderDispatcher<TEnum> : IDispatchable where TEnum
         _rd.Sync();
     }
 
-    bool verbose = false;
+    bool verbose = true;
     public virtual void CleanupGPU()
     {
         if (_rd == null) return;
@@ -86,7 +86,7 @@ public abstract class ComputeShaderDispatcher<TEnum> : IDispatchable where TEnum
             ComputeShaderUniform computeShaderUniform = kvp.Value;
 
             if (verbose) GD.Print("========================");
-            if (verbose) GD.Print($"Clearing {uniformName} in {GetType().Name} ID: {GetID()} Onwer: {computeShaderUniform.Owner}");
+            if (verbose) GD.Print($"Clearing {uniformName} in {GetType().Name} ID: {GetID()} Owner: {computeShaderUniform.Owner}");
             if (computeShaderUniform.Owner == this)
             {
                 if (verbose) GD.Print(computeShaderUniform.Rid);

@@ -53,8 +53,6 @@ namespace Dispatcher
             CreateUniformSet();
         }
 
-
-
         public override void Ready()
         {
             long computeList = _rd.ComputeListBegin();

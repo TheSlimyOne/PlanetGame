@@ -2,6 +2,7 @@ using System;
 using Godot;
 using Dispatcher;
 using Godot.Collections;
+using UniformException;
 
 namespace Uniform
 {
@@ -9,39 +10,27 @@ namespace Uniform
     {
         public class MultimeshParameters
         {
-            public Rid Multimesh { get; set; }
-            public Rid Mesh { get; set; }
-            public Rid Scenario { get; set; }
-            public Rid Instance { get; set; }
-            public float ExtraVisibilityMargin { get; set; }
-            public int InstanceCount { get; set; }
+           public Rid Multimesh { get; protected set; } = RenderingServer.MultimeshCreate();
+           public Rid Mesh { get; set; }
+           public Rid Scenario { get; set; }
+           public Rid Instance { get; set; }
+           public float ExtraVisibilityMargin { get; set; }
+           public int InstanceCount { get; set; }
+           public int VisibleInstances { get; set; } = -1;
+           public Transform3D Transform3D { get; set; } = Transform3D.Identity;
 
-            public MultimeshParameters(Rid mesh, Rid scenario, Rid instance, int instanceCount, float extraVisibilityMargin)
-            {
-                Mesh = mesh;
-                Scenario = scenario;
-                Instance = instance;
-                InstanceCount = instanceCount;
-                ExtraVisibilityMargin = extraVisibilityMargin;
-
-                Multimesh = RenderingServer.MultimeshCreate();
-                SetupMultiMeshBuffer();
-            }
-
-            public void SetupMultiMeshBuffer()
+            protected internal void ApplyMultiMeshBufferParameters()
             {
                 RenderingServer.MultimeshAllocateData(Multimesh, InstanceCount, RenderingServer.MultimeshTransformFormat.Transform3D, colorFormat: true, customDataFormat: true, useIndirect: true);
                 RenderingServer.MultimeshSetMesh(Multimesh, Mesh);
-
-                Transform3D instanceTransform = Transform3D.Identity;
-                RenderingServer.InstanceSetTransform(Instance, instanceTransform);
+                RenderingServer.MultimeshSetVisibleInstances(Multimesh, VisibleInstances);
+                
+                RenderingServer.InstanceSetBase(Instance, Multimesh);
+                RenderingServer.InstanceSetTransform(Instance, Transform3D);
                 RenderingServer.InstanceSetScenario(Instance, Scenario);
                 RenderingServer.InstanceGeometrySetFlag(Instance, RenderingServer.InstanceFlags.UseDynamicGI, true);
-
                 RenderingServer.InstanceGeometrySetCastShadowsSetting(Instance, RenderingServer.ShadowCastingSetting.On);
-                RenderingServer.InstanceSetBase(Instance, Multimesh);
                 RenderingServer.InstanceSetExtraVisibilityMargin(Instance, ExtraVisibilityMargin);
-                RenderingServer.MultimeshSetVisibleInstances(Multimesh, -1);
             }
         }
 
@@ -51,8 +40,9 @@ namespace Uniform
         public MultimeshUniform(IDispatchable owner, MultimeshParameters parameters, int binding, bool isCommandBuffer) : base(RenderingServer.GetRenderingDevice(), binding, owner)
         {
             Parameters = parameters;
+            if (!IsCommandBuffer)
+                ApplyMultiMeshBufferParameters();
             IsCommandBuffer = isCommandBuffer;
-
             Rid = IsCommandBuffer ? RenderingServer.MultimeshGetCommandBufferRdRid(Parameters.Multimesh) : RenderingServer.MultimeshGetBufferRdRid(Parameters.Multimesh);
             
             Uniform = new()
@@ -102,12 +92,21 @@ namespace Uniform
         public override void FreeRids()
         {
             if (IsCommandBuffer)
-                base.FreeRids();
+            {
+            }
             else
             {
-                RenderingServer.FreeRid(Parameters.Instance);
                 RenderingServer.FreeRid(Parameters.Multimesh);
+                RenderingServer.FreeRid(Parameters.Instance);
+
+                base.FreeRids();
             }
         }
+        
+        public void ApplyMultiMeshBufferParameters()
+        {
+            Parameters.ApplyMultiMeshBufferParameters();
+        }
+
     }
 }

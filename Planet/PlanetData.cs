@@ -180,6 +180,8 @@ namespace Planet
         }
         private float _subFactor = 1;
 
+        public int CurrentLod { get; set; }
+
         [Export]
         public Vector2 MorphRange
         {
@@ -406,6 +408,8 @@ namespace Planet
                 _shaderMaterial.SetShaderParameter("border_size", _borderSize);
                 _shaderMaterial.SetShaderParameter("center_size", _centerSize);
                 _shaderMaterial.SetShaderParameter("desired_chunk_size", _desiredChunkSize);
+                _shaderMaterial.SetShaderParameter("maximum_lod", _maximumLOD);
+
             }
         }
 
@@ -651,14 +655,13 @@ namespace Planet
             arrays[(int)Mesh.ArrayType.Index] = triangles;
             arrays[(int)Mesh.ArrayType.Normal] = normals;
             arrays[(int)Mesh.ArrayType.TexUV] = uvs;
-
-            TriangleMesh.ClearSurfaces();
-            TriangleMesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
-
-            TriangleMesh.SurfaceSetMaterial(0, _shaderMaterial);
+            
+            Rid mesh = TriangleMesh.GetRid();
+            RenderingServer.MeshClear(mesh);
+            RenderingServer.MeshAddSurfaceFromArrays(mesh, RenderingServer.PrimitiveType.Triangles, arrays);
+            if (_shaderMaterial != null)
+                RenderingServer.MeshSurfaceSetMaterial(mesh, 0, _shaderMaterial.GetRid());
         }
-
-
         #endregion
     }
 }

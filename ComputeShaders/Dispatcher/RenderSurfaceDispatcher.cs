@@ -20,11 +20,7 @@ namespace Dispatcher
 			WRITE_FULL_LIST,
 			BASE_TRIANGLES,
 			EXTERNAL_DATA,
-			HEIGHT_MAP,
 			MULTIMESH_BUFFER,
-			CULLING,
-			// PAGE_BUFFER,
-			// PAGING,
 		}
 
 		public RenderSurfaceDispatcher(string shaderFilePath, ref RenderingDevice rd) : base(shaderFilePath, ref rd)
@@ -78,23 +74,6 @@ namespace Dispatcher
 					Utilities.ToBytes<Vector4>(PlanetData.GenerateTrianglePoints()).ToArray()
 				),
 
-				[BufferNames.HEIGHT_MAP] = new Func<Texture2DUniform>(() =>
-				{
-					Image image = PlanetController.PlanetData.HeightMap.GetImage();
-					image.ClearMipmaps();
-					image.Convert(Image.Format.L8);
-
-					return new Texture2DUniform(this, _rd, (int)BufferNames.HEIGHT_MAP,
-						new RDTextureFormat()
-						{
-							Width = (uint)image.GetWidth(),
-							Height = (uint)image.GetHeight(),
-							TextureType = RenderingDevice.TextureType.Type2D,
-							Format = RenderingDevice.DataFormat.R8Unorm,
-							UsageBits = RenderingDevice.TextureUsageBits.StorageBit | RenderingDevice.TextureUsageBits.SamplingBit | RenderingDevice.TextureUsageBits.CanCopyFromBit
-						}, RenderingDevice.UniformType.SamplerWithTexture, textureData: new() { image.GetData() });
-				}).Invoke(),
-
 				[BufferNames.GLOBAL_KEYS_DATA] = new Texture2DUniform(this, _rd, (int)BufferNames.GLOBAL_KEYS_DATA,
 					new RDTextureFormat()
 					{
@@ -116,21 +95,18 @@ namespace Dispatcher
 				),
 
 				[BufferNames.MULTIMESH_BUFFER] = new MultimeshUniform(this,
-					new MultimeshUniform.MultimeshParameters(
-						PlanetController.PlanetData.TriangleMesh.GetRid(),
-						PlanetController.SurfaceController.GetWorld3D().Scenario,
-						RenderingServer.InstanceCreate(),
-						PlanetController.PlanetData.MaximumNodes,
-						2 * PlanetController.PlanetData.Radius
-					),
+					new MultimeshUniform.MultimeshParameters
+					{
+						Mesh = PlanetController.PlanetData.TriangleMesh.GetRid(),
+						Scenario = PlanetController.SurfaceController.GetWorld3D().Scenario,
+						Instance = RenderingServer.InstanceCreate(),
+						InstanceCount = PlanetController.PlanetData.MaximumNodes,
+						ExtraVisibilityMargin = 2 * PlanetController.PlanetData.Radius,
+					},
 					(int)BufferNames.MULTIMESH_BUFFER,
 					false
 				),
-
-				[BufferNames.CULLING] = new StorageBufferUniform(this, _rd, (int)BufferNames.CULLING,
-					Utilities.ToBytes<bool>(new bool[] { PlanetController.PlanetData.Culling, false }).ToArray()),
 			};
-
 			CreateUniformSet();
 		}
 
@@ -153,31 +129,27 @@ namespace Dispatcher
 			_computeShaderUniforms[BufferNames.EXTERNAL_DATA].UpdateUniform(
 				GetExternalData()
 			);
-
-			_computeShaderUniforms[BufferNames.CULLING].UpdateUniform(
-				Utilities.ToBytes<bool>(new bool[] { PlanetController.PlanetData.Culling, false }).ToArray()
-			);
 		}
 
 		//TODO make this push-constants
 		private byte[] GetExternalData()
 		{
 			Array<byte> data = new();
-
 			data.AddRange(Utilities.ToBytesSingle(PlanetController.CameraController.GetViewProjectionMatrix()).ToArray());
 			data.AddRange(Utilities.ToBytesSingle(Utilities.ToProjection(PlanetController.PlanetData.GetPlanetTransformMatrix())).ToArray());
 			data.AddRange(Utilities.ToBytesSingle(VectorUtils.toVector4(PlanetController.CameraController.GlobalPosition, 0)).ToArray());
 			data.AddRange(Utilities.ToBytes<float>(new float[]
 			{
 				Mathf.Tan(Mathf.DegToRad(PlanetController.CameraController.Fov) / 2),
-				PlanetController.PlanetData.SubFactor * PlanetController.PlanetData.Radius,
+				PlanetController.PlanetData.SubFactor,
 				PlanetController.PlanetData.HeightScale,
 				PlanetController.PlanetData.MaximumLOD,
 				PlanetController.PlanetData.Radius,
 
 				PlanetController.PlanetData.Bias1,
 				PlanetController.PlanetData.Bias2,
-				0, 0
+				PlanetController.PlanetData.Culling ? 1 : 0,
+				0
 			}).ToArray());
 			return data.ToArray();
 		}
@@ -202,10 +174,14 @@ namespace Dispatcher
 		{
 			uint[] indices = GetUniformData<uint>(BufferNames.INDICES);
 			uint[] primCounts = GetUniformData<uint>(BufferNames.ATOMIC_COUNTER);
-
-			
 			return ((int)primCounts[indices[0]], (int)primCounts[indices[0] + 3]);
 		}
 
-    }
+		public int GetCurrentMaxLod()
+		{
+			return (int)GetUniform<Texture2DUniform>(BufferNames.GLOBAL_KEYS_DATA).GetPixel(0, 0).R;
+			
+		}
+
+	}
 }

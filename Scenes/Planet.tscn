@@ -1,4 +1,4 @@
-[gd_scene load_steps=30 format=3 uid="uid://c1roirj1ei3ci"]
+[gd_scene load_steps=34 format=3 uid="uid://c1roirj1ei3ci"]
 
 [ext_resource type="Script" uid="uid://b4tv1heidhb4j" path="res://Planet/PlanetController.cs" id="1_qtwtp"]
 [ext_resource type="Resource" uid="uid://bulxpgk85g4tq" path="res://Planet/PlanetDataDefault.tres" id="2_usljo"]
@@ -20,11 +20,26 @@ panorama = ExtResource("3_ldv5r")
 sky_material = SubResource("PanoramaSkyMaterial_eodwd")
 
 [sub_resource type="Environment" id="Environment_qqt2a"]
-background_mode = 1
-background_color = Color(0.29219, 0.29219, 0.29219, 1)
+background_mode = 2
 sky = SubResource("Sky_emtpu")
 tonemap_mode = 2
 glow_enabled = true
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_qtwtp"]
+albedo_color = Color(1, 0, 0, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_usljo"]
+material = SubResource("StandardMaterial3D_qtwtp")
+size = Vector3(0.25, 0.25, 0.26)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_usljo"]
+albedo_color = Color(0, 0, 1, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_ebyhs"]
+material = SubResource("StandardMaterial3D_usljo")
+size = Vector3(0.25, 0.25, 0.25)
+
+[sub_resource type="MultiMesh" id="MultiMesh_qtwtp"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_wsrnx"]
 
@@ -82,10 +97,6 @@ albedo_color = Color(0.160784, 0.54902, 0.960784, 1)
 [sub_resource type="CylinderMesh" id="CylinderMesh_ffecf"]
 material = SubResource("StandardMaterial3D_4qqn8")
 
-[sub_resource type="SphereMesh" id="SphereMesh_q5r8e"]
-radius = 1000.0
-height = 2000.0
-
 [node name="Planet" type="Node3D" node_paths=PackedStringArray("CameraController", "SurfaceController", "SurfaceAttachment", "DebugCamera")]
 script = ExtResource("1_qtwtp")
 PlanetData = ExtResource("2_usljo")
@@ -97,52 +108,52 @@ DebugCamera = NodePath("DebugCamera")
 [node name="CanvasLayer" type="CanvasLayer" parent="." node_paths=PackedStringArray("_planetController", "_lblTriangleCount", "_lblFPS", "_lblDistance", "_lblLOD", "_lblCameraMode", "_btnProcessLod", "_btnColorizeLod", "_btnCubeMode", "_btnCulling", "_btnGenerateNormals", "_btnMorphing", "_btnGenerateCubeMap", "ImageContainer")]
 script = ExtResource("6_21o35")
 _planetController = NodePath("..")
-_lblTriangleCount = NodePath("VBoxContainer/TriangleCount")
-_lblFPS = NodePath("VBoxContainer/FPS")
-_lblDistance = NodePath("VBoxContainer/Distance")
-_lblLOD = NodePath("VBoxContainer/LOD")
-_lblCameraMode = NodePath("VBoxContainer/CameraMode")
-_btnProcessLod = NodePath("VBoxContainer2/btnProcessLod")
-_btnColorizeLod = NodePath("VBoxContainer2/btnColorizeLod")
-_btnCubeMode = NodePath("VBoxContainer2/btnCubeMode")
-_btnCulling = NodePath("VBoxContainer2/btnCulling")
-_btnGenerateNormals = NodePath("VBoxContainer2/btnGenerateNormals")
-_btnMorphing = NodePath("VBoxContainer2/btnMorphing")
-_btnGenerateCubeMap = NodePath("VBoxContainer2/btnGenerateCubeMap")
+_lblTriangleCount = NodePath("DebugStats/TriangleCount")
+_lblFPS = NodePath("DebugStats/FPS")
+_lblDistance = NodePath("DebugStats/Distance")
+_lblLOD = NodePath("DebugStats/LOD")
+_lblCameraMode = NodePath("DebugStats/CameraMode")
+_btnProcessLod = NodePath("Buttons/btnProcessLod")
+_btnColorizeLod = NodePath("Buttons/btnColorizeLod")
+_btnCubeMode = NodePath("Buttons/btnCubeMode")
+_btnCulling = NodePath("Buttons/btnCulling")
+_btnGenerateNormals = NodePath("Buttons/btnGenerateNormals")
+_btnMorphing = NodePath("Buttons/btnMorphing")
+_btnGenerateCubeMap = NodePath("Buttons/btnGenerateCubeMap")
 ImageContainer = NodePath("ImageContainer")
 _normalPath = "res://ComputeShaders/GLSL/ComputeNormals.glsl"
 _cubeMapPath = "res://ComputeShaders/GLSL/ComputeCubeMap.glsl"
 
-[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer"]
+[node name="DebugStats" type="VBoxContainer" parent="CanvasLayer"]
 offset_right = 40.0
 offset_bottom = 40.0
 
-[node name="TriangleCount" type="Label" parent="CanvasLayer/VBoxContainer"]
+[node name="TriangleCount" type="Label" parent="CanvasLayer/DebugStats"]
 layout_mode = 2
 text = "Triangles: X"
 label_settings = SubResource("LabelSettings_jr5mq")
 
-[node name="FPS" type="Label" parent="CanvasLayer/VBoxContainer"]
+[node name="FPS" type="Label" parent="CanvasLayer/DebugStats"]
 layout_mode = 2
 text = "FPS: X"
 label_settings = SubResource("LabelSettings_jr5mq")
 
-[node name="Distance" type="Label" parent="CanvasLayer/VBoxContainer"]
+[node name="Distance" type="Label" parent="CanvasLayer/DebugStats"]
 layout_mode = 2
 text = "Distance: X"
 label_settings = SubResource("LabelSettings_jr5mq")
 
-[node name="LOD" type="Label" parent="CanvasLayer/VBoxContainer"]
+[node name="LOD" type="Label" parent="CanvasLayer/DebugStats"]
 layout_mode = 2
 text = "Current LOD: X"
 label_settings = SubResource("LabelSettings_jr5mq")
 
-[node name="CameraMode" type="Label" parent="CanvasLayer/VBoxContainer"]
+[node name="CameraMode" type="Label" parent="CanvasLayer/DebugStats"]
 layout_mode = 2
 text = "Camera Mode: X"
 label_settings = SubResource("LabelSettings_jr5mq")
 
-[node name="VBoxContainer2" type="VBoxContainer" parent="CanvasLayer"]
+[node name="Buttons" type="VBoxContainer" parent="CanvasLayer"]
 anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
@@ -150,51 +161,51 @@ offset_left = -202.0
 offset_bottom = 167.0
 grow_horizontal = 0
 
-[node name="btnProcessLod" type="Button" parent="CanvasLayer/VBoxContainer2"]
+[node name="btnProcessLod" type="Button" parent="CanvasLayer/Buttons"]
 layout_mode = 2
 focus_mode = 0
 text = "Stop Processing LOD"
 
-[node name="btnColorizeLod" type="Button" parent="CanvasLayer/VBoxContainer2"]
+[node name="btnColorizeLod" type="Button" parent="CanvasLayer/Buttons"]
 layout_mode = 2
 focus_mode = 0
 text = "Enable LOD Color
 "
 
-[node name="btnCubeMode" type="Button" parent="CanvasLayer/VBoxContainer2"]
+[node name="btnCubeMode" type="Button" parent="CanvasLayer/Buttons"]
 layout_mode = 2
 focus_mode = 0
 text = "Enable Cube Mode
 "
 
-[node name="btnCulling" type="Button" parent="CanvasLayer/VBoxContainer2"]
+[node name="btnCulling" type="Button" parent="CanvasLayer/Buttons"]
 layout_mode = 2
 focus_mode = 0
 text = "Disable Culling"
 
-[node name="btnGenerateNormals" type="Button" parent="CanvasLayer/VBoxContainer2"]
+[node name="btnGenerateNormals" type="Button" parent="CanvasLayer/Buttons"]
 layout_mode = 2
 focus_mode = 0
 button_mask = 2
 text = "Generate Normal"
 
-[node name="btnGenerateCubeMap" type="Button" parent="CanvasLayer/VBoxContainer2"]
+[node name="btnGenerateCubeMap" type="Button" parent="CanvasLayer/Buttons"]
 layout_mode = 2
 focus_mode = 0
 button_mask = 2
 text = "Generate Cube Map"
 
-[node name="btnMorphing" type="Button" parent="CanvasLayer/VBoxContainer2"]
+[node name="btnMorphing" type="Button" parent="CanvasLayer/Buttons"]
 layout_mode = 2
 focus_mode = 0
 text = "Disable Morphing"
 
-[node name="btnGenerateChunks" type="Button" parent="CanvasLayer/VBoxContainer2"]
+[node name="btnGenerateChunks" type="Button" parent="CanvasLayer/Buttons"]
 layout_mode = 2
 focus_mode = 0
 text = "Generate Chunks"
 
-[node name="btnGenerateIndirectionTable" type="Button" parent="CanvasLayer/VBoxContainer2"]
+[node name="btnGenerateIndirectionTable" type="Button" parent="CanvasLayer/Buttons"]
 layout_mode = 2
 focus_mode = 0
 text = "Generate Indirection Table"
@@ -225,7 +236,7 @@ weight = 0.15
 _renderSurfaceShaderPath = "uid://b56oykpmj0br0"
 _copyKeysShaderPath = "uid://b1aoaqwgb51hm"
 
-[node name="CameraController" type="Camera3D" parent="." node_paths=PackedStringArray("UIElements", "WorldEnvironment", "InnerCamera", "Frustum")]
+[node name="CameraController" type="Camera3D" parent="." node_paths=PackedStringArray("UIElements", "WorldEnvironment", "InnerCamera", "Frustum", "_debugPlot")]
 current = true
 near = 0.001
 far = 30000.0
@@ -234,10 +245,14 @@ UIElements = NodePath("../CanvasLayer")
 WorldEnvironment = NodePath("../WorldEnvironment")
 DistanceFromSurface = 4200.0
 InnerCamera = NodePath("InnerCamera")
-Frustum = NodePath("Frustum")
+Frustum = NodePath("InnerCamera/Frustum")
+_debugPlot = NodePath("../SurfaceAttachment/DebugMesh")
 BaseZoomSpeed = 1000.0
 RayLength = 10000.0
-pointRadius = 0.025
+pointRadius = 10.0
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="CameraController"]
+mesh = SubResource("BoxMesh_usljo")
 
 [node name="InnerCamera" type="Camera3D" parent="CameraController"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.3)
@@ -245,12 +260,21 @@ fov = 100.0
 near = 0.001
 far = 30000.0
 
-[node name="Frustum" type="MeshInstance3D" parent="CameraController"]
-visible = false
+[node name="Frustum" type="MeshInstance3D" parent="CameraController/InnerCamera"]
 cast_shadow = 0
-skeleton = NodePath("../..")
+skeleton = NodePath("../../..")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="CameraController/InnerCamera"]
+mesh = SubResource("BoxMesh_ebyhs")
 
 [node name="SurfaceAttachment" type="Node3D" parent="."]
+
+[node name="MainLightSource" type="DirectionalLight3D" parent="SurfaceAttachment"]
+directional_shadow_max_distance = 2000.0
+sky_mode = 1
+
+[node name="DebugMesh" type="MultiMeshInstance3D" parent="SurfaceAttachment"]
+multimesh = SubResource("MultiMesh_qtwtp")
 
 [node name="CubicalCollision" type="StaticBody3D" parent="SurfaceAttachment"]
 
@@ -268,12 +292,7 @@ shape = SubResource("SphereShape3D_7pbfy")
 shape = SubResource("SphereShape3D_tgghh")
 
 [node name="ShadowCaster" type="MeshInstance3D" parent="SurfaceAttachment"]
-visible = false
 skeleton = NodePath("../..")
-
-[node name="MainLightSource" type="DirectionalLight3D" parent="SurfaceAttachment"]
-shadow_enabled = true
-sky_mode = 1
 
 [node name="Cube" type="MeshInstance3D" parent="SurfaceAttachment"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1000, 0)
@@ -310,21 +329,16 @@ transform = Transform3D(1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 0, 
 gi_mode = 0
 mesh = SubResource("CylinderMesh_ffecf")
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="SurfaceAttachment"]
-visible = false
-mesh = SubResource("SphereMesh_q5r8e")
-skeleton = NodePath("../..")
-
 [node name="DebugCamera" parent="." instance=ExtResource("7_w1xx6")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 4000)
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 2000, 0, 0)
 size = 8000.0
 
-[connection signal="pressed" from="CanvasLayer/VBoxContainer2/btnProcessLod" to="CanvasLayer" method="EnableOrDisableProcessing"]
-[connection signal="pressed" from="CanvasLayer/VBoxContainer2/btnColorizeLod" to="CanvasLayer" method="EnableOrDisableLodColorize"]
-[connection signal="pressed" from="CanvasLayer/VBoxContainer2/btnCubeMode" to="CanvasLayer" method="EnableOrDisableCubeMode"]
-[connection signal="pressed" from="CanvasLayer/VBoxContainer2/btnCulling" to="CanvasLayer" method="EnableOrDisableCulling"]
-[connection signal="pressed" from="CanvasLayer/VBoxContainer2/btnGenerateNormals" to="CanvasLayer" method="GenerateNormals"]
-[connection signal="pressed" from="CanvasLayer/VBoxContainer2/btnGenerateCubeMap" to="CanvasLayer" method="GenerateCubeMap"]
-[connection signal="pressed" from="CanvasLayer/VBoxContainer2/btnMorphing" to="CanvasLayer" method="EnableOrDisableMorphing"]
-[connection signal="pressed" from="CanvasLayer/VBoxContainer2/btnGenerateChunks" to="CanvasLayer" method="GenerateChunks"]
-[connection signal="pressed" from="CanvasLayer/VBoxContainer2/btnGenerateIndirectionTable" to="CanvasLayer" method="GenerateIndirectionTable"]
+[connection signal="pressed" from="CanvasLayer/Buttons/btnProcessLod" to="CanvasLayer" method="EnableOrDisableProcessing"]
+[connection signal="pressed" from="CanvasLayer/Buttons/btnColorizeLod" to="CanvasLayer" method="EnableOrDisableLodColorize"]
+[connection signal="pressed" from="CanvasLayer/Buttons/btnCubeMode" to="CanvasLayer" method="EnableOrDisableCubeMode"]
+[connection signal="pressed" from="CanvasLayer/Buttons/btnCulling" to="CanvasLayer" method="EnableOrDisableCulling"]
+[connection signal="pressed" from="CanvasLayer/Buttons/btnGenerateNormals" to="CanvasLayer" method="GenerateNormals"]
+[connection signal="pressed" from="CanvasLayer/Buttons/btnGenerateCubeMap" to="CanvasLayer" method="GenerateCubeMap"]
+[connection signal="pressed" from="CanvasLayer/Buttons/btnMorphing" to="CanvasLayer" method="EnableOrDisableMorphing"]
+[connection signal="pressed" from="CanvasLayer/Buttons/btnGenerateChunks" to="CanvasLayer" method="GenerateChunks"]
+[connection signal="pressed" from="CanvasLayer/Buttons/btnGenerateIndirectionTable" to="CanvasLayer" method="GenerateIndirectionTable"]

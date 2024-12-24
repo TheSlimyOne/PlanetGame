@@ -55,8 +55,7 @@ public partial class SurfaceController : Node3D
 		_surfaceController = _planetController.SurfaceController;
 		_cameraController = _planetController.CameraController;
 		_planetData = _planetController.PlanetData;
-
-		_planetData.ShaderMaterial.SetShaderParameter("fov", Mathf.Tan(Mathf.DegToRad(_cameraController.Fov) / 2));
+		_planetData.ShaderMaterial.SetShaderParameter("fovy", Mathf.Tan(Mathf.DegToRad(_cameraController.Fov) / 2));
 
 		_planetData.Scaled(Vector3.One * _planetData.Radius);
 		_planetData.Translate(Vector3.Back * (1 - _planetData.Radius));
@@ -131,8 +130,6 @@ public partial class SurfaceController : Node3D
 
 	void ProcessMovement(double delta)
 	{
-
-		// if (!_cameraController.Current) return;
 		float by = (float)delta;
 
 		_direction.X += Input.GetActionStrength("move_left") - Input.GetActionStrength("move_right");
@@ -152,7 +149,6 @@ public partial class SurfaceController : Node3D
 		_planetData.Rotate(Vector3.Right, adjectedOrbitSpeed * by * _direction.Z);
 		_planetData.Rotate(Vector3.Up, adjectedOrbitSpeed * by * _direction.X);
 		_planetData.Rotate(Vector3.Back, by * (_keyCameraRotation.X + _mouseCameraRotation.X));
-
 
 		_planetData.ShaderMaterial.SetShaderParameter("planet_transform_matrix", Utilities.ToProjection(_planetData.GetPlanetTransformMatrix()));
 
@@ -207,19 +203,19 @@ public partial class SurfaceController : Node3D
 		ProcessMovement(delta);
 		Locked = Processing;// && HasMoved;
 		_planetData.ShaderMaterial.SetShaderParameter("camera_position", _cameraController.GlobalPosition);
-		_planetData.ShaderMaterial.SetShaderParameter("sub_factor", _planetData.SubFactor * _planetData.Radius);
+		_planetData.ShaderMaterial.SetShaderParameter("sub_factor", _planetData.SubFactor);
+		_planetData.ShaderMaterial.SetShaderParameter("radius", _planetData.Radius);
 
 		if (Locked)
 		{
-			
-			
 			for (int i = 0; i < 3; i++)
 			{
-				
 				InvokeComputeShaders();
 			}
 
-			Render();
+			(int all, int culled) = _renderSurface.GetPrimitiveCounts();
+			_cameraController.UIElements.SetLabelTriangleCount(culled, all);
+			
 			_planetController.CameraController.UIElements.UpdateProcessingText();
 			Locked = false;
 			// Processing = false;
@@ -230,16 +226,12 @@ public partial class SurfaceController : Node3D
 	{
 		_renderSurface.GetUniform<Texture2DUniform>(RenderSurfaceDispatcher.BufferNames.GLOBAL_KEYS_DATA).ClearTexture(Colors.Black);
 		RenderingServer.CallOnRenderThread(_executeRenderSurface);
+		_planetData.CurrentLod = _renderSurface.GetCurrentMaxLod();
+
+		_cameraController.UIElements.SetCurrentLOD(_planetData.CurrentLod);
+		
 		RenderingServer.CallOnRenderThread(_executeCopyKeys);
+		
 		_renderSurface.UpdateUniforms();
-	}
-
-	private void Render()
-	{
-		_cameraController.UIElements.SetCurrentLOD(_renderSurface.GetUniform<Texture2DUniform>(RenderSurfaceDispatcher.BufferNames.GLOBAL_KEYS_DATA).GetPixel(0, 0).R);
-
-		(int all, int culled) = _renderSurface.GetPrimitiveCounts();
-
-		_cameraController.UIElements.SetLabelTriangleCount(culled, all);
 	}
 }

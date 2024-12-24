@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Godot;
 using Godot.Collections;
 using Planet;
@@ -15,7 +16,7 @@ public partial class CameraController : Camera3D
 	// [Export] public MeshInstance3D InnerCameraFrustum;
 	[Export] public MeshInstance3D Frustum;
 	private MultiMeshInstance3D _planetLine = new();
-	private MultiMeshInstance3D _debugPlot = new();
+	[Export] private MultiMeshInstance3D _debugPlot = new();
 
 	[Export] public float BaseZoomSpeed;
 	[Export] public float RayLength = 5000;
@@ -30,7 +31,7 @@ public partial class CameraController : Camera3D
 	{
 		_planetController = (PlanetController)GetParent();
 		_planetController.SurfaceAttachment.CallDeferred("add_child", _planetLine);
-		_planetController.SurfaceAttachment.CallDeferred("add_child", _debugPlot);
+		// _planetController.SurfaceAttachment.CallDeferred("add_child", _debugPlot);
 		Frustum.ExtraCullMargin = 2 * _planetController.PlanetData.Radius;
 		// InnerCameraFrustum.ExtraCullMargin = 2 * _planetController.PlanetData.Radius;
 		_debugPlot.ExtraCullMargin = 2 * _planetController.PlanetData.Radius;
@@ -129,15 +130,8 @@ public partial class CameraController : Camera3D
 
 		}
 		_debugPlot.Multimesh.InstanceCount = 0;
-		
-
-		
-
-
-		
-
 	}
-
+	bool done = false;
 	public override void _Input(InputEvent @event)
 	{
 		if (Input.IsActionJustReleased("cam_exit"))
@@ -165,28 +159,79 @@ public partial class CameraController : Camera3D
 				viewport.DebugDraw = Viewport.DebugDrawEnum.Wireframe;
 		}
 
-		if (@event is InputEventMouseButton mouseEvent)
-		{
-			if (mouseEvent.ButtonIndex == MouseButton.Left && mouseEvent.Pressed)
-			{
-				Vector2 mousePosition = GetViewport().GetMousePosition();
-				Vector3 rayOrigin = ProjectRayOrigin(mousePosition);
-				Vector3 rayEnd = rayOrigin + ProjectRayNormal(mousePosition) * RayLength;
-				CalculateRayToPlanet(rayOrigin, rayEnd);
-			}
-		}
+		// if (@event is InputEventMouseButton mouseEvent)
+		// {
+		// 	if (mouseEvent.ButtonIndex == MouseButton.Left && mouseEvent.Pressed && !done)
+		// 	{
+		// 		// Vector2 mousePosition = GetViewport().GetMousePosition();
+		// 		// Vector3 rayOrigin = ProjectRayOrigin(mousePosition);
+		// 		// Vector3 rayEnd = rayOrigin + ProjectRayNormal(mousePosition) * RayLength;
+		// 		// CalculateRayToPlanet(rayOrigin, rayEnd);
+		// 		done = false;
+
+
+		// 		int currentLod = _planetController.PlanetData.CurrentLod;
+		// 		Vector2[] points = GetSquare(Vector2.Zero, 1 / Mathf.Pow(2, currentLod)).ToArray();
+		// 		_debugPlot.Multimesh.InstanceCount = 6 * points.Length;
+
+		// 		Color[] colors = new Color[] { Colors.Red, Colors.Blue, Colors.Yellow, Colors.Green, Colors.White, Colors.Black };
+		// 		Vector3[] normals = new Vector3[] { Vector3.Up, Vector3.Down, Vector3.Left, Vector3.Right, Vector3.Forward, Vector3.Back };
+
+		// 		for (int i = 0; i < points.Length; i++)
+		// 		{
+		// 			for (int j = 0; j < 6; j++)
+		// 			{
+		// 				Transform3D transform = Transform3D.Identity;
+
+		// 				Vector3 position = VectorUtils.UVToPointOnCube(normals[j], points[i]);
+		// 				// GD.Print(position);
+		// 				position = VectorUtils.PointOnCubeToPointOnSphere(position);
+		// 				position *= _planetController.PlanetData.Radius;
+		// 				transform.Origin = position;
+		// 				_debugPlot.Multimesh.SetInstanceTransform(6 * i + j, transform);
+		// 				_debugPlot.Multimesh.SetInstanceColor(6 * i + j, colors[j]);
+		// 			}
+		// 		}
+
+
+
+		// 		// string s = "[";
+
+		// 		// s = s.Remove(s.Length - 2) + "]";			
+		// 		// GD.Print(s);
+		// 	}
+		// }
 
 		if (Input.IsActionJustPressed("switch_to_debug_cam"))
 		{
 			if (!Current)
 			{
 				MakeCurrent();
-			} 
-			else 
+			}
+			else
 			{
 				_planetController.DebugCamera.MakeCurrent();
 			}
 		}
+	}
+
+	public Array<Vector2> GetSquare(Vector2 origin, float smallestScale, float scale = 1)
+	{
+		if (scale == smallestScale)
+			return new Array<Vector2>() {
+				origin + new Vector2(scale, 0),
+				origin + new Vector2(-scale, 0),
+				origin + new Vector2(0, scale),
+				origin + new Vector2(0, -scale),
+			};
+
+		scale /= 2;
+
+		return
+			GetSquare(origin + new Vector2(scale, scale), smallestScale, scale) +
+			GetSquare(origin + new Vector2(-scale, scale), smallestScale, scale) +
+			GetSquare(origin + new Vector2(-scale, -scale), smallestScale, scale) +
+			GetSquare(origin + new Vector2(scale, -scale), smallestScale, scale);
 	}
 
 	public override void _PhysicsProcess(double delta)
@@ -203,19 +248,7 @@ public partial class CameraController : Camera3D
 			new(1, -1, 1),   // far-bottom-right
 			new(-1, 1, 1),   // far-top-left
 			new(1, 1, 1)     // far-top-right
-		}, GetCameraProjection()));
-
-
-		// InnerCameraFrustum.Mesh = CreateFrustumMesh(ProjectPoints(new Vector3[] {
-		// 	new(-1, -1, -1), // near-bottom-left
-		// 	new(1, -1, -1),  // near-bottom-right
-		// 	new(-1, 1, -1),  // near-top-left
-		// 	new(1, 1, -1),   // near-top-right
-		// 	new(-1, -1, 1),  // far-bottom-left
-		// 	new(1, -1, 1),   // far-bottom-right
-		// 	new(-1, 1, 1),   // far-top-left
-		// 	new(1, 1, 1)     // far-top-right
-		// }, InnerCamera.GetCameraProjection()));
+		}, InnerCamera.GetCameraProjection()));
 	}
 
 	public static Vector3[] ProjectPoints(Vector3[] points, Projection viewProjectionMatrix)
@@ -243,7 +276,6 @@ public partial class CameraController : Camera3D
 			frustumPoints[1], frustumPoints[5],
 			frustumPoints[2], frustumPoints[6],
 			frustumPoints[3], frustumPoints[7]
-
 		};
 		var arrays = new Godot.Collections.Array();
 		arrays.Resize((int)Mesh.ArrayType.Max);
@@ -288,8 +320,6 @@ public partial class CameraController : Camera3D
 		return Mathf.Clamp(-MathF.Log2(num / dom), 0, _planetController.PlanetData.MaximumLOD);
 	}
 
-	public float CalculateDistanceToCam(Vector3 from)
-	{
-		return from.DistanceTo(GlobalPosition);
-	}
+	public float CalculateDistanceToCam(Vector3 from) => from.DistanceTo(GlobalPosition);
+
 }
