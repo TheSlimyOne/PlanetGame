@@ -1,12 +1,13 @@
-[gd_scene load_steps=34 format=3 uid="uid://c1roirj1ei3ci"]
+[gd_scene load_steps=27 format=3 uid="uid://c1roirj1ei3ci"]
 
 [ext_resource type="Script" uid="uid://b4tv1heidhb4j" path="res://Planet/PlanetController.cs" id="1_qtwtp"]
 [ext_resource type="Resource" uid="uid://bulxpgk85g4tq" path="res://Planet/PlanetDataDefault.tres" id="2_usljo"]
 [ext_resource type="Texture2D" uid="uid://ejlq5akl3icw" path="res://Assets/Images/panorama_image.png" id="3_ldv5r"]
 [ext_resource type="Script" uid="uid://b0ouf0wmawpph" path="res://Planet/SurfaceController.cs" id="4_ebyhs"]
-[ext_resource type="Script" uid="uid://b6ndo6pet2jv4" path="res://Player/CameraController.cs" id="5_8qkf8"]
+[ext_resource type="Script" uid="uid://b6ndo6pet2jv4" path="res://Player/Camera/CameraController.cs" id="5_usljo"]
 [ext_resource type="Script" uid="uid://dmhjqmw6g7d2t" path="res://Player/UIElements.cs" id="6_21o35"]
-[ext_resource type="PackedScene" uid="uid://1n2ai6k6m8iy" path="res://Scenes/DebugCamera.tscn" id="7_w1xx6"]
+[ext_resource type="PackedScene" uid="uid://b0aa8isqnhj7e" path="res://Scenes/DebugCube.tscn" id="7_qtwtp"]
+[ext_resource type="Script" uid="uid://bvr5rurarht8e" path="res://Player/Camera/CustomCamera.cs" id="8_ldv5r"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_jr5mq"]
 font_size = 28
@@ -21,23 +22,39 @@ sky_material = SubResource("PanoramaSkyMaterial_eodwd")
 
 [sub_resource type="Environment" id="Environment_qqt2a"]
 background_mode = 2
+background_color = Color(0.314316, 0.314316, 0.314316, 1)
 sky = SubResource("Sky_emtpu")
 tonemap_mode = 2
 glow_enabled = true
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_qtwtp"]
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_i1a08"]
 albedo_color = Color(1, 0, 0, 1)
 
-[sub_resource type="BoxMesh" id="BoxMesh_usljo"]
-material = SubResource("StandardMaterial3D_qtwtp")
-size = Vector3(0.25, 0.25, 0.26)
+[sub_resource type="SphereMesh" id="SphereMesh_ebyhs"]
+material = SubResource("StandardMaterial3D_i1a08")
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_usljo"]
-albedo_color = Color(0, 0, 1, 1)
 
-[sub_resource type="BoxMesh" id="BoxMesh_ebyhs"]
+[sub_resource type="PrismMesh" id="PrismMesh_8qkf8"]
 material = SubResource("StandardMaterial3D_usljo")
-size = Vector3(0.25, 0.25, 0.25)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_qtn47"]
+albedo_color = Color(0.141176, 0.278431, 0.611765, 1)
+
+[sub_resource type="SphereMesh" id="SphereMesh_gk1q8"]
+material = SubResource("StandardMaterial3D_qtn47")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_avjct"]
+albedo_color = Color(0, 1, 1, 1)
+
+[sub_resource type="SphereMesh" id="SphereMesh_21o35"]
+material = SubResource("StandardMaterial3D_avjct")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_6uokv"]
+albedo_color = Color(0.490196, 1, 0, 1)
+
+[sub_resource type="SphereMesh" id="SphereMesh_w1xx6"]
+material = SubResource("StandardMaterial3D_6uokv")
 
 [sub_resource type="MultiMesh" id="MultiMesh_qtwtp"]
 
@@ -48,62 +65,13 @@ size = Vector3(0.25, 0.25, 0.25)
 [sub_resource type="SphereShape3D" id="SphereShape3D_tgghh"]
 radius = 500.0
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_tkgps"]
-shading_mode = 0
-
-[sub_resource type="BoxMesh" id="BoxMesh_nunc5"]
-material = SubResource("StandardMaterial3D_tkgps")
-size = Vector3(5, 5, 5)
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_2awjw"]
-shading_mode = 0
-albedo_color = Color(0.529412, 0.839216, 0.0117647, 1)
-
-[sub_resource type="CylinderMesh" id="CylinderMesh_e7bxq"]
-material = SubResource("StandardMaterial3D_2awjw")
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_n5c4w"]
-shading_mode = 0
-albedo_color = Color(0.317647, 0.501961, 0.00784314, 1)
-
-[sub_resource type="CylinderMesh" id="CylinderMesh_inwda"]
-material = SubResource("StandardMaterial3D_n5c4w")
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_gw01j"]
-shading_mode = 0
-albedo_color = Color(0.576471, 0.121569, 0.192157, 1)
-
-[sub_resource type="CylinderMesh" id="CylinderMesh_aq8kn"]
-material = SubResource("StandardMaterial3D_gw01j")
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_x5e5y"]
-shading_mode = 0
-albedo_color = Color(0.576471, 0.121569, 0.192157, 1)
-
-[sub_resource type="CylinderMesh" id="CylinderMesh_3igf2"]
-material = SubResource("StandardMaterial3D_x5e5y")
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_6gyuo"]
-shading_mode = 0
-albedo_color = Color(0.160784, 0.54902, 0.960784, 1)
-
-[sub_resource type="CylinderMesh" id="CylinderMesh_axejk"]
-material = SubResource("StandardMaterial3D_6gyuo")
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_4qqn8"]
-shading_mode = 0
-albedo_color = Color(0.160784, 0.54902, 0.960784, 1)
-
-[sub_resource type="CylinderMesh" id="CylinderMesh_ffecf"]
-material = SubResource("StandardMaterial3D_4qqn8")
-
-[node name="Planet" type="Node3D" node_paths=PackedStringArray("CameraController", "SurfaceController", "SurfaceAttachment", "DebugCamera")]
+[node name="Planet" type="Node3D" node_paths=PackedStringArray("CameraController", "SurfaceController", "SurfaceAttachment")]
 script = ExtResource("1_qtwtp")
 PlanetData = ExtResource("2_usljo")
 CameraController = NodePath("CameraController")
 SurfaceController = NodePath("SurfaceController")
 SurfaceAttachment = NodePath("SurfaceAttachment")
-DebugCamera = NodePath("DebugCamera")
+metadata/_edit_group_ = true
 
 [node name="CanvasLayer" type="CanvasLayer" parent="." node_paths=PackedStringArray("_planetController", "_lblTriangleCount", "_lblFPS", "_lblDistance", "_lblLOD", "_lblCameraMode", "_btnProcessLod", "_btnColorizeLod", "_btnCubeMode", "_btnCulling", "_btnGenerateNormals", "_btnMorphing", "_btnGenerateCubeMap", "ImageContainer")]
 script = ExtResource("6_21o35")
@@ -222,52 +190,72 @@ grow_vertical = 0
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_qqt2a")
 
-[node name="SurfaceController" type="Node3D" parent="." node_paths=PackedStringArray("WorldEnvironment", "MainLightSource", "InnerCollision", "OuterCollision", "CubicalCollision", "_shadowCaster")]
+[node name="CameraController" type="Node3D" parent="."]
+script = ExtResource("5_usljo")
+
+[node name="Main" type="Camera3D" parent="CameraController"]
+cull_mask = 3
+current = true
+near = 0.001
+far = 30000.0
+script = ExtResource("8_ldv5r")
+Sensitivity = 0.1
+RotationRangeX = Vector2(0, 180)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="CameraController/Main"]
+mesh = SubResource("SphereMesh_ebyhs")
+
+[node name="MeshInstance3D2" type="MeshInstance3D" parent="CameraController/Main"]
+transform = Transform3D(0, 4.37114e-08, 0.331828, 1.2075, -3.55271e-15, 5.15309e-23, 0, 1, -1.45047e-08, 0, 0, 0)
+mesh = SubResource("PrismMesh_8qkf8")
+
+[node name="Debug" type="Camera3D" parent="CameraController"]
+transform = Transform3D(0.761706, 0, 0.647923, 0, 1, 0, -0.647923, 0, 0.761706, 2.87193, 0, 0)
+script = ExtResource("8_ldv5r")
+Sensitivity = 0.1
+RotationRangeX = Vector2(0, 180)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="CameraController/Debug"]
+mesh = SubResource("SphereMesh_gk1q8")
+
+[node name="Lookup" type="Camera3D" parent="CameraController"]
+cull_mask = 2
+script = ExtResource("8_ldv5r")
+RotationRangeX = Vector2(0, 6)
+RotationRangeY = Vector2(0, 6)
+RotationRangeZ = Vector2(0, 6)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="CameraController/Lookup"]
+mesh = SubResource("SphereMesh_21o35")
+
+[node name="Helper" type="Camera3D" parent="CameraController"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.3)
+fov = 100.0
+near = 0.001
+far = 30000.0
+script = ExtResource("8_ldv5r")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="CameraController/Helper"]
+mesh = SubResource("SphereMesh_w1xx6")
+
+[node name="SurfaceController" type="Node3D" parent="." node_paths=PackedStringArray("WorldEnvironment", "MainLightSource", "InnerCollision", "OuterCollision", "CubicalCollision")]
 script = ExtResource("4_ebyhs")
 WorldEnvironment = NodePath("../WorldEnvironment")
 MainLightSource = NodePath("../SurfaceAttachment/MainLightSource")
 InnerCollision = NodePath("../SurfaceAttachment/InnerCollision")
 OuterCollision = NodePath("../SurfaceAttachment/OuterCollision")
 CubicalCollision = NodePath("../SurfaceAttachment/CubicalCollision")
-_shadowCaster = NodePath("../SurfaceAttachment/ShadowCaster")
 BaseOrbitSpeed = 2.0
 OrbitSpeedModifier = 1000.0
 weight = 0.15
 _renderSurfaceShaderPath = "uid://b56oykpmj0br0"
 _copyKeysShaderPath = "uid://b1aoaqwgb51hm"
 
-[node name="CameraController" type="Camera3D" parent="." node_paths=PackedStringArray("UIElements", "WorldEnvironment", "InnerCamera", "Frustum", "_debugPlot")]
-current = true
-near = 0.001
-far = 30000.0
-script = ExtResource("5_8qkf8")
-UIElements = NodePath("../CanvasLayer")
-WorldEnvironment = NodePath("../WorldEnvironment")
-DistanceFromSurface = 4200.0
-InnerCamera = NodePath("InnerCamera")
-Frustum = NodePath("InnerCamera/Frustum")
-_debugPlot = NodePath("../SurfaceAttachment/DebugMesh")
-BaseZoomSpeed = 1000.0
-RayLength = 10000.0
-pointRadius = 10.0
-
-[node name="MeshInstance3D" type="MeshInstance3D" parent="CameraController"]
-mesh = SubResource("BoxMesh_usljo")
-
-[node name="InnerCamera" type="Camera3D" parent="CameraController"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.3)
-fov = 100.0
-near = 0.001
-far = 30000.0
-
-[node name="Frustum" type="MeshInstance3D" parent="CameraController/InnerCamera"]
-cast_shadow = 0
-skeleton = NodePath("../../..")
-
-[node name="MeshInstance3D" type="MeshInstance3D" parent="CameraController/InnerCamera"]
-mesh = SubResource("BoxMesh_ebyhs")
-
 [node name="SurfaceAttachment" type="Node3D" parent="."]
+
+[node name="Cube" parent="SurfaceAttachment" instance=ExtResource("7_qtwtp")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1000, 0)
+skeleton = NodePath("../..")
 
 [node name="MainLightSource" type="DirectionalLight3D" parent="SurfaceAttachment"]
 directional_shadow_max_distance = 2000.0
@@ -287,51 +275,10 @@ shape = SubResource("BoxShape3D_wsrnx")
 shape = SubResource("SphereShape3D_7pbfy")
 
 [node name="OuterCollision" type="StaticBody3D" parent="SurfaceAttachment"]
+visible = false
 
 [node name="OuterCollisionShape3D" type="CollisionShape3D" parent="SurfaceAttachment/OuterCollision"]
 shape = SubResource("SphereShape3D_tgghh")
-
-[node name="ShadowCaster" type="MeshInstance3D" parent="SurfaceAttachment"]
-skeleton = NodePath("../..")
-
-[node name="Cube" type="MeshInstance3D" parent="SurfaceAttachment"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1000, 0)
-cast_shadow = 0
-mesh = SubResource("BoxMesh_nunc5")
-
-[node name="Up" type="MeshInstance3D" parent="SurfaceAttachment/Cube"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.5, 0)
-gi_mode = 0
-mesh = SubResource("CylinderMesh_e7bxq")
-
-[node name="Down" type="MeshInstance3D" parent="SurfaceAttachment/Cube"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -3.5, 0)
-gi_mode = 0
-mesh = SubResource("CylinderMesh_inwda")
-
-[node name="Left" type="MeshInstance3D" parent="SurfaceAttachment/Cube"]
-transform = Transform3D(-4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 0, 0, 1, -3.5, 0, 0)
-gi_mode = 0
-mesh = SubResource("CylinderMesh_aq8kn")
-
-[node name="Right" type="MeshInstance3D" parent="SurfaceAttachment/Cube"]
-transform = Transform3D(-4.37114e-08, 1, 0, -1, -4.37114e-08, 0, 0, 0, 1, 3.5, 0, 0)
-gi_mode = 0
-mesh = SubResource("CylinderMesh_3igf2")
-
-[node name="Forward" type="MeshInstance3D" parent="SurfaceAttachment/Cube"]
-transform = Transform3D(1, 0, 0, 0, -4.37114e-08, 1, 0, -1, -4.37114e-08, 0, 0, 3.5)
-gi_mode = 0
-mesh = SubResource("CylinderMesh_axejk")
-
-[node name="Backward" type="MeshInstance3D" parent="SurfaceAttachment/Cube"]
-transform = Transform3D(1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 0, -3)
-gi_mode = 0
-mesh = SubResource("CylinderMesh_ffecf")
-
-[node name="DebugCamera" parent="." instance=ExtResource("7_w1xx6")]
-transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 2000, 0, 0)
-size = 8000.0
 
 [connection signal="pressed" from="CanvasLayer/Buttons/btnProcessLod" to="CanvasLayer" method="EnableOrDisableProcessing"]
 [connection signal="pressed" from="CanvasLayer/Buttons/btnColorizeLod" to="CanvasLayer" method="EnableOrDisableLodColorize"]

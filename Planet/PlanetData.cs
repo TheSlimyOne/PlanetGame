@@ -1,5 +1,6 @@
 using System;
 using Godot;
+using Godot.Collections;
 namespace Planet
 {
     [Tool]
@@ -18,7 +19,7 @@ namespace Planet
                 {
                     _radius = Mathf.Clamp(value, 1, 8000);
                     EmitChanged();
-                    SetMaterialParameters();
+                    SetRenderSurfaceMaterialParameters();
                 }
             }
         }
@@ -34,7 +35,7 @@ namespace Planet
                 {
                     _heightScale = value;
                     EmitChanged();
-                    SetMaterialParameters();
+                    SetRenderSurfaceMaterialParameters();
                 }
             }
         }
@@ -128,7 +129,7 @@ namespace Planet
                     _resolution = Mathf.Clamp(value, 2, 500);
                     EmitChanged();
                     GenerateMesh();
-                    SetMaterialParameters();
+                    SetRenderSurfaceMaterialParameters();
                 }
             }
         }
@@ -174,7 +175,7 @@ namespace Planet
                 {
                     _subFactor = Mathf.Clamp(value, 0, 10);
                     EmitChanged();
-                    SetMaterialParameters();
+                    SetRenderSurfaceMaterialParameters();
                 }
             }
         }
@@ -192,7 +193,7 @@ namespace Planet
                 {
                     _morphRange = value;
                     EmitChanged();
-                    SetMaterialParameters();
+                    SetRenderSurfaceMaterialParameters();
                 }
             }
         }
@@ -208,7 +209,7 @@ namespace Planet
                 {
                     _nodeSize = Mathf.Clamp(value, 1, 265);
                     EmitChanged();
-                    SetMaterialParameters();
+                    SetRenderSurfaceMaterialParameters();
                 }
             }
         }
@@ -224,7 +225,7 @@ namespace Planet
                 {
                     _startingLod = Mathf.Clamp(value, 0, 4);
                     EmitChanged();
-                    SetMaterialParameters();
+                    SetRenderSurfaceMaterialParameters();
                 }
             }
         }
@@ -244,7 +245,7 @@ namespace Planet
                 {
                     _centerSize = value;
                     EmitChanged();
-                    SetMaterialParameters();
+                    SetRenderSurfaceMaterialParameters();
                 }
             }
         }
@@ -260,7 +261,7 @@ namespace Planet
                 {
                     _borderSize = value;
                     EmitChanged();
-                    SetMaterialParameters();
+                    SetRenderSurfaceMaterialParameters();
                 }
             }
         }
@@ -276,7 +277,7 @@ namespace Planet
                 {
                     _desiredChunkSize = value;
                     EmitChanged();
-                    SetMaterialParameters();
+                    SetRenderSurfaceMaterialParameters();
                 }
             }
         }
@@ -292,7 +293,7 @@ namespace Planet
                 {
                     _albedoMap = value;
                     EmitChanged();
-                    SetMaterialParameters();
+                    SetRenderSurfaceMaterialParameters();
                 }
             }
         }
@@ -308,7 +309,7 @@ namespace Planet
                 {
                     _heightMap = value;
                     EmitChanged();
-                    SetMaterialParameters();
+                    SetRenderSurfaceMaterialParameters();
                 }
             }
         }
@@ -324,7 +325,7 @@ namespace Planet
                 {
                     _normalMap = value;
                     EmitChanged();
-                    SetMaterialParameters();
+                    SetRenderSurfaceMaterialParameters();
                 }
             }
         }
@@ -340,7 +341,7 @@ namespace Planet
                 {
                     _normalStrength = Mathf.Clamp(value, 0, 10);
                     EmitChanged();
-                    SetMaterialParameters();
+                    SetRenderSurfaceMaterialParameters();
                 }
             }
         }
@@ -354,63 +355,97 @@ namespace Planet
         public TileCache TileCache { get; private set; }
 
         public void InitializeVirtualTextures()
-	    {
+        {
+            var rd = RenderingServer.GetRenderingDevice();
+            var framebuffer = rd.FramebufferCreateEmpty(DisplayServer.WindowGetSize(), RenderingDevice.TextureSamples.Samples1);
+
+            rd.FreeRid(framebuffer);
+
             ChunkedClipmap = new(DesiredChunkSize, CenterSize, BorderSize, "res://Assets/Images/test-image.png");
             int gridSize = ChunkedClipmap.ImageSize.Y / DesiredChunkSize;
+
+            GD.Print(ChunkedClipmap.TotalSubdivisions);
             IndirectionTable = new(RenderingServer.GetRenderingDevice(), gridSize, ChunkedClipmap.TotalSubdivisions);
             TileCache = new(IndirectionTable, DesiredChunkSize, ChunkedClipmap);
 
-            ShaderMaterial.SetShaderParameter("indirection_table", IndirectionTable.ToTexture2DArray());
-            ShaderMaterial.SetShaderParameter("grid_size", gridSize);
-            ShaderMaterial.SetShaderParameter("total_texture_subdivisions", ChunkedClipmap.TotalSubdivisions);
-            ShaderMaterial.SetShaderParameter("tile_cache", TileCache.GetTexture());
-	    }
+            RenderSurface.SetShaderParameter("indirection_table", IndirectionTable.ToTexture2DArray());
+            RenderSurface.SetShaderParameter("grid_size", gridSize);
+            RenderSurface.SetShaderParameter("total_texture_subdivisions", ChunkedClipmap.TotalSubdivisions);
+            RenderSurface.SetShaderParameter("tile_cache", TileCache.GetTexture());
+        }
 
         #endregion
 
         #region Material Settings
         [ExportGroup("Material Settings")]
         [Export]
-        public ShaderMaterial ShaderMaterial
+        public ShaderMaterial RenderSurface
         {
-            get => _shaderMaterial;
+            get => _renderSurface;
             set
             {
-                if (_shaderMaterial != value)
+                if (_renderSurface != value)
                 {
-                    _shaderMaterial = value;
+                    _renderSurface = value;
                     EmitChanged();
-                    SetMaterialParameters();
+                    SetRenderSurfaceMaterialParameters();
                 }
             }
         }
-        private ShaderMaterial _shaderMaterial;
+        private ShaderMaterial _renderSurface;
 
-        public void SetMaterialParameters()
+        [Export] public Shader[] Shaders { get; set; }
+        
+        public void SetRenderSurfaceMaterialParameters()
         {
-            if (_shaderMaterial != null)
+
+            if (_renderSurface != null)
             {
-                _shaderMaterial.SetShaderParameter("radius", _radius);
-                _shaderMaterial.SetShaderParameter("position_list", GenerateTrianglePoints());
-                _shaderMaterial.SetShaderParameter("albedo_map", _albedoMap);
-                _shaderMaterial.SetShaderParameter("is_texture_1D", _albedoMap is GradientTexture1D);
-                _shaderMaterial.SetShaderParameter("height_map", _heightMap);
-                _shaderMaterial.SetShaderParameter("normal_map", _normalMap);
-                _shaderMaterial.SetShaderParameter("height_scale", _heightScale);
-                _shaderMaterial.SetShaderParameter("is_colorize_lod", _colorizeLod);
-                _shaderMaterial.SetShaderParameter("is_cube", _cubeMode);
-                _shaderMaterial.SetShaderParameter("is_culling", _culling);
-                _shaderMaterial.SetShaderParameter("resolution", _resolution);
-                _shaderMaterial.SetShaderParameter("normal_strength", _normalStrength);
-                _shaderMaterial.SetShaderParameter("is_morphing", _morphing);
-                _shaderMaterial.SetShaderParameter("sub_factor", _subFactor);
-                _shaderMaterial.SetShaderParameter("morph_range", _morphRange);
-                _shaderMaterial.SetShaderParameter("border_size", _borderSize);
-                _shaderMaterial.SetShaderParameter("center_size", _centerSize);
-                _shaderMaterial.SetShaderParameter("desired_chunk_size", _desiredChunkSize);
-                _shaderMaterial.SetShaderParameter("maximum_lod", _maximumLOD);
+                _renderSurface.SetShaderParameter("radius", _radius);
+                _renderSurface.SetShaderParameter("albedo_map", _albedoMap);
+                _renderSurface.SetShaderParameter("is_texture_1D", _albedoMap is GradientTexture1D);
+                _renderSurface.SetShaderParameter("height_map", _heightMap);
+                _renderSurface.SetShaderParameter("normal_map", _normalMap);
+                _renderSurface.SetShaderParameter("height_scale", _heightScale);
+                _renderSurface.SetShaderParameter("is_colorize_lod", _colorizeLod);
+                _renderSurface.SetShaderParameter("is_cube", _cubeMode);
+                _renderSurface.SetShaderParameter("is_culling", _culling);
+                _renderSurface.SetShaderParameter("resolution", _resolution);
+                _renderSurface.SetShaderParameter("normal_strength", _normalStrength);
+                _renderSurface.SetShaderParameter("is_morphing", _morphing);
+                _renderSurface.SetShaderParameter("sub_factor", _subFactor);
+                _renderSurface.SetShaderParameter("morph_range", _morphRange);
+                _renderSurface.SetShaderParameter("border_size", _borderSize);
+                _renderSurface.SetShaderParameter("center_size", _centerSize);
+                _renderSurface.SetShaderParameter("desired_chunk_size", _desiredChunkSize);
+                _renderSurface.SetShaderParameter("maximum_lod", _maximumLOD);
 
             }
+        }
+
+        ShaderMaterial[] ShaderMaterials; 
+        public void PopulateShaderParameters()
+        {
+
+        
+
+            // ShaderMaterials = new ShaderMaterial[Shaders.Length];
+            // for (int i = 0; i < Shaders.Length; i++)
+            // {
+            //     Shader shader = Shaders[i];
+            //     ShaderMaterials[i] = new ShaderMaterial() { Shader = shader };
+            //     foreach (Dictionary parameter in shader.GetShaderUniformList())
+            //     {
+            //         string variableName =  Utilities.ToCamelCase((StringName)parameter["name"]);
+
+            //         GD.PrintS(parameter["name"], variableName);
+            //         // var properity = GetType().GetProperty(variableName);
+            //         // // string snakeScale = Utilities.ToSnakeCase
+            //         // ShaderMaterials[i].SetShaderParameter(variableName, (Variant)properity.GetValue(this));
+            //     }
+            // }
+
+
         }
 
         #endregion
@@ -427,7 +462,7 @@ namespace Planet
                 {
                     _colorizeLod = value;
                     EmitChanged();
-                    SetMaterialParameters();
+                    SetRenderSurfaceMaterialParameters();
                 }
             }
         }
@@ -443,7 +478,7 @@ namespace Planet
                 {
                     _cubeMode = value;
                     EmitChanged();
-                    SetMaterialParameters();
+                    SetRenderSurfaceMaterialParameters();
                 }
             }
         }
@@ -459,7 +494,7 @@ namespace Planet
                 {
                     _culling = value;
                     EmitChanged();
-                    SetMaterialParameters();
+                    SetRenderSurfaceMaterialParameters();
                 }
             }
         }
@@ -475,7 +510,7 @@ namespace Planet
                 {
                     _morphing = value;
                     EmitChanged();
-                    SetMaterialParameters();
+                    SetRenderSurfaceMaterialParameters();
                 }
             }
         }
@@ -491,7 +526,7 @@ namespace Planet
                 {
                     _bias1 = value;
                     EmitChanged();
-                    SetMaterialParameters();
+                    SetRenderSurfaceMaterialParameters();
                 }
             }
         }
@@ -507,7 +542,7 @@ namespace Planet
                 {
                     _bias2 = value;
                     EmitChanged();
-                    SetMaterialParameters();
+                    SetRenderSurfaceMaterialParameters();
                 }
             }
         }
@@ -523,7 +558,7 @@ namespace Planet
                 {
                     _bias3 = value;
                     EmitChanged();
-                    SetMaterialParameters();
+                    SetRenderSurfaceMaterialParameters();
                 }
             }
         }
@@ -548,106 +583,44 @@ namespace Planet
 
         #region Generation
 
-        public static Vector4[] GenerateTrianglePoints()
-        {
-            Vector4[] trianglePoints = new Vector4[6 * 6];
-            Vector3[] normals = new Vector3[]
-            {
-                Vector3.Up,
-                Vector3.Right,
-                Vector3.Back,
-                Vector3.Down,
-                Vector3.Left,
-                Vector3.Forward,
-            };
-
-            for (int i = 0; i < 6; i++)
-            {
-                Vector3 normal = normals[i];
-                Vector3 axisA = new(normal.Y, normal.Z, normal.X);
-                Vector3 axisB = normal.Cross(axisA);
-                // if (i < 3) {
-
-                trianglePoints[5 * i + 0] = VectorUtils.toVector4(normal, 1);
-                trianglePoints[5 * i + 1] = VectorUtils.toVector4(-axisA + axisB + normal, 1);
-                trianglePoints[5 * i + 2] = VectorUtils.toVector4(-axisA - axisB + normal, 1);
-                trianglePoints[5 * i + 3] = VectorUtils.toVector4(axisA + axisB + normal, 1);
-                trianglePoints[5 * i + 4] = VectorUtils.toVector4(axisA - axisB + normal, 1);
-                // }
-            }
-            return trianglePoints;
-        }
-
-
         public ArrayMesh TriangleMesh { get; private set; } = new();
 
         public void GenerateMesh()
         {
-            Vector3[] vertices = new Vector3[_resolution * (_resolution + 1) / 2];
-            Vector3[] normals = new Vector3[_resolution * (_resolution + 1) / 2];
-            Vector2[] uvs = new Vector2[_resolution * (_resolution + 1) / 2];
-            int[] triangles = new int[(_resolution - 1) * (_resolution - 1) * 6 / 2];
+            Vector3[] vertices = new Vector3[_resolution * _resolution];
+            Vector3[] normals = new Vector3[_resolution * _resolution];
+            Vector2[] uvs = new Vector2[_resolution * _resolution];
+            int[] triangles = new int[2 * _resolution * _resolution - 4];
 
             Vector3 normal = Vector3.Back;
             Vector3 axisA = new(normal.Y, normal.Z, normal.X);
             Vector3 axisB = normal.Cross(axisA).Abs();
             int triIndex = 0;
             int vertexIndex = 0;
-            for (int y = 0; y < _resolution; y++)
+
+            for (int x = 0; x < _resolution; x++)
             {
-                for (int x = 0; x < _resolution - y; x++)
+                for (int y = 0; y < _resolution; y++)
                 {
                     int currentIndex = vertexIndex++;
-                    Vector2 percentage = new Vector2(x, y) / (_resolution - 1);
-                    vertices[currentIndex] = normal + (percentage.X * axisA + percentage.Y * axisB);
+                    Vector2 percentage = new Vector2(x, y) / (_resolution - 1) * 2 - Vector2.One;
+                    vertices[currentIndex] = normal + percentage.X * axisA + percentage.Y * axisB;
                     uvs[currentIndex] = new Vector2(x, y);
                     normals[currentIndex] = normal;
 
-                    if (x != _resolution - y - 1)
+                    if (triIndex < triangles.Length)
                     {
-                        if (x == _resolution - y - 2)
-                        {
-                            triangles[triIndex++] = currentIndex;
-                            triangles[triIndex++] = currentIndex + 1;
-                            triangles[triIndex++] = currentIndex + _resolution - y;
-                        }
-                        else
-                        {
-                            bool isXEven = x % 2 == 0;
-                            bool isYEven = y % 2 == 0;
+                        triangles[triIndex++] = currentIndex;
+                        triangles[triIndex++] = currentIndex + _resolution;
 
-                            if ((isXEven && isYEven) || (!isXEven && !isYEven))
-                            {
-                                triangles[triIndex++] = currentIndex;
-                                triangles[triIndex++] = currentIndex + _resolution - y + 1;
-                                triangles[triIndex++] = currentIndex + _resolution - y;
-                                triangles[triIndex++] = currentIndex;
-                                triangles[triIndex++] = currentIndex + 1;
-                                triangles[triIndex++] = currentIndex + _resolution - y + 1;
-                            }
-                            else
-                            {
-                                triangles[triIndex++] = currentIndex;
-                                triangles[triIndex++] = currentIndex + 1;
-                                triangles[triIndex++] = currentIndex + _resolution - y;
-                                triangles[triIndex++] = currentIndex + 1;
-                                triangles[triIndex++] = currentIndex + _resolution - y + 1;
-                                triangles[triIndex++] = currentIndex + _resolution - y;
-                            }
+                        if (y == _resolution - 1 && x < _resolution - 2)
+                        {
+                            triangles[triIndex++] = currentIndex + _resolution;
+                            triangles[triIndex++] = currentIndex + 1;
                         }
                     }
                 }
             }
-            // string s = "[";
-            // for (int i = 0; i < triangles.Length; i+=3)
-            // {
-            //     Vector2 A = VectorUtils.toVector2(vertices[triangles[i + 0]]);
-            //     Vector2 B = VectorUtils.toVector2(vertices[triangles[i + 1]]);
-            //     Vector2 C = VectorUtils.toVector2(vertices[triangles[i + 2]]);
-            //     s += $"{A}, {B}, {C}, ";
-            // }
-            // s = s.Remove(s.Length - 2) + "]";
-            // GD.Print(s);
 
             Godot.Collections.Array arrays = new();
             arrays.Resize((int)Mesh.ArrayType.Max);
@@ -655,12 +628,10 @@ namespace Planet
             arrays[(int)Mesh.ArrayType.Index] = triangles;
             arrays[(int)Mesh.ArrayType.Normal] = normals;
             arrays[(int)Mesh.ArrayType.TexUV] = uvs;
-            
+
             Rid mesh = TriangleMesh.GetRid();
             RenderingServer.MeshClear(mesh);
-            RenderingServer.MeshAddSurfaceFromArrays(mesh, RenderingServer.PrimitiveType.Triangles, arrays);
-            if (_shaderMaterial != null)
-                RenderingServer.MeshSurfaceSetMaterial(mesh, 0, _shaderMaterial.GetRid());
+            RenderingServer.MeshAddSurfaceFromArrays(mesh, RenderingServer.PrimitiveType.TriangleStrip, arrays);
         }
         #endregion
     }

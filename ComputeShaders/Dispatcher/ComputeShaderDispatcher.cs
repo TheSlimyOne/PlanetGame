@@ -72,7 +72,7 @@ public abstract class ComputeShaderDispatcher<TEnum> : IDispatchable where TEnum
         _rd.Sync();
     }
 
-    bool verbose = true;
+    bool verbose = false;
     public virtual void CleanupGPU()
     {
         if (_rd == null) return;

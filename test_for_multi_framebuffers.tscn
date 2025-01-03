@@ -1,0 +1,121 @@
+[gd_scene load_steps=12 format=3 uid="uid://bralvf7itfimu"]
+
+[ext_resource type="Script" uid="uid://de2gxrtux8cqw" path="res://TestForMultiFramebuffers.cs" id="1_tkgqt"]
+[ext_resource type="Shader" uid="uid://be043ml4ahd43" path="res://green.gdshader" id="2_pqbpc"]
+[ext_resource type="Shader" uid="uid://cr8tfmbw2ya84" path="res://normal.gdshader" id="3_8c7td"]
+[ext_resource type="Shader" uid="uid://0jx0jkkmlxux" path="res://uv.gdshader" id="4_uurbm"]
+[ext_resource type="MultiMesh" uid="uid://5o6gyd6urack" path="res://Scenes/Test.tres" id="5_8c7td"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_bw3ft"]
+render_priority = 0
+shader = ExtResource("2_pqbpc")
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_pqbpc"]
+render_priority = 0
+shader = ExtResource("3_8c7td")
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_8c7td"]
+render_priority = 0
+shader = ExtResource("4_uurbm")
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_pqbpc"]
+sky_horizon_color = Color(0.64625, 0.65575, 0.67075, 1)
+ground_horizon_color = Color(0.64625, 0.65575, 0.67075, 1)
+
+[sub_resource type="Sky" id="Sky_8c7td"]
+sky_material = SubResource("ProceduralSkyMaterial_pqbpc")
+
+[sub_resource type="Environment" id="Environment_uurbm"]
+background_mode = 2
+sky = SubResource("Sky_8c7td")
+tonemap_mode = 2
+glow_enabled = true
+
+[node name="Main" type="Node3D" node_paths=PackedStringArray("viewports", "meshInstance")]
+script = ExtResource("1_tkgqt")
+viewports = [NodePath("Control/HBoxContainer/SubViewportContainer3/ViewGreen"), NodePath("Control/HBoxContainer/SubViewportContainer2/ViewNormal"), NodePath("Control/HBoxContainer/SubViewportContainer/ViewUV")]
+shaders = Array[ShaderMaterial]([SubResource("ShaderMaterial_bw3ft"), SubResource("ShaderMaterial_pqbpc"), SubResource("ShaderMaterial_8c7td")])
+meshInstance = NodePath("MeshInstance3D")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(-0.866023, -0.433016, 0.250001, 0, 0.499998, 0.866027, -0.500003, 0.749999, -0.43301, 0, 0, 0)
+shadow_enabled = true
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_uurbm")
+
+[node name="Main" type="Camera3D" parent="."]
+current = true
+
+[node name="MeshInstance3D" type="MultiMeshInstance3D" parent="."]
+transform = Transform3D(-0.729364, 0.581266, 0.360774, -0.172724, 0.353808, -0.919231, -0.661963, -0.732768, -0.157657, 0, 0, -3)
+multimesh = ExtResource("5_8c7td")
+
+[node name="Control" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="Control"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -567.0
+offset_top = -287.0
+offset_right = 203.0
+offset_bottom = 225.0
+grow_horizontal = 2
+grow_vertical = 2
+alignment = 1
+
+[node name="SubViewportContainer3" type="SubViewportContainer" parent="Control/HBoxContainer"]
+layout_mode = 2
+
+[node name="ViewGreen" type="SubViewport" parent="Control/HBoxContainer/SubViewportContainer3"]
+transparent_bg = true
+handle_input_locally = false
+size = Vector2i(256, 512)
+render_target_update_mode = 4
+
+[node name="Camera3D" type="Camera3D" parent="Control/HBoxContainer/SubViewportContainer3/ViewGreen"]
+
+[node name="SubViewportContainer2" type="SubViewportContainer" parent="Control/HBoxContainer"]
+layout_mode = 2
+
+[node name="ViewNormal" type="SubViewport" parent="Control/HBoxContainer/SubViewportContainer2"]
+transparent_bg = true
+handle_input_locally = false
+size = Vector2i(256, 512)
+render_target_update_mode = 4
+
+[node name="Camera3D" type="Camera3D" parent="Control/HBoxContainer/SubViewportContainer2/ViewNormal"]
+
+[node name="SubViewportContainer" type="SubViewportContainer" parent="Control/HBoxContainer"]
+layout_mode = 2
+
+[node name="ViewUV" type="SubViewport" parent="Control/HBoxContainer/SubViewportContainer"]
+transparent_bg = true
+handle_input_locally = false
+size = Vector2i(250, 512)
+render_target_update_mode = 4
+
+[node name="Camera3D" type="Camera3D" parent="Control/HBoxContainer/SubViewportContainer/ViewUV"]
+
+[node name="SubViewportContainer4" type="SubViewportContainer" parent="Control/HBoxContainer"]
+layout_mode = 2
+
+[node name="SubViewport" type="SubViewport" parent="Control/HBoxContainer/SubViewportContainer4"]
+transparent_bg = true
+size = Vector2i(250, 512)
+
+[node name="Camera3D" type="Camera3D" parent="Control/HBoxContainer/SubViewportContainer4/SubViewport"]
+
+[node name="MultiMeshInstance3D" type="MultiMeshInstance3D" parent="."]
+transform = Transform3D(0.612372, 0.707107, -0.353553, -0.612372, 0.707107, 0.353553, 0.5, 0, 0.866025, 2.17822, 0, -4.05129)
+multimesh = ExtResource("5_8c7td")

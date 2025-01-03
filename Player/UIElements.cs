@@ -78,7 +78,7 @@ public partial class UIElements : CanvasLayer
 		bool currentSetting = !_planetController.SurfaceController.Processing;
 		_planetController.SurfaceController.Processing = currentSetting;
 		_btnProcessLod.Text = currentSetting ? "Stop Processing LOD" : "Start Processing LOD";
-		_planetController.PlanetData.SetMaterialParameters();
+		_planetController.PlanetData.SetRenderSurfaceMaterialParameters();
 	}
 
 	public void UpdateProcessingText()
@@ -91,7 +91,7 @@ public partial class UIElements : CanvasLayer
 		bool currentSetting = !_planetController.PlanetData.ColorizeLod;
 		_planetController.PlanetData.ColorizeLod = currentSetting;
 		_btnColorizeLod.Text = currentSetting ? "Disable Lod Color" : "Enable Lod Color";
-		_planetController.PlanetData.SetMaterialParameters();
+		_planetController.PlanetData.SetRenderSurfaceMaterialParameters();
 	}
 
 	public void EnableOrDisableCubeMode()
@@ -99,7 +99,7 @@ public partial class UIElements : CanvasLayer
 		bool currentSetting = !_planetController.PlanetData.CubeMode;
 		_planetController.PlanetData.CubeMode = currentSetting;
 		_btnCubeMode.Text = currentSetting ? "Disable Cube Mode" : "Enable Cube Mode";
-		_planetController.PlanetData.SetMaterialParameters();
+		_planetController.PlanetData.SetRenderSurfaceMaterialParameters();
 	}
 
 	public void EnableOrDisableCulling()
@@ -107,7 +107,7 @@ public partial class UIElements : CanvasLayer
 		bool currentSetting = !_planetController.PlanetData.Culling;
 		_planetController.PlanetData.Culling = currentSetting;
 		_btnCulling.Text = currentSetting ? "Disable Culling" : "Enable Culling";
-		_planetController.PlanetData.SetMaterialParameters();
+		_planetController.PlanetData.SetRenderSurfaceMaterialParameters();
 	}
 
 	public void EnableOrDisableMorphing()
@@ -115,7 +115,7 @@ public partial class UIElements : CanvasLayer
 		bool currentSetting = !_planetController.PlanetData.Morphing;
 		_planetController.PlanetData.Morphing = currentSetting;
 		_btnMorphing.Text = currentSetting ? "Disable Morphing" : "Enable Morphing";
-		_planetController.PlanetData.SetMaterialParameters();
+		_planetController.PlanetData.SetRenderSurfaceMaterialParameters();
 	}
 
 	public void GenerateNormals()

@@ -8,8 +8,9 @@ namespace Dispatcher
 {
 	public class RenderSurfaceDispatcher : ComputeShaderDispatcher<RenderSurfaceDispatcher.BufferNames>
 	{
-		public PlanetController PlanetController { get; set; }
+		public PlanetData PlanetData { get; set; }
 		public CopyKeysDispatcher CopyKeysDispatcher { get; set; }
+		public CustomCamera Camera { get; set; }
 
 		public enum BufferNames
 		{
@@ -18,7 +19,6 @@ namespace Dispatcher
 			READ_LIST,
 			GLOBAL_KEYS_DATA,
 			WRITE_FULL_LIST,
-			BASE_TRIANGLES,
 			EXTERNAL_DATA,
 			MULTIMESH_BUFFER,
 		}
@@ -38,7 +38,7 @@ namespace Dispatcher
 					new Func<byte[]>(() =>
 					{
 						uint[] primCounts = new uint[2 * 3];
-						primCounts[0] = 6 * (uint)Mathf.Pow(4, PlanetController.PlanetData.StartingLod + 1);
+						primCounts[0] = 6 * (uint)Mathf.Pow(4, PlanetData.StartingLod + 1);
 						return Utilities.ToBytes<uint>(primCounts).ToArray();
 					}).Invoke()
 				 ),
@@ -48,18 +48,18 @@ namespace Dispatcher
 				// 2 Delete Index
 				// 3 Max nodes
 				[BufferNames.INDICES] = new StorageBufferUniform(this, _rd, (int)BufferNames.INDICES,
-					Utilities.ToBytes<uint>(new uint[] { 0, 1, 2, (uint)PlanetController.PlanetData.MaximumNodes }).ToArray()
+					Utilities.ToBytes<uint>(new uint[] { 0, 1, 2, (uint)PlanetData.MaximumNodes }).ToArray()
 				),
 
 				// key = uvec4(nodeIDMSB, nodeIDLSB, meshPolygonID, flagsAndRootID)
 				[BufferNames.READ_LIST] = new StorageBufferUniform(this, _rd, (int)BufferNames.READ_LIST,
 				new Func<byte[]>(() =>
 				{
-					Key[] readList = new Key[PlanetController.PlanetData.MaximumNodes];
-
+					Key[] readList = new Key[PlanetData.MaximumNodes];
+					
 					for (int i = 0; i < 6; i++)
 					{
-						Key[] faceData = Key.GenerateFullFace(PlanetController.PlanetData.StartingLod, i);
+						Key[] faceData = Key.GenerateFullFace(PlanetData.StartingLod, i);
 						System.Array.Copy(faceData, 0, readList, i * faceData.Length, faceData.Length);
 					}
 					return Utilities.ToBytes<Key>(readList).ToArray();
@@ -67,11 +67,7 @@ namespace Dispatcher
 				),
 
 				[BufferNames.WRITE_FULL_LIST] = new StorageBufferUniform(this, _rd, (int)BufferNames.WRITE_FULL_LIST,
-					Utilities.ToBytes<Key>(new Key[PlanetController.PlanetData.MaximumNodes]).ToArray()
-				),
-
-				[BufferNames.BASE_TRIANGLES] = new StorageBufferUniform(this, _rd, (int)BufferNames.BASE_TRIANGLES,
-					Utilities.ToBytes<Vector4>(PlanetData.GenerateTrianglePoints()).ToArray()
+					Utilities.ToBytes<Key>(new Key[PlanetData.MaximumNodes]).ToArray()
 				),
 
 				[BufferNames.GLOBAL_KEYS_DATA] = new Texture2DUniform(this, _rd, (int)BufferNames.GLOBAL_KEYS_DATA,
@@ -95,16 +91,10 @@ namespace Dispatcher
 				),
 
 				[BufferNames.MULTIMESH_BUFFER] = new MultimeshUniform(this,
-					new MultimeshUniform.MultimeshParameters
-					{
-						Mesh = PlanetController.PlanetData.TriangleMesh.GetRid(),
-						Scenario = PlanetController.SurfaceController.GetWorld3D().Scenario,
-						Instance = RenderingServer.InstanceCreate(),
-						InstanceCount = PlanetController.PlanetData.MaximumNodes,
-						ExtraVisibilityMargin = 2 * PlanetController.PlanetData.Radius,
-					},
 					(int)BufferNames.MULTIMESH_BUFFER,
-					false
+					PlanetData.MaximumNodes,
+					PlanetData.TriangleMesh.GetRid(),
+					-1
 				),
 			};
 			CreateUniformSet();
@@ -135,20 +125,20 @@ namespace Dispatcher
 		private byte[] GetExternalData()
 		{
 			Array<byte> data = new();
-			data.AddRange(Utilities.ToBytesSingle(PlanetController.CameraController.GetViewProjectionMatrix()).ToArray());
-			data.AddRange(Utilities.ToBytesSingle(Utilities.ToProjection(PlanetController.PlanetData.GetPlanetTransformMatrix())).ToArray());
-			data.AddRange(Utilities.ToBytesSingle(VectorUtils.toVector4(PlanetController.CameraController.GlobalPosition, 0)).ToArray());
+			data.AddRange(Utilities.ToBytesSingle(Camera.GetViewProjectionMatrix()).ToArray());
+			data.AddRange(Utilities.ToBytesSingle(Utilities.ToProjection(PlanetData.GetPlanetTransformMatrix())).ToArray());
+			data.AddRange(Utilities.ToBytesSingle(VectorUtils.toVector4(Camera.GlobalPosition, 0)).ToArray());
 			data.AddRange(Utilities.ToBytes<float>(new float[]
 			{
-				Mathf.Tan(Mathf.DegToRad(PlanetController.CameraController.Fov) / 2),
-				PlanetController.PlanetData.SubFactor,
-				PlanetController.PlanetData.HeightScale,
-				PlanetController.PlanetData.MaximumLOD,
-				PlanetController.PlanetData.Radius,
+				Mathf.Tan(Camera.GetCameraFov(true) / 2),
+				PlanetData.SubFactor,
+				PlanetData.HeightScale,
+				PlanetData.MaximumLOD,
+				PlanetData.Radius,
 
-				PlanetController.PlanetData.Bias1,
-				PlanetController.PlanetData.Bias2,
-				PlanetController.PlanetData.Culling ? 1 : 0,
+				PlanetData.Bias1,
+				PlanetData.Bias2,
+				PlanetData.Culling ? 1 : 0,
 				0
 			}).ToArray());
 			return data.ToArray();
@@ -160,6 +150,13 @@ namespace Dispatcher
 		// 		Utilities.ToBytesSingle(true).ToArray()
 		// 	);
 		// }
+
+		public Rid CreateMultimeshInstance(Transform3D transform, Rid senario, float extraVisibilityMargin, uint layerMask)
+		{
+			return GetUniform<MultimeshUniform>(BufferNames.MULTIMESH_BUFFER).CreateMultimeshInstance(
+				transform, senario, extraVisibilityMargin, layerMask
+			);
+		}
 
 		public void ResizeReadList()
 		{
@@ -180,8 +177,6 @@ namespace Dispatcher
 		public int GetCurrentMaxLod()
 		{
 			return (int)GetUniform<Texture2DUniform>(BufferNames.GLOBAL_KEYS_DATA).GetPixel(0, 0).R;
-			
 		}
-
-	}
+    }
 }

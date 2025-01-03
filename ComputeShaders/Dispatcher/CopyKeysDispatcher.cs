@@ -1,13 +1,14 @@
 using System;
 using Godot;
 using Godot.Collections;
+using Planet;
 using Uniform;
 
 namespace Dispatcher
 {
     public partial class CopyKeysDispatcher : ComputeShaderDispatcher<CopyKeysDispatcher.BufferNames>
     {
-        public PlanetController PlanetController { get; set; }
+        public PlanetData PlanetData { get; set; }
         public RenderSurfaceDispatcher RenderSurfaceDispatcher { get; set; }
 
         public enum BufferNames
@@ -24,11 +25,6 @@ namespace Dispatcher
             SetupComputeShader();
         }
 
-        public void SetComputeCullShader(RenderSurfaceDispatcher computeCullShader)
-        {
-            RenderSurfaceDispatcher = computeCullShader;
-        }
-
         public override void CreateUniforms()
         {
             _computeShaderUniforms = new System.Collections.Generic.Dictionary<Enum, ComputeShaderUniform>()
@@ -38,16 +34,15 @@ namespace Dispatcher
                 [BufferNames.INDICES] = RenderSurfaceDispatcher.GetUniform(RenderSurfaceDispatcher.BufferNames.INDICES),
 
                 [BufferNames.DISPATCH_BUFFER] = new StorageBufferUniform(this, _rd, (int)BufferNames.DISPATCH_BUFFER,
-                    Utilities.ToBytes<uint>(new uint[] { 6 * (uint)Mathf.Pow(4, PlanetController.PlanetData.StartingLod + 1) / 32 + 1, 1, 1 }).ToArray(), indirect: 1
+                    Utilities.ToBytes<uint>(new uint[] { 6 * (uint)Mathf.Pow(4, PlanetData.StartingLod + 1) / 32 + 1, 1, 1 }).ToArray(), indirect: 1
                 ),
 
                 [BufferNames.GLOBAL_KEYS_DATA] = RenderSurfaceDispatcher.GetUniform(RenderSurfaceDispatcher.BufferNames.GLOBAL_KEYS_DATA),
 
-                [BufferNames.MULTIMESH_COMMAND_BUFFER] = new MultimeshUniform(
-                    this,
-                    RenderSurfaceDispatcher.GetUniform<MultimeshUniform>(RenderSurfaceDispatcher.BufferNames.MULTIMESH_BUFFER).Parameters,
+                [BufferNames.MULTIMESH_COMMAND_BUFFER] = new MultimeshUniform(this, 
                     (int)BufferNames.MULTIMESH_COMMAND_BUFFER,
-                    true),
+                    RenderSurfaceDispatcher.GetUniform<MultimeshUniform>(RenderSurfaceDispatcher.BufferNames.MULTIMESH_BUFFER).Multimesh
+                )
             };
 
             CreateUniformSet();

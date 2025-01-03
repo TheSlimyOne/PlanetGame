@@ -33,7 +33,8 @@ namespace Uniform
             if (_rd == null) return;
             foreach (Rid rid in Uniform.GetIds())
             {
-                _rd.FreeRid(rid);
+                if (rid.IsValid)
+                    _rd.FreeRid(rid);
             }
             Uniform.ClearIds();
         }

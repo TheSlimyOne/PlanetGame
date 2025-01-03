@@ -1,6 +1,8 @@
 using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
+
 using Godot;
 
 
@@ -68,5 +70,36 @@ public static class Utilities
 
 		return meshInstance;
 	}
+
+    public static float LimitRotation(float rotation)
+	{
+		rotation %= 360f;
+		if (rotation < 0) rotation += 360f;
+		return rotation;
+	}
+
+    public static string ToSnakeCase(string camelCase)
+    {
+        string result = Regex.Replace(camelCase, "([a-z])([A-Z])", "$1_$2");
+        result = Regex.Replace(result, "([A-Z])([A-Z][a-z])", "$1_$2");
+        result = result.ToLower();
+        return result.Trim('_');
+    }
+
+   public static string ToCamelCase(string snakeCase)
+    {
+        string[] words = snakeCase.Split('_');
+        for (int i = 0; i < words.Length; i++)
+        {
+            if (!string.IsNullOrEmpty(words[i]))
+            {
+                words[i] = char.ToUpper(words[i][0]) + words[i][1..].ToLower();
+            }
+        }
+
+        string camelCase = string.Concat(words);
+        // Ensure the first character is lowercase and starts with an underscore
+        return "_" + char.ToLower(camelCase[0]) + camelCase[1..];
+    }
 
 }

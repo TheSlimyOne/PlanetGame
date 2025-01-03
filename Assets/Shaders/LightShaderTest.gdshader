@@ -1,4 +1,11 @@
 shader_type spatial;
+varying vec3 normal;
+void vertex(){
+	normal = NORMAL;
+}
 
-uniform float shadow_strength;
+void fragment(){
+	ALBEDO = normal;
+
+}
 
