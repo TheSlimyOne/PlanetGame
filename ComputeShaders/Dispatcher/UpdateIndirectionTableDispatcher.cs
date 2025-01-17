@@ -35,12 +35,12 @@ namespace Dispatcher
 
     	public override void Ready()
     	{
-    		long computeList = _rd.ComputeListBegin();
-    		_rd.ComputeListBindComputePipeline(computeList, _pipeline);
-    		_rd.ComputeListBindUniformSet(computeList, _uniformSet, 0);
-			_rd.ComputeListAddBarrier(computeList);
-    		_rd.ComputeListDispatch(computeList, 1, 1, 1);
-    		_rd.ComputeListEnd();
+    		long computeList = RenderingDevice.ComputeListBegin();
+    		RenderingDevice.ComputeListBindComputePipeline(computeList, _pipeline);
+    		RenderingDevice.ComputeListBindUniformSet(computeList, _uniformSet, 0);
+			RenderingDevice.ComputeListAddBarrier(computeList);
+    		RenderingDevice.ComputeListDispatch(computeList, 1, 1, 1);
+    		RenderingDevice.ComputeListEnd();
     	}
 
         public override void UpdateUniforms()

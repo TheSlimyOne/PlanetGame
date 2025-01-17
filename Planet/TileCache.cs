@@ -9,9 +9,9 @@ public class TileCache
     public IndirectionTable IndirectionTable { get; private set; }
     public int ChunkPixelSize { get; private set; }
     public int ImageSize { get; private set; }
-    public ChunkedClipmap ChunkedClipmap { get; private set; }
+    public ChunkedClipmapGenerator ChunkedClipmap { get; private set; }
 
-    public TileCache(IndirectionTable indirectionTable, int chunkPixelSize, ChunkedClipmap chunkedClipmap)
+    public TileCache(IndirectionTable indirectionTable, int chunkPixelSize, ChunkedClipmapGenerator chunkedClipmap)
     {
         IndirectionTable = indirectionTable;
         ImageSize = IndirectionTable.GridSize * chunkPixelSize;

@@ -2,19 +2,20 @@ using System;
 using Godot;
 using Godot.Collections;
 using Dispatcher;
+using UniformException;
 
 namespace Uniform
 {
     public partial class Texture2DUniform : ComputeShaderUniform
     {
-        public RDTextureFormat TextureFormat { get; private set; }
-        public RDSamplerState SamplerState { get; private set; }
+        public RDTextureFormat TextureFormat { get; protected set; }
+        public RDSamplerState SamplerState { get; protected set; }
 
+        // TODO prob should implement perserved lol idk how I missed that
         public Texture2DUniform(IDispatchable owner, RenderingDevice renderingDevice, int binding, RDTextureFormat format, RenderingDevice.UniformType uniformType, Array<byte[]> textureData = null, bool perserved = false) : base(renderingDevice, binding, owner)
         {
             TextureFormat = format;
             Rid = renderingDevice.TextureCreate(TextureFormat, new RDTextureView(), textureData);
-
             Uniform = new()
             {
                 UniformType = uniformType,
@@ -25,15 +26,16 @@ namespace Uniform
             {
                 SamplerState = new RDSamplerState()
                 {
-                    // MinFilter = RenderingDevice.SamplerFilter.Linear
+                    // TODO Figure this bs out 
+                    //MinFilter = RenderingDevice.SamplerFilter.Linear
                 };
-                Uniform.AddId(_rd.SamplerCreate(SamplerState));
+                Uniform.AddId(RenderingDevice.SamplerCreate(SamplerState));
             }
-        
+
             Uniform.AddId(Rid);
         }
 
-        private Texture2DUniform(IDispatchable owner, Texture2DUniform textureUniform, int binding) : base(textureUniform._rd, binding, owner)
+        private Texture2DUniform(IDispatchable owner, Texture2DUniform textureUniform, int binding) : base(textureUniform.RenderingDevice, binding, owner)
         {
             TextureFormat = textureUniform.TextureFormat;
             Rid = textureUniform.Rid;
@@ -52,11 +54,27 @@ namespace Uniform
             }
         }
 
+        public Texture2DUniform(IDispatchable owner, int binding, Rid viewport, bool perserved = false) : base(binding, owner)
+        {
+            Rid viewportTexture = RenderingServer.ViewportGetTexture(viewport);
+
+            Rid = RenderingServer.TextureGetRdTexture(viewportTexture);
+            TextureFormat = RenderingDevice.TextureGetFormat(Rid);
+
+            Uniform = new()
+            {
+                UniformType = RenderingDevice.UniformType.Image,
+                Binding = binding
+            };
+        
+            Uniform.AddId(Rid);
+        }
+
         public Texture2Drd GetTexture2Drd() => new() { TextureRdRid = Rid };
 
         public Image GetImage(Image.Format format, uint layer = 0) => Image.CreateFromData((int)TextureFormat.Width, (int)TextureFormat.Height, false, format, GetLayerByteData(layer));
-        public byte[] GetLayerByteData(uint layer) => _rd.TextureGetData(Rid, layer);
-    
+        public byte[] GetLayerByteData(uint layer) => RenderingDevice.TextureGetData(Rid, layer);
+
         public void SaveImage(string path, Image.Format format)
         {
             for (uint i = 0; i < TextureFormat.ArrayLayers; i++)
@@ -69,27 +87,27 @@ namespace Uniform
                 else
                 {
                     GD.Print($"Image saved successfully to {path}_{i}.png");
-            }
+                }
             }
         }
 
         public Color GetPixel(int x, int y) => GetTexture2Drd().GetImage().GetPixel(x, y);
 
-        public void ClearTexture(Color color) => _rd.TextureClear(Rid, color, 0, 1, 0, 1);
+        public void ClearTexture(Color color) => RenderingDevice.TextureClear(Rid, color, 0, 1, 0, 1);
 
-        public override void UpdateUniform(byte[] data) => _rd.BufferUpdate(Rid, 0, (uint)data.Length, data);
+        public override void UpdateUniform(byte[] data) => RenderingDevice.TextureUpdate(Rid, 0, data);
 
         public override Texture2DUniform RebindUniform(IDispatchable owner, RenderingDevice rd, int binding)
         {
-            if (rd == _rd)
+            if (rd == RenderingDevice)
                 return new Texture2DUniform(Owner, this, binding);
-            else
-            {
+            else if (!UsingMainRenderingDevice)
                 return new Texture2DUniform(owner, rd, binding, TextureFormat, Uniform.UniformType, GetByteData());
-            }
+            else
+                throw new InvalidRenderingDeviceException();
         }
 
-        public override Array<byte[]> GetByteData() 
+        public override Array<byte[]> GetByteData()
         {
             Array<byte[]> data = new();
             for (uint i = 0; i < TextureFormat.ArrayLayers; i++)
@@ -105,6 +123,11 @@ namespace Uniform
             image.Fill(color);
             return image.GetData();
         }
+
+        // public void GetData()
+        // {
+
+        // } 
     }
 
 }

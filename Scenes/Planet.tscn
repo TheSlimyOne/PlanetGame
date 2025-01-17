@@ -1,18 +1,14 @@
-[gd_scene load_steps=27 format=3 uid="uid://c1roirj1ei3ci"]
+[gd_scene load_steps=26 format=3 uid="uid://c1roirj1ei3ci"]
 
 [ext_resource type="Script" uid="uid://b4tv1heidhb4j" path="res://Planet/PlanetController.cs" id="1_qtwtp"]
 [ext_resource type="Resource" uid="uid://bulxpgk85g4tq" path="res://Planet/PlanetDataDefault.tres" id="2_usljo"]
+[ext_resource type="PackedScene" uid="uid://dw6xke4ovskkx" path="res://Scenes/ui.tscn" id="3_ebyhs"]
 [ext_resource type="Texture2D" uid="uid://ejlq5akl3icw" path="res://Assets/Images/panorama_image.png" id="3_ldv5r"]
 [ext_resource type="Script" uid="uid://b0ouf0wmawpph" path="res://Planet/SurfaceController.cs" id="4_ebyhs"]
 [ext_resource type="Script" uid="uid://b6ndo6pet2jv4" path="res://Player/Camera/CameraController.cs" id="5_usljo"]
-[ext_resource type="Script" uid="uid://dmhjqmw6g7d2t" path="res://Player/UIElements.cs" id="6_21o35"]
+[ext_resource type="Script" uid="uid://bker53ypetnsk" path="res://Player/Camera/OrbitalCamera3D.cs" id="6_ldv5r"]
 [ext_resource type="PackedScene" uid="uid://b0aa8isqnhj7e" path="res://Scenes/DebugCube.tscn" id="7_qtwtp"]
 [ext_resource type="Script" uid="uid://bvr5rurarht8e" path="res://Player/Camera/CustomCamera.cs" id="8_ldv5r"]
-
-[sub_resource type="LabelSettings" id="LabelSettings_jr5mq"]
-font_size = 28
-outline_size = 5
-outline_color = Color(0.0768358, 0.0768358, 0.0768358, 1)
 
 [sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_eodwd"]
 panorama = ExtResource("3_ldv5r")
@@ -22,10 +18,12 @@ sky_material = SubResource("PanoramaSkyMaterial_eodwd")
 
 [sub_resource type="Environment" id="Environment_qqt2a"]
 background_mode = 2
-background_color = Color(0.314316, 0.314316, 0.314316, 1)
 sky = SubResource("Sky_emtpu")
 tonemap_mode = 2
 glow_enabled = true
+
+[sub_resource type="ViewportTexture" id="ViewportTexture_8qkf8"]
+viewport_path = NodePath("CameraController/SubViewport")
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_i1a08"]
 albedo_color = Color(1, 0, 0, 1)
@@ -38,23 +36,18 @@ material = SubResource("StandardMaterial3D_i1a08")
 [sub_resource type="PrismMesh" id="PrismMesh_8qkf8"]
 material = SubResource("StandardMaterial3D_usljo")
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_qtn47"]
-albedo_color = Color(0.141176, 0.278431, 0.611765, 1)
-
-[sub_resource type="SphereMesh" id="SphereMesh_gk1q8"]
-material = SubResource("StandardMaterial3D_qtn47")
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_avjct"]
-albedo_color = Color(0, 1, 1, 1)
-
-[sub_resource type="SphereMesh" id="SphereMesh_21o35"]
-material = SubResource("StandardMaterial3D_avjct")
-
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_6uokv"]
 albedo_color = Color(0.490196, 1, 0, 1)
 
 [sub_resource type="SphereMesh" id="SphereMesh_w1xx6"]
 material = SubResource("StandardMaterial3D_6uokv")
+
+[sub_resource type="Environment" id="Environment_ldv5r"]
+ambient_light_source = 1
+reflected_light_source = 1
+
+[sub_resource type="World3D" id="World3D_ebyhs"]
+environment = SubResource("Environment_ldv5r")
 
 [sub_resource type="MultiMesh" id="MultiMesh_qtwtp"]
 
@@ -65,142 +58,100 @@ material = SubResource("StandardMaterial3D_6uokv")
 [sub_resource type="SphereShape3D" id="SphereShape3D_tgghh"]
 radius = 500.0
 
-[node name="Planet" type="Node3D" node_paths=PackedStringArray("CameraController", "SurfaceController", "SurfaceAttachment")]
+[node name="Planet" type="Node3D" node_paths=PackedStringArray("CameraController", "SurfaceController", "SurfaceAttachment", "UIController")]
 script = ExtResource("1_qtwtp")
 PlanetData = ExtResource("2_usljo")
 CameraController = NodePath("CameraController")
 SurfaceController = NodePath("SurfaceController")
 SurfaceAttachment = NodePath("SurfaceAttachment")
+UIController = NodePath("UIController")
 metadata/_edit_group_ = true
-
-[node name="CanvasLayer" type="CanvasLayer" parent="." node_paths=PackedStringArray("_planetController", "_lblTriangleCount", "_lblFPS", "_lblDistance", "_lblLOD", "_lblCameraMode", "_btnProcessLod", "_btnColorizeLod", "_btnCubeMode", "_btnCulling", "_btnGenerateNormals", "_btnMorphing", "_btnGenerateCubeMap", "ImageContainer")]
-script = ExtResource("6_21o35")
-_planetController = NodePath("..")
-_lblTriangleCount = NodePath("DebugStats/TriangleCount")
-_lblFPS = NodePath("DebugStats/FPS")
-_lblDistance = NodePath("DebugStats/Distance")
-_lblLOD = NodePath("DebugStats/LOD")
-_lblCameraMode = NodePath("DebugStats/CameraMode")
-_btnProcessLod = NodePath("Buttons/btnProcessLod")
-_btnColorizeLod = NodePath("Buttons/btnColorizeLod")
-_btnCubeMode = NodePath("Buttons/btnCubeMode")
-_btnCulling = NodePath("Buttons/btnCulling")
-_btnGenerateNormals = NodePath("Buttons/btnGenerateNormals")
-_btnMorphing = NodePath("Buttons/btnMorphing")
-_btnGenerateCubeMap = NodePath("Buttons/btnGenerateCubeMap")
-ImageContainer = NodePath("ImageContainer")
-_normalPath = "res://ComputeShaders/GLSL/ComputeNormals.glsl"
-_cubeMapPath = "res://ComputeShaders/GLSL/ComputeCubeMap.glsl"
-
-[node name="DebugStats" type="VBoxContainer" parent="CanvasLayer"]
-offset_right = 40.0
-offset_bottom = 40.0
-
-[node name="TriangleCount" type="Label" parent="CanvasLayer/DebugStats"]
-layout_mode = 2
-text = "Triangles: X"
-label_settings = SubResource("LabelSettings_jr5mq")
-
-[node name="FPS" type="Label" parent="CanvasLayer/DebugStats"]
-layout_mode = 2
-text = "FPS: X"
-label_settings = SubResource("LabelSettings_jr5mq")
-
-[node name="Distance" type="Label" parent="CanvasLayer/DebugStats"]
-layout_mode = 2
-text = "Distance: X"
-label_settings = SubResource("LabelSettings_jr5mq")
-
-[node name="LOD" type="Label" parent="CanvasLayer/DebugStats"]
-layout_mode = 2
-text = "Current LOD: X"
-label_settings = SubResource("LabelSettings_jr5mq")
-
-[node name="CameraMode" type="Label" parent="CanvasLayer/DebugStats"]
-layout_mode = 2
-text = "Camera Mode: X"
-label_settings = SubResource("LabelSettings_jr5mq")
-
-[node name="Buttons" type="VBoxContainer" parent="CanvasLayer"]
-anchors_preset = 1
-anchor_left = 1.0
-anchor_right = 1.0
-offset_left = -202.0
-offset_bottom = 167.0
-grow_horizontal = 0
-
-[node name="btnProcessLod" type="Button" parent="CanvasLayer/Buttons"]
-layout_mode = 2
-focus_mode = 0
-text = "Stop Processing LOD"
-
-[node name="btnColorizeLod" type="Button" parent="CanvasLayer/Buttons"]
-layout_mode = 2
-focus_mode = 0
-text = "Enable LOD Color
-"
-
-[node name="btnCubeMode" type="Button" parent="CanvasLayer/Buttons"]
-layout_mode = 2
-focus_mode = 0
-text = "Enable Cube Mode
-"
-
-[node name="btnCulling" type="Button" parent="CanvasLayer/Buttons"]
-layout_mode = 2
-focus_mode = 0
-text = "Disable Culling"
-
-[node name="btnGenerateNormals" type="Button" parent="CanvasLayer/Buttons"]
-layout_mode = 2
-focus_mode = 0
-button_mask = 2
-text = "Generate Normal"
-
-[node name="btnGenerateCubeMap" type="Button" parent="CanvasLayer/Buttons"]
-layout_mode = 2
-focus_mode = 0
-button_mask = 2
-text = "Generate Cube Map"
-
-[node name="btnMorphing" type="Button" parent="CanvasLayer/Buttons"]
-layout_mode = 2
-focus_mode = 0
-text = "Disable Morphing"
-
-[node name="btnGenerateChunks" type="Button" parent="CanvasLayer/Buttons"]
-layout_mode = 2
-focus_mode = 0
-text = "Generate Chunks"
-
-[node name="btnGenerateIndirectionTable" type="Button" parent="CanvasLayer/Buttons"]
-layout_mode = 2
-focus_mode = 0
-text = "Generate Indirection Table"
-
-[node name="ImageContainer" type="HBoxContainer" parent="CanvasLayer"]
-anchors_preset = 12
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_top = -129.0
-grow_horizontal = 2
-grow_vertical = 0
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_qqt2a")
 
-[node name="CameraController" type="Node3D" parent="."]
-script = ExtResource("5_usljo")
+[node name="UIController" parent="." node_paths=PackedStringArray("PlanetController") instance=ExtResource("3_ebyhs")]
+size_flags_horizontal = 0
+size_flags_vertical = 4
+PlanetController = NodePath("..")
 
-[node name="Main" type="Camera3D" parent="CameraController"]
-cull_mask = 3
+[node name="FramebufferVisualizer" type="TextureRect" parent="UIController"]
+z_index = -1
+texture_filter = 1
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = SubResource("ViewportTexture_8qkf8")
+
+[node name="FramebufferDataVisualizer" type="ColorRect" parent="UIController"]
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_top = -150.0
+offset_right = 150.0
+grow_vertical = 0
+mouse_filter = 2
+color = Color(0, 0, 0, 1)
+
+[node name="ColorContainer" type="VBoxContainer" parent="UIController/FramebufferDataVisualizer"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+alignment = 1
+
+[node name="RValue" type="Label" parent="UIController/FramebufferDataVisualizer/ColorContainer"]
+layout_mode = 2
+text = "R: 0"
+horizontal_alignment = 1
+uppercase = true
+
+[node name="GValue" type="Label" parent="UIController/FramebufferDataVisualizer/ColorContainer"]
+layout_mode = 2
+text = "G: 0"
+horizontal_alignment = 1
+uppercase = true
+
+[node name="BValue" type="Label" parent="UIController/FramebufferDataVisualizer/ColorContainer"]
+layout_mode = 2
+text = "B: 0"
+horizontal_alignment = 1
+uppercase = true
+
+[node name="TextureCoords" type="Label" parent="UIController/FramebufferDataVisualizer/ColorContainer"]
+layout_mode = 2
+text = "Index: (X, Y)"
+horizontal_alignment = 1
+uppercase = true
+
+[node name="UnpackedB" type="Label" parent="UIController/FramebufferDataVisualizer/ColorContainer"]
+layout_mode = 2
+text = "Grid: 0, ID: 0"
+horizontal_alignment = 1
+uppercase = true
+
+[node name="CameraController" type="Node" parent="."]
+script = ExtResource("5_usljo")
+Debug = true
+
+[node name="Main" type="Camera3D" parent="CameraController" node_paths=PackedStringArray("Target")]
+cull_mask = 1048573
 current = true
 near = 0.001
 far = 30000.0
-script = ExtResource("8_ldv5r")
+script = ExtResource("6_ldv5r")
 Sensitivity = 0.1
 RotationRangeX = Vector2(0, 180)
+RotationEasing = 0.3
+DistanceFromTarget = 4.1
+Target = NodePath("../../SurfaceController")
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="CameraController/Main"]
 mesh = SubResource("SphereMesh_ebyhs")
@@ -208,25 +159,6 @@ mesh = SubResource("SphereMesh_ebyhs")
 [node name="MeshInstance3D2" type="MeshInstance3D" parent="CameraController/Main"]
 transform = Transform3D(0, 4.37114e-08, 0.331828, 1.2075, -3.55271e-15, 5.15309e-23, 0, 1, -1.45047e-08, 0, 0, 0)
 mesh = SubResource("PrismMesh_8qkf8")
-
-[node name="Debug" type="Camera3D" parent="CameraController"]
-transform = Transform3D(0.761706, 0, 0.647923, 0, 1, 0, -0.647923, 0, 0.761706, 2.87193, 0, 0)
-script = ExtResource("8_ldv5r")
-Sensitivity = 0.1
-RotationRangeX = Vector2(0, 180)
-
-[node name="MeshInstance3D" type="MeshInstance3D" parent="CameraController/Debug"]
-mesh = SubResource("SphereMesh_gk1q8")
-
-[node name="Lookup" type="Camera3D" parent="CameraController"]
-cull_mask = 2
-script = ExtResource("8_ldv5r")
-RotationRangeX = Vector2(0, 6)
-RotationRangeY = Vector2(0, 6)
-RotationRangeZ = Vector2(0, 6)
-
-[node name="MeshInstance3D" type="MeshInstance3D" parent="CameraController/Lookup"]
-mesh = SubResource("SphereMesh_21o35")
 
 [node name="Helper" type="Camera3D" parent="CameraController"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.3)
@@ -238,6 +170,18 @@ script = ExtResource("8_ldv5r")
 [node name="MeshInstance3D" type="MeshInstance3D" parent="CameraController/Helper"]
 mesh = SubResource("SphereMesh_w1xx6")
 
+[node name="SubViewport" type="SubViewport" parent="CameraController"]
+own_world_3d = true
+world_3d = SubResource("World3D_ebyhs")
+handle_input_locally = false
+debug_draw = 1
+use_hdr_2d = true
+size = Vector2i(128, 64)
+render_target_clear_mode = 1
+
+[node name="Lookup" type="Camera3D" parent="CameraController/SubViewport"]
+script = ExtResource("8_ldv5r")
+
 [node name="SurfaceController" type="Node3D" parent="." node_paths=PackedStringArray("WorldEnvironment", "MainLightSource", "InnerCollision", "OuterCollision", "CubicalCollision")]
 script = ExtResource("4_ebyhs")
 WorldEnvironment = NodePath("../WorldEnvironment")
@@ -245,11 +189,12 @@ MainLightSource = NodePath("../SurfaceAttachment/MainLightSource")
 InnerCollision = NodePath("../SurfaceAttachment/InnerCollision")
 OuterCollision = NodePath("../SurfaceAttachment/OuterCollision")
 CubicalCollision = NodePath("../SurfaceAttachment/CubicalCollision")
-BaseOrbitSpeed = 2.0
-OrbitSpeedModifier = 1000.0
-weight = 0.15
 _renderSurfaceShaderPath = "uid://b56oykpmj0br0"
 _copyKeysShaderPath = "uid://b1aoaqwgb51hm"
+_readFramebufferPath = "uid://cpfcddd8gtckg"
+MaxSpeed = 0.005
+ZoomSpeed = 100.0
+MovementEasing = 0.3
 
 [node name="SurfaceAttachment" type="Node3D" parent="."]
 
@@ -279,13 +224,3 @@ visible = false
 
 [node name="OuterCollisionShape3D" type="CollisionShape3D" parent="SurfaceAttachment/OuterCollision"]
 shape = SubResource("SphereShape3D_tgghh")
-
-[connection signal="pressed" from="CanvasLayer/Buttons/btnProcessLod" to="CanvasLayer" method="EnableOrDisableProcessing"]
-[connection signal="pressed" from="CanvasLayer/Buttons/btnColorizeLod" to="CanvasLayer" method="EnableOrDisableLodColorize"]
-[connection signal="pressed" from="CanvasLayer/Buttons/btnCubeMode" to="CanvasLayer" method="EnableOrDisableCubeMode"]
-[connection signal="pressed" from="CanvasLayer/Buttons/btnCulling" to="CanvasLayer" method="EnableOrDisableCulling"]
-[connection signal="pressed" from="CanvasLayer/Buttons/btnGenerateNormals" to="CanvasLayer" method="GenerateNormals"]
-[connection signal="pressed" from="CanvasLayer/Buttons/btnGenerateCubeMap" to="CanvasLayer" method="GenerateCubeMap"]
-[connection signal="pressed" from="CanvasLayer/Buttons/btnMorphing" to="CanvasLayer" method="EnableOrDisableMorphing"]
-[connection signal="pressed" from="CanvasLayer/Buttons/btnGenerateChunks" to="CanvasLayer" method="GenerateChunks"]
-[connection signal="pressed" from="CanvasLayer/Buttons/btnGenerateIndirectionTable" to="CanvasLayer" method="GenerateIndirectionTable"]

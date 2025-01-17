@@ -5,7 +5,6 @@
 #define sqrt2   1.414213562
 #define PI      3.141592653
 
-
 const vec3 normals[6] = vec3[6](
     vec3(1.0, 0.0, 0.0),
     vec3(-1.0, 0.0, 0.0),
@@ -16,7 +15,7 @@ const vec3 normals[6] = vec3[6](
 );
 
 //Jad Khoury https://jadkhoury.github.io/files/MasterThesisFinal.pdf
-layout(local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
 
 layout(set = 0, binding = 0, std430) buffer restrict AtomicCounterBuffer {
     uint primitive_count_full[3];
@@ -47,7 +46,7 @@ layout(set = 0, binding = 5, std430) buffer restrict readonly external_data {
     float fovy;                   
     float sub_factor;             
     float height_scale;           
-    float max_lod;                
+    float maximum_lod;                
     float radius;                 
 
     float bias1;                  
@@ -245,7 +244,7 @@ float calculate_distance(float lod) {
 float calculate_lod(float dist) {
     float num = dist * fovy;
     float dom = sqrt2 * sub_factor * radius;
-    return clamp(-log2(num/dom), -1, 31);
+    return clamp(-log2(num/dom), 0, maximum_lod);
 }
 
 float distance_from_cam(vec3 from, vec3 normal) {
@@ -385,12 +384,12 @@ void cull_key(uvec4 key, Triangle triangle, float lod) {
     // }
     // imageAtomicMax(GlobalKeyData, ivec2(0, 0), culling);
     imageAtomicMax(GlobalKeyData, ivec2(0, 0), get_lod_of_key(key.xy));
+    imageAtomicMin(GlobalKeyData, ivec2(1, 0), get_lod_of_key(key.xy));
 }
 
 void main() {
-    uint leaf_count = uint(atomicExchange(primitive_count_full[read_index], primitive_count_full[read_index]));
     uint invocationID = gl_GlobalInvocationID.x;
-    if (invocationID >= leaf_count)
+    if (invocationID >= primitive_count_full[read_index])
         return;
     
     uvec4 key = read_list[invocationID];
@@ -407,7 +406,7 @@ void main() {
     float parent_target_LOD = calculate_lod_to_cam(parent_triangle.origin, normals[key.z]);
     float target_LOD = calculate_lod_to_cam(triangle.origin, normals[key.z]);
   
-    if (target_LOD > current_LOD && current_LOD < max_lod) { // subdivide
+    if (target_LOD > current_LOD && current_LOD < maximum_lod) { // subdivide
         uvec4 children_keys[4] = get_child_keys(key);
         for (int i = 0; i < 4; i++) {
             uint write_full_index = atomicAdd(primitive_count_full[write_index], 1);

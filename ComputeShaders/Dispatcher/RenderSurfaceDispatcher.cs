@@ -10,7 +10,8 @@ namespace Dispatcher
 	{
 		public PlanetData PlanetData { get; set; }
 		public CopyKeysDispatcher CopyKeysDispatcher { get; set; }
-		public CustomCamera Camera { get; set; }
+		public CustomCamera MainCamera { get; set; }
+		public CustomCamera HelperCamera { get; set; }
 
 		public enum BufferNames
 		{
@@ -34,7 +35,7 @@ namespace Dispatcher
 			{
 				// Full      list  0 - 2
 				// Culling   list  3 - 6
-				[BufferNames.ATOMIC_COUNTER] = new StorageBufferUniform(this, _rd, (int)BufferNames.ATOMIC_COUNTER,
+				[BufferNames.ATOMIC_COUNTER] = new StorageBufferUniform(this, RenderingDevice, (int)BufferNames.ATOMIC_COUNTER,
 					new Func<byte[]>(() =>
 					{
 						uint[] primCounts = new uint[2 * 3];
@@ -47,12 +48,12 @@ namespace Dispatcher
 				// 1 Write Index
 				// 2 Delete Index
 				// 3 Max nodes
-				[BufferNames.INDICES] = new StorageBufferUniform(this, _rd, (int)BufferNames.INDICES,
+				[BufferNames.INDICES] = new StorageBufferUniform(this, RenderingDevice, (int)BufferNames.INDICES,
 					Utilities.ToBytes<uint>(new uint[] { 0, 1, 2, (uint)PlanetData.MaximumNodes }).ToArray()
 				),
 
 				// key = uvec4(nodeIDMSB, nodeIDLSB, meshPolygonID, flagsAndRootID)
-				[BufferNames.READ_LIST] = new StorageBufferUniform(this, _rd, (int)BufferNames.READ_LIST,
+				[BufferNames.READ_LIST] = new StorageBufferUniform(this, RenderingDevice, (int)BufferNames.READ_LIST,
 				new Func<byte[]>(() =>
 				{
 					Key[] readList = new Key[PlanetData.MaximumNodes];
@@ -66,11 +67,11 @@ namespace Dispatcher
 				}).Invoke()
 				),
 
-				[BufferNames.WRITE_FULL_LIST] = new StorageBufferUniform(this, _rd, (int)BufferNames.WRITE_FULL_LIST,
+				[BufferNames.WRITE_FULL_LIST] = new StorageBufferUniform(this, RenderingDevice, (int)BufferNames.WRITE_FULL_LIST,
 					Utilities.ToBytes<Key>(new Key[PlanetData.MaximumNodes]).ToArray()
 				),
 
-				[BufferNames.GLOBAL_KEYS_DATA] = new Texture2DUniform(this, _rd, (int)BufferNames.GLOBAL_KEYS_DATA,
+				[BufferNames.GLOBAL_KEYS_DATA] = new Texture2DUniform(this, RenderingDevice, (int)BufferNames.GLOBAL_KEYS_DATA,
 					new RDTextureFormat()
 					{
 						Width = 10u,
@@ -86,7 +87,7 @@ namespace Dispatcher
 					}, RenderingDevice.UniformType.Image
 				),
 
-				[BufferNames.EXTERNAL_DATA] = new StorageBufferUniform(this, _rd, (int)BufferNames.EXTERNAL_DATA,
+				[BufferNames.EXTERNAL_DATA] = new StorageBufferUniform(this, RenderingDevice, (int)BufferNames.EXTERNAL_DATA,
 					GetExternalData()
 				),
 
@@ -102,12 +103,12 @@ namespace Dispatcher
 
 		public override void Ready()
 		{
-			long computeList = _rd.ComputeListBegin();
-			_rd.ComputeListBindComputePipeline(computeList, _pipeline);
-			_rd.ComputeListBindUniformSet(computeList, _uniformSet, 0);
-			_rd.ComputeListAddBarrier(computeList);
-			_rd.ComputeListDispatchIndirect(computeList, CopyKeysDispatcher.GetUniformRid(CopyKeysDispatcher.BufferNames.DISPATCH_BUFFER), 0);
-			_rd.ComputeListEnd();
+			long computeList = RenderingDevice.ComputeListBegin();
+			RenderingDevice.ComputeListBindComputePipeline(computeList, _pipeline);
+			RenderingDevice.ComputeListBindUniformSet(computeList, _uniformSet, 0);
+			RenderingDevice.ComputeListAddBarrier(computeList);
+			RenderingDevice.ComputeListDispatchIndirect(computeList, CopyKeysDispatcher.GetUniformRid(CopyKeysDispatcher.BufferNames.DISPATCH_BUFFER), 0);
+			RenderingDevice.ComputeListEnd();
 		}
 
 		public override void UpdateUniforms()
@@ -124,24 +125,26 @@ namespace Dispatcher
 		//TODO make this push-constants
 		private byte[] GetExternalData()
 		{
-			Array<byte> data = new();
-			data.AddRange(Utilities.ToBytesSingle(Camera.GetViewProjectionMatrix()).ToArray());
-			data.AddRange(Utilities.ToBytesSingle(Utilities.ToProjection(PlanetData.GetPlanetTransformMatrix())).ToArray());
-			data.AddRange(Utilities.ToBytesSingle(VectorUtils.toVector4(Camera.GlobalPosition, 0)).ToArray());
-			data.AddRange(Utilities.ToBytes<float>(new float[]
-			{
-				Mathf.Tan(Camera.GetCameraFov(true) / 2),
-				PlanetData.SubFactor,
-				PlanetData.HeightScale,
-				PlanetData.MaximumLOD,
-				PlanetData.Radius,
+			Array<byte> data =
+            [
+                .. Utilities.ToBytesSingle(HelperCamera.GetViewProjectionMatrix()),
+                .. Utilities.ToBytesSingle(Utilities.ToProjection(PlanetData.GetPlanetTransformMatrix())),
+                .. Utilities.ToBytesSingle(VectorUtils.ToVector4(MainCamera.GlobalPosition, 0)),
+                .. Utilities.ToBytes(
+                [
+                    Mathf.Tan(HelperCamera.GetCameraFov(true) / 2),
+                    PlanetData.SubFactor,
+                    PlanetData.HeightScale,
+                    PlanetData.MaximumLOD,
+                    PlanetData.Radius,
 
-				PlanetData.Bias1,
-				PlanetData.Bias2,
-				PlanetData.Culling ? 1 : 0,
-				0
-			}).ToArray());
-			return data.ToArray();
+                    PlanetData.Bias1,
+                    PlanetData.Bias2,
+                    PlanetData.Culling ? 1 : 0,
+                    0
+                ]),
+            ];
+			return [.. data];
 		}
 
 		// public void ComputePages()
@@ -174,7 +177,7 @@ namespace Dispatcher
 			return ((int)primCounts[indices[0]], (int)primCounts[indices[0] + 3]);
 		}
 
-		public int GetCurrentMaxLod()
+		public int GetCurrentLod()
 		{
 			return (int)GetUniform<Texture2DUniform>(BufferNames.GLOBAL_KEYS_DATA).GetPixel(0, 0).R;
 		}

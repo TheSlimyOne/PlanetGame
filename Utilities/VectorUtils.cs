@@ -70,11 +70,11 @@ public static class VectorUtils
 
     public static int SignOfNormal(Vector3 vector) => (int)vector[GetIndexOfNormalComponent(vector)];
 
-    public static Vector4 toVector4(Vector3 vector, float padValue) => new(vector.X, vector.Y, vector.Z, padValue);
+    public static Vector4 ToVector4(Vector3 vector, float padValue) => new(vector.X, vector.Y, vector.Z, padValue);
 
-    public static Vector3 toVector3(Vector4 vector) => new(vector.X, vector.Y, vector.Z);
+    public static Vector3 ToVector3(Vector4 vector) => new(vector.X, vector.Y, vector.Z);
 
-    public static Vector3 toVector3(Vector2 vector, float padding) => new(vector.X, vector.Y, padding);
+    public static Vector3 ToVector3(Vector2 vector, float padding) => new(vector.X, vector.Y, padding);
 
     public static Vector2 toVector2(Vector3 vector) => new(vector.X, vector.Y);
 

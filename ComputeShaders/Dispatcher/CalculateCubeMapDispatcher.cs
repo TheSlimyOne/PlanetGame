@@ -35,7 +35,7 @@ namespace Dispatcher
                     image.Decompress();
                     image.Convert(Image.Format.Rgbaf);
 
-                    return new Texture2DUniform(this, _rd, (int)BufferNames.IMAGE_TEXTURE,
+                    return new Texture2DUniform(this, RenderingDevice, (int)BufferNames.IMAGE_TEXTURE,
                         new RDTextureFormat()
                         {
                             Width = (uint)image.GetWidth(),
@@ -46,7 +46,7 @@ namespace Dispatcher
                         }, RenderingDevice.UniformType.SamplerWithTexture, textureData: new() { image.GetData() });
                 }).Invoke(),
 
-                [BufferNames.CUBE_TEXTURE] = new Texture2DUniform(this, _rd, (int)BufferNames.CUBE_TEXTURE,
+                [BufferNames.CUBE_TEXTURE] = new Texture2DUniform(this, RenderingDevice, (int)BufferNames.CUBE_TEXTURE,
                     new RDTextureFormat()
                     {
                         Width = (uint)cubeFaceSize,
@@ -58,12 +58,12 @@ namespace Dispatcher
                     }, RenderingDevice.UniformType.Image,
                     textureData: new()
                     {
-                        Texture2DUniform.CreateSolidColorImage(cubeFaceSize, cubeFaceSize, Image.Format.Rgbaf, VectorUtils.ToColor(VectorUtils.toVector4(Vector3.Up, 1))),
-                        Texture2DUniform.CreateSolidColorImage(cubeFaceSize, cubeFaceSize, Image.Format.Rgbaf, VectorUtils.ToColor(VectorUtils.toVector4(Vector3.Down, 1))),
-                        Texture2DUniform.CreateSolidColorImage(cubeFaceSize, cubeFaceSize, Image.Format.Rgbaf, VectorUtils.ToColor(VectorUtils.toVector4(Vector3.Left, 1))),
-                        Texture2DUniform.CreateSolidColorImage(cubeFaceSize, cubeFaceSize, Image.Format.Rgbaf, VectorUtils.ToColor(VectorUtils.toVector4(Vector3.Right, 1))),
-                        Texture2DUniform.CreateSolidColorImage(cubeFaceSize, cubeFaceSize, Image.Format.Rgbaf, VectorUtils.ToColor(VectorUtils.toVector4(Vector3.Forward, 1))),
-                        Texture2DUniform.CreateSolidColorImage(cubeFaceSize, cubeFaceSize, Image.Format.Rgbaf, VectorUtils.ToColor(VectorUtils.toVector4(Vector3.Back, 1))),
+                        Texture2DUniform.CreateSolidColorImage(cubeFaceSize, cubeFaceSize, Image.Format.Rgbaf, VectorUtils.ToColor(VectorUtils.ToVector4(Vector3.Up, 1))),
+                        Texture2DUniform.CreateSolidColorImage(cubeFaceSize, cubeFaceSize, Image.Format.Rgbaf, VectorUtils.ToColor(VectorUtils.ToVector4(Vector3.Down, 1))),
+                        Texture2DUniform.CreateSolidColorImage(cubeFaceSize, cubeFaceSize, Image.Format.Rgbaf, VectorUtils.ToColor(VectorUtils.ToVector4(Vector3.Left, 1))),
+                        Texture2DUniform.CreateSolidColorImage(cubeFaceSize, cubeFaceSize, Image.Format.Rgbaf, VectorUtils.ToColor(VectorUtils.ToVector4(Vector3.Right, 1))),
+                        Texture2DUniform.CreateSolidColorImage(cubeFaceSize, cubeFaceSize, Image.Format.Rgbaf, VectorUtils.ToColor(VectorUtils.ToVector4(Vector3.Forward, 1))),
+                        Texture2DUniform.CreateSolidColorImage(cubeFaceSize, cubeFaceSize, Image.Format.Rgbaf, VectorUtils.ToColor(VectorUtils.ToVector4(Vector3.Back, 1))),
                     }
                 ),
             };
@@ -76,11 +76,11 @@ namespace Dispatcher
         {
             int cubeFaceSize = InputTexture.GetHeight() / 2;
             Vector2I numThreads = new(cubeFaceSize / INNOVCATIONS, cubeFaceSize / INNOVCATIONS);
-            long computeList = _rd.ComputeListBegin();
-            _rd.ComputeListBindComputePipeline(computeList, _pipeline);
-            _rd.ComputeListBindUniformSet(computeList, _uniformSet, 0);
-            _rd.ComputeListDispatch(computeList, (uint)numThreads.X, (uint)numThreads.Y, 6);
-            _rd.ComputeListEnd();
+            long computeList = RenderingDevice.ComputeListBegin();
+            RenderingDevice.ComputeListBindComputePipeline(computeList, _pipeline);
+            RenderingDevice.ComputeListBindUniformSet(computeList, _uniformSet, 0);
+            RenderingDevice.ComputeListDispatch(computeList, (uint)numThreads.X, (uint)numThreads.Y, 6);
+            RenderingDevice.ComputeListEnd();
         }
 
         public override void UpdateUniforms()

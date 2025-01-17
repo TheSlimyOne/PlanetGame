@@ -22,7 +22,7 @@ namespace Uniform
             Uniform.AddId(Rid);
         }
 
-        private StorageBufferUniform(IDispatchable owner, StorageBufferUniform storageBufferUniform, int binding) : base(storageBufferUniform._rd, binding, owner)
+        private StorageBufferUniform(IDispatchable owner, StorageBufferUniform storageBufferUniform, int binding) : base(storageBufferUniform.RenderingDevice, binding, owner)
         {
             Rid = storageBufferUniform.Rid;
             Indirect = storageBufferUniform.Indirect;
@@ -42,28 +42,28 @@ namespace Uniform
         public void ResizeBuffer(uint size)
         {
             Uniform.ClearIds();
-            _rd.FreeRid(Rid);
-            Rid = _rd.StorageBufferCreate(size, new byte[size], usage: (RenderingDevice.StorageBufferUsage)Indirect);
+            RenderingDevice.FreeRid(Rid);
+            Rid = RenderingDevice.StorageBufferCreate(size, new byte[size], usage: (RenderingDevice.StorageBufferUsage)Indirect);
             Uniform.AddId(Rid);
         }
 
-        public override StorageBufferUniform RebindUniform(IDispatchable owner, RenderingDevice rd, int binding) 
+        public override StorageBufferUniform RebindUniform(IDispatchable owner, RenderingDevice rd, int binding)
         {
-            if (rd == _rd)
+            if (rd == RenderingDevice)
                 return new StorageBufferUniform(Owner, this, binding);
             else
                 return new StorageBufferUniform(owner, rd, binding, GetByteData()[0], indirect: Indirect);
         }
 
-        public T[] GetData<T>() where T : unmanaged => Utilities.FromBytes<T>(_rd.BufferGetData(Rid)).ToArray();
+        public T[] GetData<T>() where T : unmanaged => Utilities.FromBytes<T>(RenderingDevice.BufferGetData(Rid)).ToArray();
 
         public override void UpdateUniform(byte[] data)
         {
-            _rd.BufferUpdate(Rid, 0, (uint)data.Length, data);
+            RenderingDevice.BufferUpdate(Rid, 0, (uint)data.Length, data);
         }
 
-        public override Array<byte[]> GetByteData() => new() { _rd.BufferGetData(Rid) };
-        
+        public override Array<byte[]> GetByteData() => new() { RenderingDevice.BufferGetData(Rid) };
+
     }
 
 }

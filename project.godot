@@ -10,9 +10,13 @@ config_version=5
 
 [application]
 
-config/name="Planet Game"
+config/name="Main Planet Game"
 run/main_scene="res://Scenes/Planet.tscn"
 config/features=PackedStringArray("4.4", "C#", "Forward Plus")
+
+[display]
+
+window/subwindows/embed_subwindows=false
 
 [dotnet]
 

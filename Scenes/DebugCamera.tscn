@@ -1,7 +1,0 @@
-[gd_scene load_steps=2 format=3 uid="uid://1n2ai6k6m8iy"]
-
-[ext_resource type="Script" uid="uid://dibywgrl83p42" path="res://FreeCamera.gd" id="1_i1bj1"]
-
-[node name="DebugCamera" type="Camera3D"]
-far = 100000.0
-script = ExtResource("1_i1bj1")

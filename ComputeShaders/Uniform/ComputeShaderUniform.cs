@@ -10,18 +10,24 @@ namespace Uniform
         public Rid Rid { get; protected set; }
         public int Binding { get; protected set; }
         public RDUniform Uniform { get; protected set; }
-        protected RenderingDevice _rd;
+        public RenderingDevice RenderingDevice { get; private set; }
+        public readonly bool UsingMainRenderingDevice;
         public IDispatchable Owner { get; protected set; }
 
+        protected ComputeShaderUniform(int binding, IDispatchable owner) : this(RenderingServer.GetRenderingDevice(), binding, owner) { }
+       
         protected ComputeShaderUniform(RenderingDevice renderingDevice, int binding, IDispatchable owner)
         {
-            _rd = renderingDevice;
+            RenderingDevice = renderingDevice;
+            UsingMainRenderingDevice = RenderingDevice == RenderingServer.GetRenderingDevice(); 
+
             Binding = binding;
             Owner = owner;
         }
 
         // This is supposed to simplify the process of sharing buffers between 2 or more compute shaders
         // It will either share the data if the rd is the same or clone the buffer to another rd if the rds are different
+        // Make sure that if the Uniform requires the main rd to throw error if rebinding to local rd
         public abstract ComputeShaderUniform RebindUniform(IDispatchable owner, RenderingDevice rd, int binding);
 
         public abstract void UpdateUniform(byte[] data);
@@ -30,11 +36,11 @@ namespace Uniform
 
         public virtual void FreeRids()
         {
-            if (_rd == null) return;
+            if (RenderingDevice == null) return;
             foreach (Rid rid in Uniform.GetIds())
             {
                 if (rid.IsValid)
-                    _rd.FreeRid(rid);
+                    RenderingDevice.FreeRid(rid);
             }
             Uniform.ClearIds();
         }

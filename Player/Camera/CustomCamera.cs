@@ -3,7 +3,6 @@ using System;
 
 public partial class CustomCamera : Camera3D
 {
-	[Export] public float DistanceFromTarget { get; set; }
 	[Export] public float BaseZoomSpeed { get; set; }
 	[Export] public float MaxDistance { get; set; }
 	[Export] public float MinDistance { get; set; }
@@ -17,66 +16,79 @@ public partial class CustomCamera : Camera3D
 	[Export] public Vector2 RotationRangeY { get; set; }
 	[Export] public Vector2 RotationRangeZ { get; set; }
 
-	public override void _Ready()
-	{
-		// ProcessPriority = 5;
+	[Export] public float RotationEasing { get; set; }
+	private Vector2 _keyRotation;
 
-	}
+	[Export] public float DistanceFromTarget { get; set; }
+	[Export] public Node3D Target { get; set; }
+	
+	RemoteTransform3D FollowRemote;
 
 	public override void _PhysicsProcess(double delta)
 	{
-		// _cameraController.Rotation = _cameraController.Rotation with { X = Mathf.Clamp(_cameraController.Rotation.X + (by * (_keyCameraRotation.Y + _mouseCameraRotation.Y)), 0, Mathf.Pi - 0.0001f) };
-
-		if (Current)
+		if (GetTree().Root.GetViewport().GetCamera3D() == this)
 		{
-			Quaternion pitch = new Quaternion(Vector3.Right, Mathf.DegToRad(_lookRotation.X));
-			Quaternion yaw = new Quaternion(Vector3.Up, Mathf.DegToRad(_lookRotation.Y));
-			Quaternion roll = new Quaternion(Vector3.Forward, Mathf.DegToRad(_lookRotation.Z));
+			_keyRotation.X += Input.GetActionStrength("rotate_right") - Input.GetActionStrength("rotate_left");
+			_keyRotation.Y += Input.GetActionStrength("rotate_up") - Input.GetActionStrength("rotate_down");
+
+			ApplyRotation(x: _keyRotation.Y, z: _keyRotation.X);
+
+			Quaternion pitch = new(Vector3.Right, Mathf.DegToRad(_lookRotation.X));
+			Quaternion yaw = new(Vector3.Up, Mathf.DegToRad(_lookRotation.Y));
+			Quaternion roll = new(Vector3.Forward, Mathf.DegToRad(_lookRotation.Z));
 
 			Quaternion combinedRotation = yaw * roll * pitch;
-			Basis basis = new Basis(combinedRotation);
+			Basis basis = new(combinedRotation);
 
 			Transform3D transform = GlobalTransform;
 			transform.Basis = basis;
 			GlobalTransform = transform;
 
 
+			// float direction = Input.GetActionStrength("move_up") - Input.GetActionStrength("move_down");
+			// DistanceFromTarget += direction * (float)delta * 2f;
+			_keyRotation = _keyRotation.Lerp(Vector2.Zero, RotationEasing);
 		}
+		GlobalPosition = GlobalPosition with { Z = DistanceFromTarget };
 
 
 		// LookRotation = Vector3.Zero;
 	}
 
-	public void Follow(CustomCamera otherCamera)
+	public void Follow(CustomCamera otherCamera, bool useGlobalCoordinates = true, bool updatePosition = true, bool updateRotation = true, bool updateScale = true)
 	{
-		RemoteTransform3D remote = new();
-		otherCamera.AddChild(remote);
-		remote.GlobalPosition = GlobalPosition;
-		remote.RemotePath = GetPath();
+        FollowRemote = new()
+        {
+            RemotePath = GetPath(),
+            UseGlobalCoordinates = useGlobalCoordinates,
+            UpdatePosition = updatePosition,
+            UpdateRotation = updateRotation,
+            UpdateScale = updateScale,
+        };
+        otherCamera.AddChild(FollowRemote);
+		FollowRemote.GlobalPosition = GlobalPosition;
 	}
 
 	public override void _Input(InputEvent @event)
 	{
-		if (Input.IsActionJustReleased("cam_exit") && Current)
+		if (Input.IsActionJustReleased("cam_exit") && GetCurrent() == this)
 		{
 			if (Locked)
 				UnlockMouse();
 			else
-			{
 				LockMouse();
-			}
 		}
 
 		if (Locked && @event is InputEventMouseMotion mouseMotionEvent)
 		{
-			SetLookRotation(x: -mouseMotionEvent.Relative.Y * Sensitivity, z: mouseMotionEvent.Relative.X * Sensitivity);
+			ApplyRotation(x: -mouseMotionEvent.Relative.Y * Sensitivity, z: mouseMotionEvent.Relative.X * Sensitivity);
 		}
 	}
 
 
-	public void UpdateLookRotation(Vector3 rotation) => SetLookRotation(rotation.X, rotation.Y, rotation.Z);
+	public void ApplyRotation(Vector3 rotation) => ApplyRotation(rotation.X, rotation.Y, rotation.Z);
 
-	public void SetLookRotation(float x = 0, float y = 0, float z = 0)
+	public void ApplyRotation(float x = 0, float y = 0, float z = 0)
 	{
 		_lookRotation.X += x;
 		_lookRotation.Y += y;
@@ -92,11 +104,12 @@ public partial class CustomCamera : Camera3D
 		return _lookRotation;
 	}
 
-	
+
 	public void LockMouse()
 	{
 		Input.MouseMode = Input.MouseModeEnum.Captured;
 		Locked = true;
+
 	}
 
 	public void UnlockMouse()
@@ -129,6 +142,8 @@ public partial class CustomCamera : Camera3D
 		return projectionMatrix * viewMatrix4;
 	}
 
-
+	public Camera3D GetCurrent(){
+		return GetTree().Root.GetViewport().GetCamera3D();
+	}
 
 }

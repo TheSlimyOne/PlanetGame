@@ -32,7 +32,7 @@ void main() {
     uint full_count = primCount_full[read_index];
     uint culled_count = primCount_culled[read_index];
 
-    workgroup_size_x = uint(full_count / 32) + 1;   
+    workgroup_size_x = uint(full_count / 64) + 1;   
 
     primCount_full[delete_index] = 0;
     primCount_culled[delete_index] = 0;

@@ -1,6 +1,7 @@
 using System;
 using Godot;
 using Godot.Collections;
+using Shaders;
 namespace Planet
 {
     [Tool]
@@ -19,7 +20,7 @@ namespace Planet
                 {
                     _radius = Mathf.Clamp(value, 1, 8000);
                     EmitChanged();
-                    SetRenderSurfaceMaterialParameters();
+
                 }
             }
         }
@@ -35,7 +36,7 @@ namespace Planet
                 {
                     _heightScale = value;
                     EmitChanged();
-                    SetRenderSurfaceMaterialParameters();
+
                 }
             }
         }
@@ -128,8 +129,6 @@ namespace Planet
                 {
                     _resolution = Mathf.Clamp(value, 2, 500);
                     EmitChanged();
-                    GenerateMesh();
-                    SetRenderSurfaceMaterialParameters();
                 }
             }
         }
@@ -175,7 +174,6 @@ namespace Planet
                 {
                     _subFactor = Mathf.Clamp(value, 0, 10);
                     EmitChanged();
-                    SetRenderSurfaceMaterialParameters();
                 }
             }
         }
@@ -193,7 +191,6 @@ namespace Planet
                 {
                     _morphRange = value;
                     EmitChanged();
-                    SetRenderSurfaceMaterialParameters();
                 }
             }
         }
@@ -209,7 +206,6 @@ namespace Planet
                 {
                     _nodeSize = Mathf.Clamp(value, 1, 265);
                     EmitChanged();
-                    SetRenderSurfaceMaterialParameters();
                 }
             }
         }
@@ -225,7 +221,6 @@ namespace Planet
                 {
                     _startingLod = Mathf.Clamp(value, 0, 4);
                     EmitChanged();
-                    SetRenderSurfaceMaterialParameters();
                 }
             }
         }
@@ -245,7 +240,6 @@ namespace Planet
                 {
                     _centerSize = value;
                     EmitChanged();
-                    SetRenderSurfaceMaterialParameters();
                 }
             }
         }
@@ -261,7 +255,6 @@ namespace Planet
                 {
                     _borderSize = value;
                     EmitChanged();
-                    SetRenderSurfaceMaterialParameters();
                 }
             }
         }
@@ -277,7 +270,6 @@ namespace Planet
                 {
                     _desiredChunkSize = value;
                     EmitChanged();
-                    SetRenderSurfaceMaterialParameters();
                 }
             }
         }
@@ -293,7 +285,6 @@ namespace Planet
                 {
                     _albedoMap = value;
                     EmitChanged();
-                    SetRenderSurfaceMaterialParameters();
                 }
             }
         }
@@ -309,7 +300,6 @@ namespace Planet
                 {
                     _heightMap = value;
                     EmitChanged();
-                    SetRenderSurfaceMaterialParameters();
                 }
             }
         }
@@ -325,7 +315,6 @@ namespace Planet
                 {
                     _normalMap = value;
                     EmitChanged();
-                    SetRenderSurfaceMaterialParameters();
                 }
             }
         }
@@ -341,7 +330,6 @@ namespace Planet
                 {
                     _normalStrength = Mathf.Clamp(value, 0, 10);
                     EmitChanged();
-                    SetRenderSurfaceMaterialParameters();
                 }
             }
         }
@@ -350,123 +338,85 @@ namespace Planet
 
         #region Virtual Texturing Settings
 
+        [Export] public int[] TextureMapping { get; private set; }
+
         public IndirectionTable IndirectionTable { get; private set; }
-        public ChunkedClipmap ChunkedClipmap { get; private set; }
+        public ChunkedClipmapGenerator LeftGenerator { get; private set; }
+        public ChunkedClipmapGenerator RightGenerator { get; private set; }
         public TileCache TileCache { get; private set; }
+        public int TotalSubdivisions { get; private set; }
 
-        public void InitializeVirtualTextures()
+        public void InitializeVirtualTextures(Node node)
         {
-            var rd = RenderingServer.GetRenderingDevice();
-            var framebuffer = rd.FramebufferCreateEmpty(DisplayServer.WindowGetSize(), RenderingDevice.TextureSamples.Samples1);
+            LeftGenerator = new(DesiredChunkSize, CenterSize, BorderSize, "user://test/BIGA.png");
+            RightGenerator = new(DesiredChunkSize, CenterSize, BorderSize, "user://test/BIGB.png");
 
-            rd.FreeRid(framebuffer);
+            TotalSubdivisions = LeftGenerator.TotalSubdivisions;
+            int gridSize = (int)Mathf.Pow(2, LeftGenerator.TotalSubdivisions);
 
-            ChunkedClipmap = new(DesiredChunkSize, CenterSize, BorderSize, "res://Assets/Images/test-image.png");
-            int gridSize = ChunkedClipmap.ImageSize.Y / DesiredChunkSize;
-
-            GD.Print(ChunkedClipmap.TotalSubdivisions);
-            IndirectionTable = new(RenderingServer.GetRenderingDevice(), gridSize, ChunkedClipmap.TotalSubdivisions);
-            TileCache = new(IndirectionTable, DesiredChunkSize, ChunkedClipmap);
-
-            RenderSurface.SetShaderParameter("indirection_table", IndirectionTable.ToTexture2DArray());
-            RenderSurface.SetShaderParameter("grid_size", gridSize);
-            RenderSurface.SetShaderParameter("total_texture_subdivisions", ChunkedClipmap.TotalSubdivisions);
-            RenderSurface.SetShaderParameter("tile_cache", TileCache.GetTexture());
+            IndirectionTable = new(node, RenderingServer.GetRenderingDevice(), gridSize, TotalSubdivisions);
+            // IndirectionTable.ToTexture2DArray();
+            TileCache = new(IndirectionTable, DesiredChunkSize, LeftGenerator);
         }
 
         #endregion
 
         #region Material Settings
         [ExportGroup("Material Settings")]
-        [Export]
-        public ShaderMaterial RenderSurface
+
+        [Export] public BindableShaderMaterial SurfaceShader { get; set; }
+
+        [Export] public BindableShaderMaterial FramebufferShader { get; set; }
+
+        public void UpdateShaderParameters()
         {
-            get => _renderSurface;
-            set
-            {
-                if (_renderSurface != value)
-                {
-                    _renderSurface = value;
-                    EmitChanged();
-                    SetRenderSurfaceMaterialParameters();
-                }
-            }
-        }
-        private ShaderMaterial _renderSurface;
-
-        [Export] public Shader[] Shaders { get; set; }
-        
-        public void SetRenderSurfaceMaterialParameters()
-        {
-
-            if (_renderSurface != null)
-            {
-                _renderSurface.SetShaderParameter("radius", _radius);
-                _renderSurface.SetShaderParameter("albedo_map", _albedoMap);
-                _renderSurface.SetShaderParameter("is_texture_1D", _albedoMap is GradientTexture1D);
-                _renderSurface.SetShaderParameter("height_map", _heightMap);
-                _renderSurface.SetShaderParameter("normal_map", _normalMap);
-                _renderSurface.SetShaderParameter("height_scale", _heightScale);
-                _renderSurface.SetShaderParameter("is_colorize_lod", _colorizeLod);
-                _renderSurface.SetShaderParameter("is_cube", _cubeMode);
-                _renderSurface.SetShaderParameter("is_culling", _culling);
-                _renderSurface.SetShaderParameter("resolution", _resolution);
-                _renderSurface.SetShaderParameter("normal_strength", _normalStrength);
-                _renderSurface.SetShaderParameter("is_morphing", _morphing);
-                _renderSurface.SetShaderParameter("sub_factor", _subFactor);
-                _renderSurface.SetShaderParameter("morph_range", _morphRange);
-                _renderSurface.SetShaderParameter("border_size", _borderSize);
-                _renderSurface.SetShaderParameter("center_size", _centerSize);
-                _renderSurface.SetShaderParameter("desired_chunk_size", _desiredChunkSize);
-                _renderSurface.SetShaderParameter("maximum_lod", _maximumLOD);
-
-            }
+            SurfaceShader.UpdateAllParameters();
+            FramebufferShader.UpdateAllParameters();
         }
 
-        ShaderMaterial[] ShaderMaterials; 
-        public void PopulateShaderParameters()
+        public void BindVertexShaderParameters(BindableShaderMaterial bindableShaderMaterial, CustomCamera main, CustomCamera helper)
         {
+            bindableShaderMaterial.Bind("radius", () => Radius);
+            bindableShaderMaterial.FrameDependentBind("height_scale", () => HeightScale);
+            bindableShaderMaterial.Bind("resolution", () => Resolution);
+            bindableShaderMaterial.Bind("maximum_lod", () => MaximumLOD);
+            bindableShaderMaterial.FrameDependentBind("planet_transform_matrix", () => Utilities.ToProjection(GetPlanetTransformMatrix()));
 
-        
+            bindableShaderMaterial.Bind("height_map", () => HeightMap);
 
-            // ShaderMaterials = new ShaderMaterial[Shaders.Length];
-            // for (int i = 0; i < Shaders.Length; i++)
-            // {
-            //     Shader shader = Shaders[i];
-            //     ShaderMaterials[i] = new ShaderMaterial() { Shader = shader };
-            //     foreach (Dictionary parameter in shader.GetShaderUniformList())
-            //     {
-            //         string variableName =  Utilities.ToCamelCase((StringName)parameter["name"]);
+            bindableShaderMaterial.FrameDependentBind("is_cube", () => CubeMode);
+            bindableShaderMaterial.FrameDependentBind("is_culling", () => Culling);
 
-            //         GD.PrintS(parameter["name"], variableName);
-            //         // var properity = GetType().GetProperty(variableName);
-            //         // // string snakeScale = Utilities.ToSnakeCase
-            //         // ShaderMaterials[i].SetShaderParameter(variableName, (Variant)properity.GetValue(this));
-            //     }
-            // }
+            bindableShaderMaterial.FrameDependentBind("is_morphing", () => Morphing);
+            bindableShaderMaterial.FrameDependentBind("morph_range", () => MorphRange);
 
+            bindableShaderMaterial.FrameDependentBind("camera_position", () => main.GlobalPosition);
+            bindableShaderMaterial.FrameDependentBind("fovy", () => Mathf.Tan(helper.GetCameraFov(true) / 2));
+            bindableShaderMaterial.Bind("sub_factor", () => SubFactor);
+        }
 
+        public void SurfaceShaderBindParameters(CustomCamera main, CustomCamera helper)
+        {
+            BindVertexShaderParameters(SurfaceShader, main, helper);
+            SurfaceShader.Bind("albedo_map", () => AlbedoMap);
+            SurfaceShader.Bind("is_texture_1D", () => AlbedoMap is GradientTexture1D);
+            SurfaceShader.FrameDependentBind("normal_strength", () => NormalStrength);
+        }
+
+        public void IndirectShaderBindParameters(CustomCamera main, CustomCamera helper)
+        {
+            BindVertexShaderParameters(FramebufferShader, main, helper);
+            FramebufferShader.Bind("grid_size", () => IndirectionTable.GridSize);
+            FramebufferShader.Bind("total_texture_subdivisions", () => TotalSubdivisions);
+            // IndirectShader.Bind("indirection_table", IndirectionTable.ToTexture2DArray);
+            FramebufferShader.FrameDependentBind("texture_mapping", () => TextureMapping);
+            // IndirectShader.Bind("tile_cache", TileCache.GetTexture);
         }
 
         #endregion
 
         #region Debug Settings
         [ExportGroup("Debug Settings")]
-        [Export]
-        public bool ColorizeLod
-        {
-            get => _colorizeLod;
-            set
-            {
-                if (_colorizeLod != value)
-                {
-                    _colorizeLod = value;
-                    EmitChanged();
-                    SetRenderSurfaceMaterialParameters();
-                }
-            }
-        }
-        private bool _colorizeLod = false;
 
         [Export]
         public bool CubeMode
@@ -478,7 +428,6 @@ namespace Planet
                 {
                     _cubeMode = value;
                     EmitChanged();
-                    SetRenderSurfaceMaterialParameters();
                 }
             }
         }
@@ -494,7 +443,6 @@ namespace Planet
                 {
                     _culling = value;
                     EmitChanged();
-                    SetRenderSurfaceMaterialParameters();
                 }
             }
         }
@@ -510,7 +458,6 @@ namespace Planet
                 {
                     _morphing = value;
                     EmitChanged();
-                    SetRenderSurfaceMaterialParameters();
                 }
             }
         }
@@ -526,7 +473,6 @@ namespace Planet
                 {
                     _bias1 = value;
                     EmitChanged();
-                    SetRenderSurfaceMaterialParameters();
                 }
             }
         }
@@ -542,7 +488,6 @@ namespace Planet
                 {
                     _bias2 = value;
                     EmitChanged();
-                    SetRenderSurfaceMaterialParameters();
                 }
             }
         }
@@ -558,7 +503,6 @@ namespace Planet
                 {
                     _bias3 = value;
                     EmitChanged();
-                    SetRenderSurfaceMaterialParameters();
                 }
             }
         }
