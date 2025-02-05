@@ -10,8 +10,8 @@ namespace Shaders
     public partial class BindableShaderMaterial : ShaderMaterial
     {
 
-        private Dictionary<string, Callable> _parameters { get; set; } = new();
-        private Dictionary<string, Callable> _frameDependentParameters { get; set; } = new();
+        private Dictionary<string, Callable> _parameters { get; set; } = [];
+        private Dictionary<string, Callable> _frameDependentParameters { get; set; } = [];
 
         public void Bind<T>(string parameterName, Func<T> callable)
         {
@@ -20,7 +20,7 @@ namespace Shaders
 
         public void FrameDependentBind<T>(string parameterName, Func<T> callable)
         {
-            _parameters[parameterName] = Callable.From(callable);
+            Bind(parameterName, callable);
             _frameDependentParameters[parameterName] = Callable.From(callable);
         }
     
@@ -31,6 +31,14 @@ namespace Shaders
                 string parameterName = parameter.Key;
                 Callable callable = parameter.Value;
 
+                SetShaderParameter(parameterName, callable.Call());
+            }
+        }
+
+        public void UpdateParameter(string parameterName)
+        {
+            if (_parameters.TryGetValue(parameterName, out Callable callable))
+            {
                 SetShaderParameter(parameterName, callable.Call());
             }
         }
@@ -46,7 +54,6 @@ namespace Shaders
             }
         }
 
-
         public void ConnectChanged(Action action)
         {
             if (!IsConnected("changed", Callable.From(action)))
@@ -54,6 +61,7 @@ namespace Shaders
                 Changed += action;
             }
         }
+
         public void DisconnectChanged(Action action)
         {
             if (IsConnected("changed", Callable.From(action)))

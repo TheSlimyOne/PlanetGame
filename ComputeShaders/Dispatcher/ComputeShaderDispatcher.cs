@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Godot;
 using Godot.Collections;
 using Uniform;
@@ -10,7 +11,7 @@ namespace Dispatcher;
 
 public abstract class ComputeShaderDispatcher<TEnum> : IDispatchable where TEnum : Enum
 {
-    public RenderingDevice RenderingDevice { get; private set; }
+    public RenderingDevice _RenderingDevice { get; private set; }
     protected string _shaderFilePath;
     protected Rid _uniformSet;
     protected Rid _shader;
@@ -19,20 +20,25 @@ public abstract class ComputeShaderDispatcher<TEnum> : IDispatchable where TEnum
 
     protected System.Collections.Generic.Dictionary<Enum, ComputeShaderUniform> _computeShaderUniforms;
 
-    protected ComputeShaderDispatcher(string shaderFilePath, ref RenderingDevice rd)
+    protected ComputeShaderDispatcher(string shaderFilePath)
     {
         _shaderFilePath = shaderFilePath;
-        RenderingDevice = rd;
+        _RenderingDevice = RenderingServer.GetRenderingDevice();
+    }
+
+    protected ComputeShaderDispatcher(string shaderFilePath, RenderingDevice rd)
+    {
+        _shaderFilePath = shaderFilePath;
+        _RenderingDevice = rd;
     }
 
     public ComputeShaderUniform GetUniform(Enum @enum) => _computeShaderUniforms[@enum];
     public T GetUniform<T>(Enum @enum) where T : ComputeShaderUniform => (T)_computeShaderUniforms[@enum];
-    public T[] GetUniformData<T>(Enum @enum) where T : unmanaged => ((StorageBufferUniform)GetUniform(@enum)).GetData<T>();
     public Rid GetUniformRid(Enum @enum) => GetUniform(@enum).Rid;
 
 
     public abstract void UpdateUniforms();
-    public abstract void Ready();
+    public abstract void Invoke();
     public abstract void CreateUniforms();
 
     public void SetupComputeShader()
@@ -45,25 +51,25 @@ public abstract class ComputeShaderDispatcher<TEnum> : IDispatchable where TEnum
     {
         RDShaderFile shaderFile = GD.Load<RDShaderFile>(path);
         RDShaderSpirV spirV = shaderFile.GetSpirV();
-        return RenderingDevice.ShaderCreateFromSpirV(spirV);
+        return _RenderingDevice.ShaderCreateFromSpirV(spirV);
     }
 
-    protected virtual Rid CreatePipeline(Rid shader) => RenderingDevice.ComputePipelineCreate(shader);
+    protected virtual Rid CreatePipeline(Rid shader) => _RenderingDevice.ComputePipelineCreate(shader);
 
     protected void CreateUniformSet()
     {
-        Array<RDUniform> bindings = new();
+        Array<RDUniform> bindings = [];
         for (int i = 0; i < _computeShaderUniforms.Count; i++)
         {
             TEnum @enum = (TEnum)Enum.ToObject(typeof(TEnum), i);
             ComputeShaderUniform computeShaderUniform = _computeShaderUniforms[@enum];
             if (computeShaderUniform.Owner != this)
-                _computeShaderUniforms[@enum] = computeShaderUniform.RebindUniform(this, RenderingDevice, i);
+                _computeShaderUniforms[@enum] = computeShaderUniform.RebindUniform(this, _RenderingDevice, i);
 
             bindings.Add(_computeShaderUniforms[@enum].Uniform);
         }
 
-        _uniformSet = RenderingDevice.UniformSetCreate(bindings, _shader, 0);
+        _uniformSet = _RenderingDevice.UniformSetCreate(bindings, _shader, 0);
     }
 
     public void SubmitThenSync()
@@ -72,17 +78,21 @@ public abstract class ComputeShaderDispatcher<TEnum> : IDispatchable where TEnum
         Sync();
     }
 
-    public void Submit() => RenderingDevice.Submit();
-    public void Sync() => RenderingDevice.Sync();
+    public void Submit() => _RenderingDevice.Submit();
+    public void Sync() => _RenderingDevice.Sync();
 
     bool verbose = false;
     public virtual void CleanupGPU()
     {
-        if (RenderingDevice == null) return;
+        if (_RenderingDevice == null) return;
 
-        RenderingDevice.FreeRid(_uniformSet);
-        RenderingDevice.FreeRid(_pipeline);
-        RenderingDevice.FreeRid(_shader);
+        if (_RenderingDevice.UniformSetIsValid(_uniformSet))
+            _RenderingDevice.FreeRid(_uniformSet);
+        if (_RenderingDevice.ComputePipelineIsValid(_pipeline))
+            _RenderingDevice.FreeRid(_pipeline);
+        
+        _RenderingDevice.FreeRid(_shader);
+        
         foreach (KeyValuePair<Enum, ComputeShaderUniform> kvp in _computeShaderUniforms)
         {
             Enum uniformName = kvp.Key;
@@ -99,7 +109,7 @@ public abstract class ComputeShaderDispatcher<TEnum> : IDispatchable where TEnum
             if (verbose) GD.Print("========================");
         }
 
-        RenderingDevice = null;
+        _RenderingDevice = null;
     }
 
     public int GetID() => GetHashCode();

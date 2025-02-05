@@ -20,7 +20,7 @@ namespace Dispatcher
             MULTIMESH_COMMAND_BUFFER
         }
 
-        public CopyKeysDispatcher(string shaderFilePath, ref RenderingDevice rd) : base(shaderFilePath, ref rd)
+        public CopyKeysDispatcher(string shaderFilePath) : base(shaderFilePath)
         {
             SetupComputeShader();
         }
@@ -33,8 +33,8 @@ namespace Dispatcher
 
                 [BufferNames.INDICES] = RenderSurfaceDispatcher.GetUniform(RenderSurfaceDispatcher.BufferNames.INDICES),
 
-                [BufferNames.DISPATCH_BUFFER] = new StorageBufferUniform(this, RenderingDevice, (int)BufferNames.DISPATCH_BUFFER,
-                    Utilities.ToBytes<uint>(new uint[] { 6 * (uint)Mathf.Pow(4, PlanetData.StartingLod + 1) / 32 + 1, 1, 1 }).ToArray(), indirect: 1
+                [BufferNames.DISPATCH_BUFFER] = new StorageBufferUniform(this, _RenderingDevice, (int)BufferNames.DISPATCH_BUFFER,
+                    Utilities.ToBytes<uint>([6 * (uint)Mathf.Pow(4, PlanetData.StartingLod + 1) / 32 + 1, 1, 1]).ToArray(), RenderingDevice.StorageBufferUsage.DispatchIndirect
                 ),
 
                 [BufferNames.GLOBAL_KEYS_DATA] = RenderSurfaceDispatcher.GetUniform(RenderSurfaceDispatcher.BufferNames.GLOBAL_KEYS_DATA),
@@ -48,14 +48,14 @@ namespace Dispatcher
             CreateUniformSet();
         }
 
-        public override void Ready()
+        public override void Invoke()
         {
-            long computeList = RenderingDevice.ComputeListBegin();
-            RenderingDevice.ComputeListBindComputePipeline(computeList, _pipeline);
-            RenderingDevice.ComputeListBindUniformSet(computeList, _uniformSet, 0);
-            RenderingDevice.ComputeListAddBarrier(computeList);
-            RenderingDevice.ComputeListDispatch(computeList, 1, 1, 1);
-            RenderingDevice.ComputeListEnd();
+            long computeList = _RenderingDevice.ComputeListBegin();
+            _RenderingDevice.ComputeListBindComputePipeline(computeList, _pipeline);
+            _RenderingDevice.ComputeListBindUniformSet(computeList, _uniformSet, 0);
+            _RenderingDevice.ComputeListAddBarrier(computeList);
+            _RenderingDevice.ComputeListDispatch(computeList, 1, 1, 1);
+            _RenderingDevice.ComputeListEnd();
         }
 
         public override void UpdateUniforms()

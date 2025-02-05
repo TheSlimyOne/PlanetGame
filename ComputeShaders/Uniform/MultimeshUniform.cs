@@ -79,7 +79,7 @@ namespace Uniform
             RenderingDevice.BufferUpdate(Rid, 0, (uint)data.Length, data);
         }
 
-        public override Array<byte[]> GetByteData() => new() { RenderingDevice.BufferGetData(Rid) };
+        public override Array<byte[]> GetByteData() => [RenderingDevice.BufferGetData(Rid)];
 
         public Rid CreateMultimeshInstance(Transform3D transform, Rid scenario, float extraVisibilityMargin, uint layerMask)
         {

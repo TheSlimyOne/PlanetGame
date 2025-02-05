@@ -125,7 +125,7 @@ float calculate_lod(float dist) {
 int get_normal_id(ivec3 normal) {
 	ivec3 p = ivec3(bvec3(normal.x == 1, normal.y == 1, normal.z == 1));
 	ivec3 n = ivec3(bvec3(normal.x == -1, normal.y == -1, normal.z == -1));
-	return p.x * 0 + p.y * 1 + p.z * 2 + n.x * 3 + n.y * 4 + n.z * 5;
+	return p.x * 0 + n.x * 1 + p.y * 2 + n.y * 3 + p.z * 4 + n.z * 5;
 }
 
 vec3 polygon_space_to_world_space(vec3 point, vec3 normal, bool use_height) {
@@ -170,25 +170,12 @@ float calculate_morph(vec3 point, vec3 normal, uvec2 key) {
 	return percentage;
 }
 
-vec2 get_polygon_uv(vec3 point, vec3 normal) {
+vec2 get_cube_uv(int normal_id, vec3 point) {
 	point = (point + 1.0) / 2.0;
-	int index = -4;
-	int flag = 0;
-	for(int i = 0; i < 3; i++) {
-		if (normal[i] != 0.0) {
-			index = i;
-			flag = normal[i] == -1.0 ? 1 : 0;
-			break;
-		}
-	}
-
 	vec2 uv = vec2(0);
-	int input_a = (index + 1) % 3;
-	int input_b = (index + 2) % 3;
-
-	uv = vec2(point[min(input_a, input_b)], point[max(input_a, input_b)]);
-	uv = abs(vec2(0.0, float(flag)) - uv);
-
+	uv.x = normal_id == 0 || normal_id == 1 ? point.z : point.x;
+	uv.x = normal_id == 0 || normal_id == 2 || normal_id == 5 ? 1.0 - uv.x : uv.x;
+	uv.y = normal_id == 2 || normal_id == 3 ? 1.0 - point.z : 1.0 - point.y;
 	return uv;
 }
 

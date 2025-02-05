@@ -18,7 +18,7 @@ namespace Dispatcher
 
     	}
 
-    	public UpdateIndirectionTableDispatcher(string shaderFilePath, ref RenderingDevice rd) : base(shaderFilePath, ref rd)
+    	public UpdateIndirectionTableDispatcher(string shaderFilePath, RenderingDevice rd) : base(shaderFilePath, rd)
     	{
     		SetupComputeShader();
     	}
@@ -33,14 +33,14 @@ namespace Dispatcher
     		CreateUniformSet();
     	}
 
-    	public override void Ready()
+    	public override void Invoke()
     	{
-    		long computeList = RenderingDevice.ComputeListBegin();
-    		RenderingDevice.ComputeListBindComputePipeline(computeList, _pipeline);
-    		RenderingDevice.ComputeListBindUniformSet(computeList, _uniformSet, 0);
-			RenderingDevice.ComputeListAddBarrier(computeList);
-    		RenderingDevice.ComputeListDispatch(computeList, 1, 1, 1);
-    		RenderingDevice.ComputeListEnd();
+    		long computeList = _RenderingDevice.ComputeListBegin();
+    		_RenderingDevice.ComputeListBindComputePipeline(computeList, _pipeline);
+    		_RenderingDevice.ComputeListBindUniformSet(computeList, _uniformSet, 0);
+			_RenderingDevice.ComputeListAddBarrier(computeList);
+    		_RenderingDevice.ComputeListDispatch(computeList, 1, 1, 1);
+    		_RenderingDevice.ComputeListEnd();
     	}
 
         public override void UpdateUniforms()

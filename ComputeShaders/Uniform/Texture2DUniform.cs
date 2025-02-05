@@ -3,6 +3,7 @@ using Godot;
 using Godot.Collections;
 using Dispatcher;
 using UniformException;
+using System.Threading.Tasks;
 
 namespace Uniform
 {
@@ -54,48 +55,52 @@ namespace Uniform
             }
         }
 
-        public Texture2DUniform(IDispatchable owner, int binding, Rid viewport, bool perserved = false) : base(binding, owner)
+        public Texture2DUniform(IDispatchable owner, int binding, Rid rid, RenderingDevice.UniformType uniformType, bool perserved = false) : base(binding, owner)
         {
-            Rid viewportTexture = RenderingServer.ViewportGetTexture(viewport);
-
-            Rid = RenderingServer.TextureGetRdTexture(viewportTexture);
+            Rid = rid;
             TextureFormat = RenderingDevice.TextureGetFormat(Rid);
 
             Uniform = new()
             {
-                UniformType = RenderingDevice.UniformType.Image,
+                UniformType = uniformType,
                 Binding = binding
             };
-        
+
             Uniform.AddId(Rid);
         }
 
         public Texture2Drd GetTexture2Drd() => new() { TextureRdRid = Rid };
+        public Texture2DArrayRD GetTexture2DArrayRD() => new() { TextureRdRid = Rid };
 
-        public Image GetImage(Image.Format format, uint layer = 0) => Image.CreateFromData((int)TextureFormat.Width, (int)TextureFormat.Height, false, format, GetLayerByteData(layer));
+        public Image GetImage(Image.Format format, uint layer = 0) => Image.CreateFromData((int)TextureFormat.Width, (int)TextureFormat.Height, false, format, GetLayerByteData(layer));  
+        
         public byte[] GetLayerByteData(uint layer) => RenderingDevice.TextureGetData(Rid, layer);
+        
 
-        public void SaveImage(string path, Image.Format format)
+        public void SaveImage(string path, Image.Format format, uint layer = 0)
         {
-            for (uint i = 0; i < TextureFormat.ArrayLayers; i++)
+            Error error = GetImage(format, layer).SavePng(path + ".png");
+
+            if (error != Error.Ok)
             {
-                Error error = GetImage(format, i).SavePng($"{path}_{i}.png");
-                if (error != Error.Ok)
-                {
-                    GD.PrintErr($"Failed to save image: {error}");
-                }
-                else
-                {
-                    GD.Print($"Image saved successfully to {path}_{i}.png");
-                }
+                GD.PrintErr($"Failed to save image: {error}");
+            }
+            else
+            {
+                GD.Print($"Image saved successfully to {path}.png");
             }
         }
 
         public Color GetPixel(int x, int y) => GetTexture2Drd().GetImage().GetPixel(x, y);
 
         public void ClearTexture(Color color) => RenderingDevice.TextureClear(Rid, color, 0, 1, 0, 1);
+        public void ClearTexture(Color color, uint baseMipmap = 0, uint mipmapCount = 1, uint baseLayer = 0, uint layerCount = 1) => RenderingDevice.TextureClear(Rid, color, baseMipmap, mipmapCount, baseLayer, layerCount);
 
         public override void UpdateUniform(byte[] data) => RenderingDevice.TextureUpdate(Rid, 0, data);
+        public void UpdateUniform(uint offset, uint sizeBytes, byte[] data) => RenderingDevice.BufferUpdate(Rid, offset, sizeBytes, data);
+
+        public void ReplaceImage(Image image) => UpdateUniform(image.GetData());
+
 
         public override Texture2DUniform RebindUniform(IDispatchable owner, RenderingDevice rd, int binding)
         {
@@ -109,7 +114,7 @@ namespace Uniform
 
         public override Array<byte[]> GetByteData()
         {
-            Array<byte[]> data = new();
+            Array<byte[]> data = [];
             for (uint i = 0; i < TextureFormat.ArrayLayers; i++)
             {
                 data.Add(GetLayerByteData(i));
@@ -123,11 +128,6 @@ namespace Uniform
             image.Fill(color);
             return image.GetData();
         }
-
-        // public void GetData()
-        // {
-
-        // } 
     }
 
 }

@@ -7,7 +7,7 @@ font_size = 28
 outline_size = 5
 outline_color = Color(0.0768358, 0.0768358, 0.0768358, 1)
 
-[node name="UI" type="Control" node_paths=PackedStringArray("_lblKeyCount", "_lblFPS", "_lblDistance", "_lblLOD", "_lblCameraMode", "_btnProcessLod", "_btnCubeMode", "_btnCulling", "_btnMorphing", "_btnRenderFramebuffer", "_btnRenderSurface")]
+[node name="UI" type="Control" node_paths=PackedStringArray("_lblKeyCount", "_lblFPS", "_lblDistance", "_lblLOD", "_lblCameraMode", "_btnProcessLod", "_btnCubeMode", "_btnCulling", "_btnMorphing", "_btnRenderFramebuffer", "_btnRenderSurface", "_btnVirtualTexturing")]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -26,6 +26,7 @@ _btnCulling = NodePath("Buttons/btnCulling")
 _btnMorphing = NodePath("Buttons/btnMorphing")
 _btnRenderFramebuffer = NodePath("Buttons/btnRenderFramebuffer")
 _btnRenderSurface = NodePath("Buttons/btnRenderSurface")
+_btnVirtualTexturing = NodePath("Buttons/btnVirtualTexturing")
 
 [node name="DebugStats" type="VBoxContainer" parent="."]
 layout_mode = 0
@@ -97,9 +98,15 @@ layout_mode = 2
 focus_mode = 0
 text = "Render Surface"
 
+[node name="btnVirtualTexturing" type="Button" parent="Buttons"]
+layout_mode = 2
+focus_mode = 0
+text = "Disable Virtual Texturing"
+
 [connection signal="pressed" from="Buttons/btnProcessLod" to="." method="EnableOrDisableProcessing"]
 [connection signal="pressed" from="Buttons/btnCubeMode" to="." method="EnableOrDisableCubeMode"]
 [connection signal="pressed" from="Buttons/btnCulling" to="." method="EnableOrDisableCulling"]
 [connection signal="pressed" from="Buttons/btnMorphing" to="." method="EnableOrDisableMorphing"]
 [connection signal="pressed" from="Buttons/btnRenderFramebuffer" to="." method="RenderFramebuffer"]
 [connection signal="pressed" from="Buttons/btnRenderSurface" to="." method="RenderSurface"]
+[connection signal="pressed" from="Buttons/btnVirtualTexturing" to="." method="EnableOrDisableVirtualTexturing"]

@@ -7,12 +7,12 @@ namespace Uniform
 {
     public partial class StorageBufferUniform : ComputeShaderUniform
     {
-        public int Indirect { get; private set; }
+        public RenderingDevice.StorageBufferUsage StorageBufferUsage { get; private set; }
 
-        public StorageBufferUniform(IDispatchable owner, RenderingDevice renderingDevice, int binding, byte[] data, int indirect = 0) : base(renderingDevice, binding, owner)
+        public StorageBufferUniform(IDispatchable owner, RenderingDevice renderingDevice, int binding, byte[] data, RenderingDevice.StorageBufferUsage storageBufferUsage = 0) : base(renderingDevice, binding, owner)
         {
-            Rid = renderingDevice.StorageBufferCreate((uint)data.Length, data, usage: (RenderingDevice.StorageBufferUsage)indirect);
-            Indirect = indirect;
+            Rid = renderingDevice.StorageBufferCreate((uint)data.Length, data, usage: storageBufferUsage);
+            StorageBufferUsage = storageBufferUsage;
 
             Uniform = new()
             {
@@ -25,7 +25,7 @@ namespace Uniform
         private StorageBufferUniform(IDispatchable owner, StorageBufferUniform storageBufferUniform, int binding) : base(storageBufferUniform.RenderingDevice, binding, owner)
         {
             Rid = storageBufferUniform.Rid;
-            Indirect = storageBufferUniform.Indirect;
+            StorageBufferUsage = storageBufferUniform.StorageBufferUsage;
 
             Uniform = new()
             {
@@ -43,7 +43,7 @@ namespace Uniform
         {
             Uniform.ClearIds();
             RenderingDevice.FreeRid(Rid);
-            Rid = RenderingDevice.StorageBufferCreate(size, new byte[size], usage: (RenderingDevice.StorageBufferUsage)Indirect);
+            Rid = RenderingDevice.StorageBufferCreate(size, new byte[size], usage: StorageBufferUsage);
             Uniform.AddId(Rid);
         }
 
@@ -52,17 +52,24 @@ namespace Uniform
             if (rd == RenderingDevice)
                 return new StorageBufferUniform(Owner, this, binding);
             else
-                return new StorageBufferUniform(owner, rd, binding, GetByteData()[0], indirect: Indirect);
+                return new StorageBufferUniform(owner, rd, binding, GetByteData()[0], storageBufferUsage: StorageBufferUsage);
         }
 
-        public T[] GetData<T>() where T : unmanaged => Utilities.FromBytes<T>(RenderingDevice.BufferGetData(Rid)).ToArray();
+        public T[] GetData<T>(uint offsetBytes = 0, uint sizeBytes = 0) where T : unmanaged => Utilities.FromBytes<T>(RenderingDevice.BufferGetData(Rid, offsetBytes, sizeBytes)).ToArray();
+        
+        public void GetDataAsync(Callable callback, uint offsetBytes = 0, uint sizeBytes = 0) => RenderingDevice.BufferGetDataAsync(Rid, callback, offsetBytes, sizeBytes);
 
         public override void UpdateUniform(byte[] data)
         {
             RenderingDevice.BufferUpdate(Rid, 0, (uint)data.Length, data);
         }
 
-        public override Array<byte[]> GetByteData() => new() { RenderingDevice.BufferGetData(Rid) };
+        public void UpdateUniform(uint offset, uint sizeBytes, byte[] data)
+        {
+            RenderingDevice.BufferUpdate(Rid, offset, sizeBytes, data);
+        }
+
+        public override Array<byte[]> GetByteData() => [RenderingDevice.BufferGetData(Rid)];
 
     }
 

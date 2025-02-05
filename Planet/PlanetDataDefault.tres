@@ -1,11 +1,11 @@
 [gd_resource type="Resource" script_class="PlanetData" load_steps=10 format=3 uid="uid://bulxpgk85g4tq"]
 
-[ext_resource type="Texture2D" uid="uid://b0xaoom76i6uo" path="res://Assets/Images/4_no_ice_clouds_mts_16k.jpg" id="1_dcj02"]
-[ext_resource type="Texture2D" uid="uid://b4fs0ooswx8qk" path="res://Assets/Images/gebco_08_rev_elev_21600x10800.png" id="1_q2jvy"]
 [ext_resource type="Script" uid="uid://b431h1tgp42vq" path="res://Planet/PlanetData.cs" id="3_6i60t"]
 [ext_resource type="Script" uid="uid://bedoay0gxs5wg" path="res://Assets/Shaders/BindableShaderMaterial.cs" id="3_dcj02"]
 [ext_resource type="Shader" uid="uid://2qfud4ghf1lb" path="res://Assets/Shaders/PlanetTerrainFramebufferShader.gdshader" id="3_qcxde"]
 [ext_resource type="Shader" uid="uid://cpudsnak653n4" path="res://Assets/Shaders/PlanetTerrainRenderSurfaceShader.gdshader" id="5_exbr7"]
+
+[sub_resource type="PlaceholderTexture2D" id="PlaceholderTexture2D_ej6kt"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_o603k"]
 render_priority = 0
@@ -28,13 +28,15 @@ shader_parameter/texture_mapping = null
 script = ExtResource("3_dcj02")
 metadata/_custom_type_script = ExtResource("3_dcj02")
 
+[sub_resource type="PlaceholderTexture2D" id="PlaceholderTexture2D_q2jvy"]
+
 [sub_resource type="PlaceholderTexture2D" id="PlaceholderTexture2D_dcj02"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_qcxde"]
 render_priority = 0
 shader = ExtResource("5_exbr7")
-shader_parameter/radius = 50.0
-shader_parameter/height_scale = 2.0
+shader_parameter/radius = null
+shader_parameter/height_scale = null
 shader_parameter/resolution = null
 shader_parameter/maximum_lod = null
 shader_parameter/planet_transform_matrix = null
@@ -47,13 +49,17 @@ shader_parameter/fovy = null
 shader_parameter/sub_factor = null
 shader_parameter/normal_strength = null
 shader_parameter/is_texture_1D = null
+shader_parameter/morphing = null
+shader_parameter/total_texture_subdivisions = null
+shader_parameter/grid_size = null
+shader_parameter/texture_mapping = null
 script = ExtResource("3_dcj02")
 metadata/_custom_type_script = ExtResource("3_dcj02")
 
 [resource]
 script = ExtResource("3_6i60t")
 Radius = 50.0
-HeightScale = 2.0
+HeightScale = 0.0
 Resolution = 9
 MaximumNodes = 20000
 MaximumLOD = 16
@@ -62,16 +68,17 @@ MorphRange = Vector2(0.7, 0.8)
 NodeSize = 16
 StartingLod = 0
 CenterSize = 2
-BorderSize = 1
+BorderSize = 0
 DesiredChunkSize = 512
-AlbedoMap = ExtResource("1_dcj02")
-HeightMap = ExtResource("1_q2jvy")
+AlbedoMap = SubResource("PlaceholderTexture2D_ej6kt")
+HeightMap = SubResource("PlaceholderTexture2D_q2jvy")
 NormalMap = SubResource("PlaceholderTexture2D_dcj02")
 NormalStrength = 1.0
-TextureMapping = PackedInt32Array(4, 3, 2, 1, 0, 3, 2, 2, 1, 1, 1, 1, 0, 0, 0, 0)
+TextureMapping = PackedInt32Array(3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+cubeComputeShader = ""
 SurfaceShader = SubResource("ShaderMaterial_qcxde")
 FramebufferShader = SubResource("ShaderMaterial_o603k")
-CubeMode = false
+CubeMode = true
 Culling = true
 Morphing = true
 Bias1 = 0.0

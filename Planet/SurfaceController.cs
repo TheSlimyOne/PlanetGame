@@ -5,6 +5,7 @@ using Uniform;
 using Planet;
 using System.Threading.Tasks;
 using Godot.Collections;
+using System.Linq;
 
 public partial class SurfaceController : Node3D
 {
@@ -25,45 +26,39 @@ public partial class SurfaceController : Node3D
 	[ExportGroup("Shaders")]
 	[Export(PropertyHint.File, "*.glsl")] private string _renderSurfaceShaderPath;
 	[Export(PropertyHint.File, "*.glsl")] private string _copyKeysShaderPath;
-	[Export(PropertyHint.File, "*.glsl")] private string _readFramebufferPath;
 
 	private RenderSurfaceDispatcher _renderSurface;
 	private CopyKeysDispatcher _copyKeys;
-	private ReadFramebufferDispatcher _readFramebuffer;
+	
 
 	public bool Processing { get; set; }
-	private RenderingDevice _rd;
 
 	private Vector3 _direction = Vector3.Zero;
 	public bool HasMoved { get; private set; }
+	private bool _ready = false;
+
 
 	public const float MINIMUM_RADIUS_SCALE = 0.999f;
 
 	private Callable _executeRenderSurface;
 	private Callable _executeCopyKeys;
-	private Callable _executeReadFramebuffer;
+	
 
 	public Array<Rid> Surfaces { get; private set; } = [];
 
 	public override void _Ready()
 	{
 		PlanetController = (PlanetController)GetParent();
-
 		_planetData = PlanetController.PlanetData;
-
-		InitializeComputeShaders();
 	}
 
-	private void InitializeComputeShaders()
+	public void InitializeComputeShaders()
 	{
-		_rd = RenderingServer.GetRenderingDevice();
-
 		SetUpMultimesh();
 
-		_copyKeys = new CopyKeysDispatcher(_copyKeysShaderPath, ref _rd);
-		_renderSurface = new RenderSurfaceDispatcher(_renderSurfaceShaderPath, ref _rd);
-		_readFramebuffer = new ReadFramebufferDispatcher(_readFramebufferPath, ref _rd);
-
+		_copyKeys = new CopyKeysDispatcher(_copyKeysShaderPath);
+		_renderSurface = new RenderSurfaceDispatcher(_renderSurfaceShaderPath);
+		
 		_copyKeys.RenderSurfaceDispatcher = _renderSurface;
 		_copyKeys.PlanetData = _planetData;
 
@@ -72,16 +67,16 @@ public partial class SurfaceController : Node3D
 		_renderSurface.MainCamera = PlanetController.CameraController.GetCamera("Main");
 		_renderSurface.HelperCamera = PlanetController.CameraController.GetCamera("Helper");
 
-		_readFramebuffer.Viewport = PlanetController.CameraController.GetCamera("Lookup").GetViewport();
+		
 
-		_executeRenderSurface = Callable.From(_renderSurface.Ready);
-		_executeCopyKeys = Callable.From(_copyKeys.Ready);
-		_executeReadFramebuffer = Callable.From(_readFramebuffer.Ready);
-
+		_executeRenderSurface = Callable.From(_renderSurface.Invoke);
+		_executeCopyKeys = Callable.From(_copyKeys.Invoke);
+		
 		_renderSurface.CreateUniforms();
 		_copyKeys.CreateUniforms();
-		_readFramebuffer.CreateUniforms();
-
+	
+		
+		_ready = true;
 		// Texture2Drd globalKeyData = _renderSurface.GetUniform<Texture2DUniform>(RenderSurfaceDispatcher.BufferNames.GLOBAL_KEYS_DATA).GetTexture2Drd();
 	}
 
@@ -161,7 +156,7 @@ public partial class SurfaceController : Node3D
 	}
 
 	public bool Locked { get; private set; }
-	public override void _PhysicsProcess(double delta)
+	public override async void _PhysicsProcess(double delta)
 	{
 		ProcessMovement(delta);
 
@@ -171,27 +166,37 @@ public partial class SurfaceController : Node3D
 
 		if (Locked)
 		{
-			InvokeComputeShaders();
+			await InvokeComputeShaders();
+			
+			// Processing = false;
 			Locked = false;
 		}
 	}
 
-	public void InvokeComputeShaders()
+	public async Task InvokeComputeShaders()
 	{
+		await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
+		
 		_renderSurface.GetUniform<Texture2DUniform>(RenderSurfaceDispatcher.BufferNames.GLOBAL_KEYS_DATA).ClearTexture(Colors.Black);
+		
 		RenderingServer.CallOnRenderThread(_executeRenderSurface);
 
 		_planetData.CurrentLod = _renderSurface.GetCurrentLod();
+		
 		PlanetController.UIController.SetCurrentLOD(_planetData.CurrentLod - 1);
 
 		RenderingServer.CallOnRenderThread(_executeCopyKeys);
+		
 		_renderSurface.UpdateUniforms();
 
 		(int all, int culled) = _renderSurface.GetPrimitiveCounts();
 		PlanetController.UIController.SetLabelKeyCount(culled, all);
 		PlanetController.UIController.UpdateProcessingText();
 
-		_readFramebuffer.UpdateUniforms();
-		RenderingServer.CallOnRenderThread(_executeReadFramebuffer);
+		_planetData.SparseVirtualTexture.UpdateTextures();
+		// Vector4[] data = _readFramebuffer.GetTextureIds();
+		// await _planetData.UpdateSparseVirtualTextures(data);
+		
+
 	}
 }

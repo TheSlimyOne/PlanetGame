@@ -13,7 +13,7 @@ namespace Dispatcher
 
         public PlanetController PlanetController { get; set; }
 
-        public ComputeCollisionDispatcher(string shaderFilePath, ref RenderingDevice rd) : base(shaderFilePath, ref rd)
+        public ComputeCollisionDispatcher(string shaderFilePath, RenderingDevice rd) : base(shaderFilePath, rd)
         {
             SetupComputeShader();
         }
@@ -23,7 +23,7 @@ namespace Dispatcher
             throw new NotImplementedException();
         }
 
-        public override void Ready()
+        public override void Invoke()
         {
             throw new NotImplementedException();
         }

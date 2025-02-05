@@ -2,9 +2,12 @@ shader_type spatial;
 
 #include "Includes/PlanetTerrainVertexShader.gdshaderinc"
 
+uniform sampler2DArray tile_cache : repeat_disable, source_color, filter_nearest;
+uniform sampler2DArray indirection_table : repeat_disable, filter_nearest;
 uniform sampler2D albedo_map : repeat_disable, source_color;
 uniform float normal_strength;
 uniform bool is_texture_1D;
+uniform bool morphing;
 
 vec3 height_to_normal(float height, float strength, vec3 vertex, vec3 normal) {
 	vec3 d_x = dFdx(vertex);
@@ -31,13 +34,37 @@ vec3 hsl_to_rgb(vec3 c) {
 	return c.z * mix(k.xxx, clamp(p - k.xxx, 0.0, 1.0), c.y);
 }
 
+uniform int total_texture_subdivisions;
+uniform float grid_size;
+uniform int[32] texture_mapping;
+
 void fragment() {
 	vec2 sphere_uv_point = point_on_sphere_to_uv(sphere_local_position);
 	vec3 surface_texture = textureLod(albedo_map, is_texture_1D ? vec2(elevation, 0.0) : sphere_uv_point, 0.0).rgb;
+
 	vec3 normal = normals[key.z];
 	int lod = int(calculate_lod_to_cam(sphere_local_position, normal, false));
-	vec3 debug_color = hsl_to_rgb(vec3(float(lod) / 16.0, 1.0, 0.5));
+	int grid = texture_mapping[lod];
 
+	float lod_grid_size = grid_size / pow(2.0, float(grid));
+
+	vec2 uv = get_cube_uv(int(key.z), cube_local_position);
+	vec2 cell_uv = floor(uv * lod_grid_size) / lod_grid_size;
+	vec3 debug_color = hsl_to_rgb(vec3(float(lod) / 16.0, 1.0, 0.5));
 	NORMAL = height_to_normal(elevation, normal_strength, VERTEX, NORMAL);
-	ALBEDO = surface_texture;
+
+	vec3 indirection_index = vec3(
+		cell_uv,
+		float(total_texture_subdivisions * int(key.z) + grid)
+	);
+	uvec4 indirection_table_data = uvec4(textureLod(indirection_table, indirection_index, 0.0) * 255.0);
+	if (indirection_table_data.a == 0u) {
+		ALBEDO = vec3(cell_uv, 0);
+	} else {
+
+		uint virtual_texture_tile_index = indirection_table_data.r;
+		vec2 tile_uv = fract(uv * lod_grid_size);
+
+		ALBEDO = textureLod(tile_cache, vec3(tile_uv, float(virtual_texture_tile_index)), 0.0).xyz;
+	}
 }

@@ -25,11 +25,11 @@ glow_enabled = true
 [sub_resource type="ViewportTexture" id="ViewportTexture_8qkf8"]
 viewport_path = NodePath("CameraController/SubViewport")
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_i1a08"]
-albedo_color = Color(1, 0, 0, 1)
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ldv5r"]
+albedo_color = Color(0, 1, 1, 1)
 
 [sub_resource type="SphereMesh" id="SphereMesh_ebyhs"]
-material = SubResource("StandardMaterial3D_i1a08")
+material = SubResource("StandardMaterial3D_ldv5r")
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_usljo"]
 
@@ -43,13 +43,15 @@ albedo_color = Color(0.490196, 1, 0, 1)
 material = SubResource("StandardMaterial3D_6uokv")
 
 [sub_resource type="Environment" id="Environment_ldv5r"]
+background_mode = 1
+background_color = Color(1, 1, 1, 0)
 ambient_light_source = 1
 reflected_light_source = 1
 
 [sub_resource type="World3D" id="World3D_ebyhs"]
 environment = SubResource("Environment_ldv5r")
 
-[sub_resource type="MultiMesh" id="MultiMesh_qtwtp"]
+[sub_resource type="MultiMesh" id="MultiMesh_ldv5r"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_wsrnx"]
 
@@ -76,6 +78,7 @@ size_flags_vertical = 4
 PlanetController = NodePath("..")
 
 [node name="FramebufferVisualizer" type="TextureRect" parent="UIController"]
+visible = false
 z_index = -1
 texture_filter = 1
 layout_mode = 1
@@ -88,6 +91,7 @@ mouse_filter = 2
 texture = SubResource("ViewportTexture_8qkf8")
 
 [node name="FramebufferDataVisualizer" type="ColorRect" parent="UIController"]
+visible = false
 layout_mode = 1
 anchors_preset = 2
 anchor_top = 1.0
@@ -105,7 +109,6 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-alignment = 1
 
 [node name="RValue" type="Label" parent="UIController/FramebufferDataVisualizer/ColorContainer"]
 layout_mode = 2
@@ -131,12 +134,6 @@ text = "Index: (X, Y)"
 horizontal_alignment = 1
 uppercase = true
 
-[node name="UnpackedB" type="Label" parent="UIController/FramebufferDataVisualizer/ColorContainer"]
-layout_mode = 2
-text = "Grid: 0, ID: 0"
-horizontal_alignment = 1
-uppercase = true
-
 [node name="CameraController" type="Node" parent="."]
 script = ExtResource("5_usljo")
 Debug = true
@@ -150,7 +147,7 @@ script = ExtResource("6_ldv5r")
 Sensitivity = 0.1
 RotationRangeX = Vector2(0, 180)
 RotationEasing = 0.3
-DistanceFromTarget = 4.1
+DistanceFromTarget = 85.0
 Target = NodePath("../../SurfaceController")
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="CameraController/Main"]
@@ -176,11 +173,23 @@ world_3d = SubResource("World3D_ebyhs")
 handle_input_locally = false
 debug_draw = 1
 use_hdr_2d = true
-size = Vector2i(128, 64)
+size = Vector2i(64, 36)
 render_target_clear_mode = 1
+render_target_update_mode = 4
 
 [node name="Lookup" type="Camera3D" parent="CameraController/SubViewport"]
 script = ExtResource("8_ldv5r")
+
+[node name="RemoteTransform3D" type="RemoteTransform3D" parent="CameraController/SubViewport/Lookup"]
+remote_path = NodePath("../../../MeshInstance3D")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="CameraController"]
+mesh = SubResource("SphereMesh_ebyhs")
+
+[node name="MeshInstance3D2" type="MeshInstance3D" parent="CameraController/MeshInstance3D"]
+transform = Transform3D(0, 4.37114e-08, 0.331828, 1.2075, -3.55271e-15, 5.15309e-23, 0, 1, -1.45047e-08, 0, 0, 0)
+mesh = SubResource("PrismMesh_8qkf8")
+skeleton = NodePath("../..")
 
 [node name="SurfaceController" type="Node3D" parent="." node_paths=PackedStringArray("WorldEnvironment", "MainLightSource", "InnerCollision", "OuterCollision", "CubicalCollision")]
 script = ExtResource("4_ebyhs")
@@ -191,7 +200,6 @@ OuterCollision = NodePath("../SurfaceAttachment/OuterCollision")
 CubicalCollision = NodePath("../SurfaceAttachment/CubicalCollision")
 _renderSurfaceShaderPath = "uid://b56oykpmj0br0"
 _copyKeysShaderPath = "uid://b1aoaqwgb51hm"
-_readFramebufferPath = "uid://cpfcddd8gtckg"
 MaxSpeed = 0.005
 ZoomSpeed = 100.0
 MovementEasing = 0.3
@@ -199,7 +207,8 @@ MovementEasing = 0.3
 [node name="SurfaceAttachment" type="Node3D" parent="."]
 
 [node name="Cube" parent="SurfaceAttachment" instance=ExtResource("7_qtwtp")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1000, 0)
+transform = Transform3D(10, 0, 0, 0, 10, 0, 0, 0, 10, 0, 100, 0)
+visible = false
 skeleton = NodePath("../..")
 
 [node name="MainLightSource" type="DirectionalLight3D" parent="SurfaceAttachment"]
@@ -207,7 +216,7 @@ directional_shadow_max_distance = 2000.0
 sky_mode = 1
 
 [node name="DebugMesh" type="MultiMeshInstance3D" parent="SurfaceAttachment"]
-multimesh = SubResource("MultiMesh_qtwtp")
+multimesh = SubResource("MultiMesh_ldv5r")
 
 [node name="CubicalCollision" type="StaticBody3D" parent="SurfaceAttachment"]
 

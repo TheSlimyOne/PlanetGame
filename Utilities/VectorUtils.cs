@@ -71,6 +71,8 @@ public static class VectorUtils
     public static int SignOfNormal(Vector3 vector) => (int)vector[GetIndexOfNormalComponent(vector)];
 
     public static Vector4 ToVector4(Vector3 vector, float padValue) => new(vector.X, vector.Y, vector.Z, padValue);
+    
+    public static Vector4 ToVector4(Color color) => new(color.R, color.G, color.B, color.A);
 
     public static Vector3 ToVector3(Vector4 vector) => new(vector.X, vector.Y, vector.Z);
 
@@ -165,7 +167,6 @@ public static class VectorUtils
         float latitude = Mathf.Asin(-point.Y);
         float u = (longitude / Mathf.Pi + 1) * 0.5f;
         float v = latitude / Mathf.Pi + 0.5f;
-
         return new Vector2(u, v);
     }
 

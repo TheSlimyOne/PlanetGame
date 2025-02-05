@@ -20,6 +20,7 @@ public partial class UIController : Control
 	[Export] private Button _btnMorphing;
 	[Export] private Button _btnRenderFramebuffer;
 	[Export] private Button _btnRenderSurface;
+	[Export] private Button _btnVirtualTexturing;
 	
 	private int _all_max;
 	private int _culled_max;
@@ -62,6 +63,14 @@ public partial class UIController : Control
 		bool currentSetting = !PlanetController.SurfaceController.Processing;
 		PlanetController.SurfaceController.Processing = currentSetting;
 		_btnProcessLod.Text = currentSetting ? "Stop Processing LOD" : "Start Processing LOD";
+
+	}
+
+	public void EnableOrDisableVirtualTexturing()
+	{
+		bool currentSetting = !PlanetController.PlanetData.SparseVirtualTexture.Enabled;
+		PlanetController.PlanetData.SparseVirtualTexture.Enabled = currentSetting;
+		_btnVirtualTexturing.Text = currentSetting ? "Disable Virtual Texturing" : "Enable Virtual Texturing";
 
 	}
 

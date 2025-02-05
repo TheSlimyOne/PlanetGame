@@ -16,7 +16,7 @@ namespace Dispatcher
         public float HeightScale { get; set; }
         public Texture2D InputTexture { get; set; }
 
-        public CalculateNormalsDispatcher(string shaderFilePath, ref RenderingDevice rd) : base(shaderFilePath, ref rd)
+        public CalculateNormalsDispatcher(string shaderFilePath, RenderingDevice rd) : base(shaderFilePath, rd)
         {
             SetupComputeShader();
         }
@@ -25,7 +25,7 @@ namespace Dispatcher
         {
             _computeShaderUniforms = new System.Collections.Generic.Dictionary<Enum, ComputeShaderUniform>()
             {
-                [BufferNames.HEIGHT_MAP_DATA] = new StorageBufferUniform(this, RenderingDevice, (int)BufferNames.HEIGHT_MAP_DATA, Utilities.ToBytes<float>(new float[] {
+                [BufferNames.HEIGHT_MAP_DATA] = new StorageBufferUniform(this, _RenderingDevice, (int)BufferNames.HEIGHT_MAP_DATA, Utilities.ToBytes<float>(new float[] {
                     Radius,
                     HeightScale
                 }).ToArray()),
@@ -36,7 +36,7 @@ namespace Dispatcher
                     image.ClearMipmaps();
                     image.Convert(Image.Format.L8);
 
-                    return new Texture2DUniform(this, RenderingDevice, (int)BufferNames.HEIGHT_MAP,
+                    return new Texture2DUniform(this, _RenderingDevice, (int)BufferNames.HEIGHT_MAP,
                         new RDTextureFormat()
                         {
                             Width = (uint)image.GetWidth(),
@@ -47,7 +47,7 @@ namespace Dispatcher
                         }, RenderingDevice.UniformType.SamplerWithTexture, textureData: new() { image.GetData() } );
                 }).Invoke(),
 
-                [BufferNames.NORMAL_MAP] = new Texture2DUniform(this, RenderingDevice, (int)BufferNames.NORMAL_MAP,
+                [BufferNames.NORMAL_MAP] = new Texture2DUniform(this, _RenderingDevice, (int)BufferNames.NORMAL_MAP,
                     new RDTextureFormat()
                     {
                         Width = (uint)InputTexture.GetWidth(),
@@ -71,14 +71,14 @@ namespace Dispatcher
             GetUniform<Texture2DUniform>(BufferNames.NORMAL_MAP).SaveImage(path, Image.Format.Rgbaf);
         }
 
-        public override void Ready()
+        public override void Invoke()
         {
             Vector2I numThreads = new(InputTexture.GetWidth() / 8, InputTexture.GetHeight() / 8);
-            long computeList = RenderingDevice.ComputeListBegin();
-            RenderingDevice.ComputeListBindComputePipeline(computeList, _pipeline);
-            RenderingDevice.ComputeListBindUniformSet(computeList, _uniformSet, 0);
-            RenderingDevice.ComputeListDispatch(computeList, (uint)numThreads.X, (uint)numThreads.Y, 1);
-            RenderingDevice.ComputeListEnd();
+            long computeList = _RenderingDevice.ComputeListBegin();
+            _RenderingDevice.ComputeListBindComputePipeline(computeList, _pipeline);
+            _RenderingDevice.ComputeListBindUniformSet(computeList, _uniformSet, 0);
+            _RenderingDevice.ComputeListDispatch(computeList, (uint)numThreads.X, (uint)numThreads.Y, 1);
+            _RenderingDevice.ComputeListEnd();
         }
 
         public override void UpdateUniforms()

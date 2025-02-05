@@ -30,6 +30,7 @@ namespace Uniform
         // Make sure that if the Uniform requires the main rd to throw error if rebinding to local rd
         public abstract ComputeShaderUniform RebindUniform(IDispatchable owner, RenderingDevice rd, int binding);
 
+        // TODO either delete or fix this because ever uniform updates differently
         public abstract void UpdateUniform(byte[] data);
 
         public abstract Array<byte[]> GetByteData();
@@ -41,6 +42,8 @@ namespace Uniform
             {
                 if (rid.IsValid)
                     RenderingDevice.FreeRid(rid);
+                else
+                    GD.PrintErr($"Rid: {rid} is not valid for RenderingDevice: {RenderingDevice}.");
             }
             Uniform.ClearIds();
         }

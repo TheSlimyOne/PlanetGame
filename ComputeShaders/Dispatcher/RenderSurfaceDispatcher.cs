@@ -24,7 +24,7 @@ namespace Dispatcher
 			MULTIMESH_BUFFER,
 		}
 
-		public RenderSurfaceDispatcher(string shaderFilePath, ref RenderingDevice rd) : base(shaderFilePath, ref rd)
+		public RenderSurfaceDispatcher(string shaderFilePath) : base(shaderFilePath)
 		{
 			SetupComputeShader();
 		}
@@ -35,7 +35,7 @@ namespace Dispatcher
 			{
 				// Full      list  0 - 2
 				// Culling   list  3 - 6
-				[BufferNames.ATOMIC_COUNTER] = new StorageBufferUniform(this, RenderingDevice, (int)BufferNames.ATOMIC_COUNTER,
+				[BufferNames.ATOMIC_COUNTER] = new StorageBufferUniform(this, _RenderingDevice, (int)BufferNames.ATOMIC_COUNTER,
 					new Func<byte[]>(() =>
 					{
 						uint[] primCounts = new uint[2 * 3];
@@ -48,12 +48,12 @@ namespace Dispatcher
 				// 1 Write Index
 				// 2 Delete Index
 				// 3 Max nodes
-				[BufferNames.INDICES] = new StorageBufferUniform(this, RenderingDevice, (int)BufferNames.INDICES,
-					Utilities.ToBytes<uint>(new uint[] { 0, 1, 2, (uint)PlanetData.MaximumNodes }).ToArray()
+				[BufferNames.INDICES] = new StorageBufferUniform(this, _RenderingDevice, (int)BufferNames.INDICES,
+					Utilities.ToBytes<uint>([0, 1, 2, (uint)PlanetData.MaximumNodes]).ToArray()
 				),
 
 				// key = uvec4(nodeIDMSB, nodeIDLSB, meshPolygonID, flagsAndRootID)
-				[BufferNames.READ_LIST] = new StorageBufferUniform(this, RenderingDevice, (int)BufferNames.READ_LIST,
+				[BufferNames.READ_LIST] = new StorageBufferUniform(this, _RenderingDevice, (int)BufferNames.READ_LIST,
 				new Func<byte[]>(() =>
 				{
 					Key[] readList = new Key[PlanetData.MaximumNodes];
@@ -67,11 +67,11 @@ namespace Dispatcher
 				}).Invoke()
 				),
 
-				[BufferNames.WRITE_FULL_LIST] = new StorageBufferUniform(this, RenderingDevice, (int)BufferNames.WRITE_FULL_LIST,
+				[BufferNames.WRITE_FULL_LIST] = new StorageBufferUniform(this, _RenderingDevice, (int)BufferNames.WRITE_FULL_LIST,
 					Utilities.ToBytes<Key>(new Key[PlanetData.MaximumNodes]).ToArray()
 				),
 
-				[BufferNames.GLOBAL_KEYS_DATA] = new Texture2DUniform(this, RenderingDevice, (int)BufferNames.GLOBAL_KEYS_DATA,
+				[BufferNames.GLOBAL_KEYS_DATA] = new Texture2DUniform(this, _RenderingDevice, (int)BufferNames.GLOBAL_KEYS_DATA,
 					new RDTextureFormat()
 					{
 						Width = 10u,
@@ -87,7 +87,7 @@ namespace Dispatcher
 					}, RenderingDevice.UniformType.Image
 				),
 
-				[BufferNames.EXTERNAL_DATA] = new StorageBufferUniform(this, RenderingDevice, (int)BufferNames.EXTERNAL_DATA,
+				[BufferNames.EXTERNAL_DATA] = new StorageBufferUniform(this, _RenderingDevice, (int)BufferNames.EXTERNAL_DATA,
 					GetExternalData()
 				),
 
@@ -101,14 +101,14 @@ namespace Dispatcher
 			CreateUniformSet();
 		}
 
-		public override void Ready()
+		public override void Invoke()
 		{
-			long computeList = RenderingDevice.ComputeListBegin();
-			RenderingDevice.ComputeListBindComputePipeline(computeList, _pipeline);
-			RenderingDevice.ComputeListBindUniformSet(computeList, _uniformSet, 0);
-			RenderingDevice.ComputeListAddBarrier(computeList);
-			RenderingDevice.ComputeListDispatchIndirect(computeList, CopyKeysDispatcher.GetUniformRid(CopyKeysDispatcher.BufferNames.DISPATCH_BUFFER), 0);
-			RenderingDevice.ComputeListEnd();
+			long computeList = _RenderingDevice.ComputeListBegin();
+			_RenderingDevice.ComputeListBindComputePipeline(computeList, _pipeline);
+			_RenderingDevice.ComputeListBindUniformSet(computeList, _uniformSet, 0);
+			_RenderingDevice.ComputeListAddBarrier(computeList);
+			_RenderingDevice.ComputeListDispatchIndirect(computeList, CopyKeysDispatcher.GetUniformRid(CopyKeysDispatcher.BufferNames.DISPATCH_BUFFER), 0);
+			_RenderingDevice.ComputeListEnd();
 		}
 
 		public override void UpdateUniforms()
@@ -172,8 +172,8 @@ namespace Dispatcher
 
 		public (int, int) GetPrimitiveCounts()
 		{
-			uint[] indices = GetUniformData<uint>(BufferNames.INDICES);
-			uint[] primCounts = GetUniformData<uint>(BufferNames.ATOMIC_COUNTER);
+			uint[] indices = GetUniform<StorageBufferUniform>(BufferNames.INDICES).GetData<uint>();
+			uint[] primCounts = GetUniform<StorageBufferUniform>(BufferNames.ATOMIC_COUNTER).GetData<uint>();
 			return ((int)primCounts[indices[0]], (int)primCounts[indices[0] + 3]);
 		}
 

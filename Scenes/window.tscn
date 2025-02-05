@@ -3,19 +3,20 @@
 [ext_resource type="Script" uid="uid://beqi21y4fyxsr" path="res://Scenes/Window.cs" id="1_efths"]
 
 [node name="Window" type="Window"]
-position = Vector2i(0, 36)
-size = Vector2i(256, 256)
+initial_position = 3
+size = Vector2i(500, 500)
+current_screen = 0
 exclusive = true
 always_on_top = true
 script = ExtResource("1_efths")
 
-[node name="IndirectionTableTextureContainer" type="VBoxContainer" parent="."]
+[node name="GridContainer" type="GridContainer" parent="."]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-size_flags_horizontal = 4
-size_flags_vertical = 0
+size_flags_stretch_ratio = 0.0
+columns = 2
 
 [connection signal="close_requested" from="." to="." method="OnCloseRequested"]

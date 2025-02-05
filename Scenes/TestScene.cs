@@ -28,7 +28,7 @@ public partial class TestScene : Node
     public void ExecuteShader()
 	{
 		// RenderingDevice rd = RenderingServer.GetRenderingDevice();
-		// CalculateSlopeMapDispatcher calculateSlope = new(_shaderPath, ref rd);
+		// CalculateSlopeMapDispatcher calculateSlope = new(_shaderPath, rd);
 		// calculateSlope.MaxSlope = maxSlope;
 		// calculateSlope.HeightScale = 1;
 		// calculateSlope.InputTexture = A.Texture;
@@ -77,13 +77,13 @@ public partial class TestScene : Node
 			{
 				Image chunk = CreateChunk(chunkSize, numChunksPerRow, padding, baseImage, rowIndex, colIndex);
 	
-				BlurImageDispatcher dispatcher = new(_shaderPath, ref rd)
+				BlurImageDispatcher dispatcher = new(_shaderPath, rd)
 				{
 					Padding = padding,
 					HeightMap = chunk
 				};
 				dispatcher.CreateUniforms();
-				dispatcher.Ready();
+				dispatcher.Invoke();
 
 				dispatcher.Submit();
 				dispatcher.Sync();

@@ -16,22 +16,21 @@ vec3 hsl_to_rgb(vec3 c) {
 void fragment() {
 	vec2 sphere_uv_point = point_on_sphere_to_uv(sphere_local_position);
 
-	float msb = float(get_lod_of_key(key.xy)) / 16.0;
-
 	vec3 normal = normals[key.z];
 
-	vec2 uv = get_polygon_uv(cube_local_position, normal);
+	vec2 uv = get_cube_uv(int(key.z), cube_local_position);
+	// Adjusting uvs to make sure the range is [0, 1)
+	vec2 adjusted_uv = min(uv, vec2(1.0) - vec2(1e-7));
 
 	int lod = int(calculate_lod_to_cam(sphere_local_position, normal, false));
 
 	int grid = texture_mapping[lod];
 
 	float lod_grid_size = grid_size / pow(2.0, float(grid));
+	
+	vec2 cell_uv = floor(adjusted_uv * lod_grid_size) / lod_grid_size;
 
-	vec2 cell_uv = floor(uv * lod_grid_size) / lod_grid_size;
-	//vec2 tile = floor(polygon_uv / lod_grid_size);
-	int packed_id = (grid << 3) | int(key.z);
-	//float floatBits = packed_id / float(1 << 23);
+	int packed_id = (grid << 4) | int(key.z);
 
 	//ALBEDO = vec3(float(lod) / 16.0, float(key.z)/16.0, 0.0);
 	ALBEDO = vec3(cell_uv, float(packed_id)/255.0);

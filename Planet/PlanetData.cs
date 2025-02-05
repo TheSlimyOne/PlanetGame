@@ -1,7 +1,11 @@
 using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using Dispatcher;
 using Godot;
 using Godot.Collections;
 using Shaders;
+using Uniform;
 namespace Planet
 {
     [Tool]
@@ -261,7 +265,7 @@ namespace Planet
         private int _borderSize = 1;
 
         [Export(PropertyHint.Range, "128, 8192")]
-        public int DesiredChunkSize
+        public uint DesiredChunkSize
         {
             get => _desiredChunkSize;
             set
@@ -273,7 +277,7 @@ namespace Planet
                 }
             }
         }
-        private int _desiredChunkSize = 512;
+        private uint _desiredChunkSize = 512;
 
         [Export]
         public Texture2D AlbedoMap
@@ -285,6 +289,7 @@ namespace Planet
                 {
                     _albedoMap = value;
                     EmitChanged();
+                    SurfaceShader?.UpdateParameter("albedo_map");
                 }
             }
         }
@@ -339,25 +344,38 @@ namespace Planet
         #region Virtual Texturing Settings
 
         [Export] public int[] TextureMapping { get; private set; }
+        public SparseVirtualTexture SparseVirtualTexture { get; private set; }
 
-        public IndirectionTable IndirectionTable { get; private set; }
-        public ChunkedClipmapGenerator LeftGenerator { get; private set; }
-        public ChunkedClipmapGenerator RightGenerator { get; private set; }
-        public TileCache TileCache { get; private set; }
-        public int TotalSubdivisions { get; private set; }
+        [Export(PropertyHint.File, "*.glsl")] private string cubeComputeShader;
 
-        public void InitializeVirtualTextures(Node node)
+        public void InitializeVirtualTextures(Viewport viewport, Node node)
         {
-            LeftGenerator = new(DesiredChunkSize, CenterSize, BorderSize, "user://test/BIGA.png");
-            RightGenerator = new(DesiredChunkSize, CenterSize, BorderSize, "user://test/BIGB.png");
+            Vector2I imageSize = new(8192, 4096);
+            // ChunkManager chunkManager = new(imageSize, DesiredChunkSize, CenterSize, BorderSize);
+            // chunkManager.QueueCubeMapGeneration("res://Assets/Images/test-image.png");
+            // chunkManager.CreateCubeMaps();
+            // chunkManager.ChunkDestination = "user://test/chunks/";
+            // chunkManager.QueueChunkGeneration("user://test/cubemap/0.png", 0);
+            // chunkManager.QueueChunkGeneration("user://test/cubemap/1.png", 1);
+            // chunkManager.QueueChunkGeneration("user://test/cubemap/2.png", 2);
+            // chunkManager.QueueChunkGeneration("user://test/cubemap/3.png", 3);
+            // chunkManager.QueueChunkGeneration("user://test/cubemap/4.png", 4);
+            // chunkManager.QueueChunkGeneration("user://test/cubemap/5.png", 5);
+            // chunkManager.CreateChunks();
 
-            TotalSubdivisions = LeftGenerator.TotalSubdivisions;
-            int gridSize = (int)Mathf.Pow(2, LeftGenerator.TotalSubdivisions);
-
-            IndirectionTable = new(node, RenderingServer.GetRenderingDevice(), gridSize, TotalSubdivisions);
-            // IndirectionTable.ToTexture2DArray();
-            TileCache = new(IndirectionTable, DesiredChunkSize, LeftGenerator);
+            SparseVirtualTexture = new(viewport, imageSize, DesiredChunkSize,
+            [
+                // Image.LoadFromFile("user://test/chunks/3-0-0-0.png"),
+                // Image.LoadFromFile("user://test/chunks/3-1-0-0.png"),
+                // Image.LoadFromFile("user://test/chunks/3-2-0-0.png"),
+                // Image.LoadFromFile("user://test/chunks/3-3-0-0.png"),
+                // Image.LoadFromFile("user://test/chunks/3-4-0-0.png"),
+                // Image.LoadFromFile("user://test/chunks/3-5-0-0.png"),
+            ]);
+            SparseVirtualTexture.CreateDebugWindow(node);
+            SparseVirtualTexture.Enabled = true;
         }
+
 
         #endregion
 
@@ -401,16 +419,22 @@ namespace Planet
             SurfaceShader.Bind("albedo_map", () => AlbedoMap);
             SurfaceShader.Bind("is_texture_1D", () => AlbedoMap is GradientTexture1D);
             SurfaceShader.FrameDependentBind("normal_strength", () => NormalStrength);
+            SurfaceShader.Bind("indirection_table", () => SparseVirtualTexture.IndirectionTable.Table);
+            SurfaceShader.Bind("tile_cache", () => SparseVirtualTexture.TileCache.Cache);
+
+            SurfaceShader.Bind("grid_size", () => SparseVirtualTexture.IndirectionTable.GridSize);
+            SurfaceShader.Bind("total_texture_subdivisions", () => SparseVirtualTexture.IndirectionTable.MipDepth);
+            SurfaceShader.FrameDependentBind("texture_mapping", () => TextureMapping);
+
+            SurfaceShader.FrameDependentBind("morphing", () => Morphing);
         }
 
-        public void IndirectShaderBindParameters(CustomCamera main, CustomCamera helper)
+        public void FramebufferShaderBindParameters(CustomCamera main, CustomCamera helper)
         {
             BindVertexShaderParameters(FramebufferShader, main, helper);
-            FramebufferShader.Bind("grid_size", () => IndirectionTable.GridSize);
-            FramebufferShader.Bind("total_texture_subdivisions", () => TotalSubdivisions);
-            // IndirectShader.Bind("indirection_table", IndirectionTable.ToTexture2DArray);
+            FramebufferShader.Bind("grid_size", () => SparseVirtualTexture.IndirectionTable.GridSize);
+            FramebufferShader.Bind("total_texture_subdivisions", () => SparseVirtualTexture.IndirectionTable.MipDepth);
             FramebufferShader.FrameDependentBind("texture_mapping", () => TextureMapping);
-            // IndirectShader.Bind("tile_cache", TileCache.GetTexture);
         }
 
         #endregion
@@ -549,7 +573,8 @@ namespace Planet
                     int currentIndex = vertexIndex++;
                     Vector2 percentage = new Vector2(x, y) / (_resolution - 1) * 2 - Vector2.One;
                     vertices[currentIndex] = normal + percentage.X * axisA + percentage.Y * axisB;
-                    uvs[currentIndex] = new Vector2(x, y);
+
+
                     normals[currentIndex] = normal;
 
                     if (triIndex < triangles.Length)
@@ -566,7 +591,7 @@ namespace Planet
                 }
             }
 
-            Godot.Collections.Array arrays = new();
+            Godot.Collections.Array arrays = [];
             arrays.Resize((int)Mesh.ArrayType.Max);
             arrays[(int)Mesh.ArrayType.Vertex] = vertices;
             arrays[(int)Mesh.ArrayType.Index] = triangles;

@@ -17,7 +17,7 @@ namespace Dispatcher
         public Image HeightMap { get; set; }
         public int Padding { get; set; }
 
-        public BlurImageDispatcher(string shaderFilePath, ref RenderingDevice rd) : base(shaderFilePath, ref rd)
+        public BlurImageDispatcher(string shaderFilePath, RenderingDevice rd) : base(shaderFilePath, rd)
         {
             SetupComputeShader();
         }
@@ -34,7 +34,7 @@ namespace Dispatcher
                     image.ClearMipmaps();
                     image.Convert(Image.Format.L8);
 
-                    return new Texture2DUniform(this, RenderingDevice, (int)BufferNames.HEIGHT_MAP,
+                    return new Texture2DUniform(this, _RenderingDevice, (int)BufferNames.HEIGHT_MAP,
                         new RDTextureFormat()
                         {
                             Width = (uint)image.GetWidth(),
@@ -45,7 +45,7 @@ namespace Dispatcher
                         }, RenderingDevice.UniformType.Image, textureData: new() { image.GetData() });
                 }).Invoke(),
 
-                [BufferNames.BLURRED_HEIGHT_MAP] = new Texture2DUniform(this, RenderingDevice, (int)BufferNames.BLURRED_HEIGHT_MAP,
+                [BufferNames.BLURRED_HEIGHT_MAP] = new Texture2DUniform(this, _RenderingDevice, (int)BufferNames.BLURRED_HEIGHT_MAP,
                     new RDTextureFormat()
                     {
                         Width = (uint)(HeightMap.GetWidth() - 2 * Padding),
@@ -61,7 +61,7 @@ namespace Dispatcher
                     }, RenderingDevice.UniformType.Image
                 ),
 
-                [BufferNames.IMAGE_PADDING] = new StorageBufferUniform(this, RenderingDevice, (int)BufferNames.IMAGE_PADDING,
+                [BufferNames.IMAGE_PADDING] = new StorageBufferUniform(this, _RenderingDevice, (int)BufferNames.IMAGE_PADDING,
                     Utilities.ToBytes<int>(new int[] { Padding }).ToArray()
                 )
             };
@@ -76,14 +76,14 @@ namespace Dispatcher
 
         public void SaveBlurredHeightMap(string path) => GetUniform<Texture2DUniform>(BufferNames.BLURRED_HEIGHT_MAP).SaveImage(path, Image.Format.L8);
 
-        public override void Ready()
+        public override void Invoke()
         {
             Vector2I numThreads = new((HeightMap.GetWidth() - 2 * Padding) / 8, (HeightMap.GetHeight() - 2 * Padding) / 8);
-            long computeList = RenderingDevice.ComputeListBegin();
-            RenderingDevice.ComputeListBindComputePipeline(computeList, _pipeline);
-            RenderingDevice.ComputeListBindUniformSet(computeList, _uniformSet, 0);
-            RenderingDevice.ComputeListDispatch(computeList, (uint)numThreads.X, (uint)numThreads.Y, 1);
-            RenderingDevice.ComputeListEnd();
+            long computeList = _RenderingDevice.ComputeListBegin();
+            _RenderingDevice.ComputeListBindComputePipeline(computeList, _pipeline);
+            _RenderingDevice.ComputeListBindUniformSet(computeList, _uniformSet, 0);
+            _RenderingDevice.ComputeListDispatch(computeList, (uint)numThreads.X, (uint)numThreads.Y, 1);
+            _RenderingDevice.ComputeListEnd();
         }
 
         public override void UpdateUniforms()

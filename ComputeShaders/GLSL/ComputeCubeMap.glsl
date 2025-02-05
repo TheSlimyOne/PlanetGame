@@ -2,21 +2,22 @@
 #version 450
 #define PI 3.14159265359
 
+const vec3 normals[6] = vec3[6](
+    vec3(1.0, 0.0, 0.0),
+    vec3(-1.0, 0.0, 0.0),
+    vec3(0.0, 1.0, 0.0),
+    vec3(0.0, -1.0, 0.0),
+    vec3(0.0, 0.0, 1.0),
+    vec3(0.0, 0.0, -1.0)
+);
+
 // Sebastian Lague
-layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
 layout(set = 0, binding = 0) uniform sampler2D InputImage;
 layout(set = 0, binding = 1, rgba32f) uniform image3D CubeMap;
 
-vec3 toCubePosition(vec3 normal, vec2 uv)
-{
-    if (normal.x == 1 || normal.x == -1) return vec3(normal.x, uv.x, uv.y);
-    if (normal.y == 1 || normal.y == -1) return vec3(uv.x, normal.y, uv.y);
-    if (normal.z == 1 || normal.z == -1) return vec3(uv.x, uv.y, normal.z);
-    return vec3(-1);
-}
-
-vec2 pointOnSphereToUV(vec3 p) {
+vec2 point_on_sphere_to_uv(vec3 p) {
 	float longitude = atan(p.x, p.z);
 	float latitude = asin(-p.y);
 	float u = (longitude / PI + 1.0) * 0.5;
@@ -24,22 +25,50 @@ vec2 pointOnSphereToUV(vec3 p) {
 	return vec2(u, v);
 }
 
-vec3 pointOnCubeToPointOnSphere(vec3 p) {
+vec3 point_on_cube_to_point_on_sphere(vec3 p) {
 	vec3 square = p * p;
 	return p * sqrt(1.0 - (square.yxx + square.zzy) / 2.0 + square.yxx * square.zzy / 3.0);
 }
 
+vec3 to_cube_position(int normal_id, vec2 uv) {
+    vec3 point = vec3(0);
+    switch(normal_id) {
+        case 0:
+            point = vec3(1.0, 1.0 - uv.y, 1.0 - uv.x);
+            point.yz = 2 * point.yz - 1;
+            break;
+        case 1:
+            point = vec3(-1.0, 1.0 - uv.y, uv.x);
+            point.yz = 2 * point.yz - 1;
+            break;
+        case 2:
+            point = vec3(1.0 - uv.x, 1.0, 1.0 - uv.y);
+            point.xz = 2 * point.xz - 1;
+            break;
+        case 3:
+            point = vec3(uv.x, -1.0, 1.0 - uv.y);
+            point.xz = 2 * point.xz - 1;
+            break;
+        case 4:
+            point = vec3(uv.x, 1.0 - uv.y, 1.0);
+            point.xy = 2 * point.xy - 1;
+            break;
+        case 5:
+            point = vec3(1.0 - uv.x, 1.0 - uv.y, -1.0);
+            point.xy = 2 * point.xy - 1;
+            break;
+    }
+    return point;
+}
+
 void main()
 {
-    ivec3 invocationID = ivec3(gl_GlobalInvocationID.xyz);
-    
-    vec3 direction = imageLoad(CubeMap, invocationID).xyz;
-    vec2 faceUV = vec2(invocationID.xy) / vec2(imageSize(CubeMap).xy);
-    faceUV = 2 * faceUV - 1;
-    vec3 cubePosition = toCubePosition(direction, faceUV);
-    vec3 spherePosition = pointOnCubeToPointOnSphere(cubePosition);
-    vec2 uv = pointOnSphereToUV(spherePosition);
+    ivec3 invocation_id = ivec3(gl_GlobalInvocationID.xyz);
+    vec3 direction = normals[invocation_id.z];
+    vec2 faceUV = vec2(invocation_id.xy) / vec2(imageSize(CubeMap).xy);
+    vec3 cube_position = to_cube_position(int(invocation_id.z), faceUV);
+    vec3 sphere_position = point_on_cube_to_point_on_sphere(cube_position);
+    vec2 uv = point_on_sphere_to_uv(sphere_position);
     vec4 color = texture(InputImage, uv);
-    // color = vec4(uv, 0, 0);
-    imageStore(CubeMap, invocationID, color);
+    imageStore(CubeMap, invocation_id, color);
 }
