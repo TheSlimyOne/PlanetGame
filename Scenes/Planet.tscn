@@ -1,10 +1,9 @@
-[gd_scene load_steps=26 format=3 uid="uid://c1roirj1ei3ci"]
+[gd_scene load_steps=25 format=3 uid="uid://c1roirj1ei3ci"]
 
 [ext_resource type="Script" uid="uid://b4tv1heidhb4j" path="res://Planet/PlanetController.cs" id="1_qtwtp"]
 [ext_resource type="Resource" uid="uid://bulxpgk85g4tq" path="res://Planet/PlanetDataDefault.tres" id="2_usljo"]
 [ext_resource type="PackedScene" uid="uid://dw6xke4ovskkx" path="res://Scenes/ui.tscn" id="3_ebyhs"]
 [ext_resource type="Texture2D" uid="uid://ejlq5akl3icw" path="res://Assets/Images/panorama_image.png" id="3_ldv5r"]
-[ext_resource type="Script" uid="uid://b0ouf0wmawpph" path="res://Planet/SurfaceController.cs" id="4_ebyhs"]
 [ext_resource type="Script" uid="uid://b6ndo6pet2jv4" path="res://Player/Camera/CameraController.cs" id="5_usljo"]
 [ext_resource type="Script" uid="uid://bker53ypetnsk" path="res://Player/Camera/OrbitalCamera3D.cs" id="6_ldv5r"]
 [ext_resource type="PackedScene" uid="uid://b0aa8isqnhj7e" path="res://Scenes/DebugCube.tscn" id="7_qtwtp"]
@@ -25,11 +24,7 @@ glow_enabled = true
 [sub_resource type="ViewportTexture" id="ViewportTexture_8qkf8"]
 viewport_path = NodePath("CameraController/SubViewport")
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ldv5r"]
-albedo_color = Color(0, 1, 1, 1)
-
 [sub_resource type="SphereMesh" id="SphereMesh_ebyhs"]
-material = SubResource("StandardMaterial3D_ldv5r")
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_usljo"]
 
@@ -60,13 +55,23 @@ environment = SubResource("Environment_ldv5r")
 [sub_resource type="SphereShape3D" id="SphereShape3D_tgghh"]
 radius = 500.0
 
-[node name="Planet" type="Node3D" node_paths=PackedStringArray("CameraController", "SurfaceController", "SurfaceAttachment", "UIController")]
+[sub_resource type="CylinderMesh" id="CylinderMesh_ldv5r"]
+top_radius = 2.0
+bottom_radius = 2.0
+height = 10000.0
+
+[node name="Planet" type="Node3D" node_paths=PackedStringArray("CameraController", "SurfaceAttachment", "UIController", "MainLightSource", "WorldEnvironment")]
 script = ExtResource("1_qtwtp")
 PlanetData = ExtResource("2_usljo")
 CameraController = NodePath("CameraController")
-SurfaceController = NodePath("SurfaceController")
 SurfaceAttachment = NodePath("SurfaceAttachment")
 UIController = NodePath("UIController")
+MainLightSource = NodePath("SurfaceAttachment/MainLightSource")
+WorldEnvironment = NodePath("WorldEnvironment")
+MaxSpeed = 0.005
+ZoomSpeed = 100.0
+MovementEasing = 0.3
+LodSubdivisionMap = PackedInt32Array(4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
 metadata/_edit_group_ = true
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
@@ -138,17 +143,16 @@ uppercase = true
 script = ExtResource("5_usljo")
 Debug = true
 
-[node name="Main" type="Camera3D" parent="CameraController" node_paths=PackedStringArray("Target")]
-cull_mask = 1048573
+[node name="Main" type="Camera3D" parent="CameraController"]
 current = true
+fov = 70.0
 near = 0.001
 far = 30000.0
 script = ExtResource("6_ldv5r")
 Sensitivity = 0.1
 RotationRangeX = Vector2(0, 180)
 RotationEasing = 0.3
-DistanceFromTarget = 85.0
-Target = NodePath("../../SurfaceController")
+DistanceFromTarget = 50.0
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="CameraController/Main"]
 mesh = SubResource("SphereMesh_ebyhs")
@@ -191,19 +195,6 @@ transform = Transform3D(0, 4.37114e-08, 0.331828, 1.2075, -3.55271e-15, 5.15309e
 mesh = SubResource("PrismMesh_8qkf8")
 skeleton = NodePath("../..")
 
-[node name="SurfaceController" type="Node3D" parent="." node_paths=PackedStringArray("WorldEnvironment", "MainLightSource", "InnerCollision", "OuterCollision", "CubicalCollision")]
-script = ExtResource("4_ebyhs")
-WorldEnvironment = NodePath("../WorldEnvironment")
-MainLightSource = NodePath("../SurfaceAttachment/MainLightSource")
-InnerCollision = NodePath("../SurfaceAttachment/InnerCollision")
-OuterCollision = NodePath("../SurfaceAttachment/OuterCollision")
-CubicalCollision = NodePath("../SurfaceAttachment/CubicalCollision")
-_renderSurfaceShaderPath = "uid://b56oykpmj0br0"
-_copyKeysShaderPath = "uid://b1aoaqwgb51hm"
-MaxSpeed = 0.005
-ZoomSpeed = 100.0
-MovementEasing = 0.3
-
 [node name="SurfaceAttachment" type="Node3D" parent="."]
 
 [node name="Cube" parent="SurfaceAttachment" instance=ExtResource("7_qtwtp")]
@@ -233,3 +224,7 @@ visible = false
 
 [node name="OuterCollisionShape3D" type="CollisionShape3D" parent="SurfaceAttachment/OuterCollision"]
 shape = SubResource("SphereShape3D_tgghh")
+
+[node name="Pole" type="MeshInstance3D" parent="SurfaceAttachment"]
+visible = false
+mesh = SubResource("CylinderMesh_ldv5r")

@@ -1,17 +1,31 @@
-using System;
 using Godot;
 using Godot.Collections;
-using Dispatcher;
+using PlanetGame.ComputeShaders.Dispatcher;
+using PlanetGame.Util;
 
 namespace Uniform
 {
     public partial class StorageBufferUniform : ComputeShaderUniform
     {
         public RenderingDevice.StorageBufferUsage StorageBufferUsage { get; private set; }
+        static int test = 0;
 
-        public StorageBufferUniform(IDispatchable owner, RenderingDevice renderingDevice, int binding, byte[] data, RenderingDevice.StorageBufferUsage storageBufferUsage = 0) : base(renderingDevice, binding, owner)
+        public StorageBufferUniform(IDispatchable owner, RenderingDevice renderingDevice, int binding, byte[] data, RenderingDevice.StorageBufferUsage storageBufferUsage = 0, bool perserve = false) : base(renderingDevice, binding, owner, perserve)
         {
             Rid = renderingDevice.StorageBufferCreate((uint)data.Length, data, usage: storageBufferUsage);
+            StorageBufferUsage = storageBufferUsage;
+
+            Uniform = new()
+            {
+                UniformType = RenderingDevice.UniformType.StorageBuffer,
+                Binding = binding
+            };
+            Uniform.AddId(Rid);
+        }
+
+        public StorageBufferUniform(IDispatchable owner, RenderingDevice renderingDevice, int binding, Rid rid, RenderingDevice.StorageBufferUsage storageBufferUsage = 0, bool perserve = false) : base(renderingDevice, binding, owner, perserve)
+        {
+            Rid = rid;
             StorageBufferUsage = storageBufferUsage;
 
             Uniform = new()
@@ -57,7 +71,7 @@ namespace Uniform
 
         public T[] GetData<T>(uint offsetBytes = 0, uint sizeBytes = 0) where T : unmanaged => Utilities.FromBytes<T>(RenderingDevice.BufferGetData(Rid, offsetBytes, sizeBytes)).ToArray();
         
-        public void GetDataAsync(Callable callback, uint offsetBytes = 0, uint sizeBytes = 0) => RenderingDevice.BufferGetDataAsync(Rid, callback, offsetBytes, sizeBytes);
+        public Error GetDataAsync(Callable callback, uint offsetBytes = 0, uint sizeBytes = 0) => RenderingDevice.BufferGetDataAsync(Rid, callback, offsetBytes, sizeBytes);
 
         public override void UpdateUniform(byte[] data)
         {

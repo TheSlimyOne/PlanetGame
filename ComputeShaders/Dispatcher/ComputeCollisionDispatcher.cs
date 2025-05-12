@@ -1,9 +1,7 @@
 using System;
 using Godot;
-using Godot.Collections;
-using Uniform;
 
-namespace Dispatcher
+namespace PlanetGame.ComputeShaders.Dispatcher
 {
     public partial class ComputeCollisionDispatcher : ComputeShaderDispatcher<ComputeCollisionDispatcher.BufferNames>
     {

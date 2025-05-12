@@ -14,8 +14,14 @@ const vec3 normals[6] = vec3[6](
 // Sebastian Lague
 layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
-layout(set = 0, binding = 0) uniform sampler2D InputImage;
-layout(set = 0, binding = 1, rgba32f) uniform image3D CubeMap;
+layout(set = 0, binding = 0) uniform sampler2DArray InputImage;
+layout(set = 0, binding = 1, rgba8) uniform image2DArray Plane;
+layout(set = 0, binding = 2, std430) buffer restrict NormalID {
+    uint normal_id;
+};
+layout(set = 0, binding = 3, std430) buffer restrict Data {
+    ivec2 tile_dimension;
+};
 
 vec2 point_on_sphere_to_uv(vec3 p) {
 	float longitude = atan(p.x, p.z);
@@ -64,11 +70,30 @@ vec3 to_cube_position(int normal_id, vec2 uv) {
 void main()
 {
     ivec3 invocation_id = ivec3(gl_GlobalInvocationID.xyz);
-    vec3 direction = normals[invocation_id.z];
-    vec2 faceUV = vec2(invocation_id.xy) / vec2(imageSize(CubeMap).xy);
-    vec3 cube_position = to_cube_position(int(invocation_id.z), faceUV);
+    vec3 direction = normals[normal_id];
+
+    int plane_tile_x = invocation_id.z % 2;
+    int plane_tile_y = invocation_id.z / 2;
+    vec2 full_image_uv = vec2(invocation_id) / vec2(2 * imageSize(Plane).xy);
+    full_image_uv += vec2(0.5) * vec2(plane_tile_x, plane_tile_y);
+
+    vec3 cube_position = to_cube_position(int(normal_id), full_image_uv);
     vec3 sphere_position = point_on_cube_to_point_on_sphere(cube_position);
-    vec2 uv = point_on_sphere_to_uv(sphere_position);
-    vec4 color = texture(InputImage, uv);
-    imageStore(CubeMap, invocation_id, color);
+
+    vec2 full_image_uv_spherical = point_on_sphere_to_uv(sphere_position);
+    int tile_x = min(int(floor(full_image_uv_spherical.x * 4)), tile_dimension.x - 1);
+    int tile_y = min(int(floor(full_image_uv_spherical.y * 2)), tile_dimension.y - 1);
+    int tile_index = tile_y * 4 + tile_x;
+
+    vec2 tile_size = 1.0 / vec2(tile_dimension);
+    float tile_u = (full_image_uv_spherical.x - tile_x * tile_size.x) / tile_size.x;
+    float tile_v = (full_image_uv_spherical.y - tile_y * tile_size.y) / tile_size.y;
+
+    vec4 color = texture(InputImage, vec3(tile_u, tile_v, tile_index));
+
+    imageStore(Plane, ivec3(invocation_id), color);
+
+
+
+
 }

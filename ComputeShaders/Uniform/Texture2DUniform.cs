@@ -1,9 +1,7 @@
-using System;
 using Godot;
 using Godot.Collections;
-using Dispatcher;
+using PlanetGame.ComputeShaders.Dispatcher;
 using UniformException;
-using System.Threading.Tasks;
 
 namespace Uniform
 {
@@ -13,7 +11,8 @@ namespace Uniform
         public RDSamplerState SamplerState { get; protected set; }
 
         // TODO prob should implement perserved lol idk how I missed that
-        public Texture2DUniform(IDispatchable owner, RenderingDevice renderingDevice, int binding, RDTextureFormat format, RenderingDevice.UniformType uniformType, Array<byte[]> textureData = null, bool perserved = false) : base(renderingDevice, binding, owner)
+        // got it partial done ig
+        public Texture2DUniform(IDispatchable owner, RenderingDevice renderingDevice, int binding, RDTextureFormat format, RenderingDevice.UniformType uniformType, Array<byte[]> textureData = null, bool perserved = false) : base(renderingDevice, binding, owner, perserved)
         {
             TextureFormat = format;
             Rid = renderingDevice.TextureCreate(TextureFormat, new RDTextureView(), textureData);
@@ -36,7 +35,7 @@ namespace Uniform
             Uniform.AddId(Rid);
         }
 
-        private Texture2DUniform(IDispatchable owner, Texture2DUniform textureUniform, int binding) : base(textureUniform.RenderingDevice, binding, owner)
+        private Texture2DUniform(IDispatchable owner, Texture2DUniform textureUniform, int binding) : base(textureUniform.RenderingDevice, binding, owner, textureUniform.Perserved)
         {
             TextureFormat = textureUniform.TextureFormat;
             Rid = textureUniform.Rid;
@@ -55,7 +54,7 @@ namespace Uniform
             }
         }
 
-        public Texture2DUniform(IDispatchable owner, int binding, Rid rid, RenderingDevice.UniformType uniformType, bool perserved = false) : base(binding, owner)
+        public Texture2DUniform(IDispatchable owner, int binding, Rid rid, RenderingDevice.UniformType uniformType, bool perserved = false) : base(binding, owner, perserved)
         {
             Rid = rid;
             TextureFormat = RenderingDevice.TextureGetFormat(Rid);
@@ -72,10 +71,19 @@ namespace Uniform
         public Texture2Drd GetTexture2Drd() => new() { TextureRdRid = Rid };
         public Texture2DArrayRD GetTexture2DArrayRD() => new() { TextureRdRid = Rid };
 
-        public Image GetImage(Image.Format format, uint layer = 0) => Image.CreateFromData((int)TextureFormat.Width, (int)TextureFormat.Height, false, format, GetLayerByteData(layer));  
-        
+        public Image GetImage(Image.Format format, uint layer = 0) => Image.CreateFromData((int)TextureFormat.Width, (int)TextureFormat.Height, false, format, GetLayerByteData(layer));
+
+        public Image[] GetImageArray(Image.Format format)
+        {
+            Image[] images = new Image[TextureFormat.ArrayLayers];
+            for (uint i = 0; i < images.Length; i++)
+            {
+                images[i] = Image.CreateFromData((int)TextureFormat.Width, (int)TextureFormat.Height, false, format, GetLayerByteData(i));
+            }
+            return images;
+        }
+
         public byte[] GetLayerByteData(uint layer) => RenderingDevice.TextureGetData(Rid, layer);
-        
 
         public void SaveImage(string path, Image.Format format, uint layer = 0)
         {
@@ -99,8 +107,15 @@ namespace Uniform
         public override void UpdateUniform(byte[] data) => RenderingDevice.TextureUpdate(Rid, 0, data);
         public void UpdateUniform(uint offset, uint sizeBytes, byte[] data) => RenderingDevice.BufferUpdate(Rid, offset, sizeBytes, data);
 
-        public void ReplaceImage(Image image) => UpdateUniform(image.GetData());
+        public void SetImage(Image image) => UpdateUniform(image.GetData());
 
+        public void SetImage(Image[] images)
+        {
+            for (uint i = 0; i < images.Length; i++)
+            {
+                RenderingDevice.TextureUpdate(Rid, i, images[i].GetData());
+            }
+        }
 
         public override Texture2DUniform RebindUniform(IDispatchable owner, RenderingDevice rd, int binding)
         {

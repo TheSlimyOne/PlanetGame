@@ -2,7 +2,7 @@
 
 [ext_resource type="Shader" uid="uid://c8qwynbty4d0k" path="res://test.gdshader" id="1_qih2i"]
 [ext_resource type="Texture2D" uid="uid://bolcfeuqq1ras" path="res://Assets/Images/numb.png" id="2_sth5e"]
-[ext_resource type="Shader" uid="uid://dt3p1ekd60lqa" path="res://Assets/Shaders/array_texture_visualizer.gdshader" id="3_sth5e"]
+[ext_resource type="Shader" uid="uid://dt3p1ekd60lqa" path="res://Assets/Shaders/Planet/array_texture_visualizer.gdshader" id="3_sth5e"]
 
 [sub_resource type="BoxMesh" id="BoxMesh_2pks0"]
 subdivide_width = 32

@@ -1,11 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Godot;
 using Godot.Collections;
 using Uniform;
 
-namespace Dispatcher;
+namespace PlanetGame.ComputeShaders.Dispatcher;
 
 
 
@@ -32,11 +31,16 @@ public abstract class ComputeShaderDispatcher<TEnum> : IDispatchable where TEnum
         _RenderingDevice = rd;
     }
 
+    public ComputeShaderUniform this[Enum @enum]
+    {
+        get => GetUniform(@enum);
+    }
+
+
     public ComputeShaderUniform GetUniform(Enum @enum) => _computeShaderUniforms[@enum];
     public T GetUniform<T>(Enum @enum) where T : ComputeShaderUniform => (T)_computeShaderUniforms[@enum];
-    public Rid GetUniformRid(Enum @enum) => GetUniform(@enum).Rid;
 
-
+    // TODO maybe rename this to resetUniforms
     public abstract void UpdateUniforms();
     public abstract void Invoke();
     public abstract void CreateUniforms();
@@ -78,10 +82,21 @@ public abstract class ComputeShaderDispatcher<TEnum> : IDispatchable where TEnum
         Sync();
     }
 
-    public void Submit() => _RenderingDevice.Submit();
-    public void Sync() => _RenderingDevice.Sync();
+    public void Submit()
+    {
+        if (RenderingServer.GetRenderingDevice() == _RenderingDevice)
+            throw new InvalidOperationException("Cannot submit on the main rendering device.");
+        _RenderingDevice.Submit();
+    }
 
-    bool verbose = false;
+    public void Sync()
+    {
+        if (RenderingServer.GetRenderingDevice() == _RenderingDevice)
+            throw new InvalidOperationException("Cannot sync on the main rendering device.");
+        _RenderingDevice.Sync();
+    }
+
+    private readonly bool _verbose = false;
     public virtual void CleanupGPU()
     {
         if (_RenderingDevice == null) return;
@@ -98,15 +113,15 @@ public abstract class ComputeShaderDispatcher<TEnum> : IDispatchable where TEnum
             Enum uniformName = kvp.Key;
             ComputeShaderUniform computeShaderUniform = kvp.Value;
 
-            if (verbose) GD.Print("========================");
-            if (verbose) GD.Print($"Clearing {uniformName} in {GetType().Name} ID: {GetID()} Owner: {computeShaderUniform.Owner}");
+            if (_verbose) GD.Print("========================");
+            if (_verbose) GD.Print($"Clearing {uniformName} in {GetType().Name} ID: {GetID()} Owner: {computeShaderUniform.Owner}");
             if (computeShaderUniform.Owner == this)
             {
-                if (verbose) GD.Print(computeShaderUniform.Rid);
+                if (_verbose) GD.Print(computeShaderUniform.Rid);
                 computeShaderUniform.FreeRids();
             }
-            else { if (verbose) GD.Print($"{GetType().Name} does not own this uniform. Not free rid"); }
-            if (verbose) GD.Print("========================");
+            else { if (_verbose) GD.Print($"{GetType().Name} does not own this uniform. Not free rid"); }
+            if (_verbose) GD.Print("========================");
         }
 
         _RenderingDevice = null;

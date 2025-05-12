@@ -1,10 +1,11 @@
 using System;
-using System.Linq;
 using Uniform;
 using Godot;
 using Godot.Collections;
 using Planet;
-namespace Dispatcher
+using PlanetGame.Util;
+
+namespace PlanetGame.ComputeShaders.Dispatcher
 {
 	public class RenderSurfaceDispatcher : ComputeShaderDispatcher<RenderSurfaceDispatcher.BufferNames>
 	{
@@ -12,6 +13,7 @@ namespace Dispatcher
 		public CopyKeysDispatcher CopyKeysDispatcher { get; set; }
 		public CustomCamera MainCamera { get; set; }
 		public CustomCamera HelperCamera { get; set; }
+		public MultiMeshRD PlanetMultiMesh { get; set; }
 
 		public enum BufferNames
 		{
@@ -23,8 +25,8 @@ namespace Dispatcher
 			EXTERNAL_DATA,
 			MULTIMESH_BUFFER,
 		}
-
-		public RenderSurfaceDispatcher(string shaderFilePath) : base(shaderFilePath)
+		
+		public RenderSurfaceDispatcher() : base(ShaderPaths.RENDER_SURFACE_PATH)
 		{
 			SetupComputeShader();
 		}
@@ -52,7 +54,7 @@ namespace Dispatcher
 					Utilities.ToBytes<uint>([0, 1, 2, (uint)PlanetData.MaximumNodes]).ToArray()
 				),
 
-				// key = uvec4(nodeIDMSB, nodeIDLSB, meshPolygonID, flagsAndRootID)
+				// key = uvec4(nodeIdMSB, nodeIdLSB, meshPolygonId, flagsAndRootId)
 				[BufferNames.READ_LIST] = new StorageBufferUniform(this, _RenderingDevice, (int)BufferNames.READ_LIST,
 				new Func<byte[]>(() =>
 				{
@@ -91,12 +93,15 @@ namespace Dispatcher
 					GetExternalData()
 				),
 
-				[BufferNames.MULTIMESH_BUFFER] = new MultimeshUniform(this,
-					(int)BufferNames.MULTIMESH_BUFFER,
-					PlanetData.MaximumNodes,
-					PlanetData.TriangleMesh.GetRid(),
-					-1
-				),
+				// [BufferNames.MULTIMESH_BUFFER] = new MultimeshUniform(this,
+				// 	(int)BufferNames.MULTIMESH_BUFFER,
+				// 	PlanetData.MaximumNodes,
+				// 	PlanetData.TriangleMesh.GetRid(),
+				// 	-1
+				// ),
+
+				[BufferNames.MULTIMESH_BUFFER] = new StorageBufferUniform(this, _RenderingDevice, (int)BufferNames.MULTIMESH_BUFFER, 
+					PlanetMultiMesh.Buffer, perserve: true)
 			};
 			CreateUniformSet();
 		}
@@ -107,8 +112,10 @@ namespace Dispatcher
 			_RenderingDevice.ComputeListBindComputePipeline(computeList, _pipeline);
 			_RenderingDevice.ComputeListBindUniformSet(computeList, _uniformSet, 0);
 			_RenderingDevice.ComputeListAddBarrier(computeList);
-			_RenderingDevice.ComputeListDispatchIndirect(computeList, CopyKeysDispatcher.GetUniformRid(CopyKeysDispatcher.BufferNames.DISPATCH_BUFFER), 0);
+			_RenderingDevice.ComputeListDispatchIndirect(computeList, CopyKeysDispatcher[CopyKeysDispatcher.BufferNames.DISPATCH_BUFFER].Rid, 0);
 			_RenderingDevice.ComputeListEnd();
+
+
 		}
 
 		public override void UpdateUniforms()
@@ -147,19 +154,12 @@ namespace Dispatcher
 			return [.. data];
 		}
 
-		// public void ComputePages()
+		// public Rid CreateMultimeshInstance(Transform3D transform, Rid senario, float extraVisibilityMargin, uint layerMask)
 		// {
-		// 	_computeShaderUniforms[BufferNames.PAGING].UpdateUniform(
-		// 		Utilities.ToBytesSingle(true).ToArray()
+		// 	return GetUniform<MultimeshUniform>(BufferNames.MULTIMESH_BUFFER).CreateMultimeshInstance(
+		// 		transform, senario, extraVisibilityMargin, layerMask
 		// 	);
 		// }
-
-		public Rid CreateMultimeshInstance(Transform3D transform, Rid senario, float extraVisibilityMargin, uint layerMask)
-		{
-			return GetUniform<MultimeshUniform>(BufferNames.MULTIMESH_BUFFER).CreateMultimeshInstance(
-				transform, senario, extraVisibilityMargin, layerMask
-			);
-		}
 
 		public void ResizeReadList()
 		{
@@ -181,5 +181,11 @@ namespace Dispatcher
 		{
 			return (int)GetUniform<Texture2DUniform>(BufferNames.GLOBAL_KEYS_DATA).GetPixel(0, 0).R;
 		}
+
+        public void ClearGlobalKeys()
+        {
+            GetUniform<Texture2DUniform>(BufferNames.GLOBAL_KEYS_DATA).ClearTexture(Colors.Black);
+        }
+
     }
 }

@@ -1,6 +1,6 @@
 using Godot;
 using Godot.Collections;
-
+using PlanetGame.Util;
 public partial class IndirectDrawing : Node3D
 {
 	Vector3[] Vertices = new Vector3[]{
@@ -55,7 +55,7 @@ public partial class IndirectDrawing : Node3D
 		
 	 
 		byte[] args = Utilities.ToBytesSingle(new IndirectArgs() { vertexCount = Vertices.Length, instanceCount = InstanceCount}).ToArray();
-		indirectArgs = rd.StorageBufferCreate((uint)args.Length, args, RenderingDevice.StorageBufferUsage.DispatchIndirect);
+		indirectArgs = rd.StorageBufferCreate((uint)args.Length, args, RenderingDevice.StorageBufferUsage.Indirect);
 
 		Array<RDVertexAttribute> attribute = new();
 		RDVertexAttribute vertexAttribute = new() {

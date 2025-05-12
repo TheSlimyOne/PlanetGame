@@ -1,11 +1,10 @@
 using System;
-using System.Linq;
 using Godot;
-using Godot.Collections;
-using Planet;
 using Uniform;
+using PlanetGame.Rendering.VirtualTexturing;
+using PlanetGame.Util;
 
-namespace Dispatcher
+namespace PlanetGame.ComputeShaders.Dispatcher
 {
     public partial class ReadFramebufferDispatcher : ComputeShaderDispatcher<ReadFramebufferDispatcher.BufferNames>
     {
@@ -25,7 +24,7 @@ namespace Dispatcher
             TILE_IDS
         }
 
-        public ReadFramebufferDispatcher(string shaderFilePath) : base(shaderFilePath)
+        public ReadFramebufferDispatcher() : base(ShaderPaths.READ_FRAME_BUFFER)
         {
             SetupComputeShader();
         }
@@ -37,20 +36,20 @@ namespace Dispatcher
 
             _computeShaderUniforms = new System.Collections.Generic.Dictionary<Enum, ComputeShaderUniform>()
             {
-                [BufferNames.FRAMEBUFFER] = new Texture2DUniform(this, (int)BufferNames.FRAMEBUFFER, 
-                    RenderingServer.TextureGetRdTexture(viewportTexture), RenderingDevice.UniformType.Image
+                [BufferNames.FRAMEBUFFER] = new Texture2DUniform(this, (int)BufferNames.FRAMEBUFFER,
+                    RenderingServer.TextureGetRdTexture(viewportTexture), RenderingDevice.UniformType.Image, perserved: true
                 ),
 
                 [BufferNames.INDIRECTION_TABLE] = new Texture2DUniform(this, (int)BufferNames.INDIRECTION_TABLE,
-                    SparseVirtualTexture.IndirectionTable.Table.TextureRdRid, RenderingDevice.UniformType.Image
+                    SparseVirtualTexture.IndirectionTable.Table.TextureRdRid, RenderingDevice.UniformType.Image, perserved: true
                 ),
-                
+
                 [BufferNames.INDIRECTION_STATE_TABLE] = new Texture2DUniform(this, (int)BufferNames.INDIRECTION_STATE_TABLE,
-                    SparseVirtualTexture.IndirectionStateTable.Table.TextureRdRid, RenderingDevice.UniformType.Image
+                    SparseVirtualTexture.IndirectionStateTable.Table.TextureRdRid, RenderingDevice.UniformType.Image, perserved: true
                 ),
-                
+
                 [BufferNames.RESIDENCY_TABLE] = new Texture2DUniform(this, (int)BufferNames.RESIDENCY_TABLE,
-                    SparseVirtualTexture.ResidencyTable.Table.TextureRdRid, RenderingDevice.UniformType.Image
+                    SparseVirtualTexture.ResidencyTable.Table.TextureRdRid, RenderingDevice.UniformType.Image, perserved: true
                 ),
 
                 [BufferNames.INDIRECTION_TABLE_DATA] = new StorageBufferUniform(this, _RenderingDevice, (int)BufferNames.INDIRECTION_TABLE_DATA,
@@ -92,7 +91,7 @@ namespace Dispatcher
 
         public override void UpdateUniforms()
         {
-            GetUniform<StorageBufferUniform>(BufferNames.TEXTURE_ID_COUNTER).UpdateUniform(new byte[Utilities.SizeOf<int>()]);
+            this[BufferNames.TEXTURE_ID_COUNTER].UpdateUniform(new byte[Utilities.SizeOf<int>()]);
             // GD.Print(GetUniform<StorageBufferUniform>(BufferNames.TILE_CACHE_COUNTER).GetData<uint>()[0]);
             // GetUniform<Texture2DUniform>(BufferNames.INDIRECTION_TABLE).ClearTexture(new Color(0, 0, 0, 0), layerCount: totalPages);
             // GetUniform<Texture2DUniform>(BufferNames.REQUEST_TABLE).ClearTexture(new Color(0, 0, 0, 0), layerCount: totalPages);
@@ -108,7 +107,7 @@ namespace Dispatcher
             int amount = GetUniform<StorageBufferUniform>(BufferNames.TEXTURE_ID_COUNTER).GetData<int>()[0];
             if (amount == 0)
             {
-                callback.Call(System.Array.Empty<byte>());
+                callback.Call(Array.Empty<byte>());
                 return;
             }
 

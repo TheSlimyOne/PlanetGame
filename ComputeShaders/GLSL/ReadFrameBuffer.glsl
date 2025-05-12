@@ -110,14 +110,14 @@ void main() {
 
         for (int i = 0; i < lod_size; i++) {
             for (int j = 0; j < lod_size; j++) {
-                imageStore(indirectionTable, indirection_index + ivec3(i, j, 0), pack_rgba8(slot, 0, 0, 1));
+                imageStore(indirectionTable, indirection_index + ivec3(i, j, 0), pack_rgba8(slot, 0, 0, 2));
             }
         }
     }
-    else {
-        uint slot = indirection_data.x;
-        ivec2 slot_coords = ivec2(slot % grid_size, slot / grid_size);
-        vec4 tile_data = imageLoad(residencyTable, slot_coords);
-        imageStore(residencyTable, slot_coords, vec4(tile_data.xy, 1, tile_data.w));
-    }
+    // else {
+    //     uint slot = indirection_data.x;
+    //     ivec2 slot_coords = ivec2(slot % grid_size, slot / grid_size);
+    //     vec4 tile_data = imageLoad(residencyTable, slot_coords);
+    //     imageStore(residencyTable, slot_coords, vec4(tile_data.xy, 1, tile_data.w));
+    // }
 }

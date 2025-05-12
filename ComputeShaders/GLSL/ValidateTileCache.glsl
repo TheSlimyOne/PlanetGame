@@ -40,11 +40,5 @@ void main() {
 
     uvec4 indirection_data = unpack_rgba8(imageLoad(indirectionTable, indirection_index));
     uint indirection_slot = indirection_data.x;
-
-    
-
-
-
-
-
+    imageStore(indirectionTable, indirection_index, pack_rgba8(indirection_data.x, indirection_data.y, indirection_data.z, 1));
 }

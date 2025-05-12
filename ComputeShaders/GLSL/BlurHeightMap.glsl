@@ -1,6 +1,5 @@
 #[compute]
 #version 450
-#define PI 3.14159265359
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 

@@ -1,11 +1,5 @@
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using Dispatcher;
 using Godot;
-using Godot.Collections;
-using Shaders;
-using Uniform;
+
 namespace Planet
 {
     [Tool]
@@ -183,8 +177,6 @@ namespace Planet
         }
         private float _subFactor = 1;
 
-        public int CurrentLod { get; set; }
-
         [Export]
         public Vector2 MorphRange
         {
@@ -265,7 +257,7 @@ namespace Planet
         private int _borderSize = 1;
 
         [Export(PropertyHint.Range, "128, 8192")]
-        public uint DesiredChunkSize
+        public int DesiredChunkSize
         {
             get => _desiredChunkSize;
             set
@@ -277,23 +269,7 @@ namespace Planet
                 }
             }
         }
-        private uint _desiredChunkSize = 512;
-
-        [Export]
-        public Texture2D AlbedoMap
-        {
-            get => _albedoMap;
-            set
-            {
-                if (_albedoMap != value)
-                {
-                    _albedoMap = value;
-                    EmitChanged();
-                    SurfaceShader?.UpdateParameter("albedo_map");
-                }
-            }
-        }
-        private Texture2D _albedoMap = new PlaceholderTexture2D();
+        private int _desiredChunkSize = 512;
 
         [Export]
         public Texture2D HeightMap
@@ -339,104 +315,6 @@ namespace Planet
             }
         }
         private float _normalStrength = 5;
-        #endregion
-
-        #region Virtual Texturing Settings
-
-        [Export] public int[] TextureMapping { get; private set; }
-        public SparseVirtualTexture SparseVirtualTexture { get; private set; }
-
-        [Export(PropertyHint.File, "*.glsl")] private string cubeComputeShader;
-
-        public void InitializeVirtualTextures(Viewport viewport, Node node)
-        {
-            Vector2I imageSize = new(8192, 4096);
-            // ChunkManager chunkManager = new(imageSize, DesiredChunkSize, CenterSize, BorderSize);
-            // chunkManager.QueueCubeMapGeneration("res://Assets/Images/test-image.png");
-            // chunkManager.CreateCubeMaps();
-            // chunkManager.ChunkDestination = "user://test/chunks/";
-            // chunkManager.QueueChunkGeneration("user://test/cubemap/0.png", 0);
-            // chunkManager.QueueChunkGeneration("user://test/cubemap/1.png", 1);
-            // chunkManager.QueueChunkGeneration("user://test/cubemap/2.png", 2);
-            // chunkManager.QueueChunkGeneration("user://test/cubemap/3.png", 3);
-            // chunkManager.QueueChunkGeneration("user://test/cubemap/4.png", 4);
-            // chunkManager.QueueChunkGeneration("user://test/cubemap/5.png", 5);
-            // chunkManager.CreateChunks();
-
-            SparseVirtualTexture = new(viewport, imageSize, DesiredChunkSize,
-            [
-                // Image.LoadFromFile("user://test/chunks/3-0-0-0.png"),
-                // Image.LoadFromFile("user://test/chunks/3-1-0-0.png"),
-                // Image.LoadFromFile("user://test/chunks/3-2-0-0.png"),
-                // Image.LoadFromFile("user://test/chunks/3-3-0-0.png"),
-                // Image.LoadFromFile("user://test/chunks/3-4-0-0.png"),
-                // Image.LoadFromFile("user://test/chunks/3-5-0-0.png"),
-            ]);
-            SparseVirtualTexture.CreateDebugWindow(node);
-            SparseVirtualTexture.Enabled = true;
-        }
-
-
-        #endregion
-
-        #region Material Settings
-        [ExportGroup("Material Settings")]
-
-        [Export] public BindableShaderMaterial SurfaceShader { get; set; }
-
-        [Export] public BindableShaderMaterial FramebufferShader { get; set; }
-
-        public void UpdateShaderParameters()
-        {
-            SurfaceShader.UpdateAllParameters();
-            FramebufferShader.UpdateAllParameters();
-        }
-
-        public void BindVertexShaderParameters(BindableShaderMaterial bindableShaderMaterial, CustomCamera main, CustomCamera helper)
-        {
-            bindableShaderMaterial.Bind("radius", () => Radius);
-            bindableShaderMaterial.FrameDependentBind("height_scale", () => HeightScale);
-            bindableShaderMaterial.Bind("resolution", () => Resolution);
-            bindableShaderMaterial.Bind("maximum_lod", () => MaximumLOD);
-            bindableShaderMaterial.FrameDependentBind("planet_transform_matrix", () => Utilities.ToProjection(GetPlanetTransformMatrix()));
-
-            bindableShaderMaterial.Bind("height_map", () => HeightMap);
-
-            bindableShaderMaterial.FrameDependentBind("is_cube", () => CubeMode);
-            bindableShaderMaterial.FrameDependentBind("is_culling", () => Culling);
-
-            bindableShaderMaterial.FrameDependentBind("is_morphing", () => Morphing);
-            bindableShaderMaterial.FrameDependentBind("morph_range", () => MorphRange);
-
-            bindableShaderMaterial.FrameDependentBind("camera_position", () => main.GlobalPosition);
-            bindableShaderMaterial.FrameDependentBind("fovy", () => Mathf.Tan(helper.GetCameraFov(true) / 2));
-            bindableShaderMaterial.Bind("sub_factor", () => SubFactor);
-        }
-
-        public void SurfaceShaderBindParameters(CustomCamera main, CustomCamera helper)
-        {
-            BindVertexShaderParameters(SurfaceShader, main, helper);
-            SurfaceShader.Bind("albedo_map", () => AlbedoMap);
-            SurfaceShader.Bind("is_texture_1D", () => AlbedoMap is GradientTexture1D);
-            SurfaceShader.FrameDependentBind("normal_strength", () => NormalStrength);
-            SurfaceShader.Bind("indirection_table", () => SparseVirtualTexture.IndirectionTable.Table);
-            SurfaceShader.Bind("tile_cache", () => SparseVirtualTexture.TileCache.Cache);
-
-            SurfaceShader.Bind("grid_size", () => SparseVirtualTexture.IndirectionTable.GridSize);
-            SurfaceShader.Bind("total_texture_subdivisions", () => SparseVirtualTexture.IndirectionTable.MipDepth);
-            SurfaceShader.FrameDependentBind("texture_mapping", () => TextureMapping);
-
-            SurfaceShader.FrameDependentBind("morphing", () => Morphing);
-        }
-
-        public void FramebufferShaderBindParameters(CustomCamera main, CustomCamera helper)
-        {
-            BindVertexShaderParameters(FramebufferShader, main, helper);
-            FramebufferShader.Bind("grid_size", () => SparseVirtualTexture.IndirectionTable.GridSize);
-            FramebufferShader.Bind("total_texture_subdivisions", () => SparseVirtualTexture.IndirectionTable.MipDepth);
-            FramebufferShader.FrameDependentBind("texture_mapping", () => TextureMapping);
-        }
-
         #endregion
 
         #region Debug Settings
@@ -534,46 +412,28 @@ namespace Planet
 
         #endregion
 
-        public void ConnectChanged(Action action)
-        {
-            if (!IsConnected("changed", Callable.From(action)))
-            {
-                Changed += action;
-            }
-        }
-        public void DisconnectChanged(Action action)
-        {
-            if (IsConnected("changed", Callable.From(action)))
-            {
-                Changed -= action;
-            }
-        }
-
         #region Generation
 
         public ArrayMesh TriangleMesh { get; private set; } = new();
 
-        public void GenerateMesh()
+        public void GenerateQuadMesh()
         {
             Vector3[] vertices = new Vector3[_resolution * _resolution];
             Vector3[] normals = new Vector3[_resolution * _resolution];
-            Vector2[] uvs = new Vector2[_resolution * _resolution];
             int[] triangles = new int[2 * _resolution * _resolution - 4];
 
             Vector3 normal = Vector3.Back;
             Vector3 axisA = new(normal.Y, normal.Z, normal.X);
             Vector3 axisB = normal.Cross(axisA).Abs();
             int triIndex = 0;
-            int vertexIndex = 0;
 
             for (int x = 0; x < _resolution; x++)
             {
                 for (int y = 0; y < _resolution; y++)
                 {
-                    int currentIndex = vertexIndex++;
+                    int currentIndex = x * _resolution + y;
                     Vector2 percentage = new Vector2(x, y) / (_resolution - 1) * 2 - Vector2.One;
                     vertices[currentIndex] = normal + percentage.X * axisA + percentage.Y * axisB;
-
 
                     normals[currentIndex] = normal;
 
@@ -596,7 +456,6 @@ namespace Planet
             arrays[(int)Mesh.ArrayType.Vertex] = vertices;
             arrays[(int)Mesh.ArrayType.Index] = triangles;
             arrays[(int)Mesh.ArrayType.Normal] = normals;
-            arrays[(int)Mesh.ArrayType.TexUV] = uvs;
 
             Rid mesh = TriangleMesh.GetRid();
             RenderingServer.MeshClear(mesh);

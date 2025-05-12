@@ -54,6 +54,22 @@ namespace Shaders
             }
         }
 
+        public void Unbind(string parameterName)
+        {
+            _parameters.Remove(parameterName);
+        }
+        
+        public void UnbindFrameDependentBind(string parameterName)
+        {
+            _frameDependentParameters.Remove(parameterName);
+        }
+
+        public void UnbindAll()
+        {
+            _parameters.Clear();
+            _frameDependentParameters.Clear();
+        }
+
         public void ConnectChanged(Action action)
         {
             if (!IsConnected("changed", Callable.From(action)))

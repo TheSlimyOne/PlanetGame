@@ -46,7 +46,7 @@ layout(set = 0, binding = 5, std430) buffer restrict readonly external_data {
     float fovy;                   
     float sub_factor;             
     float height_scale;           
-    float maximum_lod;                
+    float maximum_lod;            
     float radius;                 
 
     float bias1;                  
@@ -60,7 +60,7 @@ layout(set = 0, binding = 6, std430) buffer restrict OutputBuffer {
 } output_buffer;
 
 
-struct Triangle {
+struct Square {
     vec3 origin; // (0.5, 0.5)
     vec3 xNeighbor; // (0.5, -0.5)
     vec3 yNeighbor; // (-0.5, 0.5)
@@ -218,7 +218,7 @@ vec3 get_polygon_space_point(vec2 point, mat4 polygon_space_matrix) {
     |     3 |     2 |
     +-------+-------+
 */
-Triangle create_triangle(uvec4 key) {
+Square create_square(uvec4 key) {
     mat3 quadtree_space = leaf_space_to_quadtree_space(key.xy);
 
     vec2 point_a = get_quadtree_point(vec2(0.5, 0.5), quadtree_space);
@@ -228,7 +228,7 @@ Triangle create_triangle(uvec4 key) {
     vec3 normal = normals[key.z];
     mat4 polygon_space = quadtree_space_to_polygon_space(normal, key.w);
     
-    Triangle t;
+    Square t;
     
     t.origin = get_polygon_space_point(point_a, polygon_space);
     t.xNeighbor = get_polygon_space_point(point_b, polygon_space);
@@ -278,7 +278,7 @@ bool is_upper_left_child(uvec2 key) {
     return (3 & key[1]) == 0;
 }
 
-uint get_junction_flags(uvec4 key, Triangle parent_triangle, float lod) {
+uint get_junction_flags(uvec4 key, Square parent_square, float lod) {
     uint b1b2 = key.y & 0x3;
     vec3 neighbour;
 
@@ -287,10 +287,10 @@ uint get_junction_flags(uvec4 key, Triangle parent_triangle, float lod) {
     }
 
     if ((b1b2 >> 1) == 0) { // Check parent's Y neighbour
-        neighbour = parent_triangle.yNeighbor;
+        neighbour = parent_square.yNeighbor;
     }
     else if ((b1b2 >> 1) == 1) { // Check parent's X neighbour
-        neighbour = parent_triangle.xNeighbor;
+        neighbour = parent_square.xNeighbor;
     }
 
     float neighbour_lod = calculate_lod_to_cam(neighbour, normals[key.z]);
@@ -339,9 +339,9 @@ bool InHorizon(vec3 point, vec3 normal) {
     return false;
 }
 
-bool triangle_in_frustum(Triangle triangle) {
+bool square_in_frustum(Square square) {
     return true;
-    // return InHorizon(triangle.v0) || InHorizon(triangle.v1) || InHorizon(triangle.v2) || InHorizon(triangle.origin);
+    // return InHorizon(square.v0) || InHorizon(square.v1) || InHorizon(square.v2) || InHorizon(square.origin);
 }
 
 void set_multimesh_data(uint index, uvec4 key) {
@@ -373,9 +373,9 @@ void set_multimesh_data(uint index, uvec4 key) {
     output_buffer.data[20 * index + 19] = uintBitsToFloat(key.w);
 }
 
-void cull_key(uvec4 key, Triangle triangle, float lod) {
+void cull_key(uvec4 key, Square square, float lod) {
     // bool isCulling = culling == 1;
-    // if (isCulling && triangle_in_frustum(triangle)) {
+    // if (isCulling && square_in_frustum(square)) {
     uint write_culled_index = atomicAdd(primitive_count_culled[write_index], 1);
     set_multimesh_data(write_culled_index, key);
     // } else if (!isCulling) {
@@ -398,40 +398,40 @@ void main() {
     uvec4 parent_key = get_parent_key(key);
     uvec4 grand_parent_key = get_parent_key(parent_key);
 
-    Triangle triangle = create_triangle(key);
-    Triangle parent_triangle = create_triangle(parent_key);
-    Triangle grand_parent_triangle = create_triangle(grand_parent_key);
+    Square square = create_square(key);
+    Square parent_square = create_square(parent_key);
+    Square grand_parent_square = create_square(grand_parent_key);
 
     float current_LOD = get_lod_of_key(key.xy);
-    float parent_target_LOD = calculate_lod_to_cam(parent_triangle.origin, normals[key.z]);
-    float target_LOD = calculate_lod_to_cam(triangle.origin, normals[key.z]);
+    float parent_target_LOD = calculate_lod_to_cam(parent_square.origin, normals[key.z]);
+    float target_LOD = calculate_lod_to_cam(square.origin, normals[key.z]);
   
     if (target_LOD > current_LOD && current_LOD < maximum_lod) { // subdivide
         uvec4 children_keys[4] = get_child_keys(key);
         for (int i = 0; i < 4; i++) {
             uint write_full_index = atomicAdd(primitive_count_full[write_index], 1);
-            Triangle child_triangle = create_triangle(children_keys[i]);
+            Square child_square = create_square(children_keys[i]);
             
-            children_keys[i].w |= get_junction_flags(children_keys[i], triangle, current_LOD + 1);
+            children_keys[i].w |= get_junction_flags(children_keys[i], square, current_LOD + 1);
             write_full_list[write_full_index] = children_keys[i];
             
-            cull_key(children_keys[i], child_triangle, current_LOD + 1);
+            cull_key(children_keys[i], child_square, current_LOD + 1);
         }
     } else if (parent_target_LOD < current_LOD - 1 && current_LOD > 0) { // merging
         if (is_upper_left_child(key.xy)) {
             uint write_full_index = atomicAdd(primitive_count_full[write_index], 1);
 
-            parent_key.w |= get_junction_flags(parent_key, grand_parent_triangle, current_LOD - 1);
+            parent_key.w |= get_junction_flags(parent_key, grand_parent_square, current_LOD - 1);
             write_full_list[write_full_index] = parent_key;
 
-            cull_key(parent_key, parent_triangle, current_LOD - 1);
+            cull_key(parent_key, parent_square, current_LOD - 1);
         }
     } else {
         uint write_full_index = atomicAdd(primitive_count_full[write_index], 1);
 
-        key.w |= get_junction_flags(key, parent_triangle, current_LOD);
+        key.w |= get_junction_flags(key, parent_square, current_LOD);
         write_full_list[write_full_index] = key;
      
-        cull_key(key, triangle, current_LOD);
+        cull_key(key, square, current_LOD);
     }
 }

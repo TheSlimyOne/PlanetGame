@@ -1,55 +1,49 @@
 using System;
-using System.Linq;
 using Uniform;
 using Godot;
-using Godot.Collections;
-using Planet;
-namespace Dispatcher
+using PlanetGame.Rendering.VirtualTexturing;
+namespace PlanetGame.ComputeShaders.Dispatcher
 {
     public class ValidateCacheDispatcher : ComputeShaderDispatcher<ValidateCacheDispatcher.BufferNames>
     {
-    	public SparseVirtualTexture SparseVirtualTexture;
+        public SparseVirtualTexture SparseVirtualTexture { private get; set; }
 
-    	public enum BufferNames
-    	{
-			INDIRECTION_TABLE,
-			RESIDENCY_TABLE,
-			INDIRECTION_TABLE_DATA,
-    	}
+        public enum BufferNames
+        {
+            INDIRECTION_TABLE,
+            RESIDENCY_TABLE,
+            INDIRECTION_TABLE_DATA,
+        }
 
-    	public ValidateCacheDispatcher(string shaderFilePath) : base(shaderFilePath)
-    	{
-    		SetupComputeShader();
-    	}
+        public ValidateCacheDispatcher() : base(ShaderPaths.VALIDATE_TILE_CACHE)
+        {
+            SetupComputeShader();
+        }
 
-    	public override void CreateUniforms()
-    	{
-    		_computeShaderUniforms = new System.Collections.Generic.Dictionary<Enum, ComputeShaderUniform>()
-    		{
-    			[BufferNames.INDIRECTION_TABLE] = new Texture2DUniform(this, (int)BufferNames.INDIRECTION_TABLE,
-                    SparseVirtualTexture.IndirectionTable.Table.TextureRdRid, RenderingDevice.UniformType.Image
-                ),
+        public override void CreateUniforms()
+        {
+            _computeShaderUniforms = new System.Collections.Generic.Dictionary<Enum, ComputeShaderUniform>()
+            {
+                [BufferNames.INDIRECTION_TABLE] = SparseVirtualTexture.ReadFramebuffer[ReadFramebufferDispatcher.BufferNames.INDIRECTION_TABLE],
 
-    			[BufferNames.RESIDENCY_TABLE] = new Texture2DUniform(this, (int)BufferNames.RESIDENCY_TABLE,
-                    SparseVirtualTexture.ResidencyTable.Table.TextureRdRid, RenderingDevice.UniformType.Image
-                ),
+                [BufferNames.RESIDENCY_TABLE] = SparseVirtualTexture.ReadFramebuffer[ReadFramebufferDispatcher.BufferNames.RESIDENCY_TABLE],
 
-				[BufferNames.INDIRECTION_TABLE_DATA] = SparseVirtualTexture.ReadFramebuffer.GetUniform(ReadFramebufferDispatcher.BufferNames.INDIRECTION_TABLE_DATA),
+                [BufferNames.INDIRECTION_TABLE_DATA] = SparseVirtualTexture.ReadFramebuffer[ReadFramebufferDispatcher.BufferNames.INDIRECTION_TABLE_DATA],
             };
 
-    		CreateUniformSet();
-    	}
+            CreateUniformSet();
+        }
 
-    	public override void Invoke()
-    	{
+        public override void Invoke()
+        {
             uint gridSize = SparseVirtualTexture.ResidencyTable.GridSize;
-    		long computeList = _RenderingDevice.ComputeListBegin();
-    		_RenderingDevice.ComputeListBindComputePipeline(computeList, _pipeline);
-    		_RenderingDevice.ComputeListBindUniformSet(computeList, _uniformSet, 0);
-			_RenderingDevice.ComputeListAddBarrier(computeList);
-    		_RenderingDevice.ComputeListDispatch(computeList, gridSize, gridSize, 1);
-    		_RenderingDevice.ComputeListEnd();
-    	}
+            long computeList = _RenderingDevice.ComputeListBegin();
+            _RenderingDevice.ComputeListBindComputePipeline(computeList, _pipeline);
+            _RenderingDevice.ComputeListBindUniformSet(computeList, _uniformSet, 0);
+            _RenderingDevice.ComputeListAddBarrier(computeList);
+            _RenderingDevice.ComputeListDispatch(computeList, gridSize, gridSize, 1);
+            _RenderingDevice.ComputeListEnd();
+        }
 
         public override void UpdateUniforms()
         {

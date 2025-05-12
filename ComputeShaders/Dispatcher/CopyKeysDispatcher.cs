@@ -1,15 +1,17 @@
 using System;
 using Godot;
-using Godot.Collections;
 using Planet;
 using Uniform;
+using PlanetGame.Util;
 
-namespace Dispatcher
+namespace PlanetGame.ComputeShaders.Dispatcher
 {
     public partial class CopyKeysDispatcher : ComputeShaderDispatcher<CopyKeysDispatcher.BufferNames>
     {
         public PlanetData PlanetData { get; set; }
         public RenderSurfaceDispatcher RenderSurfaceDispatcher { get; set; }
+        public MultiMeshRD PlanetMultiMesh { get; set; }
+
 
         public enum BufferNames
         {
@@ -20,7 +22,7 @@ namespace Dispatcher
             MULTIMESH_COMMAND_BUFFER
         }
 
-        public CopyKeysDispatcher(string shaderFilePath) : base(shaderFilePath)
+        public CopyKeysDispatcher() : base(ShaderPaths.COPY_KEYS_PATH)
         {
             SetupComputeShader();
         }
@@ -29,19 +31,21 @@ namespace Dispatcher
         {
             _computeShaderUniforms = new System.Collections.Generic.Dictionary<Enum, ComputeShaderUniform>()
             {
-                [BufferNames.ATOMIC_COUNTER] = RenderSurfaceDispatcher.GetUniform(RenderSurfaceDispatcher.BufferNames.ATOMIC_COUNTER),
+                [BufferNames.ATOMIC_COUNTER] = RenderSurfaceDispatcher[RenderSurfaceDispatcher.BufferNames.ATOMIC_COUNTER],
 
-                [BufferNames.INDICES] = RenderSurfaceDispatcher.GetUniform(RenderSurfaceDispatcher.BufferNames.INDICES),
+                [BufferNames.INDICES] = RenderSurfaceDispatcher[RenderSurfaceDispatcher.BufferNames.INDICES],
 
                 [BufferNames.DISPATCH_BUFFER] = new StorageBufferUniform(this, _RenderingDevice, (int)BufferNames.DISPATCH_BUFFER,
-                    Utilities.ToBytes<uint>([6 * (uint)Mathf.Pow(4, PlanetData.StartingLod + 1) / 32 + 1, 1, 1]).ToArray(), RenderingDevice.StorageBufferUsage.DispatchIndirect
+                    Utilities.ToBytes<uint>([6 * (uint)Mathf.Pow(4, PlanetData.StartingLod + 1) / 32 + 1, 1, 1]).ToArray(), RenderingDevice.StorageBufferUsage.Indirect
                 ),
 
-                [BufferNames.GLOBAL_KEYS_DATA] = RenderSurfaceDispatcher.GetUniform(RenderSurfaceDispatcher.BufferNames.GLOBAL_KEYS_DATA),
+                [BufferNames.GLOBAL_KEYS_DATA] = RenderSurfaceDispatcher[RenderSurfaceDispatcher.BufferNames.GLOBAL_KEYS_DATA],
 
-                [BufferNames.MULTIMESH_COMMAND_BUFFER] = new MultimeshUniform(this, 
+
+                [BufferNames.MULTIMESH_COMMAND_BUFFER] = new StorageBufferUniform(this, _RenderingDevice,
                     (int)BufferNames.MULTIMESH_COMMAND_BUFFER,
-                    RenderSurfaceDispatcher.GetUniform<MultimeshUniform>(RenderSurfaceDispatcher.BufferNames.MULTIMESH_BUFFER).Multimesh
+                    PlanetMultiMesh.CommandBuffer,
+                    perserve: true
                 )
             };
 

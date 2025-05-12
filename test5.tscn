@@ -1,0 +1,76 @@
+[gd_scene load_steps=15 format=3 uid="uid://bo7efj2yfcjxi"]
+
+[ext_resource type="Script" uid="uid://0b2e3ibuo8ro" path="res://test5.cs" id="1_ucl28"]
+[ext_resource type="Texture2D" uid="uid://qtk2yu6e8qn8" path="res://Assets/Images/HeightMapSamples/coarse_elevation.png" id="2_u1ffx"]
+[ext_resource type="Texture2D" uid="uid://bu7olmm7ge6qn" path="res://Assets/Images/HeightMapSamples/peak_density.png" id="3_1wlca"]
+[ext_resource type="Shader" uid="uid://dh3yu5uhwooui" path="res://Assets/Shaders/Arrow/lineShader.gdshader" id="4_u1ffx"]
+
+[sub_resource type="SphereMesh" id="SphereMesh_u1ffx"]
+radius = 0.25
+height = 0.5
+radial_segments = 8
+rings = 4
+
+[sub_resource type="MultiMesh" id="MultiMesh_1wlca"]
+transform_format = 1
+instance_count = 46
+mesh = SubResource("SphereMesh_u1ffx")
+buffer = PackedFloat32Array(1, 0, 0, -100, 0, 1, 0, 100, 0, 0, 1, 100, 1, 0, 0, -100, 0, 1, 0, 100, 0, 0, 1, -100, 1, 0, 0, 100, 0, 1, 0, 100, 0, 0, 1, 100, 1, 0, 0, 100, 0, 1, 0, 100, 0, 0, 1, -100, 1, 0, 0, -100, 0, 1, 0, 0, 0, 0, 1, 100, 1, 0, 0, -100, 0, 1, 0, 0, 0, 0, 1, -100, 1, 0, 0, 100, 0, 1, 0, 0, 0, 0, 1, 100, 1, 0, 0, 100, 0, 1, 0, 0, 0, 0, 1, -100, 1, 0, 0, -16.2462, 0, 1, 0, -98.8438, 0, 0, 1, 7.8167, 1, 0, 0, -55.3659, 0, 1, 0, -97.2013, 0, 0, 1, -4.10381, 1, 0, 0, 6.24818, 0, 1, 0, -95.5048, 0, 0, 1, 65.9773, 1, 0, 0, 64.3571, 0, 1, 0, -94.8303, 0, 0, 1, 78.5726, 1, 0, 0, 20.5008, 0, 1, 0, -94.506, 0, 0, 1, 11.6266, 1, 0, 0, -43.0193, 0, 1, 0, -93.5336, 0, 0, 1, 20.7853, 1, 0, 0, -18.9434, 0, 1, 0, -89.9053, 0, 0, 1, 3.03149, 1, 0, 0, -11.4439, 0, 1, 0, -88.3445, 0, 0, 1, 38.4226, 1, 0, 0, -19.0621, 0, 1, 0, -88.1245, 0, 0, 1, 10.7328, 1, 0, 0, -43.6183, 0, 1, 0, -81.9159, 0, 0, 1, -24.3879, 1, 0, 0, -41.6873, 0, 1, 0, -80.8854, 0, 0, 1, -8.60259, 1, 0, 0, -15.4459, 0, 1, 0, -80.5408, 0, 0, 1, -69.406, 1, 0, 0, -43.1492, 0, 1, 0, -79.5455, 0, 0, 1, -21.457, 1, 0, 0, -44.2952, 0, 1, 0, -79.2188, 0, 0, 1, -49.7143, 1, 0, 0, -34.3311, 0, 1, 0, -78.7449, 0, 0, 1, -24.1233, 1, 0, 0, -71.1973, 0, 1, 0, -78.1468, 0, 0, 1, 57.3369, 1, 0, 0, -87.5727, 0, 1, 0, -77.6283, 0, 0, 1, -26.9869, 1, 0, 0, -51.4393, 0, 1, 0, -77.2523, 0, 0, 1, -49.3283, 1, 0, 0, -55.6489, 0, 1, 0, -76.2565, 0, 0, 1, -47.9773, 1, 0, 0, -52.1294, 0, 1, 0, -75.6871, 0, 0, 1, -40.3629, 1, 0, 0, -81.9427, 0, 1, 0, -74.0795, 0, 0, 1, -36.1786, 1, 0, 0, -42.4248, 0, 1, 0, -72.2495, 0, 0, 1, -19.0269, 1, 0, 0, -34.0339, 0, 1, 0, -71.7064, 0, 0, 1, -31.2151, 1, 0, 0, -35.645, 0, 1, 0, -70.8132, 0, 0, 1, -18.8011, 1, 0, 0, -58.6254, 0, 1, 0, -68.6345, 0, 0, 1, -21.2078, 1, 0, 0, -40.5006, 0, 1, 0, -68.3324, 0, 0, 1, -49.1676, 1, 0, 0, -75.0562, 0, 1, 0, -65.2047, 0, 0, 1, -32.7998, 1, 0, 0, -74.6042, 0, 1, 0, -64.3074, 0, 0, 1, -11.5283, 1, 0, 0, -20.7853, 0, 1, 0, -64.0162, 0, 0, 1, -68.4928, 1, 0, 0, -32.9389, 0, 1, 0, -63.6761, 0, 0, 1, -18.5621, 1, 0, 0, -95.8835, 0, 1, 0, -63.0478, 0, 0, 1, -14.7015, 1, 0, 0, -6.36545, 0, 1, 0, -62.3693, 0, 0, 1, -37.2874, 1, 0, 0, -73.0488, 0, 1, 0, -61.4348, 0, 0, 1, -67.5688, 1, 0, 0, -25.8712, 0, 1, 0, -60.198, 0, 0, 1, -17.6055, 1, 0, 0, -72.9099, 0, 1, 0, -52.2745, 0, 0, 1, 0.610316, 1, 0, 0, -82.8155, 0, 1, 0, -51.8243, 0, 0, 1, 14.6651, 1, 0, 0, -70.1783, 0, 1, 0, -46.5484, 0, 0, 1, -52.3091, 1, 0, 0, -93.76, 0, 1, 0, -45.1036, 0, 0, 1, -53.5581)
+
+[sub_resource type="Curve" id="Curve_xuca8"]
+_limits = [0.0, 1000.0, 0.0, 1.0]
+_data = [Vector2(0, 0), 0.0, 1000.0, 0, 1, Vector2(1, 1000), 0.0, 0.0, 0, 0]
+point_count = 2
+metadata/_snap_enabled = true
+metadata/_snap_count = 12
+
+[sub_resource type="Curve" id="Curve_o074y"]
+_limits = [10.0, 250.0, 0.0, 1.0]
+_data = [Vector2(0, 10), 0.0, 0.0, 0, 0, Vector2(1, 250), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Curve" id="Curve_ecj1f"]
+_limits = [0.0, 359.0, 0.0, 1.0]
+_data = [Vector2(0, 89.75), 0.0, 0.0, 0, 1, Vector2(0.25, 89.75), 0.0, 0.0, 0, 0, Vector2(0.25001, 0), 0.0, 0.0, 0, 0, Vector2(0.74999, 359), 0.0, 0.0, 0, 0, Vector2(0.75, 269.25), 0.0, 0.0, 0, 0, Vector2(1, 269.25), 0.0, 0.0, 1, 0]
+point_count = 6
+metadata/_snap_enabled = true
+metadata/_snap_count = 24
+
+[sub_resource type="Curve" id="Curve_u3iib"]
+_limits = [10.0, 800.0, 0.0, 1.0]
+_data = [Vector2(0, 10), 0.0, 0.0, 0, 0, Vector2(1, 550.93), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Curve" id="Curve_ocb3m"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_8dhg4"]
+render_priority = 0
+shader = ExtResource("4_u1ffx")
+
+[sub_resource type="ImmediateMesh" id="ImmediateMesh_x6iro"]
+
+[sub_resource type="MultiMesh" id="MultiMesh_ocb3m"]
+transform_format = 1
+use_colors = true
+use_custom_data = true
+mesh = SubResource("ImmediateMesh_x6iro")
+
+[node name="test5" type="MultiMeshInstance3D" node_paths=PackedStringArray("Lines")]
+multimesh = SubResource("MultiMesh_1wlca")
+script = ExtResource("1_ucl28")
+Amount = 500
+Size = Vector2(1000, 1000)
+ViewSize = Vector3(100, 100, 100)
+PointRadius = 0.25
+ElevationCurve = SubResource("Curve_xuca8")
+IsolationDistanceCurve = SubResource("Curve_o074y")
+IsolationDirectionCurve = SubResource("Curve_ecj1f")
+ProminenceCurve = SubResource("Curve_u3iib")
+DominanceGroupsCurve = SubResource("Curve_ocb3m")
+CoarseElevationMap = ExtResource("2_u1ffx")
+PeakDensityMap = ExtResource("3_1wlca")
+LineMaterial = SubResource("ShaderMaterial_8dhg4")
+Lines = NodePath("Lines")
+
+[node name="Lines" type="MultiMeshInstance3D" parent="."]
+multimesh = SubResource("MultiMesh_ocb3m")

@@ -1,8 +1,5 @@
 using Godot;
-using Planet;
-using Uniform;
-using System;
-using Dispatcher;
+using PlanetGame.Rendering.VirtualTexturing;
 
 public partial class UIController : Control
 {
@@ -58,26 +55,31 @@ public partial class UIController : Control
 		_lblCameraMode.Text = $"Camera Mode: {PlanetController.CameraController.GetViewport().DebugDraw}";
 	}
 
-	public void EnableOrDisableProcessing()
-	{
-		bool currentSetting = !PlanetController.SurfaceController.Processing;
-		PlanetController.SurfaceController.Processing = currentSetting;
-		_btnProcessLod.Text = currentSetting ? "Stop Processing LOD" : "Start Processing LOD";
+	// public void EnableOrDisableProcessing()
+	// {
+	// 	if (PlanetController.TerrainTessellator.Paused)
+	// 		PlanetController.TerrainTessellator.Resume();
+	// 	else
+	// 		PlanetController.TerrainTessellator.Pause();
+		
+	// 	_btnProcessLod.Text = PlanetController.TerrainTessellator.Paused ? "Stop Processing LOD" : "Start Processing LOD";
+	// }
 
-	}
+	// public void EnableOrDisableVirtualTexturing()
+	// {
+	// 	GD.Print(PlanetController.SparseVirtualTexture.Paused);
+	// 	if (PlanetController.SparseVirtualTexture.Paused)
+	// 		PlanetController.SparseVirtualTexture.Resume();
+	// 	else
+	// 		PlanetController.SparseVirtualTexture.Pause();
+		
+	// 	_btnVirtualTexturing.Text = PlanetController.SparseVirtualTexture.Paused ? "Enable Virtual Texturing" : "Disable Virtual Texturing";
+	// }
 
-	public void EnableOrDisableVirtualTexturing()
-	{
-		bool currentSetting = !PlanetController.PlanetData.SparseVirtualTexture.Enabled;
-		PlanetController.PlanetData.SparseVirtualTexture.Enabled = currentSetting;
-		_btnVirtualTexturing.Text = currentSetting ? "Disable Virtual Texturing" : "Enable Virtual Texturing";
-
-	}
-
-	public void UpdateProcessingText()
-	{
-		_btnProcessLod.Text = PlanetController.SurfaceController.Processing ? "Stop Processing LOD" : "Start Processing LOD";
-	}
+	// public void UpdateProcessingText()
+	// {
+	// 	_btnProcessLod.Text = PlanetController.TerrainTessellator.Paused ? "Stop Processing LOD" : "Start Processing LOD";
+	// }
 
 	public void EnableOrDisableCubeMode()
 	{
@@ -104,14 +106,30 @@ public partial class UIController : Control
 	public void RenderFramebuffer()
 	{
 		RenderingServer.InstanceGeometrySetMaterialOverride(
-			PlanetController.SurfaceController.Surfaces[0], 
-			PlanetController.PlanetData.FramebufferShader.GetRid());
+			PlanetController.PlanetMultiMesh.Instances[0],
+			PlanetController.FramebufferShader.GetRid());
 	}
+	
 	public void RenderSurface()
 	{
 		RenderingServer.InstanceGeometrySetMaterialOverride(
-			PlanetController.SurfaceController.Surfaces[0], 
-			PlanetController.PlanetData.SurfaceShader.GetRid());
+			PlanetController.PlanetMultiMesh.Instances[0],
+			PlanetController.SurfaceShader.GetRid());
+	}
+
+	public void GenerateAlbedoMap()
+	{
+		Vector2I baseImageSize = new(16384, 8192);
+        ChunkManager chunkManager = new(baseImageSize, PlanetController.PlanetData.DesiredChunkSize, PlanetController.PlanetData.CenterSize, PlanetController.PlanetData.BorderSize);
+        chunkManager.QueueGenerateChunksFromImage(PlanetController.RootPath, "Albedo", "Base Images/4_no_ice_clouds_mts_16k.jpg", "Tiles/Albedo Tiles", "Cube Map/Albedo");
+        _ = chunkManager.CreateChunks().ContinueWith(_ => chunkManager.CleanupGPUResources());
+	}
+	public void GenerateHeightMap()
+	{
+		Vector2I baseImageSize = new(16384, 8192);
+		ChunkManager chunkManager = new(baseImageSize, PlanetController.PlanetData.DesiredChunkSize, PlanetController.PlanetData.CenterSize, PlanetController.PlanetData.BorderSize);
+		chunkManager.QueueGenerateChunksFromImage(PlanetController.RootPath, "Height Map", "Base Images/gebco_08_rev_elev_21600x10800.png", "Tiles/Height Map Tiles", "Cube Map/Height Map", Image.Interpolation.Trilinear);
+		_ = chunkManager.CreateChunks().ContinueWith(_ => chunkManager.CleanupGPUResources());
 	}
 
 }

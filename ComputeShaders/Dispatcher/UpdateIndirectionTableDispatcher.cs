@@ -1,10 +1,7 @@
 using System;
-using System.Linq;
 using Uniform;
 using Godot;
-using Godot.Collections;
-using Planet;
-namespace Dispatcher
+namespace PlanetGame.ComputeShaders.Dispatcher
 {
     public class UpdateIndirectionTableDispatcher : ComputeShaderDispatcher<UpdateIndirectionTableDispatcher.BufferNames>
     {

@@ -1,7 +1,8 @@
 using System;
 using Uniform;
 using Godot;
-namespace Dispatcher
+using PlanetGame.Util;
+namespace PlanetGame.ComputeShaders.Dispatcher
 {
     public partial class CalculateNormalsDispatcher : ComputeShaderDispatcher<CalculateNormalsDispatcher.BufferNames>
     {

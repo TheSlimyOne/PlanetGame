@@ -1,8 +1,6 @@
-using Dispatcher;
+using PlanetGame.ComputeShaders.Dispatcher;
 using Godot;
 using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 
 public partial class TestScene : Node
 {

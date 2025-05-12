@@ -1,0 +1,65 @@
+shader_type spatial;
+
+#include "res://Assets/Shaders/Includes/PlanetTerrainVertexShader.gdshaderinc"
+
+uniform sampler2DArray tile_cache : repeat_disable, source_color, filter_nearest;
+uniform sampler2DArray indirection_table : repeat_disable, filter_nearest;
+uniform float normal_strength;
+
+vec3 height_to_normal(float height, float strength, vec3 vertex, vec3 normal) {
+	vec3 d_x = dFdx(vertex);
+	vec3 d_y = dFdy(vertex);
+
+	vec3 cross_x = cross(normal, d_x);
+	vec3 cross_y = cross(d_y, normal);
+
+	float d_t = dot(d_x, cross_y);
+	float sign = d_t < 0.0 ? -1.0 : 1.0;
+	float surface = sign / max(1.192093e-12, abs(d_t));
+
+	float d_hdx = dFdx(height);
+	float d_hdy = dFdy(height);
+
+	vec3 surface_gradient = surface * (d_hdx * cross_y + d_hdy * cross_x);
+
+	return normalize(normal - strength * surface_gradient);
+}
+
+vec3 hsl_to_rgb(vec3 c) {
+	vec4 k = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+	vec3 p = abs(fract(c.xxx + k.xyz) * 6.0 - k.www);
+	return c.z * mix(k.xxx, clamp(p - k.xxx, 0.0, 1.0), c.y);
+}
+
+uniform int total_texture_subdivisions;
+uniform float grid_size;
+uniform int[32] texture_mapping;
+
+void fragment() {
+	vec3 normal = normals[key.z];
+	int lod = int(calculate_lod_to_cam(sphere_local_position, normal, false));
+	int grid = texture_mapping[lod];
+
+	float lod_grid_size = grid_size / pow(2.0, float(grid));
+
+	vec2 uv = get_cube_uv(int(key.z), cube_local_position);
+	vec2 cell_uv = floor(uv * lod_grid_size) / lod_grid_size;
+	vec3 debug_color = hsl_to_rgb(vec3(float(lod) / 16.0, 1.0, 0.5));
+	NORMAL = height_to_normal(elevation, normal_strength, VERTEX, NORMAL);
+
+	vec3 indirection_index = vec3(
+		cell_uv,
+		float(total_texture_subdivisions * int(key.z) + grid)
+	);
+	uvec4 indirection_table_data = uvec4(textureLod(indirection_table, indirection_index, 0.0) * 255.0);
+	vec2 tile_uv = fract(uv * lod_grid_size);
+	uint virtual_texture_tile_index = indirection_table_data.r;
+	if (indirection_table_data.a != 1u) {
+		ALBEDO = textureLod(tile_cache, vec3(uv, float(key.z)), 0.0).rgb;
+	} else {
+
+		ALBEDO = textureLod(tile_cache, vec3(tile_uv, float(virtual_texture_tile_index)), 0.0).rgb;
+	}
+	ALBEDO = pow(ALBEDO, vec3(2.2));
+
+}

@@ -1,7 +1,6 @@
 using Godot;
-using System;
-using Dispatcher;
 using Godot.Collections;
+using PlanetGame.ComputeShaders.Dispatcher;
 
 namespace Uniform
 {
@@ -13,16 +12,18 @@ namespace Uniform
         public RenderingDevice RenderingDevice { get; private set; }
         public readonly bool UsingMainRenderingDevice;
         public IDispatchable Owner { get; protected set; }
+        public bool Perserved { get; protected set; }
 
-        protected ComputeShaderUniform(int binding, IDispatchable owner) : this(RenderingServer.GetRenderingDevice(), binding, owner) { }
+        protected ComputeShaderUniform(int binding, IDispatchable owner, bool perserved = false) : this(RenderingServer.GetRenderingDevice(), binding, owner, perserved) { }
        
-        protected ComputeShaderUniform(RenderingDevice renderingDevice, int binding, IDispatchable owner)
+        protected ComputeShaderUniform(RenderingDevice renderingDevice, int binding, IDispatchable owner, bool perserved = false)
         {
             RenderingDevice = renderingDevice;
             UsingMainRenderingDevice = RenderingDevice == RenderingServer.GetRenderingDevice(); 
 
             Binding = binding;
             Owner = owner;
+            Perserved = perserved;
         }
 
         // This is supposed to simplify the process of sharing buffers between 2 or more compute shaders
@@ -38,14 +39,25 @@ namespace Uniform
         public virtual void FreeRids()
         {
             if (RenderingDevice == null) return;
+
             foreach (Rid rid in Uniform.GetIds())
             {
+                if (Rid == rid && Perserved)
+                {
+                    // GD.Print($"Perserved {rid} for a {GetType()}");
+                    continue;
+                }
+                    
                 if (rid.IsValid)
+                {
+                    // GD.Print($"Freed {rid} for a {GetType()}");
                     RenderingDevice.FreeRid(rid);
+                }
                 else
                     GD.PrintErr($"Rid: {rid} is not valid for RenderingDevice: {RenderingDevice}.");
             }
             Uniform.ClearIds();
+            Uniform = null;
         }
 
         public bool HasOwner()

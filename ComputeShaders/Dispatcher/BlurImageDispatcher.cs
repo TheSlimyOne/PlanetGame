@@ -1,9 +1,9 @@
 using Godot;
 using System;
-using System.Runtime.Intrinsics.Arm;
 using Uniform;
+using PlanetGame.Util;
 
-namespace Dispatcher
+namespace PlanetGame.ComputeShaders.Dispatcher
 {
     public class BlurImageDispatcher : ComputeShaderDispatcher<BlurImageDispatcher.BufferNames>
     {
@@ -62,7 +62,7 @@ namespace Dispatcher
                 ),
 
                 [BufferNames.IMAGE_PADDING] = new StorageBufferUniform(this, _RenderingDevice, (int)BufferNames.IMAGE_PADDING,
-                    Utilities.ToBytes<int>(new int[] { Padding }).ToArray()
+                    Utilities.ToBytes([Padding]).ToArray()
                 )
             };
             CreateUniformSet();
