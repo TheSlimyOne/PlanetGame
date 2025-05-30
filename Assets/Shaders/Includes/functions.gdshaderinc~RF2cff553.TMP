@@ -1,0 +1,54 @@
+vec3 get_tile(
+    sampler2DArray tile_cache, 
+    sampler2DArray indirection_table, 
+    int lod_index, 
+    float grid_size, 
+    vec2 uv, 
+    int total_texture_subdivisions, 
+    int polygon_id) {
+
+    float lod_grid_size = grid_size / pow(2.0, float(lod_index));
+    vec2 cell_uv = floor(uv * lod_grid_size) / lod_grid_size;
+
+    vec3 indirection_index = vec3(
+        cell_uv,
+        float(total_texture_subdivisions * int(polygon_id) + lod_index)
+    );
+
+    uvec4 indirection_table_data = uvec4(textureLod(indirection_table, indirection_index, 0.0) * 255.0);
+    vec2 tile_uv = fract(uv * lod_grid_size);
+    uint virtual_texture_tile_index = indirection_table_data.r;
+
+    vec3 tile = indirection_table_data.a != 1u ? 
+        textureLod(tile_cache, vec3(uv, float(polygon_id)), 0.0).rgb :
+        textureLod(tile_cache, vec3(tile_uv, float(virtual_texture_tile_index)), 0.0).rgb;
+
+    return tile;
+}
+
+vec2 morph_vertex(vec2 vertex, float morph_k, int resolution) {
+    float patch_tess_factor = float(resolution - 1);
+    vec2 fract_part = fract(vertex * patch_tess_factor * 0.5f);
+    fract_part *= 2.0 / patch_tess_factor;
+    vec2 int_part = floor(vertex.xy * patch_tess_factor * 0.5);
+    vec2 sign_vec = mod(int_part, 2.0) * vec2(-2.0) + vec2(1.0);
+    return vertex - (sign_vec * fract_part) * morph_k;
+}
+
+mat4 get_rotation_from_matrix(mat4 transform_matrix) {
+    return mat4(
+        vec4(transform_matrix[0].xyz / length(transform_matrix[0].xyz), 0),
+        vec4(transform_matrix[1].xyz / length(transform_matrix[1].xyz), 0),
+        vec4(transform_matrix[2].xyz / length(transform_matrix[2].xyz), 0),
+        vec4(0, 0, 0, 1)
+    );
+}
+
+vec2 get_cube_uv(int normal_id, vec3 point) {
+    point = (point + 1.0) / 2.0;
+    vec2 uv = vec2(0);
+    uv.x = normal_id == 0 || normal_id == 1 ? point.z : point.x;
+    uv.x = normal_id == 0 || normal_id == 2 || normal_id == 5 ? 1.0 - uv.x : uv.x;
+    uv.y = normal_id == 2 || normal_id == 3 ? 1.0 - point.z : 1.0 - point.y;
+    return uv;
+}

@@ -1,0 +1,39 @@
+[gd_scene load_steps=3 format=3 uid="uid://bvefiivscchap"]
+
+[ext_resource type="Script" uid="uid://bv8pib4lk3ypr" path="res://Scenes/TestScene.cs" id="1_r5l72"]
+[ext_resource type="Texture2D" uid="uid://cgd3avmvd8g1t" path="res://Assets/Images/Test1.png" id="2_r5l72"]
+
+[node name="Test Scene" type="Control" node_paths=PackedStringArray("A", "B", "C")]
+layout_mode = 3
+anchors_preset = 0
+script = ExtResource("1_r5l72")
+A = NodePath("A")
+B = NodePath("Control/HBoxContainer/B")
+C = NodePath("Control/HBoxContainer/C")
+size = 16384
+interpolation = 2
+_shaderPath = "uid://y7kqpyv44g1h"
+
+[node name="A" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -64.0
+offset_bottom = 64.0
+grow_horizontal = 0
+texture = ExtResource("2_r5l72")
+
+[node name="Control" type="Control" parent="."]
+anchors_preset = 0
+
+[node name="HBoxContainer" type="HBoxContainer" parent="Control"]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="B" type="TextureRect" parent="Control/HBoxContainer"]
+layout_mode = 2
+
+[node name="C" type="TextureRect" parent="Control/HBoxContainer"]
+layout_mode = 2

@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://y7kqpyv44g1h"
+path="res://.godot/imported/BlurHeightMap.glsl-d154d2db030b02068a4014e3e5338da6.res"
+
+[deps]
+
+source_file="res://ComputeShaders/GLSL/BlurHeightMap.glsl"
+dest_files=["res://.godot/imported/BlurHeightMap.glsl-d154d2db030b02068a4014e3e5338da6.res"]
+
+[params]
+

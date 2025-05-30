@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://du0yf1f1j265o"
+path="res://.godot/imported/ValidateTileCache.glsl-b34444acce5ecf8026289205b8525cd2.res"
+
+[deps]
+
+source_file="res://ComputeShaders/GLSL/ValidateTileCache.glsl"
+dest_files=["res://.godot/imported/ValidateTileCache.glsl-b34444acce5ecf8026289205b8525cd2.res"]
+
+[params]
+

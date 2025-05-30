@@ -1,0 +1,240 @@
+[gd_scene load_steps=25 format=3 uid="uid://c1roirj1ei3ci"]
+
+[ext_resource type="Script" uid="uid://b4tv1heidhb4j" path="res://Planet/PlanetController.cs" id="1_qtwtp"]
+[ext_resource type="PackedScene" uid="uid://dw6xke4ovskkx" path="res://Scenes/ui.tscn" id="3_ebyhs"]
+[ext_resource type="Texture2D" uid="uid://ejlq5akl3icw" path="res://Assets/Images/panorama_image.png" id="3_ldv5r"]
+[ext_resource type="CompositorEffect" uid="uid://drxgmc0dtr5oy" path="res://NewClouds.tres" id="3_usljo"]
+[ext_resource type="Script" uid="uid://b6ndo6pet2jv4" path="res://Player/Camera/CameraController.cs" id="5_usljo"]
+[ext_resource type="Script" uid="uid://bker53ypetnsk" path="res://Player/Camera/OrbitalCamera3D.cs" id="6_ldv5r"]
+[ext_resource type="Script" uid="uid://dfj074g0bsaan" path="res://addons/SunshineClouds2/SunshineCloudsDriver.cs" id="8_ebyhs"]
+[ext_resource type="Script" uid="uid://bvr5rurarht8e" path="res://Player/Camera/CustomCamera.cs" id="8_ldv5r"]
+
+[sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_eodwd"]
+panorama = ExtResource("3_ldv5r")
+
+[sub_resource type="Sky" id="Sky_emtpu"]
+sky_material = SubResource("PanoramaSkyMaterial_eodwd")
+
+[sub_resource type="Environment" id="Environment_qqt2a"]
+background_mode = 2
+sky = SubResource("Sky_emtpu")
+tonemap_mode = 2
+glow_enabled = true
+
+[sub_resource type="Compositor" id="Compositor_8qkf8"]
+compositor_effects = Array[CompositorEffect]([ExtResource("3_usljo")])
+
+[sub_resource type="ViewportTexture" id="ViewportTexture_8qkf8"]
+viewport_path = NodePath("CameraController/SubViewport")
+
+[sub_resource type="SphereMesh" id="SphereMesh_ebyhs"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_usljo"]
+
+[sub_resource type="PrismMesh" id="PrismMesh_8qkf8"]
+material = SubResource("StandardMaterial3D_usljo")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_6uokv"]
+albedo_color = Color(0.490196, 1, 0, 1)
+
+[sub_resource type="SphereMesh" id="SphereMesh_w1xx6"]
+material = SubResource("StandardMaterial3D_6uokv")
+
+[sub_resource type="Environment" id="Environment_ldv5r"]
+background_mode = 1
+background_color = Color(1, 1, 1, 0)
+ambient_light_source = 1
+reflected_light_source = 1
+
+[sub_resource type="World3D" id="World3D_ebyhs"]
+environment = SubResource("Environment_ldv5r")
+
+[sub_resource type="MultiMesh" id="MultiMesh_ldv5r"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_wsrnx"]
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_7pbfy"]
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_tgghh"]
+radius = 500.0
+
+[node name="Planet" type="Node3D" node_paths=PackedStringArray("CameraController", "SurfaceAttachment", "UIController", "MainLightSource", "WorldEnvironment")]
+script = ExtResource("1_qtwtp")
+Radius = 8000.0
+HeightScale = 1.0
+CameraController = NodePath("CameraController")
+SurfaceAttachment = NodePath("SurfaceAttachment")
+UIController = NodePath("UIController")
+MainLightSource = NodePath("SurfaceAttachment/MainLightSource")
+WorldEnvironment = NodePath("WorldEnvironment")
+BaseZoomSpeed = 80.0
+BaseRotationSpeed = 1.0
+MovementEasing = 10.0
+Resolution = 17
+LodSubdivisionMap = PackedInt32Array(4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+MorphRange = Vector2(0.4, 0.8)
+StartingLod = 0
+NormalStrength = 0.2
+RenderFrameBufferOnTop = false
+Bias1 = 0.5
+Verbose = true
+metadata/_edit_group_ = true
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_qqt2a")
+compositor = SubResource("Compositor_8qkf8")
+
+[node name="UIController" parent="." node_paths=PackedStringArray("PlanetController") instance=ExtResource("3_ebyhs")]
+size_flags_horizontal = 0
+size_flags_vertical = 4
+PlanetController = NodePath("..")
+
+[node name="FramebufferVisualizer" type="TextureRect" parent="UIController"]
+visible = false
+z_index = -1
+texture_filter = 1
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = SubResource("ViewportTexture_8qkf8")
+
+[node name="FramebufferDataVisualizer" type="ColorRect" parent="UIController"]
+visible = false
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_top = -150.0
+offset_right = 150.0
+grow_vertical = 0
+mouse_filter = 2
+color = Color(0, 0, 0, 1)
+
+[node name="ColorContainer" type="VBoxContainer" parent="UIController/FramebufferDataVisualizer"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="RValue" type="Label" parent="UIController/FramebufferDataVisualizer/ColorContainer"]
+layout_mode = 2
+text = "R: 0"
+horizontal_alignment = 1
+uppercase = true
+
+[node name="GValue" type="Label" parent="UIController/FramebufferDataVisualizer/ColorContainer"]
+layout_mode = 2
+text = "G: 0"
+horizontal_alignment = 1
+uppercase = true
+
+[node name="BValue" type="Label" parent="UIController/FramebufferDataVisualizer/ColorContainer"]
+layout_mode = 2
+text = "B: 0"
+horizontal_alignment = 1
+uppercase = true
+
+[node name="TextureCoords" type="Label" parent="UIController/FramebufferDataVisualizer/ColorContainer"]
+layout_mode = 2
+text = "Index: (X, Y)"
+horizontal_alignment = 1
+uppercase = true
+
+[node name="CameraController" type="Node" parent="."]
+script = ExtResource("5_usljo")
+Debug = true
+
+[node name="Main" type="Camera3D" parent="CameraController"]
+current = true
+fov = 70.0
+near = 0.001
+far = 30000.0
+script = ExtResource("6_ldv5r")
+Sensitivity = 0.1
+RotationRangeX = Vector2(0, 180)
+RotationEasing = 0.3
+DistanceFromTarget = 50.0
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="CameraController/Main"]
+mesh = SubResource("SphereMesh_ebyhs")
+
+[node name="MeshInstance3D2" type="MeshInstance3D" parent="CameraController/Main"]
+transform = Transform3D(0, 4.37114e-08, 0.331828, 1.2075, -3.55271e-15, 5.15309e-23, 0, 1, -1.45047e-08, 0, 0, 0)
+mesh = SubResource("PrismMesh_8qkf8")
+
+[node name="Helper" type="Camera3D" parent="CameraController"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.3)
+fov = 100.0
+near = 0.001
+far = 30000.0
+script = ExtResource("8_ldv5r")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="CameraController/Helper"]
+mesh = SubResource("SphereMesh_w1xx6")
+
+[node name="SubViewport" type="SubViewport" parent="CameraController"]
+own_world_3d = true
+world_3d = SubResource("World3D_ebyhs")
+handle_input_locally = false
+debug_draw = 1
+use_hdr_2d = true
+size = Vector2i(64, 36)
+render_target_clear_mode = 1
+render_target_update_mode = 4
+
+[node name="Lookup" type="Camera3D" parent="CameraController/SubViewport"]
+script = ExtResource("8_ldv5r")
+
+[node name="RemoteTransform3D" type="RemoteTransform3D" parent="CameraController/SubViewport/Lookup"]
+remote_path = NodePath("../../../MeshInstance3D")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="CameraController"]
+mesh = SubResource("SphereMesh_ebyhs")
+
+[node name="MeshInstance3D2" type="MeshInstance3D" parent="CameraController/MeshInstance3D"]
+transform = Transform3D(0, 4.37114e-08, 0.331828, 1.2075, -3.55271e-15, 5.15309e-23, 0, 1, -1.45047e-08, 0, 0, 0)
+mesh = SubResource("PrismMesh_8qkf8")
+skeleton = NodePath("../..")
+
+[node name="SurfaceAttachment" type="Node3D" parent="."]
+
+[node name="MainLightSource" type="DirectionalLight3D" parent="SurfaceAttachment"]
+directional_shadow_max_distance = 2000.0
+sky_mode = 1
+
+[node name="SunshineCloudsDriver" type="Node" parent="SurfaceAttachment" node_paths=PackedStringArray("TrackedDirectionalLights")]
+script = ExtResource("8_ebyhs")
+CloudsResource = ExtResource("3_usljo")
+AmbienceSampleEnvironment = SubResource("Environment_qqt2a")
+TrackedDirectionalLights = [NodePath("../MainLightSource")]
+TrackedDirectionalLightShadowSteps = Array[int]([12])
+ExtraLargeCloudsPos = Vector3(136969, 0, 0)
+LargeCloudsPos = Vector3(-2169.45, 0, 0)
+MediumCloudsPos = Vector3(-2868.59, 0, 0)
+SmallCloudsPos = Vector3(-800.772, 800.772, 0)
+metadata/_custom_type_script = "uid://dfj074g0bsaan"
+
+[node name="DebugMesh" type="MultiMeshInstance3D" parent="SurfaceAttachment"]
+multimesh = SubResource("MultiMesh_ldv5r")
+
+[node name="CubicalCollision" type="StaticBody3D" parent="SurfaceAttachment"]
+
+[node name="CubicalCollisionShape" type="CollisionShape3D" parent="SurfaceAttachment/CubicalCollision"]
+shape = SubResource("BoxShape3D_wsrnx")
+
+[node name="InnerCollision" type="StaticBody3D" parent="SurfaceAttachment"]
+
+[node name="InnerCollisionShape" type="CollisionShape3D" parent="SurfaceAttachment/InnerCollision"]
+shape = SubResource("SphereShape3D_7pbfy")
+
+[node name="OuterCollision" type="StaticBody3D" parent="SurfaceAttachment"]
+visible = false
+
+[node name="OuterCollisionShape3D" type="CollisionShape3D" parent="SurfaceAttachment/OuterCollision"]
+shape = SubResource("SphereShape3D_tgghh")
