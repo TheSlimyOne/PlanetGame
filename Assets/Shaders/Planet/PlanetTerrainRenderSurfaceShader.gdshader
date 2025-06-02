@@ -48,9 +48,9 @@ void fragment() {
 	vec3 tile_uv = get_tile_uv(terrain_indirection_table, lod_index, grid_size,
 		vertex_uv, total_texture_subdivisions, int(key.z));
 	ALBEDO = pow(get_tile(albedo_tile_cache, tile_uv).xyz, vec3(2.2));
-	
-	vec3 a = get_sphere_normal(height_map_tile_cache, vec3(vertex_uv, float(key.z)), normal_id, normal_strength, get_rotation_from_matrix(planet_transform_matrix) );
-	ALBEDO = a;
+
+	//vec3 a = get_sphere_normal(height_map_tile_cache, vec3(vertex_uv, float(key.z)), normal_id, normal_strength, get_rotation_from_matrix(planet_transform_matrix) );
+	//ALBEDO = a;
 	//ALBEDO = point_to_point_on_cube(normal_id, vertex_uv);
 
 	//ALBEDO = vec3(dot(NORMAL, a), 0, 0);

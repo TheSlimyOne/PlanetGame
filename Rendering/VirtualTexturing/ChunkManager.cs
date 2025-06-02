@@ -128,14 +128,13 @@ namespace PlanetGame.Rendering.VirtualTexturing
 
         public static Image[] GenerateCubeMapFromImage(Image image, Image.Interpolation interpolation = Image.Interpolation.Bilinear)
         {
+            Vector2I subTileParitionSize = new(16, 8);   
             CalculateCubeMapDispatcher calculateCubeMapDispatcher = new()
             {
-                // TileAmount = 8,
-                TileSize = 4096,
-                SubTileParitionSize = new Vector2I(16, 8),
+                SubTileParitionSize = subTileParitionSize,
+                TileSize = CalculateCubeMapDispatcher.GetTileSize(image, subTileParitionSize).X,
                 BorderSize = 0
             };
-            
             calculateCubeMapDispatcher.CreateUniforms();
             Image[] cubeMap = calculateCubeMapDispatcher.CreateCubeMap(image, interpolation: interpolation);
             calculateCubeMapDispatcher.CleanupGPU();

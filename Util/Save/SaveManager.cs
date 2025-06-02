@@ -104,63 +104,62 @@ public static class SaveManager
 
     public async static void WriteNewSave(string saveName, Image albedo, Image heightmap, int tilePartitionCount, int totalTileSlots)
     {
-        // string baseDirectory = $"user://Saves//{saveName}";
-        // string baseImagesDir = $"{baseDirectory}//Base Images";
-        // string thumbnailsDir = $"{baseDirectory}//Thumbnails";
-        // string tileDir = $"{baseDirectory}//Tiles";
-        // string cubeMapDir = $"{baseDirectory}//Cube Maps";
+        string baseDirectory = $"user://Saves//{saveName}";
+        string baseImagesDir = $"{baseDirectory}//Base Images";
+        string thumbnailsDir = $"{baseDirectory}//Thumbnails";
+        string tileDir = $"{baseDirectory}//Tiles";
+        string cubeMapDir = $"{baseDirectory}//Cube Maps";
 
-        // string baseAlbedo = $"{baseImagesDir}//Albedo.png";
-        // string baseHeightmap = $"{baseImagesDir}//Heightmap.png";
-        // string thumbnailAlbedo = $"{thumbnailsDir}//Albedo Thumbnail.png";
-        // string thumbnailHeightmap = $"{thumbnailsDir}//Heightmap Thumbnail.png";
+        string baseAlbedo = $"{baseImagesDir}//Albedo.png";
+        string baseHeightmap = $"{baseImagesDir}//Heightmap.png";
+        string thumbnailAlbedo = $"{thumbnailsDir}//Albedo Thumbnail.png";
+        string thumbnailHeightmap = $"{thumbnailsDir}//Heightmap Thumbnail.png";
 
-        // string cubeAlbedoDir = $"{cubeMapDir}//Albedo";
-        // string cubeHeightmapDir = $"{cubeMapDir}//Heightmap";
+        string cubeAlbedoDir = $"{cubeMapDir}//Albedo";
+        string cubeHeightmapDir = $"{cubeMapDir}//Heightmap";
 
-        // string tileAlbedoDir = $"{tileDir}//Albedo";
-        // string tileHeightmapDir = $"{tileDir}//Heightmap";
-        // int tileSize = 8192 / tilePartitionCount;
+        string tileAlbedoDir = $"{tileDir}//Albedo";
+        string tileHeightmapDir = $"{tileDir}//Heightmap";
+        int tileSize = 8192 / tilePartitionCount;
 
-        // WorldSave worldSave = new()
-        // {
-        //     BaseDirectory = baseDirectory,
-        //     BaseAlbedo = baseAlbedo,
-        //     BaseHeightmap = baseHeightmap,
-        //     ThumbnailAlbedo = thumbnailAlbedo,
-        //     ThumbnailHeightmap = thumbnailHeightmap,
-        //     TilesAlbedo = tileAlbedoDir,
-        //     TilesHeightmap = tileHeightmapDir,
-        //     TilePartitionCount = (uint)tilePartitionCount,
-        //     TotalTileSlots = (uint)totalTileSlots,
-        //     TileSize = (uint)tileSize,
-        //     BorderSize = 0u,
-        // };
+        WorldSave worldSave = new()
+        {
+            BaseDirectory = baseDirectory,
+            BaseAlbedo = baseAlbedo,
+            BaseHeightmap = baseHeightmap,
+            ThumbnailAlbedo = thumbnailAlbedo,
+            ThumbnailHeightmap = thumbnailHeightmap,
+            TilesAlbedo = tileAlbedoDir,
+            TilesHeightmap = tileHeightmapDir,
+            TilePartitionCount = (uint)tilePartitionCount,
+            TotalTileSlots = (uint)totalTileSlots,
+            TileSize = (uint)tileSize,
+            BorderSize = 0u,
+        };
 
-        // DirAccess.MakeDirRecursiveAbsolute(baseDirectory);
-        // DirAccess.MakeDirRecursiveAbsolute(baseImagesDir);
-        // DirAccess.MakeDirRecursiveAbsolute(thumbnailsDir);
+        DirAccess.MakeDirRecursiveAbsolute(baseDirectory);
+        DirAccess.MakeDirRecursiveAbsolute(baseImagesDir);
+        DirAccess.MakeDirRecursiveAbsolute(thumbnailsDir);
 
-        // DirAccess.MakeDirRecursiveAbsolute(cubeAlbedoDir);
-        // DirAccess.MakeDirRecursiveAbsolute(cubeHeightmapDir);
+        DirAccess.MakeDirRecursiveAbsolute(cubeAlbedoDir);
+        DirAccess.MakeDirRecursiveAbsolute(cubeHeightmapDir);
 
-        // DirAccess.MakeDirRecursiveAbsolute(tileAlbedoDir);
-        // DirAccess.MakeDirRecursiveAbsolute(tileHeightmapDir);
+        DirAccess.MakeDirRecursiveAbsolute(tileAlbedoDir);
+        DirAccess.MakeDirRecursiveAbsolute(tileHeightmapDir);
 
-        // albedo.SavePng(baseAlbedo);
-        // heightmap.SavePng(baseHeightmap);
+        albedo.SavePng(baseAlbedo);
+        heightmap.SavePng(baseHeightmap);
 
-        // GenerateThumbnail(albedo).SavePng(thumbnailAlbedo);
-        // GenerateThumbnail(heightmap).SavePng(thumbnailHeightmap);
+        GenerateThumbnail(albedo).SavePng(thumbnailAlbedo);
+        GenerateThumbnail(heightmap).SavePng(thumbnailHeightmap);
 
-        ChunkManager chunkManager = new();
         Image[] albedoCubeMap = ChunkManager.GenerateCubeMapFromImage(albedo);
         // Image[] heightmapCubeMap = chunkManager.GenerateCubeMapFromImage(heightmap);
         // for (int i = 0; i < 6; i++)
-        {
+        // {
             // albedoCubeMap[i].SavePng($"{cubeAlbedoDir}//Albedo-{i}.png");
             // heightmapCubeMap[i].SavePng($"{cubeHeightmapDir}//Heightmap-{i}.png");
-        }
+        // }
         // chunkManager.CleanupGPUResources();
 
         // chunkManager.GenerateImageChunkFromCubeMap((int)worldSave.TileSize, 0, albedoCubeMap, tileAlbedoDir);
@@ -168,12 +167,12 @@ public static class SaveManager
 
         // await chunkManager.CreateChunks();
 
-        // if (!Saves.TryAdd(saveName, worldSave))
-        // {
-        //     GD.Print("[SaveManager:168] Overriding save");
-        //     Saves[saveName] = worldSave;
-        // }
-        // WriteSaves();
+        if (!Saves.TryAdd(saveName, worldSave))
+        {
+            GD.Print("[SaveManager:168] Overriding save");
+            Saves[saveName] = worldSave;
+        }
+        WriteSaves();
 
     }
 

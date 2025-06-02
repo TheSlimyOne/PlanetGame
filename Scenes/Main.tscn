@@ -89,7 +89,7 @@ stretch = true
 
 [node name="SubViewport" type="SubViewport" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/Load Section/SubViewportContainer" node_paths=PackedStringArray("Planet")]
 handle_input_locally = false
-size = Vector2i(2, 200)
+size = Vector2i(309, 200)
 render_target_update_mode = 4
 script = ExtResource("2_idj7w")
 RotationSpeed = 0.5

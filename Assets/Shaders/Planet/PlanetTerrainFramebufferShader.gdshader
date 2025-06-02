@@ -12,7 +12,7 @@ vec3 hsl_to_rgb(vec3 c) {
 void fragment() {
 	// Adjusting uvs to make sure the range is [0, 1)
 	vec2 adjusted_uv = min(vertex_uv, vec2(1.0) - vec2(1e-7));
-	
+
 	int lod = int(calculate_lod_to_cam(sphere_local_position, camera_position, planet_transform_matrix, fovy, sub_factor, radius, maximum_lod));
 	int lod_index = lod_subdivision_map[lod];
 

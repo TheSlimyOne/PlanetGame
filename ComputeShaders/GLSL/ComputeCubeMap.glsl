@@ -14,8 +14,8 @@ const vec3 normals[6] = vec3[6](
 // Sebastian Lague
 layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
-layout(set = 0, binding = 0) uniform sampler2DArray SubTiles;
-layout(set = 0, binding = 1, rgba8) uniform image2DArray Plane;
+layout(set = 0, binding = 0) uniform sampler2D SubTiles;
+layout(set = 0, binding = 1, rgba8) uniform image2D Plane;
 
 layout(set = 0, binding = 2, std430) buffer restrict PlaneData {
     uvec2 tile_dimension;
@@ -87,7 +87,7 @@ void main()
     vec2 tile_size = 1.0 / vec2(tile_dimension);
     vec2 tile_uv = (full_image_uv_spherical - vec2(tile_coord) * tile_size) / tile_size;
 
-    vec4 color = texture(SubTiles, vec3(tile_uv, tile_index));
+    vec4 color = texture(SubTiles, tile_uv);
 
-    imageStore(Plane, ivec3(invocation_id), color);
+    // imageStore(Plane, ivec3(invocation_id), color);
 }

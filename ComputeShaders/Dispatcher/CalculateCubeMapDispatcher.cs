@@ -23,6 +23,7 @@ namespace PlanetGame.ComputeShaders.Dispatcher
         public int BorderSize { get; set; }
 
         public Vector2I SubTileParitionSize = new(4, 2);
+        public Vector2I PlaneParitionSize = new(4, 4);
 
         private uint _cubeMapSubTileCount = 4;
 
@@ -40,8 +41,7 @@ namespace PlanetGame.ComputeShaders.Dispatcher
                     {
                         Width = (uint)TileSize,
                         Height = (uint)TileSize,
-                        ArrayLayers = (uint)SubTileParitionSize.X * (uint)SubTileParitionSize.Y,
-                        TextureType = RenderingDevice.TextureType.Type2DArray,
+                        TextureType = RenderingDevice.TextureType.Type2D,
                         Format = RenderingDevice.DataFormat.R8G8B8A8Unorm,
                         UsageBits = RenderingDevice.TextureUsageBits.StorageBit | RenderingDevice.TextureUsageBits.SamplingBit | RenderingDevice.TextureUsageBits.CanCopyFromBit | RenderingDevice.TextureUsageBits.CanUpdateBit
                     }, RenderingDevice.UniformType.SamplerWithTexture),
@@ -51,8 +51,7 @@ namespace PlanetGame.ComputeShaders.Dispatcher
                     {
                         Width = (uint)TileSize,
                         Height = (uint)TileSize,
-                        ArrayLayers = _cubeMapSubTileCount,
-                        TextureType = RenderingDevice.TextureType.Type2DArray,
+                        TextureType = RenderingDevice.TextureType.Type2D,
                         Format = RenderingDevice.DataFormat.R8G8B8A8Unorm,
                         UsageBits = RenderingDevice.TextureUsageBits.StorageBit | RenderingDevice.TextureUsageBits.SamplingBit | RenderingDevice.TextureUsageBits.CanCopyFromBit | RenderingDevice.TextureUsageBits.CanCopyToBit | RenderingDevice.TextureUsageBits.CanUpdateBit
                     }, RenderingDevice.UniformType.Image
@@ -73,7 +72,7 @@ namespace PlanetGame.ComputeShaders.Dispatcher
             long computeList = _RenderingDevice.ComputeListBegin();
             _RenderingDevice.ComputeListBindComputePipeline(computeList, _pipeline);
             _RenderingDevice.ComputeListBindUniformSet(computeList, _uniformSet, 0);
-            _RenderingDevice.ComputeListDispatch(computeList, (uint)numThreads.X, (uint)numThreads.Y, _cubeMapSubTileCount);
+            _RenderingDevice.ComputeListDispatch(computeList, (uint)numThreads.X, (uint)numThreads.Y, 1);
             _RenderingDevice.ComputeListEnd();
             SubmitThenSync();
         }
@@ -83,20 +82,19 @@ namespace PlanetGame.ComputeShaders.Dispatcher
             throw new NotImplementedException();
         }
 
-        private Image GetLastProcessedCubeFace()
-        {
-            Image[] image = GetUniform<Texture2DUniform>(BufferNames.PLANE).GetImageArray(Image.Format.Rgba8);
+        // private Image GetLastProcessedCubeFace()
+        // {
+        //     Image[] image = GetUniform<Texture2DUniform>(BufferNames.PLANE).GetImageArray(Image.Format.Rgba8);
 
-            // TODO Hard coded prob can be a function so to reuse it for saveCubeMap
-            Image fullPlane = Image.CreateEmpty(2 * TileSize, 2 * TileSize, false, Image.Format.Rgba8);
-            for (int i = 0; i < _cubeMapSubTileCount; i++)
-            {
-                int x = i % ((int)_cubeMapSubTileCount / 2);
-                int y = i / ((int)_cubeMapSubTileCount / 2);
-                fullPlane.BlitRect(image[i], new(0, 0, Vector2I.One * TileSize), new Vector2I(x, y) * TileSize);
-            }
-            return fullPlane;
-        }
+        //     Image fullPlane = Image.CreateEmpty(2 * TileSize, 2 * TileSize, false, Image.Format.Rgba8);
+        //     for (int i = 0; i < _cubeMapSubTileCount; i++)
+        //     {
+        //         int x = i % ((int)_cubeMapSubTileCount / 2);
+        //         int y = i / ((int)_cubeMapSubTileCount / 2);
+        //         fullPlane.BlitRect(image[i], new(0, 0, Vector2I.One * TileSize), new Vector2I(x, y) * TileSize);
+        //     }
+        //     return fullPlane;
+        // }
 
         // TODO need to un hardcode sub image right now it only supports 4 x 2
         // Maybe bench mark the speeds to see find which configuation is faster 
@@ -104,17 +102,22 @@ namespace PlanetGame.ComputeShaders.Dispatcher
         private Image[] CreateSubTiles(Image baseImage)
         {
             int subTileCount = SubTileParitionSize.X * SubTileParitionSize.Y;
-            Vector2I subTileSize = baseImage.GetSize() / SubTileParitionSize;
+            // Vector2I subTileSize = GetTileSize(baseImage, SubTileParitionSize);
             Image[] subImages = new Image[subTileCount];
             for (int i = 0; i < subTileCount; i++)
             {
-                int x = i % SubTileParitionSize.X * subTileSize.X;
-                int y = i / SubTileParitionSize.X * subTileSize.Y;
+                int x = i % SubTileParitionSize.X * TileSize;
+                int y = i / SubTileParitionSize.X * TileSize;
 
-                subImages[i] = Image.CreateEmpty(subTileSize.X, subTileSize.Y, false, baseImage.GetFormat());
-                subImages[i].BlitRect(baseImage, new Rect2I(x, y, subTileSize.X, subTileSize.Y), Vector2I.Zero);
+                subImages[i] = Image.CreateEmpty(TileSize, TileSize, false, baseImage.GetFormat());
+                subImages[i].BlitRect(baseImage, new Rect2I(x, y, TileSize, TileSize), Vector2I.Zero);
             }
             return subImages;
+        }
+
+        public static Vector2I GetTileSize(Image baseImage, Vector2I subTileParitionSize)
+        {
+            return baseImage.GetSize() / subTileParitionSize;
         }
 
         public Image[] CreateCubeMap(Image image, Image.Interpolation interpolation = Image.Interpolation.Bilinear)
@@ -130,15 +133,15 @@ namespace PlanetGame.ComputeShaders.Dispatcher
             if (image.GetFormat() != Image.Format.Rgba8)
                 image.Convert(Image.Format.Rgba8);
 
-            image.Resize(16384, 8192, interpolation);
+            // image.Resize(16384, 8192, interpolation);
 
             Image[] subTiles = CreateSubTiles(image);
             for (int i = 0; i < subTiles.Length; i++)
             {
-                subTiles[i].SavePng($"user://Tests//subtiles-{i}.png");
+                subTiles[i].SavePng($"user://Test-SubTiles//subtiles-{i}.png");
                 // GD.Print($"{i}");
             }
-            GetUniform<Texture2DUniform>(BufferNames.SUB_TILES).SetImage(subTiles);
+            // GetUniform<Texture2DUniform>(BufferNames.SUB_TILES).SetImage(subTiles);
 
             // Stopwatch stopwatch = new();
             // stopwatch.Start();
@@ -155,7 +158,7 @@ namespace PlanetGame.ComputeShaders.Dispatcher
             // stopwatch.Stop();
             // GD.Print(stopwatch.Elapsed);
             // return cubeMap;
-            
+
             return [];
 
         }
