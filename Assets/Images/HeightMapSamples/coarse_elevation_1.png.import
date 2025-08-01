@@ -2,21 +2,20 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://lfyhcvhwtvs"
-path.s3tc="res://.godot/imported/4.png-35452c5cf3fbb1e3a8261a013c4157e0.s3tc.ctex"
+uid="uid://criui22avbqiq"
+path="res://.godot/imported/coarse_elevation_1.png-4a7d4e237ef58e552eb27deecdf95840.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
-"vram_texture": true
+"vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Images/CubeMap/4.png"
-dest_files=["res://.godot/imported/4.png-35452c5cf3fbb1e3a8261a013c4157e0.s3tc.ctex"]
+source_file="res://Assets/Images/HeightMapSamples/coarse_elevation_1.png"
+dest_files=["res://.godot/imported/coarse_elevation_1.png-4a7d4e237ef58e552eb27deecdf95840.ctex"]
 
 [params]
 
-compress/mode=2
+compress/mode=0
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/hdr_compression=1

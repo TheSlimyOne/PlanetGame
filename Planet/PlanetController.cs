@@ -34,7 +34,6 @@ public partial class PlanetController : Node3D
     [ExportGroup("Rendering Settings")]
     [Export] public int MaximumNodes { get; set; } = 40000;
     [Export(PropertyHint.Range, "2,500,")] public int Resolution { get; set; } = 3;
-    [Export] public int[] LodSubdivisionMap { get; private set; } = new int[31];
     [Export] public Vector2 MorphRange { get; set; } = new(0, 0);
     [Export(PropertyHint.Range, "1, 10")] public float SubFactor { get; set; } = 4;
     [Export(PropertyHint.Range, "0, 31")] public int MaximumLOD { get; set; } = 12;
@@ -133,23 +132,6 @@ public partial class PlanetController : Node3D
 
     public override void _Ready()
     {
-        // = GD.Load<("res://Planet/PlanetDataDefault.tres");
-
-        // ChunkManager chunkManager = new();
-        // Image image = tex.GetImage();
-        // image.ResizeToPo2();
-        // chunkManager.GenerateImageChunkFromCubeMap(32, 0, (int)Math.Log2(16) + 1, image, "", "user://obama");
-
-
-        // ChunkManager chunkManager = new();
-        // Image albedo = Image.LoadFromFile(SaveManager.GetDirectoryPath(SaveName, SaveManager.Directory.BASE_ALBEDO));
-        // int centerSize = albedo.GetSize().Y; 
-        // chunkManager.QueueGenerateChunksFromImage();
-
-
-        // chunkManager.CleanupGPUResources();
-
-
         SurfaceShader = new BindableShaderMaterial() { Shader = GD.Load<Shader>(ShaderPaths.SURFACE_SHADER_PATH) };
         FramebufferShader = new BindableShaderMaterial() { Shader = GD.Load<Shader>(ShaderPaths.FRAME_BUFFER_SHADER) };
 
@@ -196,7 +178,6 @@ public partial class PlanetController : Node3D
 
         helperCamera.Follow(MainCamera);
         lookupCamera.Follow(MainCamera);
-        
 
         MainCamera.Far = 32768; // Max far value for cameras
         helperCamera.Far = MainCamera.Far;
@@ -209,6 +190,8 @@ public partial class PlanetController : Node3D
         CameraController.SetCurrent("Main");
 
         MainCamera.AddChild(helperCamera.GetFrustumMeshInstance());
+
+        lookupCamera.SetSize(DisplayServer.WindowGetSize() / 4);
     }
 
     private Vector3 _direction = Vector3.Zero;
@@ -281,8 +264,9 @@ public partial class PlanetController : Node3D
         bindableShaderMaterial.FrameDependentBind("fovy", () => Mathf.Tan(helper.GetCameraFov(true) / 2));
         bindableShaderMaterial.Bind("sub_factor", () => SubFactor);
         bindableShaderMaterial.Bind("total_texture_subdivisions", () => SparseVirtualTexture.IndirectionTable.MipDepth);
-        bindableShaderMaterial.FrameDependentBind("lod_subdivision_map", () => LodSubdivisionMap);
-        bindableShaderMaterial.Bind("grid_size", () => SparseVirtualTexture.IndirectionTable.GridSize);
+        bindableShaderMaterial.FrameDependentBind("lod_to_mip_map", () => SaveManager.GetCurrentSave().LodToMipMap);
+
+        bindableShaderMaterial.Bind("tile_padding", () => SparseVirtualTexture.TilePadding);
 
         SurfaceShader.Bind("height_map_tile_cache", () => SparseVirtualTexture.HeightTileCache.Cache);
         SurfaceShader.Bind("terrain_indirection_table", () => SparseVirtualTexture.IndirectionTable.Table);

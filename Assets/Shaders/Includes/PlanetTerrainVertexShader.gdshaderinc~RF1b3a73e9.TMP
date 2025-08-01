@@ -6,7 +6,6 @@ uniform float height_scale;
 uniform sampler2D height_map;
 uniform int resolution;
 uniform float maximum_lod;
-uniform int tile_padding;
 uniform mat4 planet_transform_matrix;
 
 uniform sampler2DArray height_map_tile_cache : repeat_disable, source_color, filter_linear;
@@ -32,7 +31,8 @@ varying float elevation;
 varying vec2 vertex_uv;
 
 uniform int total_texture_subdivisions;
-uniform int[32] lod_to_mip_map;
+uniform float grid_size;
+uniform int[32] lod_subdivision_map;
 
 void vertex() {
 	key = floatBitsToUint(INSTANCE_CUSTOM);
@@ -58,15 +58,14 @@ void vertex() {
 	vec3 morphed_world_position = get_world_space_point(morphed_local_position, planet_transform_matrix);
 
 	int lod = int(calculate_lod_to_cam(sphere_local_position, camera_position, planet_transform_matrix, fovy, sub_factor, radius, maximum_lod));
-	int mip_index = lod_to_mip_map[lod];
+	int lod_index = lod_subdivision_map[lod];
 	vertex_uv = get_cube_uv(int(key.z), cube_local_position);
 
-	vec3 tile_uv = get_tile_uv(terrain_indirection_table, mip_index, tile_padding, vertex_uv, total_texture_subdivisions, int(key.z));
+	vec3 tile_uv = get_tile_uv(terrain_indirection_table, lod_index, grid_size, vertex_uv, total_texture_subdivisions, int(key.z));
 	elevation = get_tile(height_map_tile_cache, tile_uv).r;
 	//elevation /= 255.0;
 	//elevation = textureLod(height_map, point_on_sphere_to_uv(morphed_local_position), 0.0).r;
 
 	NORMAL = (vec4(morphed_local_position, 1) * get_rotation_from_matrix(planet_transform_matrix)).xyz;
-	//NORMAL = compute_sphere_normal_from_heightmap(height_map_tile_cache, tile_uv.xy, int(tile_uv.z), NORMAL, height_scale);
 	VERTEX = morphed_world_position + NORMAL * height_scale * elevation;
 }

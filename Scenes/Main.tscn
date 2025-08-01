@@ -7,7 +7,7 @@
 [sub_resource type="Environment" id="Environment_idj7w"]
 background_mode = 1
 
-[node name="Main Menu" type="MarginContainer" node_paths=PackedStringArray("LoadOptions", "LoadSave", "AlbedoSave", "HeightmapSave", "StartNewGame", "DemoPlanet", "FileDialog", "SaveName")]
+[node name="Main Menu" type="MarginContainer" node_paths=PackedStringArray("LoadOptions", "LoadSave", "AlbedoSave", "HeightmapSave", "StartNewGame", "ProgressBar", "ProgressLabel", "DemoPlanet", "FileDialog", "SaveName")]
 custom_minimum_size = Vector2(512, 256)
 anchors_preset = 15
 anchor_right = 1.0
@@ -24,6 +24,8 @@ LoadSave = NodePath("CenterContainer/VBoxContainer/ScrollContainer/MarginContain
 AlbedoSave = NodePath("CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/New Game Section/btnUploadAlbedo")
 HeightmapSave = NodePath("CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/New Game Section/btnUploadHeight")
 StartNewGame = NodePath("CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/New Game Section/btnStartNewGame")
+ProgressBar = NodePath("CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/pgbProgressBar")
+ProgressLabel = NodePath("CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/lblProgressLabel")
 DemoPlanet = NodePath("CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/Load Section/SubViewportContainer/SubViewport")
 FileDialog = NodePath("FileDialog")
 SaveName = NodePath("CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/New Game Section/txtSaveName")
@@ -34,6 +36,14 @@ layout_mode = 2
 
 [node name="VBoxContainer" type="VBoxContainer" parent="CenterContainer"]
 layout_mode = 2
+
+[node name="Button" type="Button" parent="CenterContainer/VBoxContainer"]
+layout_mode = 2
+text = "Generate Tiles"
+
+[node name="Button2" type="Button" parent="CenterContainer/VBoxContainer"]
+layout_mode = 2
+text = "Generate Cubemap"
 
 [node name="ScrollContainer" type="ScrollContainer" parent="CenterContainer/VBoxContainer"]
 custom_minimum_size = Vector2(640, 480)
@@ -83,13 +93,13 @@ size_flags_horizontal = 3
 theme_type_variation = &"NoRadioButton"
 
 [node name="SubViewportContainer" type="SubViewportContainer" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/Load Section"]
-custom_minimum_size = Vector2(0, 200)
+custom_minimum_size = Vector2(0, 148)
 layout_mode = 2
 stretch = true
 
 [node name="SubViewport" type="SubViewport" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/Load Section/SubViewportContainer" node_paths=PackedStringArray("Planet")]
 handle_input_locally = false
-size = Vector2i(309, 200)
+size = Vector2i(309, 148)
 render_target_update_mode = 4
 script = ExtResource("2_idj7w")
 RotationSpeed = 0.5
@@ -106,6 +116,11 @@ environment = SubResource("Environment_idj7w")
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/Load Section/SubViewportContainer/SubViewport"]
 transform = Transform3D(-3.9e-08, 0.451609, -0.892216, 1.97404e-08, 0.892216, 0.451609, 1, 1.71783e-15, -4.37114e-08, 0, 0, 0)
+
+[node name="btnRegenerate" type="Button" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/Load Section"]
+layout_mode = 2
+size_flags_vertical = 3
+text = "Regenerate Tiles"
 
 [node name="btnLoad" type="Button" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/Load Section"]
 layout_mode = 2
@@ -148,7 +163,10 @@ layout_mode = 2
 size_flags_vertical = 3
 text = "Start New Game"
 
-[node name="lblStartGameProgress" type="Label" parent="CenterContainer/VBoxContainer"]
+[node name="pgbProgressBar" type="ProgressBar" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter"]
+layout_mode = 2
+
+[node name="lblProgressLabel" type="Label" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter"]
 layout_mode = 2
 horizontal_alignment = 1
 
@@ -162,8 +180,11 @@ filters = PackedStringArray("*.png,*.jpg")
 use_native_dialog = true
 script = ExtResource("3_kln2b")
 
+[connection signal="pressed" from="CenterContainer/VBoxContainer/Button" to="." method="GenerateTiles"]
+[connection signal="pressed" from="CenterContainer/VBoxContainer/Button2" to="." method="GenerateCubemap"]
 [connection signal="item_selected" from="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/Load Section/Load Group/obtLoadOptions" to="." method="OnSaveSelection"]
 [connection signal="pressed" from="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/Load Section/Load Group/obtLoadOptions" to="." method="OnOpenSavesList"]
+[connection signal="pressed" from="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/Load Section/btnRegenerate" to="." method="OnLoad"]
 [connection signal="pressed" from="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/Load Section/btnLoad" to="." method="OnLoad"]
 [connection signal="pressed" from="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/New Game Section/btnUploadAlbedo" to="." method="OpenFileDialog" binds= ["ALBEDO"]]
 [connection signal="pressed" from="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/New Game Section/btnUploadHeight" to="." method="OpenFileDialog" binds= ["HEIGHT"]]

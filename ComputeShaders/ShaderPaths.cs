@@ -10,6 +10,7 @@ namespace PlanetGame.ComputeShaders
         public const string VALIDATE_TILE_CACHE = "res://ComputeShaders/GLSL/ValidateTileCache.glsl";
 
         public const string ARRAY_TEXTURE_VISUALIZER = "res://Assets/Shaders/Planet/array_texture_visualizer.gdshader";
+        public const string RESIDENCY_TABLE_SHADER = "res://Rendering/VirtualTexturing/Visualization Shaders/ResidencyShader.gdshader";
 
         public const string SURFACE_SHADER_PATH = "res://Assets/Shaders/Planet/PlanetTerrainRenderSurfaceShader.gdshader";
         public const string FRAME_BUFFER_SHADER = "res://Assets/Shaders/Planet/PlanetTerrainFramebufferShader.gdshader";

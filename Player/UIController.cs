@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using Godot;
 using PlanetGame.Rendering.VirtualTexturing;
 
@@ -65,16 +67,13 @@ public partial class UIController : Control
 	// 	_btnProcessLod.Text = PlanetController.TerrainTessellator.Paused ? "Stop Processing LOD" : "Start Processing LOD";
 	// }
 
-	// public void EnableOrDisableVirtualTexturing()
-	// {
-	// 	GD.Print(PlanetController.SparseVirtualTexture.Paused);
-	// 	if (PlanetController.SparseVirtualTexture.Paused)
-	// 		PlanetController.SparseVirtualTexture.Resume();
-	// 	else
-	// 		PlanetController.SparseVirtualTexture.Pause();
+	public void EnableOrDisableVirtualTexturing()
+	{
+		PlanetController.SparseVirtualTexture.Paused = !PlanetController.SparseVirtualTexture.Paused;
+		GD.Print(PlanetController.SparseVirtualTexture.Paused);
 
-	// 	_btnVirtualTexturing.Text = PlanetController.SparseVirtualTexture.Paused ? "Enable Virtual Texturing" : "Disable Virtual Texturing";
-	// }
+		_btnVirtualTexturing.Text = PlanetController.SparseVirtualTexture.Paused ? "Enable Virtual Texturing" : "Disable Virtual Texturing";
+	}
 
 	// public void UpdateProcessingText()
 	// {
@@ -128,7 +127,7 @@ public partial class UIController : Control
 	// 	Vector2I baseImageSize = image.GetSize();
 	// 	// ChunkManager chunkManager = new(baseImageSize, PlanetController.TilePartitionCount, PlanetController.BorderSize);
 	// 	// chunkManager.BorderSize = 
-	// 	// chunkManager.QueueGenerateChunksFromImage(SaveRootPath, "Albedo", $"Base Images/{BaseAlbedoImageName}", "Tiles/Albedo Tiles", "Cube Map/Albedo");
+	// 	// chunkManager.QueueGenerateChunksFromImage(SaveRootPath, "Albedo", $"Base Images/{BaseAlbedoImageName}", "Tiles/Albedo Tiles", "Cubemap/Albedo");
 	// 	// _ = chunkManager.CreateChunks().ContinueWith(_ => chunkManager.CleanupGPUResources());
 	// }
 
@@ -139,7 +138,7 @@ public partial class UIController : Control
 	// 	Vector2I baseImageSize = image.GetSize();
 
 	// 	// ChunkManager chunkManager = new(baseImageSize, CenterSize, BorderSize);
-	// 	// chunkManager.QueueGenerateChunksFromImage(SaveRootPath, "Heightmap", $"Base Images/{BaseHeightmapImageName}", "Tiles/Heightmap Tiles", "Cube Map/Heightmap", Image.Interpolation.Trilinear);
+	// 	// chunkManager.QueueGenerateChunksFromImage(SaveRootPath, "Heightmap", $"Base Images/{BaseHeightmapImageName}", "Tiles/Heightmap Tiles", "Cubemap/Heightmap", Image.Interpolation.Trilinear);
 	// 	// _ = chunkManager.CreateChunks().ContinueWith(_ => chunkManager.CleanupGPUResources());
 	// }
 }

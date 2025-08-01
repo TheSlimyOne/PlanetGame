@@ -21,6 +21,36 @@ namespace PlanetGame.Util
             return ToBytes<T>(new T[] { data });
         }
 
+        public static (float[,] data, float max, float min) To2Darray(Image image, bool normalized = false)
+        {
+            int width = image.GetWidth();
+            int height = image.GetHeight();
+            float[,] array = new float[width, height];
+
+            float max = float.MinValue;
+            float min = float.MaxValue;
+
+            for (int x = 0; x < width; x++)
+            {
+                for (int y = 0; y < height; y++)
+                {
+                    // Assuming grayscale: use the red channel (R)
+                    float val = image.GetPixel(x, y).R;
+                    array[x, y] = val;
+
+                    if (val < min) min = val;
+                    if (val > max) max = val;
+                }
+            }
+
+            if (normalized && max != min)
+                for (int x = 0; x < width; x++)
+                    for (int y = 0; y < height; y++)
+                        array[x, y] = (array[x, y] - min) / (max - min);
+
+            return (array, max, min);
+        }
+
         public static byte[] ToBytes8(float[,] array)
         {
             int col = array.GetLength(0);
@@ -128,36 +158,5 @@ namespace PlanetGame.Util
             // Ensure the first character is lowercase and starts with an underscore
             return "_" + char.ToLower(camelCase[0]) + camelCase[1..];
         }
-
-        public static float GetPixelBilinear(Image image, float u, float v)
-        {
-            u = Mathf.Clamp(u, 0f, 1f);
-            v = Mathf.Clamp(v, 0f, 1f);
-
-            int width = image.GetWidth();
-            int height = image.GetHeight();
-
-            float x = u * (width - 1);
-            float y = v * (height - 1);
-
-            int x0 = Mathf.Clamp((int)x, 0, Mathf.Max(0, width - 2));
-            int y0 = Mathf.Clamp((int)y, 0, Mathf.Max(0, height - 2));
-            int x1 = x0 + 1;
-            int y1 = y0 + 1;
-
-            float tx = x - x0;
-            float ty = y - y0;
-
-            float v00 = image.GetPixel(x0, y0).R;
-            float v10 = image.GetPixel(x1, y0).R;
-            float v01 = image.GetPixel(x0, y1).R;
-            float v11 = image.GetPixel(x1, y1).R;
-
-            float a = Mathf.Lerp(v00, v10, tx);
-            float b = Mathf.Lerp(v01, v11, tx);
-            return Mathf.Lerp(a, b, ty);
-        }
-
-
     }
 }

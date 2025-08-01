@@ -1,6 +1,11 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Godot;
 using PlanetGame.ComputeShaders;
+using PlanetGame.Rendering.VirtualTexturing;
+using PlanetGame.Util;
 using static SaveManager;
 
 public partial class MainMenu : MarginContainer
@@ -11,6 +16,9 @@ public partial class MainMenu : MarginContainer
 	[Export] private Button HeightmapSave;
 	[Export] private Button StartNewGame;
 
+	[Export] private ProgressBar ProgressBar;
+	[Export] private Label ProgressLabel;
+
 	[Export] private DemoPlanet DemoPlanet;
 	[Export] private ResponsiveFileDialog FileDialog;
 
@@ -18,8 +26,6 @@ public partial class MainMenu : MarginContainer
 
 	private Image NewSaveAlbedo;
 	private Image NewSaveHeightmap;
-
-	private WorldSave NewSave;
 
 	private string SelectedSave;
 
@@ -31,7 +37,39 @@ public partial class MainMenu : MarginContainer
 		DemoPlanet.Planet.Mesh = new BoxMesh() { SubdivideWidth = 16, SubdivideHeight = 16, SubdivideDepth = 16 };
 		ShaderMaterial shader = new() { Shader = GD.Load<Shader>(ShaderPaths.DEMO_SHADER_PATH) };
 		DemoPlanet.Planet.Mesh.SurfaceSetMaterial(0, shader);
+	}
 
+    public override void _EnterTree()
+    {
+		TileManager.OnTileGeneratedProgress += OnTileProgress;
+	}
+
+	public override void _ExitTree()
+	{
+		TileManager.OnTileGeneratedProgress -= OnTileProgress;
+	}
+
+	private void OnTileProgress(int current, string outputText, int maxValue)
+	{
+		CallDeferred(nameof(UpdateProgressBar), current, outputText, maxValue);
+	}
+
+	public void UpdateProgressBar(int currentCount, string outputText, int maxValue)
+	{
+		if (ProgressBar == null || ProgressLabel == null)
+			return;
+
+		ProgressBar.MinValue = 0;
+		ProgressBar.MaxValue = maxValue;
+		ProgressBar.Value = currentCount;
+		ProgressLabel.Text = outputText;
+
+		if (ProgressBar.Value == ProgressBar.MaxValue)
+		{
+			ProgressBar.Value = 0;
+			ProgressLabel.Text = "";
+		}
+	
 	}
 
 	public void OnOpenSavesList()
@@ -90,12 +128,27 @@ public partial class MainMenu : MarginContainer
 		}));
 	}
 
+	public void GenerateTiles()
+	{
+		string testDir = "user://Tests//Tile Border Test";
 
+		using DirAccess dir = DirAccess.Open(testDir);
+		dir.GetFiles().Where(f => f.EndsWith(".png")).ToList().ForEach(f => dir.Remove(f));
+		Image image = Image.LoadFromFile("res://Assets/Images/test-image small.png");
+		
+
+		TileManager.GenerateTilesAsync(image, 10, 3, testDir);
+	}
 
 	public void OnLoad()
 	{
 		CurrentSave = SelectedSave;
 		GetTree().ChangeSceneToFile("res://Scenes/Planet.tscn");
+	}
+	public void OnRenerateTiles()
+	{
+		CurrentSave = SelectedSave;
+		
 	}
 
 	public void OnStartNewGame()
@@ -104,10 +157,10 @@ public partial class MainMenu : MarginContainer
 		// if (NewSaveAlbedo == null || NewSaveHeightmap == null)
 		// 	return;
 
-		string saveName = "Test";
-		Image test1 = Image.LoadFromFile("res://Assets/Images/4_no_ice_clouds_mts_16k.jpg");
-		Image test2 = Image.LoadFromFile("res://Assets/Images/World_elevation_map.png");
-		WriteNewSave(saveName, test1, test2, 16, 256);
+		string saveName = "Earth";
+		Image test1 = Image.LoadFromFile("user://Albedo.png");
+		Image test2 = Image.LoadFromFile("user://Heightmap.png");
+		WriteNewSave(saveName, test1, test2, 5, 0, [4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+		// WriteNewSave(saveName, NewSaveAlbedo, NewSaveHeightmap, 5, 5, [4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
 	}
-
 }

@@ -135,29 +135,29 @@ namespace PlanetGame.ComputeShaders.Dispatcher
 
             // image.Resize(16384, 8192, interpolation);
 
-            Image[] subTiles = CreateSubTiles(image);
-            for (int i = 0; i < subTiles.Length; i++)
-            {
-                subTiles[i].SavePng($"user://Test-SubTiles//subtiles-{i}.png");
-                // GD.Print($"{i}");
-            }
+            // Image[] subTiles = CreateSubTiles(image);
+            // for (int i = 0; i < subTiles.Length; i++)
+            // {
+            //     subTiles[i].SavePng($"user://Test-SubTiles//subtiles-{i}.png");
+            //     // GD.Print($"{i}");
+            // }
             // GetUniform<Texture2DUniform>(BufferNames.SUB_TILES).SetImage(subTiles);
 
             // Stopwatch stopwatch = new();
             // stopwatch.Start();
-            // Image[] cubeMap = new Image[6];
+            // Image[] cubemap = new Image[6];
             // for (int i = 0; i < 6; i++)
             // {
             //     GetUniform<StorageBufferUniform>(BufferNames.PLANE_DATA).UpdateUniform(SizeOf<uint>() * 3, SizeOf<uint>(), [.. ToBytesSingle(i)]);
             //     Invoke();
             //     SubmitThenSync();
-            //     cubeMap[i] = GetLastProcessedCubeFace();
+            //     cubemap[i] = GetLastProcessedCubeFace();
             // }
 
             // GD.PrintS("Cube map generation complete");
             // stopwatch.Stop();
             // GD.Print(stopwatch.Elapsed);
-            // return cubeMap;
+            // return cubemap;
 
             return [];
 

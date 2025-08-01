@@ -40,13 +40,14 @@ void fragment() {
 	//vec3 debug_color = hsl_to_rgb(vec3(float(lod) / 16.0, 1.0, 0.5));
 	vec3 normal = normals[key.z];
 	int normal_id = get_normal_id(ivec3(normal));
-	NORMAL = height_to_normal(elevation, normal_strength, VERTEX, NORMAL);
+	//NORMAL = height_to_normal(elevation, normal_strength, VERTEX, NORMAL);
+
 
 	int lod = int(calculate_lod_to_cam(sphere_local_position, camera_position, planet_transform_matrix, fovy, sub_factor, radius, maximum_lod));
-	int lod_index = lod_subdivision_map[lod];
+	int lod_index = lod_to_mip_map[lod];
 
-	vec3 tile_uv = get_tile_uv(terrain_indirection_table, lod_index, grid_size,
-		vertex_uv, total_texture_subdivisions, int(key.z));
+	vec3 tile_uv = get_tile_uv(terrain_indirection_table, lod_index, tile_padding, vertex_uv, total_texture_subdivisions, int(key.z));
+	//ALBEDO = tile_uv;
 	ALBEDO = pow(get_tile(albedo_tile_cache, tile_uv).xyz, vec3(2.2));
 
 	//vec3 a = get_sphere_normal(height_map_tile_cache, vec3(vertex_uv, float(key.z)), normal_id, normal_strength, get_rotation_from_matrix(planet_transform_matrix) );

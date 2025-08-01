@@ -5,7 +5,7 @@ using PlanetGame.ComputeShaders;
 
 namespace PlanetGame.Rendering.VirtualTexturing
 {
-    public class IndirectionStateTable : VirtualTextureTable
+    public class StateTable : VirtualTextureTable
     {
         public Texture2DArrayRD Table
         {
@@ -17,7 +17,7 @@ namespace PlanetGame.Rendering.VirtualTexturing
         public uint MipDepth { get; private set; }
 
         // TODO need to recognize if there is border pixels 
-        public IndirectionStateTable(uint totalSubdivisions)
+        public StateTable(uint totalSubdivisions)
         {
             GridSize = (uint)Mathf.Pow(2, totalSubdivisions - 1);
             MipDepth = totalSubdivisions;
@@ -96,6 +96,16 @@ namespace PlanetGame.Rendering.VirtualTexturing
 
             if (Table.TextureRdRid.IsValid)
                 RenderingServer.GetRenderingDevice().FreeRid(Table.TextureRdRid);
+        }
+
+        public override void SetFallbackSlots()
+        {
+            throw new NotSupportedException();
+        }
+
+        public override Color GetPixel(int x, int y, int z)
+        {
+            throw new NotImplementedException();
         }
     }
 }

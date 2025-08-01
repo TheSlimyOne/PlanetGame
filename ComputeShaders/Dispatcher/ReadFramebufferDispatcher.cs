@@ -15,12 +15,12 @@ namespace PlanetGame.ComputeShaders.Dispatcher
         {
             FRAMEBUFFER,
             INDIRECTION_TABLE,
-            INDIRECTION_STATE_TABLE,
+            STATE_TABLE,
             RESIDENCY_TABLE,
             VIRTUAL_TEXTURE_DATA,
             TEXTURE_ID_COUNTER,
             TILE_CACHE_COUNTER,
-            TILE_IDS
+            REQUESTED_TILE_IDS
         }
 
         public ReadFramebufferDispatcher() : base(ShaderPaths.READ_FRAME_BUFFER)
@@ -43,8 +43,8 @@ namespace PlanetGame.ComputeShaders.Dispatcher
                     SparseVirtualTexture.IndirectionTable.Table.TextureRdRid, RenderingDevice.UniformType.Image, perserved: true
                 ),
 
-                [BufferNames.INDIRECTION_STATE_TABLE] = new Texture2DUniform(this, (int)BufferNames.INDIRECTION_STATE_TABLE,
-                    SparseVirtualTexture.IndirectionStateTable.Table.TextureRdRid, RenderingDevice.UniformType.Image, perserved: true
+                [BufferNames.STATE_TABLE] = new Texture2DUniform(this, (int)BufferNames.STATE_TABLE,
+                    SparseVirtualTexture.StateTable.Table.TextureRdRid, RenderingDevice.UniformType.Image, perserved: true
                 ),
 
                 [BufferNames.RESIDENCY_TABLE] = new Texture2DUniform(this, (int)BufferNames.RESIDENCY_TABLE,
@@ -57,7 +57,7 @@ namespace PlanetGame.ComputeShaders.Dispatcher
                             SparseVirtualTexture.IndirectionTable.GridSize,
                             SparseVirtualTexture.IndirectionTable.MipDepth,
                             SparseVirtualTexture.IndirectionTable.RootTileAmount,
-                            SparseVirtualTexture.TotalTileSlots
+                            TileCache.TotalTileSlots
                         ]
                     ).ToArray()
                 ),
@@ -70,7 +70,7 @@ namespace PlanetGame.ComputeShaders.Dispatcher
                     Utilities.ToBytesSingle(0).ToArray()
                 ),
 
-                [BufferNames.TILE_IDS] = new StorageBufferUniform(this, _RenderingDevice, (int)BufferNames.TILE_IDS,
+                [BufferNames.REQUESTED_TILE_IDS] = new StorageBufferUniform(this, _RenderingDevice, (int)BufferNames.REQUESTED_TILE_IDS,
                     new byte[Utilities.SizeOf<uint>() * size.X * size.Y]
                 )
             };
@@ -111,7 +111,7 @@ namespace PlanetGame.ComputeShaders.Dispatcher
                 return;
             }
 
-            GetUniform<StorageBufferUniform>(BufferNames.TILE_IDS).GetDataAsync(callback, sizeBytes: (uint)amount * Utilities.SizeOf<uint>());
+            GetUniform<StorageBufferUniform>(BufferNames.REQUESTED_TILE_IDS).GetDataAsync(callback, sizeBytes: (uint)amount * Utilities.SizeOf<uint>());
         }
     }
 }

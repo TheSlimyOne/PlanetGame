@@ -11,7 +11,6 @@ namespace PlanetGame.Rendering.VirtualTexturing
             protected set => StorageTexture = value;
         }
 
-
         public uint GridSize { get; private set; }
         public uint MipDepth { get; private set; }
         public uint RootTileAmount { get; private set; }
@@ -42,6 +41,7 @@ namespace PlanetGame.Rendering.VirtualTexturing
             };
 
             ClearStorageTexture();
+            SetFallbackSlots();
             CreateVisualization();
 
             // GD.Print($"Total textures {MipDepth * 6}");
@@ -51,14 +51,6 @@ namespace PlanetGame.Rendering.VirtualTexturing
         public override void ClearStorageTexture()
         {
             RenderingServer.GetRenderingDevice().TextureClear(Table.TextureRdRid, new Color("00000000"), 0, 1, 0, MipDepth * 6);
-            for (uint i = 0; i < RootTileAmount; i++)
-            {
-                uint tileLayer = MipDepth * i + (MipDepth - 1);
-                Image image = Image.CreateEmpty((int)GridSize, (int)GridSize, false, Image.Format.Rgba8);
-                image.Fill(new Color(i / 255f, 0, 0, 1));
-
-                RenderingServer.GetRenderingDevice().TextureUpdate(Table.TextureRdRid, tileLayer, image.GetData());
-            }
         }
 
         protected override void CreateVisualization()
@@ -108,6 +100,23 @@ namespace PlanetGame.Rendering.VirtualTexturing
 
             if (Table.TextureRdRid.IsValid)
                 RenderingServer.GetRenderingDevice().FreeRid(Table.TextureRdRid);
+        }
+
+        public override void SetFallbackSlots()
+        {
+            for (uint i = 0; i < RootTileAmount; i++)
+            {
+                uint tileLayer = MipDepth * i + (MipDepth - 1);
+                Image image = Image.CreateEmpty((int)GridSize, (int)GridSize, false, Image.Format.Rgba8);
+                image.Fill(new Color(i / 255f, 1, 1, 1));
+
+                RenderingServer.GetRenderingDevice().TextureUpdate(Table.TextureRdRid, tileLayer, image.GetData());
+            }
+        }
+
+        public override Color GetPixel(int x, int y, int z)
+        {
+            throw new System.NotImplementedException();
         }
     }
 }

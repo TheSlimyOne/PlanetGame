@@ -3,7 +3,7 @@
 [ext_resource type="Script" uid="uid://b4tv1heidhb4j" path="res://Planet/PlanetController.cs" id="1_qtwtp"]
 [ext_resource type="PackedScene" uid="uid://dw6xke4ovskkx" path="res://Scenes/ui.tscn" id="3_ebyhs"]
 [ext_resource type="Texture2D" uid="uid://ejlq5akl3icw" path="res://Assets/Images/panorama_image.png" id="3_ldv5r"]
-[ext_resource type="CompositorEffect" uid="uid://drxgmc0dtr5oy" path="res://NewClouds.tres" id="3_usljo"]
+[ext_resource type="CompositorEffect" uid="uid://drxgmc0dtr5oy" path="res://addons/SunshineClouds2/NewClouds.tres" id="3_usljo"]
 [ext_resource type="Script" uid="uid://b6ndo6pet2jv4" path="res://Player/Camera/CameraController.cs" id="5_usljo"]
 [ext_resource type="Script" uid="uid://bker53ypetnsk" path="res://Player/Camera/OrbitalCamera3D.cs" id="6_ldv5r"]
 [ext_resource type="Script" uid="uid://bvr5rurarht8e" path="res://Player/Camera/CustomCamera.cs" id="8_ldv5r"]
@@ -60,7 +60,6 @@ radius = 500.0
 [node name="Planet" type="Node3D" node_paths=PackedStringArray("CameraController", "SurfaceAttachment", "UIController", "MainLightSource", "WorldEnvironment")]
 script = ExtResource("1_qtwtp")
 Radius = 2000.0
-HeightScale = 32.0
 CameraController = NodePath("CameraController")
 SurfaceAttachment = NodePath("SurfaceAttachment")
 UIController = NodePath("UIController")
@@ -70,7 +69,6 @@ BaseZoomSpeed = 1.0
 BaseRotationSpeed = 1.0
 MovementEasing = 10.0
 Resolution = 17
-LodSubdivisionMap = PackedInt32Array(4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
 MorphRange = Vector2(0.4, 0.8)
 StartingLod = 0
 NormalStrength = 0.001
@@ -183,7 +181,7 @@ world_3d = SubResource("World3D_ebyhs")
 handle_input_locally = false
 debug_draw = 1
 use_hdr_2d = true
-size = Vector2i(64, 36)
+size = Vector2i(64, 64)
 render_target_clear_mode = 1
 render_target_update_mode = 4
 

@@ -108,6 +108,10 @@ layout_mode = 2
 focus_mode = 0
 text = "Quit"
 
+[node name="btnFunction" type="Button" parent="Buttons"]
+layout_mode = 2
+text = "Function"
+
 [connection signal="pressed" from="Buttons/btnProcessLod" to="." method="EnableOrDisableProcessing"]
 [connection signal="pressed" from="Buttons/btnCubeMode" to="." method="EnableOrDisableCubeMode"]
 [connection signal="pressed" from="Buttons/btnCulling" to="." method="EnableOrDisableCulling"]
@@ -116,3 +120,4 @@ text = "Quit"
 [connection signal="pressed" from="Buttons/btnRenderSurface" to="." method="RenderSurface"]
 [connection signal="pressed" from="Buttons/btnVirtualTexturing" to="." method="EnableOrDisableVirtualTexturing"]
 [connection signal="pressed" from="Buttons/btnQuit" to="." method="OnClickQuit"]
+[connection signal="pressed" from="Buttons/btnFunction" to="." method="GenerateAlbedoMap"]

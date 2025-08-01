@@ -1,23 +1,26 @@
 using System;
 using System.Linq;
 using Godot;
+using PlanetGame.ComputeShaders;
 
 namespace PlanetGame.Rendering.VirtualTexturing
 {
     public class ResidencyTable : VirtualTextureTable
     {
-        public Texture2Drd Table 
-        { 
+        public Texture2Drd Table
+        {
             get => (Texture2Drd)StorageTexture;
             protected set => StorageTexture = value;
         }
 
         public uint GridSize { get; private set; }
+        public uint TotalSubdivisions { get; private set; }
 
         // TODO need to recognize if there is border pixels 
         public ResidencyTable(uint totalSubdivisions)
         {
-            GridSize = (uint)Mathf.Pow(2, totalSubdivisions - 1);;
+            TotalSubdivisions = totalSubdivisions;
+            GridSize = (uint)Mathf.Pow(2, TotalSubdivisions - 1);
 
             Table = new()
             {
@@ -34,6 +37,7 @@ namespace PlanetGame.Rendering.VirtualTexturing
                 )
             };
             ClearStorageTexture();
+            SetFallbackSlots();
             CreateVisualization();
         }
 
@@ -45,15 +49,17 @@ namespace PlanetGame.Rendering.VirtualTexturing
 
         protected override void CreateVisualization()
         {
+            Shader shader = GD.Load<Shader>(ShaderPaths.RESIDENCY_TABLE_SHADER);
             TextureRect textureRect = new()
             {
                 Name = "Residency Table",
                 SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
                 SizeFlagsVertical = Control.SizeFlags.ExpandFill,
                 Texture = Table,
-                TextureFilter = CanvasItem.TextureFilterEnum.Nearest
+                TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
+                Material = new ShaderMaterial() { Shader = shader }
             };
-
+            ((ShaderMaterial)textureRect.Material).SetShaderParameter("total_mips", (int)TotalSubdivisions);
             textureRect.SetAnchorsPreset(Control.LayoutPreset.FullRect);
             Visualization = textureRect;
         }
@@ -64,6 +70,23 @@ namespace PlanetGame.Rendering.VirtualTexturing
 
             if (Table.TextureRdRid.IsValid)
                 RenderingServer.GetRenderingDevice().FreeRid(Table.TextureRdRid);
+        }
+
+        public override void SetFallbackSlots()
+        {
+            Image image = Image.CreateFromData((int)GridSize, (int)GridSize, false, Image.Format.Rgbaf, RenderingServer.GetRenderingDevice().TextureGetData(Table.TextureRdRid, 0));
+            for (int i = 0; i < 6; i++)
+            {
+                image.SetPixel(i, 0, TileManager.EncodeTilePath(1, 1, i, (int)TotalSubdivisions - 1, (int)TotalSubdivisions));
+            }
+            RenderingServer.GetRenderingDevice().TextureUpdate(Table.TextureRdRid, 0, image.GetData());
+
+        }
+
+        public override Color GetPixel(int x, int y, int z = 0)
+        {
+            Image image = Image.CreateFromData((int)GridSize, (int)GridSize, false, Image.Format.Rgbaf, RenderingServer.GetRenderingDevice().TextureGetData(Table.TextureRdRid, 0));
+            return image.GetPixel(x, y);
         }
     }
 }

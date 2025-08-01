@@ -179,7 +179,7 @@ public struct Key(uint msb, uint lsb, uint meshPolygonID, uint meshData)
         return new Vector4(theta, scale, translation.X, translation.Y);
     }
 
-    static readonly Vector3[] Normals = [
+    public static readonly Vector3[] Normals = [
         Vector3.Right,
         Vector3.Left,
         Vector3.Up,

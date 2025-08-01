@@ -102,30 +102,89 @@ vec3 get_sphere_normal(sampler2DArray height_texture, vec3 uv, int normal_id, fl
 }
 
 vec4 get_tile(sampler2DArray tile_cache, vec3 tile_uv) {
-    return texture2D_bicubic(tile_cache, tile_uv, vec2(512.0));
+    //return texture2D_bicubic(tile_cache, tile_uv, vec2(512.0));
+	return textureLod(tile_cache, tile_uv, 0.0);
 }
 
 vec3 get_tile_uv(
     sampler2DArray indirection_table,
-    int lod_index,
-    float grid_size,
+    int target_lod_index,
+	int tile_padding,
     vec2 uv,
     int total_texture_subdivisions,
     int polygon_id) {
 
-    float lod_grid_size = grid_size / pow(2.0, float(lod_index));
-    vec2 cell_uv = floor(uv * lod_grid_size) / lod_grid_size;
+	float grid_size = pow(2.0, float(total_texture_subdivisions - 1));
+    //float lod_grid_size = grid_size / pow(2.0, float(lod_index));
+    //vec2 tile_pos = uv * lod_grid_size;
+    //vec2 cell_uv = floor(tile_pos) / lod_grid_size;
+    //vec2 tile_uv = fract(tile_pos);
+//
+    //vec3 indirection_index = vec3(
+        //cell_uv,
+        //float(total_texture_subdivisions * int(polygon_id) + lod_index)
+    //);
+//
+    //uvec4 indirection_table_data = uvec4(textureLod(indirection_table, indirection_index, 0.0) * 255.0);
+    //uint virtual_texture_tile_index = indirection_table_data.r;
+    //uint valid_flag = indirection_table_data.b;
+//
+    ////float texel_size = 1.0 / (grid_size + 2.0 * float(tile_padding));
+    ////vec2 padded_uv = texel_size * (tile_uv * grid_size + float(tile_padding));
+//
+	//if (valid_flag == 255u)
+		//return vec3(tile_uv, float(virtual_texture_tile_index));
+	//else
+	//{
+	//}
+	//for(int lod_index = target_lod_index; lod_index < total_texture_subdivisions; lod_index++)
+	int lod_index =target_lod_index;
+	{
+		float lod_grid_size = grid_size / pow(2.0, float(lod_index));
+		vec2 tile_pos = uv * lod_grid_size;
+		vec2 cell_uv = floor(tile_pos) / lod_grid_size;
+		vec2 tile_uv = fract(tile_pos);
 
-    vec3 indirection_index = vec3(
-        cell_uv,
-        float(total_texture_subdivisions * int(polygon_id) + lod_index)
-    );
+		vec3 indirection_index = vec3(cell_uv, float(total_texture_subdivisions * int(polygon_id) + lod_index));
+		uvec4 indirection_table_data = uvec4(textureLod(indirection_table, indirection_index, 0.0) * 255.0);
+		uint virtual_texture_tile_index = indirection_table_data.r;
+		uint valid_flag = indirection_table_data.b;
+		if (valid_flag == 255u)
+			return vec3(tile_uv, float(virtual_texture_tile_index));
+	}
 
-    uvec4 indirection_table_data = uvec4(textureLod(indirection_table, indirection_index, 0.0) * 255.0);
-    vec2 tile_uv = fract(uv * lod_grid_size);
-    uint virtual_texture_tile_index = indirection_table_data.r;
+	//return vec3(0);
+	//return vec3(tile_uv, float(virtual_texture_tile_index));
+}
 
-    return indirection_table_data.a != 1u ? vec3(uv, float(polygon_id)) : vec3(tile_uv, float(virtual_texture_tile_index));
+
+vec3 compute_sphere_normal_from_heightmap(
+	sampler2DArray heightmap,
+	vec2 uv,
+	int normal_id,
+	vec3 vertex_position,
+	float height_scale
+) {
+	vec2 texel_size = 1.0 / vec2(textureSize(heightmap, 0).xy);
+
+	float hL = texture(heightmap, vec3(uv - vec2(texel_size.x, 0), float(normal_id))).r;
+	float hR = texture(heightmap, vec3(uv + vec2(texel_size.x, 0), float(normal_id))).r;
+	float hD = texture(heightmap, vec3(uv - vec2(0, texel_size.y), float(normal_id))).r;
+	float hU = texture(heightmap, vec3(uv + vec2(0, texel_size.y), float(normal_id))).r;
+
+	vec3 grad = vec3((hR - hL), (hU - hD), 2.0 / height_scale);
+	grad.xy *= height_scale;
+
+	vec3 normal = normalize(vertex_position);
+	vec3 up = abs(normal.y) < 0.999 ? vec3(0.0, 1.0, 0.0) : vec3(0.0, 0.0, 1.0);
+	vec3 tangent = normalize(cross(up, normal));
+	vec3 bitangent = normalize(cross(normal, tangent));
+
+	return normalize(
+		-grad.x * tangent +
+		-grad.y * bitangent +
+		grad.z * normal
+	);
 }
 
 mat4 get_rotation_from_matrix(mat4 transform_matrix) {

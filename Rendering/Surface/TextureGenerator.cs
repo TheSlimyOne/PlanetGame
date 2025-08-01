@@ -25,7 +25,7 @@ public class TextureGenerator
 	// 	Vector2I baseImageSize = image.GetSize();
 	// 	ChunkManager chunkManager = new(baseImageSize, TilePartitionCount, BorderSize);
 	// 	// chunkManager.BorderSize = 
-	// 	// chunkManager.QueueGenerateChunksFromImage(SaveRootPath, "Albedo", $"Base Images/{BaseAlbedoImageName}", "Tiles/Albedo Tiles", "Cube Map/Albedo");
+	// 	// chunkManager.QueueGenerateChunksFromImage(SaveRootPath, "Albedo", $"Base Images/{BaseAlbedoImageName}", "Tiles/Albedo Tiles", "Cubemap/Albedo");
 	// 	// _ = chunkManager.CreateChunks().ContinueWith(_ => chunkManager.CleanupGPUResources());
 	// }
 
@@ -36,7 +36,7 @@ public class TextureGenerator
 	// 	Vector2I baseImageSize = image.GetSize();
 
 		// ChunkManager chunkManager = new(baseImageSize, CenterSize, BorderSize);
-	// 	// chunkManager.QueueGenerateChunksFromImage(SaveRootPath, "Heightmap", $"Base Images/{BaseHeightmapImageName}", "Tiles/Heightmap Tiles", "Cube Map/Heightmap", Image.Interpolation.Trilinear);
+	// 	// chunkManager.QueueGenerateChunksFromImage(SaveRootPath, "Heightmap", $"Base Images/{BaseHeightmapImageName}", "Tiles/Heightmap Tiles", "Cubemap/Heightmap", Image.Interpolation.Trilinear);
 	// 	// _ = chunkManager.CreateChunks().ContinueWith(_ => chunkManager.CleanupGPUResources());
 	// }
 }

@@ -9,5 +9,7 @@ namespace PlanetGame.Rendering.VirtualTexturing
         protected abstract void CreateVisualization();
         public abstract void CleanupGPU();
         public abstract void ClearStorageTexture();
+        public abstract void SetFallbackSlots();
+        public abstract Color GetPixel(int x, int y, int z);
     }
 }

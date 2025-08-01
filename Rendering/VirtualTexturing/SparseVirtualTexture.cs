@@ -18,26 +18,27 @@ namespace PlanetGame.Rendering.VirtualTexturing
         public TileCache AlbedoTileCache { get; private set; }
         public TileCache HeightTileCache { get; private set; }
         public ResidencyTable ResidencyTable { get; private set; }
-        public IndirectionStateTable IndirectionStateTable { get; private set; }
+        public StateTable StateTable { get; private set; }
         
-        public uint TotalTileSlots { get; private set; }
+        public uint TilePadding { get; private set; }
+        public uint TileSize { get; private set; }
 
         public bool Ready { get; private set; } = true;
 
         public SparseVirtualTexture(SaveManager.WorldSave worldSave, Viewport viewport)
         {
             Viewport = viewport;
-            TotalTileSlots = worldSave.TotalTileSlots;
-
-            uint tileSize = worldSave.TileSize;
+            
+            TileSize = worldSave.TileSize;
+            TilePadding = worldSave.TilePadding;
             uint totalSubdivisions = worldSave.TotalLods;
 
-            AlbedoTileCache = new(tileSize, TotalTileSlots, totalSubdivisions, worldSave.TilesAlbedo, Colors.Magenta, Image.Format.Rgba8);
-            HeightTileCache = new(tileSize, TotalTileSlots, totalSubdivisions, worldSave.TilesHeightmap, Colors.Black, Image.Format.R8);
+            AlbedoTileCache = new(TileSize, TilePadding, totalSubdivisions, worldSave.TilesAlbedo, Colors.Magenta, Image.Format.Rgba8);
+            HeightTileCache = new(TileSize, TilePadding, totalSubdivisions, worldSave.TilesHeightmap, Colors.Black, Image.Format.R8);
 
             IndirectionTable = new(totalSubdivisions);
             ResidencyTable = new(totalSubdivisions);
-            IndirectionStateTable = new(totalSubdivisions);
+            StateTable = new(totalSubdivisions);
 
             ReadFramebuffer = new()
             {
@@ -65,14 +66,14 @@ namespace PlanetGame.Rendering.VirtualTexturing
             DebugWindow.Title = "Debug Window";
             sceneReference.AddChild(DebugWindow);
             Control node = DebugWindow.GetChild<Control>(0);
-            // node.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+            node.SetAnchorsPreset(Control.LayoutPreset.FullRect);
             node.AddChild(IndirectionTable.Visualization);
 
             node.AddChild(AlbedoTileCache.Visualization);
             node.AddChild(HeightTileCache.Visualization);
 
-            // node.AddChild(ResidencyTable.Visualization);
-            node.AddChild(IndirectionStateTable.Visualization);
+            node.AddChild(ResidencyTable.Visualization);
+            node.AddChild(StateTable.Visualization);
         }
 
         public async void RequestTileSlot(byte[] bytes)
@@ -104,13 +105,14 @@ namespace PlanetGame.Rendering.VirtualTexturing
             Ready = true;
         }
 
+        public bool Paused = false;
         public void Invoke()
         {
-            if (!IsValidForProcessing() || !Ready)
+            if (!IsValidForProcessing() || !Ready || Paused)
                 return;
 
             Ready = false;
-            IndirectionStateTable.ClearStorageTexture();
+            StateTable.ClearStorageTexture();
             ReadFramebuffer.UpdateUniforms();
             ReadFramebuffer.Invoke();
             ReadFramebuffer.GetTextureIds(Callable.From<byte[]>(RequestTileSlot));
@@ -130,8 +132,8 @@ namespace PlanetGame.Rendering.VirtualTexturing
             ResidencyTable.CleanupGPU();
             ResidencyTable = null;
 
-            IndirectionStateTable.CleanupGPU();
-            IndirectionStateTable = null;
+            StateTable.CleanupGPU();
+            StateTable = null;
 
             ReadFramebuffer.CleanupGPU();
             ValidateTileCache.CleanupGPU();

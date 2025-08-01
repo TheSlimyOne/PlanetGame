@@ -2,21 +2,20 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://b1ayvqxe32afp"
-path.s3tc="res://.godot/imported/2.png-3670f88ff53223c0232837eae87e1efe.s3tc.ctex"
+uid="uid://bgumwx2jutmkn"
+path="res://.godot/imported/peak_density_1.png-e854596cf448c6357805a70694bbf522.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
-"vram_texture": true
+"vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Images/CubeMap/2.png"
-dest_files=["res://.godot/imported/2.png-3670f88ff53223c0232837eae87e1efe.s3tc.ctex"]
+source_file="res://Assets/Images/HeightMapSamples/peak_density_1.png"
+dest_files=["res://.godot/imported/peak_density_1.png-e854596cf448c6357805a70694bbf522.ctex"]
 
 [params]
 
-compress/mode=2
+compress/mode=0
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/hdr_compression=1

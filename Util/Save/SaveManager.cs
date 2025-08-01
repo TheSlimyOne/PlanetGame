@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading.Tasks;
 using Godot;
 using PlanetGame.Rendering.VirtualTexturing;
 
@@ -18,18 +19,18 @@ public static class SaveManager
 
         public string ThumbnailAlbedo { get; set; }
         public string ThumbnailHeightmap { get; set; }
-    
+
         public string TilesAlbedo { get; set; }
         public string TilesHeightmap { get; set; }
         public string TilesNormalMap { get; set; }
 
-        public uint TilePartitionCount { get; set; }
         public uint TotalTileSlots { get; set; }
-        public uint TileSize { get; set; }
         public uint BorderSize { get; set; }
+        public uint TotalLods { get; set; }
+        public uint TileSize { get; set; }
+        public uint TilePadding { get; set; }
 
-        [JsonIgnore]
-        public readonly uint TotalLods => (uint)Math.Log2(TilePartitionCount) + 1;
+        public int[] LodToMipMap { get; set; }
 
 
         public static int GetAsInt(Dictionary<string, object> from, string key)
@@ -53,12 +54,25 @@ public static class SaveManager
         }
     }
 
-
+    public struct SavePaths
+    {
+        public string BaseDirectory;
+        public string BaseImagesDir;
+        public string ThumbnailsDir;
+        public string TileDir;
+        public string BaseAlbedo;
+        public string BaseHeightmap;
+        public string ThumbnailAlbedo;
+        public string ThumbnailHeightmap;
+        public string TileAlbedoDir;
+        public string TileHeightmapDir;
+    }
     public enum SaveDataIdentifier
     {
         ROOT_SAVE_DIRECTORY,
         BASE_ALBEDO,
         BASE_HEIGHT_MAP,
+        BASE_NORMAL_MAP,
 
         THUMBNAIL_ALEBDO,
         THUMBNAIL_HEIGHT_MAP,
@@ -73,6 +87,12 @@ public static class SaveManager
     public static SaveDataIdentifier[] Thumbnails = [
         SaveDataIdentifier.THUMBNAIL_ALEBDO,
         SaveDataIdentifier.THUMBNAIL_HEIGHT_MAP
+    ];
+
+    public static SaveDataIdentifier[] BaseImages = [
+        SaveDataIdentifier.BASE_ALBEDO,
+        SaveDataIdentifier.BASE_HEIGHT_MAP,
+        SaveDataIdentifier.BASE_NORMAL_MAP
     ];
 
     public static SaveDataIdentifier[] Tiles = [
@@ -93,7 +113,7 @@ public static class SaveManager
         fileAccess.Close();
         return JsonSerializer.Deserialize<Dictionary<string, WorldSave>>(jsonText, Options);
     }
-    
+
     private static void WriteSaves()
     {
         string jsonText = JsonSerializer.Serialize(Saves, Options);
@@ -102,78 +122,103 @@ public static class SaveManager
         fileAccess.Close();
     }
 
-    public async static void WriteNewSave(string saveName, Image albedo, Image heightmap, int tilePartitionCount, int totalTileSlots)
+
+    public static SavePaths CreatePaths(string saveName)
     {
-        string baseDirectory = $"user://Saves//{saveName}";
-        string baseImagesDir = $"{baseDirectory}//Base Images";
-        string thumbnailsDir = $"{baseDirectory}//Thumbnails";
-        string tileDir = $"{baseDirectory}//Tiles";
-        string cubeMapDir = $"{baseDirectory}//Cube Maps";
+        string baseDirectory = $"user://Saves/{saveName}";
+        string baseImagesDir = $"{baseDirectory}/Base Images";
+        string thumbnailsDir = $"{baseDirectory}/Thumbnails";
+        string tileDir = $"{baseDirectory}/Tiles";
 
-        string baseAlbedo = $"{baseImagesDir}//Albedo.png";
-        string baseHeightmap = $"{baseImagesDir}//Heightmap.png";
-        string thumbnailAlbedo = $"{thumbnailsDir}//Albedo Thumbnail.png";
-        string thumbnailHeightmap = $"{thumbnailsDir}//Heightmap Thumbnail.png";
+        string baseAlbedo = $"{baseImagesDir}/Albedo.png";
+        string baseHeightmap = $"{baseImagesDir}/Heightmap.png";
+        string thumbnailAlbedo = $"{thumbnailsDir}/Albedo Thumbnail.png";
+        string thumbnailHeightmap = $"{thumbnailsDir}/Heightmap Thumbnail.png";
 
-        string cubeAlbedoDir = $"{cubeMapDir}//Albedo";
-        string cubeHeightmapDir = $"{cubeMapDir}//Heightmap";
-
-        string tileAlbedoDir = $"{tileDir}//Albedo";
-        string tileHeightmapDir = $"{tileDir}//Heightmap";
-        int tileSize = 8192 / tilePartitionCount;
-
-        WorldSave worldSave = new()
-        {
-            BaseDirectory = baseDirectory,
-            BaseAlbedo = baseAlbedo,
-            BaseHeightmap = baseHeightmap,
-            ThumbnailAlbedo = thumbnailAlbedo,
-            ThumbnailHeightmap = thumbnailHeightmap,
-            TilesAlbedo = tileAlbedoDir,
-            TilesHeightmap = tileHeightmapDir,
-            TilePartitionCount = (uint)tilePartitionCount,
-            TotalTileSlots = (uint)totalTileSlots,
-            TileSize = (uint)tileSize,
-            BorderSize = 0u,
-        };
+        string tileAlbedoDir = $"{tileDir}/Albedo";
+        string tileHeightmapDir = $"{tileDir}/Heightmap";
 
         DirAccess.MakeDirRecursiveAbsolute(baseDirectory);
         DirAccess.MakeDirRecursiveAbsolute(baseImagesDir);
         DirAccess.MakeDirRecursiveAbsolute(thumbnailsDir);
-
-        DirAccess.MakeDirRecursiveAbsolute(cubeAlbedoDir);
-        DirAccess.MakeDirRecursiveAbsolute(cubeHeightmapDir);
-
         DirAccess.MakeDirRecursiveAbsolute(tileAlbedoDir);
         DirAccess.MakeDirRecursiveAbsolute(tileHeightmapDir);
 
-        albedo.SavePng(baseAlbedo);
-        heightmap.SavePng(baseHeightmap);
+        return new SavePaths
+        {
+            BaseDirectory = baseDirectory,
+            BaseImagesDir = baseImagesDir,
+            ThumbnailsDir = thumbnailsDir,
+            TileDir = tileDir,
+            BaseAlbedo = baseAlbedo,
+            BaseHeightmap = baseHeightmap,
+            ThumbnailAlbedo = thumbnailAlbedo,
+            ThumbnailHeightmap = thumbnailHeightmap,
+            TileAlbedoDir = tileAlbedoDir,
+            TileHeightmapDir = tileHeightmapDir
+        };
+    }
 
-        GenerateThumbnail(albedo).SavePng(thumbnailAlbedo);
-        GenerateThumbnail(heightmap).SavePng(thumbnailHeightmap);
+    public static async Task WriteNewSave(string saveName, Image albedo, Image heightmap, int mipCount, int tilePadding, int[] lodToMipMap)
+    {
+        albedo.ResizeToPo2();
+        if (albedo.GetSize() != heightmap.GetSize())
+        {
+            heightmap.Resize(albedo.GetSize().X, albedo.GetSize().Y);
+        }
 
-        Image[] albedoCubeMap = ChunkManager.GenerateCubeMapFromImage(albedo);
-        // Image[] heightmapCubeMap = chunkManager.GenerateCubeMapFromImage(heightmap);
-        // for (int i = 0; i < 6; i++)
-        // {
-            // albedoCubeMap[i].SavePng($"{cubeAlbedoDir}//Albedo-{i}.png");
-            // heightmapCubeMap[i].SavePng($"{cubeHeightmapDir}//Heightmap-{i}.png");
-        // }
-        // chunkManager.CleanupGPUResources();
+        SavePaths paths = CreatePaths(saveName);
 
-        // chunkManager.GenerateImageChunkFromCubeMap((int)worldSave.TileSize, 0, albedoCubeMap, tileAlbedoDir);
-        // chunkManager.GenerateImageChunkFromCubeMap((int)worldSave.TileSize, 0, heightmapCubeMap, tileHeightmapDir);
+        WorldSave worldSave = new()
+        {
+            BaseDirectory = paths.BaseDirectory,
+            BaseAlbedo = paths.BaseAlbedo,
+            BaseHeightmap = paths.BaseHeightmap,
+            ThumbnailAlbedo = paths.ThumbnailAlbedo,
+            ThumbnailHeightmap = paths.ThumbnailHeightmap,
+            TilesAlbedo = paths.TileAlbedoDir,
+            TilesHeightmap = paths.TileHeightmapDir,
+            TotalTileSlots = TileCache.TotalTileSlots,
+            BorderSize = 0u,
+            TotalLods = (uint)mipCount,
+            TileSize = (uint)(albedo.GetHeight() / Mathf.Pow(2, mipCount - 1)),
+            TilePadding = (uint)tilePadding,
+            LodToMipMap = lodToMipMap
+        };
 
-        // await chunkManager.CreateChunks();
+        albedo.SavePng(paths.BaseAlbedo);
+        heightmap.SavePng(paths.BaseHeightmap);
+
+        GenerateThumbnail(albedo).SavePng(paths.ThumbnailAlbedo);
+        GenerateThumbnail(heightmap).SavePng(paths.ThumbnailHeightmap);
+
+        GD.Print("Generating Albedo map");
+        await TileManager.GenerateTilesAsync(albedo, tilePadding, mipCount - 1, worldSave.TilesAlbedo);
+
+        GD.Print("Generating Heightmap");
+        await TileManager.GenerateTilesAsync(heightmap, tilePadding, mipCount - 1, worldSave.TilesHeightmap);
 
         if (!Saves.TryAdd(saveName, worldSave))
         {
-            GD.Print("[SaveManager:168] Overriding save");
+            GD.Print("[SaveManager:162] Overriding save");
             Saves[saveName] = worldSave;
         }
         WriteSaves();
+    }
 
+    public static async Task RegenerateGenerateTiles(string saveName)
+    {
+        WorldSave save = GetSave(saveName);
+        Image albedo = Image.LoadFromFile(save.BaseAlbedo);
+        Image heightmap = Image.LoadFromFile(save.BaseHeightmap);
+        int mipCount = (int)save.TotalLods;
+        int tilePadding = (int)save.TilePadding;
+
+        GD.Print("Generating Albedo map");
+        await TileManager.GenerateTilesAsync(albedo, tilePadding, mipCount - 1, save.TilesAlbedo);
+
+        GD.Print("Generating Heightmap");
+        await TileManager.GenerateTilesAsync(heightmap, tilePadding, mipCount - 1, save.TilesHeightmap);
     }
 
     private static Image GenerateThumbnail(Image originalImage)
@@ -257,14 +302,7 @@ public static class SaveManager
             SaveDataIdentifier thumbnail = Thumbnails[i];
             string path = GetDirectoryPath(saveName, thumbnail);
 
-            if (FileExists(path))
-            {
-                images[thumbnail] = ImageTexture.CreateFromImage(Image.LoadFromFile(path));
-            }
-            else
-            {
-                images[thumbnail] = new PlaceholderTexture2D();
-            }
+            images[thumbnail] = FileExists(path) ? ImageTexture.CreateFromImage(Image.LoadFromFile(path)) : new PlaceholderTexture2D();
         }
         return images;
     }
