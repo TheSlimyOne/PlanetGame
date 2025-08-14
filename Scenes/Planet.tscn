@@ -60,6 +60,7 @@ radius = 500.0
 [node name="Planet" type="Node3D" node_paths=PackedStringArray("CameraController", "SurfaceAttachment", "UIController", "MainLightSource", "WorldEnvironment")]
 script = ExtResource("1_qtwtp")
 Radius = 2000.0
+HeightScale = 50.0
 CameraController = NodePath("CameraController")
 SurfaceAttachment = NodePath("SurfaceAttachment")
 UIController = NodePath("UIController")

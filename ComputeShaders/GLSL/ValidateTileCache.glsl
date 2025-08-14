@@ -4,7 +4,7 @@
 
 layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
-layout(set = 0, binding = 0, rgba8ui) restrict uniform uimage2DArray indirectionTable;
+layout(set = 0, binding = 0, rgba32f) restrict uniform image2DArray indirectionTable;
 
 layout(set = 0, binding = 1, rgba32f) restrict uniform image2D residencyTable;
 
@@ -15,19 +15,11 @@ layout (std430, binding = 2) buffer restrict virtual_texture_data  {
     uint total_texture_slots;
 };
 
-uvec4 pack_rgba8(uint r, uint g, uint b, uint a){
-    return floatBitsToUint(vec4(r,g,b,a) / 255.0);
-}
-
-uvec4 unpack_rgba8(uvec4 rgba){
-    return uvec4(uintBitsToFloat(rgba) * 255.0);
-}
-
 void set_indirection_entry(ivec3 indirection_index, int lod_size, uvec4 data)
 {
     for (int i = 0; i < lod_size; i++) {
         for (int j = 0; j < lod_size; j++) {
-            imageStore(indirectionTable, indirection_index + ivec3(i, j, 0), data);
+            imageStore(indirectionTable, indirection_index + ivec3(i, j, 0), uintBitsToFloat(data));
         }
     }
 }
@@ -38,7 +30,7 @@ void main() {
     if (invocation_id.x >= texture_size.x || invocation_id.y >= texture_size.y) return;
 
     uvec4 tile_data = floatBitsToUint(imageLoad(residencyTable, invocation_id));
-    if (tile_data == vec4(0)) return;
+    if (tile_data.w == 0) return;
 
     uint packed_indirection_index = tile_data.x;
     int lod_size = int(pow(2, tile_data.y));
@@ -49,7 +41,7 @@ void main() {
         (packed_indirection_index >> 8) & 0xFF
     );
 
-    uvec4 indirection_data = unpack_rgba8(imageLoad(indirectionTable, indirection_index));
+    uvec4 indirection_data = floatBitsToUint(imageLoad(indirectionTable, indirection_index));
 
-    set_indirection_entry(indirection_index, lod_size, pack_rgba8(indirection_data.x, indirection_data.y, 255, indirection_data.w));
+    set_indirection_entry(indirection_index, lod_size, uvec4(indirection_data.x, indirection_data.y, 255, indirection_data.w));
 }

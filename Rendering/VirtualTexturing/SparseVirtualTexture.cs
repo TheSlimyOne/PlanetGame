@@ -24,11 +24,12 @@ namespace PlanetGame.Rendering.VirtualTexturing
         public uint TileSize { get; private set; }
 
         public bool Ready { get; private set; } = true;
+        public bool Paused = false;
 
         public SparseVirtualTexture(SaveManager.WorldSave worldSave, Viewport viewport)
         {
             Viewport = viewport;
-            
+
             TileSize = worldSave.TileSize;
             TilePadding = worldSave.TilePadding;
             uint totalSubdivisions = worldSave.TotalLods;
@@ -94,8 +95,12 @@ namespace PlanetGame.Rendering.VirtualTexturing
                     uint tileSlot = (tileData >> 16) & 0xFF;
                     string tilePath = $"{mipIndex}-{normalId}-{x_coord}-{y_coord}.png";
 
+                    // // GD.Print("Requesting: ", tilePath);
+
                     HeightTileCache.InsertTile(tilePath, tileSlot);
                     AlbedoTileCache.InsertTile(tilePath, tileSlot);
+
+                    // GD.PrintS((tileData >> 24) & 0xFF, (tileData >> 16) & 0xFF, (tileData >> 8) & 0xFF);
 
                     return new ValueTask();
                 });
@@ -105,10 +110,9 @@ namespace PlanetGame.Rendering.VirtualTexturing
             Ready = true;
         }
 
-        public bool Paused = false;
         public void Invoke()
         {
-            if (!IsValidForProcessing() || !Ready || Paused)
+            if (!Ready || !IsValidForProcessing() || Paused)
                 return;
 
             Ready = false;

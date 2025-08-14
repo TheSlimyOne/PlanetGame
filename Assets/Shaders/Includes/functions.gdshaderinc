@@ -138,19 +138,23 @@ vec3 get_tile_uv(
 	//{
 	//}
 	//for(int lod_index = target_lod_index; lod_index < total_texture_subdivisions; lod_index++)
-	int lod_index =target_lod_index;
+	int lod_index = target_lod_index;
 	{
 		float lod_grid_size = grid_size / pow(2.0, float(lod_index));
 		vec2 tile_pos = uv * lod_grid_size;
 		vec2 cell_uv = floor(tile_pos) / lod_grid_size;
 		vec2 tile_uv = fract(tile_pos);
 
-		vec3 indirection_index = vec3(cell_uv, float(total_texture_subdivisions * int(polygon_id) + lod_index));
-		uvec4 indirection_table_data = uvec4(textureLod(indirection_table, indirection_index, 0.0) * 255.0);
+		ivec2 tex_size = textureSize(indirection_table, 0).xy;
+		ivec3 indirection_index = ivec3(ivec2(cell_uv * vec2(tex_size)), total_texture_subdivisions * int(polygon_id) + lod_index);
+		uvec4 indirection_table_data = floatBitsToUint(texelFetch(indirection_table, indirection_index, 0));
+
 		uint virtual_texture_tile_index = indirection_table_data.r;
 		uint valid_flag = indirection_table_data.b;
 		if (valid_flag == 255u)
 			return vec3(tile_uv, float(virtual_texture_tile_index));
+		else
+			return vec3(uv, float(polygon_id));
 	}
 
 	//return vec3(0);

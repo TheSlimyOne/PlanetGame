@@ -1,0 +1,67 @@
+[gd_scene load_steps=3 format=3 uid="uid://3xktki3j15y4"]
+
+[ext_resource type="Script" uid="uid://dxe68ncrqf4vy" path="res://Rendering/VirtualTexturing/Tile Generation/DebugTileGenerator.cs" id="1_m85b3"]
+
+[sub_resource type="PlaceholderTexture2D" id="PlaceholderTexture2D_lkx8v"]
+
+[node name="DebugTileGenerator" type="Control" node_paths=PackedStringArray("_txrBackground", "_lblMipIndex", "_lblNormalId", "_lblTileCoords", "Viewport")]
+layout_mode = 3
+anchors_preset = 0
+script = ExtResource("1_m85b3")
+_txrBackground = NodePath("SubViewportContainer/SubViewport/txrBackground")
+_lblMipIndex = NodePath("SubViewportContainer/SubViewport/txrBackground/VBoxContainer/lblMipIndex")
+_lblNormalId = NodePath("SubViewportContainer/SubViewport/txrBackground/VBoxContainer/lblNormalId")
+_lblTileCoords = NodePath("SubViewportContainer/SubViewport/txrBackground/VBoxContainer/lblTileCoords")
+Size = Vector2i(512, 512)
+Viewport = NodePath("SubViewportContainer/SubViewport")
+
+[node name="SubViewportContainer" type="SubViewportContainer" parent="."]
+layout_mode = 2
+offset_right = 256.0
+offset_bottom = 256.0
+
+[node name="SubViewport" type="SubViewport" parent="SubViewportContainer"]
+handle_input_locally = false
+debug_draw = 1
+size = Vector2i(256, 256)
+render_target_clear_mode = 1
+render_target_update_mode = 4
+
+[node name="txrBackground" type="TextureRect" parent="SubViewportContainer/SubViewport"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 6
+size_flags_vertical = 6
+texture = SubResource("PlaceholderTexture2D_lkx8v")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="SubViewportContainer/SubViewport/txrBackground"]
+layout_mode = 1
+anchors_preset = 14
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_top = -38.5
+offset_bottom = 38.5
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="lblMipIndex" type="Label" parent="SubViewportContainer/SubViewport/txrBackground/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 8
+text = "mipIndex"
+horizontal_alignment = 1
+
+[node name="lblNormalId" type="Label" parent="SubViewportContainer/SubViewport/txrBackground/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 8
+text = "normalId"
+horizontal_alignment = 1
+
+[node name="lblTileCoords" type="Label" parent="SubViewportContainer/SubViewport/txrBackground/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 8
+text = "tileX, tileY"
+horizontal_alignment = 1

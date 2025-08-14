@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using Godot;
 using PlanetGame.ComputeShaders;
@@ -29,10 +30,10 @@ namespace PlanetGame.Rendering.VirtualTexturing
                 TextureRdRid = RenderingServer.GetRenderingDevice().TextureCreate(
                     new RDTextureFormat()
                     {
-                        Format = RenderingDevice.DataFormat.R8G8B8A8Unorm,
                         Width = GridSize,
                         Height = GridSize,
                         ArrayLayers = MipDepth * 6,
+                        Format = RenderingDevice.DataFormat.R32G32B32A32Sfloat,
                         TextureType = RenderingDevice.TextureType.Type2DArray,
                         UsageBits = RenderingDevice.TextureUsageBits.StorageBit | RenderingDevice.TextureUsageBits.CanCopyFromBit | RenderingDevice.TextureUsageBits.CanUpdateBit | RenderingDevice.TextureUsageBits.SamplingBit | RenderingDevice.TextureUsageBits.CanCopyToBit
                     },
@@ -55,7 +56,7 @@ namespace PlanetGame.Rendering.VirtualTexturing
 
         protected override void CreateVisualization()
         {
-            Shader shader = GD.Load<Shader>(ShaderPaths.ARRAY_TEXTURE_VISUALIZER);
+            Shader shader = GD.Load<Shader>(ShaderPaths.INDIRECTION_TABLE_SHADER);
             GridContainer gridContainer = new()
             {
                 Columns = (int)MipDepth,
@@ -77,9 +78,10 @@ namespace PlanetGame.Rendering.VirtualTexturing
                         // StretchMode = TextureRect.StretchModeEnum.KeepAspect,
                         TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
                         Material = new ShaderMaterial() { Shader = shader }
-                    };
+                    }; 
 
                     ((ShaderMaterial)rect.Material).SetShaderParameter("index", index);
+                    ((ShaderMaterial)rect.Material).SetShaderParameter("grid_size", GridSize);
                     ((ShaderMaterial)rect.Material).SetShaderParameter("table", Table);
 
                     gridContainer.AddChild(rect);
@@ -107,8 +109,15 @@ namespace PlanetGame.Rendering.VirtualTexturing
             for (uint i = 0; i < RootTileAmount; i++)
             {
                 uint tileLayer = MipDepth * i + (MipDepth - 1);
-                Image image = Image.CreateEmpty((int)GridSize, (int)GridSize, false, Image.Format.Rgba8);
-                image.Fill(new Color(i / 255f, 1, 1, 1));
+                Image image = Image.CreateEmpty((int)GridSize, (int)GridSize, false, Image.Format.Rgbaf);
+                Color data = new()
+                {
+                    R = BitConverter.UInt32BitsToSingle(i),
+                    G = BitConverter.UInt32BitsToSingle(0),
+                    B = BitConverter.UInt32BitsToSingle(255),
+                    A = BitConverter.UInt32BitsToSingle(255),
+                };
+                image.Fill(data);
 
                 RenderingServer.GetRenderingDevice().TextureUpdate(Table.TextureRdRid, tileLayer, image.GetData());
             }
@@ -116,7 +125,7 @@ namespace PlanetGame.Rendering.VirtualTexturing
 
         public override Color GetPixel(int x, int y, int z)
         {
-            throw new System.NotImplementedException();
+            throw new NotImplementedException();
         }
     }
 }

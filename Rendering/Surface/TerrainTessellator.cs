@@ -11,6 +11,9 @@ namespace PlanetGame.Rendering.Surface
         public int CulledCount;
         public int TotalCount;
 
+        public bool Ready { get; private set; } = true;
+        public bool Paused = false;
+
         public TerrainTessellator(PlanetController planetController, MultiMeshRD planetMultiMesh, CustomCamera mainCamera, CustomCamera helperCamera)
         {
             RenderSurface = new();
@@ -45,7 +48,7 @@ namespace PlanetGame.Rendering.Surface
 
         public void Invoke()
         {
-            if (!IsValidForProcessing())
+            if (!Ready || !IsValidForProcessing() || Paused)
                 return;
 
             RenderSurface.ClearGlobalKeys();

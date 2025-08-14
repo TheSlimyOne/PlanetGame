@@ -145,7 +145,7 @@ public partial class PlanetController : Node3D
         PlanetMultiMesh = new(MaximumNodes, TriangleMesh.GetRid(), -1);
         _terrainInstances.Add(PlanetMultiMesh.CreateMultimeshInstance(Transform3D.Identity, SurfaceShader.GetRid(), GetWorld3D().Scenario, 2 * Radius, 0b1u));
         _terrainInstances.Add(PlanetMultiMesh.CreateMultimeshInstance(Transform3D.Identity, FramebufferShader.GetRid(), CameraController.GetCamera("Lookup").GetWorld3D().Scenario, 2 * Radius, 0b1u));
-
+        
         string saveName = !string.IsNullOrWhiteSpace(SaveManager.CurrentSave) ? SaveManager.CurrentSave : "Test";
         TerrainTessellator = new(this, PlanetMultiMesh, MainCamera, CameraController.GetCamera("Helper"));
         SparseVirtualTexture = new(SaveManager.GetSave(saveName), CameraController.GetCamera("Lookup").GetViewport());
@@ -268,8 +268,8 @@ public partial class PlanetController : Node3D
 
         bindableShaderMaterial.Bind("tile_padding", () => SparseVirtualTexture.TilePadding);
 
-        SurfaceShader.Bind("height_map_tile_cache", () => SparseVirtualTexture.HeightTileCache.Cache);
-        SurfaceShader.Bind("terrain_indirection_table", () => SparseVirtualTexture.IndirectionTable.Table);
+        bindableShaderMaterial.Bind("height_map_tile_cache", () => SparseVirtualTexture.HeightTileCache.Cache);
+        bindableShaderMaterial.Bind("terrain_indirection_table", () => SparseVirtualTexture.IndirectionTable.Table);
     }
 
     public void SurfaceShaderBindParameters()

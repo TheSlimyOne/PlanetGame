@@ -1,6 +1,6 @@
 [gd_scene load_steps=3 format=3 uid="uid://dw6xke4ovskkx"]
 
-[ext_resource type="Script" uid="uid://dmhjqmw6g7d2t" path="res://Player/UIController.cs" id="1_jxero"]
+[ext_resource type="Script" uid="uid://dmhjqmw6g7d2t" path="res://Player/UI/UIController.cs" id="1_jxero"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_nf4gj"]
 font_size = 28
