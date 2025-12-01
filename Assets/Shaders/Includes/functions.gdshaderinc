@@ -1,3 +1,5 @@
+#include "res://Constants.gdshaderinc"
+
 float w0(float a) { return (1.0/6.0)*(a*(a*(-a + 3.0) - 3.0) + 1.0); }
 float w1(float a) { return (1.0/6.0)*(a*a*(3.0*a - 6.0) + 4.0); }
 float w2(float a) { return (1.0/6.0)*(a*(a*(-3.0*a + 3.0) + 3.0) + 1.0); }
@@ -6,6 +8,7 @@ float g0(float a) { return w0(a) + w1(a); }
 float g1(float a) { return w2(a) + w3(a); }
 float h0(float a) { return -1.0 + w1(a) / (w0(a) + w1(a)); }
 float h1(float a) { return 1.0 + w3(a) / (w2(a) + w3(a)); }
+
 
 vec4 texture2D_bicubic(sampler2DArray tex, vec3 uv, vec2 res) {
 	uv.xy = uv.xy * res + 0.5;
@@ -30,13 +33,37 @@ vec4 texture2D_bicubic(sampler2DArray tex, vec3 uv, vec2 res) {
                         g1x * textureLod(tex, vec3(p3, uv.z), 0.0));
 }
 
+vec4 texture2D_linear(sampler2DArray tex, vec3 uv)
+{
+    vec2 texSize = vec2(textureSize(tex, 0).xy);
+    vec2 st = uv.xy * texSize - 0.5;
+
+    vec2 iuv = floor(st);
+    vec2 fuv = fract(st);
+
+    vec4 a = texture(tex, vec3((iuv + vec2(0.0, 0.0) + 0.5) / texSize, uv.z));
+    vec4 b = texture(tex, vec3((iuv + vec2(1.0, 0.0) + 0.5) / texSize, uv.z));
+    vec4 c = texture(tex, vec3((iuv + vec2(0.0, 1.0) + 0.5) / texSize, uv.z));
+    vec4 d = texture(tex, vec3((iuv + vec2(1.0, 1.0) + 0.5) / texSize, uv.z));
+
+    vec4 mixAB = mix(a, b, fuv.x);
+    vec4 mixCD = mix(c, d, fuv.x);
+    return mix(mixAB, mixCD, fuv.y);
+}
+
+bool is_on_edge(vec3 p) {
+    int count = int(abs(p.x) == 1.0) + int(abs(p.y) == 1.0) + int(abs(p.z) == 1.0);
+    return count == 2;
+}
+
 vec2 get_cube_uv(int normal_id, vec3 point) {
-    point = (point + 1.0) / 2.0;
-    vec2 uv = vec2(0);
-    uv.x = normal_id == 0 || normal_id == 1 ? point.z : point.x;
-    uv.x = normal_id == 0 || normal_id == 2 || normal_id == 5 ? 1.0 - uv.x : uv.x;
-    uv.y = normal_id == 2 || normal_id == 3 ? 1.0 - point.z : 1.0 - point.y;
-    return uv;
+	vec2 uv = vec2(0);
+	point = (point + 1.0) / 2.0;
+	uv.x = normal_id == 0 || normal_id == 1 ? point.z : point.x;
+	uv.x = normal_id == 0 || normal_id == 2 || normal_id == 5 ? 1.0 - uv.x : uv.x;
+	uv.y = normal_id == 2 || normal_id == 3 ? 1.0 - point.z : 1.0 - point.y;
+
+	return clamp(uv, vec2(0.0), vec2(1.0 - EPS));
 }
 
 vec3 point_to_point_on_cube(int normal_id, vec2 uv) {
@@ -102,7 +129,7 @@ vec3 get_sphere_normal(sampler2DArray height_texture, vec3 uv, int normal_id, fl
 }
 
 vec4 get_tile(sampler2DArray tile_cache, vec3 tile_uv) {
-    //return texture2D_bicubic(tile_cache, tile_uv, vec2(512.0));
+    //return texture2D_linear(tile_cache, tile_uv);
 	return textureLod(tile_cache, tile_uv, 0.0);
 }
 
@@ -110,55 +137,36 @@ vec3 get_tile_uv(
     sampler2DArray indirection_table,
     int target_lod_index,
 	int tile_padding,
+	int tile_size,
     vec2 uv,
     int total_texture_subdivisions,
     int polygon_id) {
 
 	float grid_size = pow(2.0, float(total_texture_subdivisions - 1));
-    //float lod_grid_size = grid_size / pow(2.0, float(lod_index));
-    //vec2 tile_pos = uv * lod_grid_size;
-    //vec2 cell_uv = floor(tile_pos) / lod_grid_size;
-    //vec2 tile_uv = fract(tile_pos);
-//
-    //vec3 indirection_index = vec3(
-        //cell_uv,
-        //float(total_texture_subdivisions * int(polygon_id) + lod_index)
-    //);
-//
-    //uvec4 indirection_table_data = uvec4(textureLod(indirection_table, indirection_index, 0.0) * 255.0);
-    //uint virtual_texture_tile_index = indirection_table_data.r;
-    //uint valid_flag = indirection_table_data.b;
-//
-    ////float texel_size = 1.0 / (grid_size + 2.0 * float(tile_padding));
-    ////vec2 padded_uv = texel_size * (tile_uv * grid_size + float(tile_padding));
-//
-	//if (valid_flag == 255u)
-		//return vec3(tile_uv, float(virtual_texture_tile_index));
-	//else
-	//{
-	//}
-	//for(int lod_index = target_lod_index; lod_index < total_texture_subdivisions; lod_index++)
-	int lod_index = target_lod_index;
-	{
-		float lod_grid_size = grid_size / pow(2.0, float(lod_index));
-		vec2 tile_pos = uv * lod_grid_size;
-		vec2 cell_uv = floor(tile_pos) / lod_grid_size;
-		vec2 tile_uv = fract(tile_pos);
 
-		ivec2 tex_size = textureSize(indirection_table, 0).xy;
-		ivec3 indirection_index = ivec3(ivec2(cell_uv * vec2(tex_size)), total_texture_subdivisions * int(polygon_id) + lod_index);
-		uvec4 indirection_table_data = floatBitsToUint(texelFetch(indirection_table, indirection_index, 0));
+	float lod_grid_size = grid_size / pow(2.0, float(target_lod_index));
+	vec2 tile_pos = uv * lod_grid_size;
+	vec2 cell_uv = floor(tile_pos) / lod_grid_size;
+	vec2 tile_uv = fract(tile_pos);
 
-		uint virtual_texture_tile_index = indirection_table_data.r;
-		uint valid_flag = indirection_table_data.b;
-		if (valid_flag == 255u)
-			return vec3(tile_uv, float(virtual_texture_tile_index));
-		else
-			return vec3(uv, float(polygon_id));
-	}
+	tile_uv = (tile_uv * float(tile_size) + float(tile_padding)) / float(tile_size + 2 * tile_padding);
 
-	//return vec3(0);
-	//return vec3(tile_uv, float(virtual_texture_tile_index));
+	//float real_tile_size = float(tile_size + 2 * tile_padding); float scale = float(tile_size) / real_tile_size; float offset = float(tile_padding) / real_tile_size; tile_uv = tile_uv * scale + offset;
+
+	vec2 indirection_texture_size = vec2(textureSize(indirection_table, 0).xy);
+	ivec3 indirection_index = ivec3(
+		ivec2(cell_uv * indirection_texture_size),
+		total_texture_subdivisions * polygon_id + target_lod_index
+	);
+
+	uvec4 indirection_table_data = floatBitsToUint(texelFetch(indirection_table, indirection_index, 0));
+	uint virtual_texture_tile_index = indirection_table_data.r;
+	uint valid_flag = indirection_table_data.b;
+		// ignore the else{} causes flickering (not working atm)
+	if (valid_flag == 255u)
+		return vec3(tile_uv, float(virtual_texture_tile_index));
+	else
+		return vec3(tile_uv, float(polygon_id));
 }
 
 

@@ -11,8 +11,7 @@ namespace PlanetGame.ComputeShaders.Dispatcher
         public enum BufferNames
         {
             INDIRECTION_TABLE,
-            RESIDENCY_TABLE,
-            VIRTUAL_TEXTURE_DATA,
+            RESIDENCY_TABLE
         }
 
         public ValidateCacheDispatcher() : base(ShaderPaths.VALIDATE_TILE_CACHE)
@@ -26,9 +25,7 @@ namespace PlanetGame.ComputeShaders.Dispatcher
             {
                 [BufferNames.INDIRECTION_TABLE] = SparseVirtualTexture.ReadFramebuffer[ReadFramebufferDispatcher.BufferNames.INDIRECTION_TABLE],
 
-                [BufferNames.RESIDENCY_TABLE] = SparseVirtualTexture.ReadFramebuffer[ReadFramebufferDispatcher.BufferNames.RESIDENCY_TABLE],
-
-                [BufferNames.VIRTUAL_TEXTURE_DATA] = SparseVirtualTexture.ReadFramebuffer[ReadFramebufferDispatcher.BufferNames.VIRTUAL_TEXTURE_DATA],
+                [BufferNames.RESIDENCY_TABLE] = SparseVirtualTexture.ReadFramebuffer[ReadFramebufferDispatcher.BufferNames.RESIDENCY_TABLE]
             };
 
             CreateUniformSet();

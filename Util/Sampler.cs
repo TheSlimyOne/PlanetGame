@@ -3,6 +3,7 @@ using Godot;
 
 public static class Sampler
 {
+    public static Color SampleNearest(Image image, Vector2 uv) => SampleNearest(image, uv.X, uv.Y);
     public static Color SampleNearest(Image image, float u, float v)
     {
         int width = image.GetWidth();
@@ -14,6 +15,7 @@ public static class Sampler
         return image.GetPixel(x, y);
     }
 
+    public static Color SampleBilinear(Image image, Vector2 uv) => SampleBilinear(image, uv.X, uv.Y);
     public static Color SampleBilinear(Image image, float u, float v)
     {
         int width = image.GetWidth();
@@ -43,6 +45,7 @@ public static class Sampler
         return cx0.Lerp(cx1, ty);
     }
 
+    public static Color SampleBicubic(Image image, Vector2 uv) => SampleBicubic(image, uv.X, uv.Y);
     public static Color SampleBicubic(Image image, float u, float v)
     {
         int width = image.GetWidth();
@@ -87,6 +90,7 @@ public static class Sampler
         return BicubicInterpolate(ty, col[0], col[1], col[2], col[3]);
     }
 
+    public static Color SampleTrilinear(Image image, Vector2 uv, float mip) => SampleTrilinear(image, uv.X, uv.Y, mip);
     public static Color SampleTrilinear(Image image, float u, float v, float mip)
     {
         int mip0 = Mathf.Clamp((int)Mathf.Floor(mip), 0, image.GetMipmapCount() - 1);

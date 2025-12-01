@@ -5,6 +5,8 @@ shader_type spatial;
 uniform sampler2DArray albedo_tile_cache : repeat_disable, source_color, filter_linear;
 uniform float normal_strength;
 uniform bool render_frame_buffer_on_top;
+uniform bool render_padded_uvs;
+uniform bool render_tile_uvs;
 
 vec3 height_to_normal(float height, float strength, vec3 vertex, vec3 normal) {
 	vec3 d_x = dFdx(vertex);
@@ -43,13 +45,33 @@ void fragment() {
 	//NORMAL = height_to_normal(elevation, normal_strength, VERTEX, NORMAL);
 
 
-	int lod = int(calculate_lod_to_cam(sphere_local_position, camera_position, planet_transform_matrix, fovy, sub_factor, radius, maximum_lod));
+	int lod = int(calculate_lod_to_cam(morphed_sphere_local_position, camera_position, planet_transform_matrix, fovy, sub_factor, radius, maximum_lod));
 	int lod_index = lod_to_mip_map[lod];
 
-	vec3 tile_uv = get_tile_uv(terrain_indirection_table, lod_index, tile_padding, vertex_uv, total_texture_subdivisions, int(key.z));
-	//ALBEDO = tile_uv;
-	ALBEDO = pow(get_tile(albedo_tile_cache, tile_uv).xyz, vec3(2.2));
+	vec3 tile_uv = vec3(0);
+	//if (render_padded_uvs)
+	//{
+	tile_uv = get_tile_uv(terrain_indirection_table, lod_index, tile_padding, tile_size, vertex_uv, total_texture_subdivisions, int(key.z));
 
+	//} else {
+		//tile_uv = get_tile_uv(terrain_indirection_table, lod_index, 0, vertex_uv, total_texture_subdivisions, int(key.z));
+	//}
+	if (render_tile_uvs)
+	{
+		ALBEDO = vec3(tile_uv.xy, 0);
+	}
+	else
+	{
+		ALBEDO = pow(get_tile(albedo_tile_cache, tile_uv).xyz, vec3(2.2));
+	}
+	
+	//vec2 wave = 0.5 + 0.5 * sin( (vertex_uv * 40.0) + TIME * 4.0);
+	//vec3 uv_color = vec3(vertex_uv, 0.0);
+	//ALBEDO = mix(uv_color, vec3(wave, 1.0), 0.5);
+	//ALBEDO = vec3(tile_uv.xy, 0);
+
+	//ALBEDO = pow(get_tile(height_map_tile_cache, tile_uv).xyz, vec3(2.2));
+	//ALBEDO = vec3(vertex_uv.xy, 0);
 	//vec3 a = get_sphere_normal(height_map_tile_cache, vec3(vertex_uv, float(key.z)), normal_id, normal_strength, get_rotation_from_matrix(planet_transform_matrix) );
 	//ALBEDO = a;
 	//ALBEDO = point_to_point_on_cube(normal_id, vertex_uv);

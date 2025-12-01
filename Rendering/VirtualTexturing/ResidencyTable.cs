@@ -37,7 +37,6 @@ namespace PlanetGame.Rendering.VirtualTexturing
                 )
             };
             ClearStorageTexture();
-            SetFallbackSlots();
             CreateVisualization();
         }
 

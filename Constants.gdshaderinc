@@ -1,0 +1,1 @@
+const float EPS = 1e-7;

@@ -168,9 +168,9 @@ int get_lod_of_key(uvec2 key) {
 }
 
 float calculate_lod(float dist, float fovy, float sub_factor, float radius, float maximum_lod) {
-    float num = dist * fovy;
-    float dom = sqrt2 * sub_factor * radius;
-    return clamp(-log2(num / dom), 0, maximum_lod);
+    float num = sqrt2 * sub_factor * radius;
+    float dom = dist * fovy;
+    return clamp(log2(num / dom), 0, maximum_lod);
 }
 
 int get_normal_id(ivec3 normal) {
@@ -202,6 +202,7 @@ vec2 morph_vertex(vec2 vertex, float morph_k, int resolution) {
     return vertex - (sign_vec * fract_part) * morph_k;
 }
 
+const float quantize_factor = 12.0;
 float calculate_morph(vec3 point, uvec2 key, vec2 morph_range, vec3 camera_position, mat4 planet_transform_matrix, float fovy, float sub_factor, float radius, float maximum_lod) {
     float percentage = get_percentage(point, key, camera_position, planet_transform_matrix, fovy, sub_factor, radius, maximum_lod);
 
@@ -210,5 +211,8 @@ float calculate_morph(vec3 point, uvec2 key, vec2 morph_range, vec3 camera_posit
     if (percentage > morph_range.y)
         return 1.0;
 
-    return (percentage - morph_range.x) / (morph_range.y - morph_range.x);
+    float normalized = (percentage - morph_range.x) / (morph_range.y - morph_range.x);
+
+    normalized = round(normalized * quantize_factor) / quantize_factor;
+    return normalized;
 }

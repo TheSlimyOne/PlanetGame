@@ -1,8 +1,10 @@
-[gd_scene load_steps=5 format=3 uid="uid://b51tva3mp4mna"]
+[gd_scene load_steps=6 format=3 uid="uid://b51tva3mp4mna"]
 
 [ext_resource type="Script" uid="uid://bg23ka1dyr38v" path="res://Player/MainMenu.cs" id="1_idj7w"]
 [ext_resource type="Script" uid="uid://o8r7ootm7ppm" path="res://Menu/DemoPlanet.cs" id="2_idj7w"]
 [ext_resource type="Script" uid="uid://cv0ny5p7gmgpf" path="res://Menu/ResponsiveFileDialog.cs" id="3_kln2b"]
+
+[sub_resource type="SphereMesh" id="SphereMesh_kln2b"]
 
 [sub_resource type="Environment" id="Environment_idj7w"]
 background_mode = 1
@@ -110,6 +112,7 @@ transform = Transform3D(1, 0, 0, 0, 0.961764, 0.27388, 0, -0.27388, 0.961764, 0,
 
 [node name="Demo Planet" type="MeshInstance3D" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/Load Section/SubViewportContainer/SubViewport"]
 transform = Transform3D(1, 0, 0, 0, 0.974226, 0.225575, 0, -0.225575, 0.974226, 0, 0, 0)
+mesh = SubResource("SphereMesh_kln2b")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/Load Section/SubViewportContainer/SubViewport"]
 environment = SubResource("Environment_idj7w")

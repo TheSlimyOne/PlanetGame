@@ -60,7 +60,7 @@ radius = 500.0
 [node name="Planet" type="Node3D" node_paths=PackedStringArray("CameraController", "SurfaceAttachment", "UIController", "MainLightSource", "WorldEnvironment")]
 script = ExtResource("1_qtwtp")
 Radius = 2000.0
-HeightScale = 50.0
+HeightScale = 125.0
 CameraController = NodePath("CameraController")
 SurfaceAttachment = NodePath("SurfaceAttachment")
 UIController = NodePath("UIController")
@@ -69,8 +69,9 @@ WorldEnvironment = NodePath("WorldEnvironment")
 BaseZoomSpeed = 1.0
 BaseRotationSpeed = 1.0
 MovementEasing = 10.0
-Resolution = 17
+Resolution = 9
 MorphRange = Vector2(0.4, 0.8)
+MaximumLOD = 16
 StartingLod = 0
 NormalStrength = 0.001
 RenderFrameBufferOnTop = false
@@ -210,11 +211,13 @@ sky_mode = 1
 multimesh = SubResource("MultiMesh_ldv5r")
 
 [node name="CubicalCollision" type="StaticBody3D" parent="SurfaceAttachment"]
+visible = false
 
 [node name="CubicalCollisionShape" type="CollisionShape3D" parent="SurfaceAttachment/CubicalCollision"]
 shape = SubResource("BoxShape3D_wsrnx")
 
 [node name="InnerCollision" type="StaticBody3D" parent="SurfaceAttachment"]
+visible = false
 
 [node name="InnerCollisionShape" type="CollisionShape3D" parent="SurfaceAttachment/InnerCollision"]
 shape = SubResource("SphereShape3D_7pbfy")

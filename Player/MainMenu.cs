@@ -148,20 +148,21 @@ public partial class MainMenu : MarginContainer
 	public void OnRenerateTiles()
 	{
 		CurrentSave = SelectedSave;
-
 	}
 
 	public void OnStartNewGame()
 	{
-		// string saveName = SaveName.Text;
-		// if (NewSaveAlbedo == null || NewSaveHeightmap == null)
-		// 	return;
+		string saveName = SaveName.Text;
+		if (NewSaveAlbedo == null || NewSaveHeightmap == null)
+			return;
 
-		string saveName = "Earth";
-		Image test1 = Image.LoadFromFile("user://Albedo.png");
-		Image test2 = Image.LoadFromFile("user://Heightmap.png");
-		WriteNewSave(saveName, test1, test2, 5, 0, [4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
-		// WriteNewSave(saveName, NewSaveAlbedo, NewSaveHeightmap, 5, 5, [4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+		// string saveName = "TEST BORDER";
+		// Image test1 = Image.LoadFromFile("user://Albedo.png");
+		// Image test2 = Image.LoadFromFile("user://Heightmap.png");
+		// WriteNewSave(saveName, test1, test2, 5, 0, [4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+		WriteNewSave(saveName, NewSaveAlbedo, NewSaveHeightmap, 5, 40, [4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+		GD.Print("Creating Save:", saveName);
+		CurrentSave = saveName;
 	}
 
 	public void GenerateDebugTiles()

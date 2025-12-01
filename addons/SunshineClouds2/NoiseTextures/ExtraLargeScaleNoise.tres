@@ -6,5 +6,5 @@ frequency = 0.0039
 [resource]
 width = 1024
 height = 1024
-seamless = true
 noise = SubResource("FastNoiseLite_w4rkf")
+seamless = true

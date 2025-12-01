@@ -103,6 +103,11 @@ layout_mode = 2
 focus_mode = 0
 text = "Disable Virtual Texturing"
 
+[node name="btnWipeVirtualTexture" type="Button" parent="Buttons"]
+layout_mode = 2
+focus_mode = 0
+text = "Wipe Virtual Texture"
+
 [node name="btnQuit" type="Button" parent="Buttons"]
 layout_mode = 2
 focus_mode = 0
@@ -110,6 +115,12 @@ text = "Quit"
 
 [node name="btnFunction" type="Button" parent="Buttons"]
 layout_mode = 2
+focus_mode = 0
+text = "Function"
+
+[node name="btnFunction2" type="Button" parent="Buttons"]
+layout_mode = 2
+focus_mode = 0
 text = "Function"
 
 [connection signal="pressed" from="Buttons/btnProcessLod" to="." method="EnableOrDisableProcessing"]
@@ -119,5 +130,7 @@ text = "Function"
 [connection signal="pressed" from="Buttons/btnRenderFramebuffer" to="." method="RenderFramebuffer"]
 [connection signal="pressed" from="Buttons/btnRenderSurface" to="." method="RenderSurface"]
 [connection signal="pressed" from="Buttons/btnVirtualTexturing" to="." method="EnableOrDisableVirtualTexturing"]
+[connection signal="pressed" from="Buttons/btnWipeVirtualTexture" to="." method="WipeVirtualTexture"]
 [connection signal="pressed" from="Buttons/btnQuit" to="." method="OnClickQuit"]
-[connection signal="pressed" from="Buttons/btnFunction" to="." method="GenerateAlbedoMap"]
+[connection signal="pressed" from="Buttons/btnFunction" to="." method="OnFunctionButton"]
+[connection signal="pressed" from="Buttons/btnFunction2" to="." method="OnFunction2Button"]

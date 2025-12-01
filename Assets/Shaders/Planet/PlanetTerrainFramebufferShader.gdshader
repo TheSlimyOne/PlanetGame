@@ -5,7 +5,8 @@ render_mode unshaded;
 
 void fragment() {
 	// Adjusting uvs to make sure the range is [0, 1)
-	vec2 adjusted_uv = min(vertex_uv, vec2(0.9999999));
+	vec2 adjusted_uv = clamp(vertex_uv, vec2(0.0), vec2(1.0 - EPS));
+
 
 	int lod = int(calculate_lod_to_cam(sphere_local_position, camera_position, planet_transform_matrix, fovy, sub_factor, radius, maximum_lod));
 	int mip_index = lod_to_mip_map[lod];

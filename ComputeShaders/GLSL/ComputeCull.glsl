@@ -287,9 +287,9 @@ float calculate_distance(float lod) {
 }
 
 float calculate_lod(float dist) {
-    float num = dist * fovy;
-    float dom = sqrt2 * sub_factor * radius;
-    return clamp(-log2(num / dom), 0, maximum_lod);
+    float num = sqrt2 * sub_factor * radius;
+    float dom = dist * fovy;
+    return clamp(log2(num / dom), 0, maximum_lod);
 }
 
 float distance_from_cam(vec3 from) {

@@ -41,6 +41,7 @@ public partial class PlanetController : Node3D
     [Export] public float NormalStrength { get; set; } = 1;
 
     [ExportGroup("Debug Settings")]
+    [Export] public bool ShowDebugWindow { get; set; } = false;
     [Export] public bool CubeMode { get; set; } = false;
     [Export] public bool Culling { get; set; } = true;
     [Export] public bool Morphing { get; set; } = true;
@@ -57,7 +58,6 @@ public partial class PlanetController : Node3D
     public SparseVirtualTexture SparseVirtualTexture { get; private set; }
 
     public MultiMeshRD PlanetMultiMesh { get; private set; }
-    public ArrayMesh TriangleMesh { get; private set; }
 
     [Export] public bool Paused { get; set; } = false;
     private bool Quiting = false;
@@ -129,7 +129,7 @@ public partial class PlanetController : Node3D
     }
 
     private readonly List<Rid> _terrainInstances = [];
-
+    
     public override void _Ready()
     {
         SurfaceShader = new BindableShaderMaterial() { Shader = GD.Load<Shader>(ShaderPaths.SURFACE_SHADER_PATH) };
@@ -139,10 +139,7 @@ public partial class PlanetController : Node3D
 
         ScalePlanet(Vector3.One * Radius);
         TranslatePlanet(Vector3.Back * (1 - Radius));
-
-        TriangleMesh = GetTriangleMesh();
-
-        PlanetMultiMesh = new(MaximumNodes, TriangleMesh.GetRid(), -1);
+        PlanetMultiMesh = new(MaximumNodes, GetTriangleMesh(), -1);
         _terrainInstances.Add(PlanetMultiMesh.CreateMultimeshInstance(Transform3D.Identity, SurfaceShader.GetRid(), GetWorld3D().Scenario, 2 * Radius, 0b1u));
         _terrainInstances.Add(PlanetMultiMesh.CreateMultimeshInstance(Transform3D.Identity, FramebufferShader.GetRid(), CameraController.GetCamera("Lookup").GetWorld3D().Scenario, 2 * Radius, 0b1u));
         
@@ -152,7 +149,9 @@ public partial class PlanetController : Node3D
 
         SurfaceShaderBindParameters();
         FramebufferShaderBindParameters();
-        SparseVirtualTexture.CreateDebugWindow(this);
+
+        if (ShowDebugWindow)
+            SparseVirtualTexture.CreateDebugWindow(this);
     }
 
     public override void _Process(double delta)
@@ -267,9 +266,12 @@ public partial class PlanetController : Node3D
         bindableShaderMaterial.FrameDependentBind("lod_to_mip_map", () => SaveManager.GetCurrentSave().LodToMipMap);
 
         bindableShaderMaterial.Bind("tile_padding", () => SparseVirtualTexture.TilePadding);
+        bindableShaderMaterial.Bind("tile_size", () => SparseVirtualTexture.TileSize);
 
         bindableShaderMaterial.Bind("height_map_tile_cache", () => SparseVirtualTexture.HeightTileCache.Cache);
         bindableShaderMaterial.Bind("terrain_indirection_table", () => SparseVirtualTexture.IndirectionTable.Table);
+
+        // bindableShaderMaterial.FrameDependentBind("is_virtual_texturing_enabled", () => SparseVirtualTexture.Paused);
     }
 
     public void SurfaceShaderBindParameters()

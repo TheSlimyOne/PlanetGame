@@ -1,7 +1,4 @@
-using System;
-using System.Collections.Generic;
 using Godot;
-using PlanetGame.Rendering.VirtualTexturing;
 
 public partial class UIController : Control
 {
@@ -72,6 +69,10 @@ public partial class UIController : Control
 		PlanetController.SparseVirtualTexture.Paused = !PlanetController.SparseVirtualTexture.Paused;
 		_btnVirtualTexturing.Text = PlanetController.SparseVirtualTexture.Paused ? "Enable Virtual Texturing" : "Disable Virtual Texturing";
 	}
+	public void WipeVirtualTexture()
+	{
+		PlanetController.SparseVirtualTexture.ClearVirtualTexture();
+	}
 
 	// public void UpdateProcessingText()
 	// {
@@ -117,6 +118,28 @@ public partial class UIController : Control
 	public void OnClickQuit()
 	{
 		GetTree().ChangeSceneToFile("res://Scenes/Main.tscn");
+	}
+
+	private bool previousValue = true;
+	public void OnFunctionButton()
+	{
+		int newPadding = (int)PlanetController.SurfaceShader.GetShaderParameter("tile_padding") + 1;
+		GD.Print($"Current Padding: {PlanetController.SurfaceShader.GetShaderParameter("tile_padding")}, New Padding {newPadding}");
+		PlanetController.SurfaceShader.SetShaderParameter("tile_padding", newPadding);
+		
+		// PlanetController.SurfaceShader.SetShaderParameter("render_padded_uvs", !previousValue);
+		// PlanetController.SurfaceShader.SetShaderParameter("render_tile_uvs", !previousValue);
+		// previousValue = !previousValue;
+	}
+	public void OnFunction2Button()
+	{
+		int newPadding = (int)PlanetController.SurfaceShader.GetShaderParameter("tile_padding") - 1;
+		GD.Print($"Current Padding: {PlanetController.SurfaceShader.GetShaderParameter("tile_padding")}, New Padding {newPadding}");
+		PlanetController.SurfaceShader.SetShaderParameter("tile_padding", newPadding);
+		
+		// PlanetController.SurfaceShader.SetShaderParameter("render_padded_uvs", !previousValue);
+		// PlanetController.SurfaceShader.SetShaderParameter("render_tile_uvs", !previousValue);
+		// previousValue = !previousValue;
 	}
 	// public void GenerateAlbedoMap()
 	// {

@@ -8,13 +8,6 @@ layout(set = 0, binding = 0, rgba32f) restrict uniform image2DArray indirectionT
 
 layout(set = 0, binding = 1, rgba32f) restrict uniform image2D residencyTable;
 
-layout (std430, binding = 2) buffer restrict virtual_texture_data  {
-    uint grid_size;
-    uint total_mips;
-    uint tile_offset;
-    uint total_texture_slots;
-};
-
 void set_indirection_entry(ivec3 indirection_index, int lod_size, uvec4 data)
 {
     for (int i = 0; i < lod_size; i++) {

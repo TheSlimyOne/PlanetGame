@@ -90,9 +90,9 @@ namespace PlanetGame.Rendering.VirtualTexturing
                         tasks.Add(new Task(() =>
                         {
                             Image tile = GenerateTile(parameters);
-                            tile.SavePng($"{parameters.Destination}\\{parameters.MipIndex}-{parameters.NormalId}-{parameters.TileIndexX}-{parameters.TileIndexY}.png");
 
                             int current = Interlocked.Increment(ref processedTiles);
+                            tile.SavePng($"{parameters.Destination}\\{parameters.MipIndex}-{parameters.NormalId}-{parameters.TileIndexX}-{parameters.TileIndexY}.png");
                             string outputText = $"Processing Normal: {parameters.NormalId} at Mip: {parameters.MipIndex} for tile coords: ({parameters.TileIndexX}, {parameters.TileIndexY})";
                             OnTileGeneratedProgress?.Invoke(current, outputText, totalTiles);
                         }));
@@ -102,10 +102,10 @@ namespace PlanetGame.Rendering.VirtualTexturing
 
             Stopwatch stopwatch = new();
             stopwatch.Start();
-            int batchSize = 128;
-            for (int i = 0; i < tasks.Count; i += batchSize)
+            const int BATCH_SIZE = 32;
+            for (int i = 0; i < tasks.Count; i += BATCH_SIZE)
             {
-                List<Task> batch = [.. tasks.Skip(i).Take(batchSize)];
+                List<Task> batch = [.. tasks.Skip(i).Take(BATCH_SIZE)];
                 foreach (Task task in batch)
                 {
                     task.Start();
@@ -116,7 +116,7 @@ namespace PlanetGame.Rendering.VirtualTexturing
             GD.Print($"Done in: {stopwatch.Elapsed}");
         }
 
-        public class TileGenerationParams
+        public struct TileGenerationParams
         {
             public int TileIndexX { get; set; }
             public int TileIndexY { get; set; }
@@ -138,7 +138,7 @@ namespace PlanetGame.Rendering.VirtualTexturing
             {
                 for (int x = -parameters.Padding; x < parameters.TileSize + parameters.Padding; x++)
                 {
-                    Vector2 coordinates = new(Mathf.Clamp(x, 0, parameters.TileSize - 1), Mathf.Clamp(y, 0, parameters.TileSize - 1));
+                    Vector2 coordinates = new(x, y);
                     Vector2 cubePixel = coordinates + (parameters.TileSize - 1) * new Vector2(parameters.TileIndexX, parameters.TileIndexY);
                     Vector2 cubeUV = cubePixel / ((parameters.TileSize - 1) * parameters.TilesPerSide);
 
@@ -153,6 +153,7 @@ namespace PlanetGame.Rendering.VirtualTexturing
 
             return tile;
         }
+
 
         public static int GetValidMipIndex(Image image, int mipCount)
         {

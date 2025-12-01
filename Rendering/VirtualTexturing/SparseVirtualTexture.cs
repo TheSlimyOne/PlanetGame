@@ -110,6 +110,21 @@ namespace PlanetGame.Rendering.VirtualTexturing
             Ready = true;
         }
 
+        public void ClearVirtualTexture()
+        {
+            IndirectionTable.ClearStorageTexture();
+            IndirectionTable.SetFallbackSlots();
+
+            AlbedoTileCache.ClearStorageTexture();
+            AlbedoTileCache.SetFallbackSlots();
+
+            HeightTileCache.ClearStorageTexture();
+            HeightTileCache.SetFallbackSlots();
+
+            ResidencyTable.ClearStorageTexture();
+            ResidencyTable.SetFallbackSlots();
+        }
+
         public void Invoke()
         {
             if (!Ready || !IsValidForProcessing() || Paused)
