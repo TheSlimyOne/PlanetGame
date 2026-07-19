@@ -2,3 +2,4 @@
 .godot/
 .vscode/
 /Assets/Images/
+*.TMP

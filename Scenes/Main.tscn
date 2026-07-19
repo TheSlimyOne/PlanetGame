@@ -179,6 +179,10 @@ layout_mode = 2
 layout_mode = 2
 horizontal_alignment = 1
 
+[node name="btnQuit" type="Button" parent="CenterContainer/VBoxContainer" unique_id=200122952]
+layout_mode = 2
+text = "Quit"
+
 [node name="FileDialog" type="FileDialog" parent="." unique_id=1580509217]
 title = "Open a File"
 initial_position = 1
@@ -198,4 +202,5 @@ script = ExtResource("3_kln2b")
 [connection signal="pressed" from="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/New Game Section/btnUploadAlbedo" to="." method="OpenFileDialog" binds= ["ALBEDO"]]
 [connection signal="pressed" from="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/New Game Section/btnUploadHeight" to="." method="OpenFileDialog" binds= ["HEIGHT"]]
 [connection signal="pressed" from="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/New Game Section/btnStartNewGame" to="." method="OnStartNewGame"]
+[connection signal="pressed" from="CenterContainer/VBoxContainer/btnQuit" to="." method="OnQuit"]
 [connection signal="file_selected" from="FileDialog" to="FileDialog" method="OnFileSelected"]

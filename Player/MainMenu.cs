@@ -15,6 +15,7 @@ public partial class MainMenu : MarginContainer
 	[Export] private Button AlbedoSave;
 	[Export] private Button HeightmapSave;
 	[Export] private Button StartNewGame;
+	[Export] private Button Quit;
 
 	[Export] private ProgressBar ProgressBar;
 	[Export] private Label ProgressLabel;
@@ -177,5 +178,10 @@ public partial class MainMenu : MarginContainer
 		instance.SetBackground(background);
 		instance.GenerateDebugTilesAsync(GetTree(), 5);
 
+	}
+
+	public void OnQuit()
+	{
+		GetTree().Quit();
 	}
 }

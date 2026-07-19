@@ -230,11 +230,6 @@ namespace PlanetGame.Rendering.VirtualTexturing
                         uvs[currentIndex] = uv;
                         normals[currentIndex] = Vector3.Zero;
 
-                        if (cubePoint.X == 1 && cubePoint.Y == -1 && cubePoint.Z == -1)
-                        {
-                            GD.PrintS($"{i} {currentIndex % (resolution * resolution)} {cubePoint}");
-                        }
-
                         if (x != resolution - 1 && y != resolution - 1)
                         {
                             bool isXEven = x % 2 == 0;
@@ -264,13 +259,7 @@ namespace PlanetGame.Rendering.VirtualTexturing
                 }
             }
 
-            // GD.Print("\n\nfor desmos:\n", forDesmos);
-
             CalculateNormals(vertices, triangles, normals, resolution);
-
-
-            // GD.Print(triangles.Length / 3);
-            // GD.Print(Key.FormatForDesmos(vertices, triangles));
 
             Godot.Collections.Array arrays = [];
             arrays.Resize((int)Mesh.ArrayType.Max);
@@ -287,7 +276,9 @@ namespace PlanetGame.Rendering.VirtualTexturing
 
         private enum Direction
         {
-            up, down, left, right, _
+            up, down, left, right,
+            bottom_left, bottom_right, top_left, top_right,
+            _
         }
 
         private static void CalculateNormals(Vector3[] vertices, int[] triangles, Vector3[] normals, int resolution)
@@ -305,9 +296,20 @@ namespace PlanetGame.Rendering.VirtualTexturing
 
                 (2, 4, Direction.down,  Direction.down,  false, true),
                 (2, 5, Direction.up,    Direction.down,  false, false),
-
                 (3, 4, Direction.down,  Direction.up,    true,  true),
                 (3, 5, Direction.up,    Direction.up,    true,  false),
+            ];
+
+            (int faceA, int faceB, int faceC, Direction directionA, Direction directionB, Direction directionC)[] corners = [
+                (0, 2, 4, Direction.bottom_left,  Direction.bottom_left,  Direction.bottom_right),
+                (1, 2, 4, Direction.bottom_right, Direction.bottom_right, Direction.bottom_left),
+                (1, 3, 4, Direction.top_right,    Direction.bottom_left,  Direction.top_left),
+                (1, 3, 5, Direction.top_left,     Direction.top_left,     Direction.top_right),
+                (1, 2, 5, Direction.bottom_left,  Direction.top_right,    Direction.bottom_right),
+                (0, 2, 5, Direction.bottom_right, Direction.top_left,     Direction.bottom_left),
+                (0, 3, 4, Direction.top_left,     Direction.bottom_right, Direction.top_right),
+                (0, 3, 5, Direction.top_right,    Direction.top_right,    Direction.top_left),
+
             ];
 
             for (int i = 0; i < triangles.Length; i += 3)
@@ -325,7 +327,7 @@ namespace PlanetGame.Rendering.VirtualTexturing
                 normals[indexB] += faceNormal;
                 normals[indexC] += faceNormal;
             }
-    
+
             static List<int> GetIndicesFromDirection(Direction direction, int resolution, bool isReversed)
             {
                 IEnumerable<int> indices = direction switch
@@ -336,17 +338,26 @@ namespace PlanetGame.Rendering.VirtualTexturing
                     Direction.right => Enumerable.Range(0, resolution).Select(value => value * resolution + resolution - 1),
                     _ => []
                 };
+
+                indices = indices.Skip(1).SkipLast(1);
                 return [.. isReversed ? indices.Reverse() : indices];
             }
 
-            bool IsCorner(int localPoint, int resolution)
+            static int GetCornerIndex(Direction direction, int resolution)
             {
-                int x = localPoint % resolution; 
-                int y = localPoint / resolution;
-                
-                return (x == 0 && y == 0) || (x == 0 && y == resolution - 1) || (x == resolution - 1 && y == 0) || (x == resolution - 1 && y == resolution - 1);
-            }
+                int indices = direction switch
+                {
+                    Direction.bottom_left => 0,
+                    Direction.bottom_right => resolution - 1,
+                    Direction.top_left => resolution * (resolution - 1),
+                    Direction.top_right => resolution * resolution - 1,
 
+                    _ => -1
+                };
+
+               
+                return  indices;
+            }
 
             foreach ((int faceA, int faceB, Direction directionA, Direction directionB, bool isReversedA, bool isReversedB) in adjecencies)
             {
@@ -355,23 +366,36 @@ namespace PlanetGame.Rendering.VirtualTexturing
 
                 for (int i = 0; i < faceAIndices.Count; i++)
                 {
-                    // if you are a corner we know A and B just map C s
-                    // if (IsCorner(faceAIndices[i], resolution) || IsCorner(faceBIndices[i], resolution))
-                    //     continue;
-                    
                     int vertexIndexA = faceA * resolution * resolution + faceAIndices[i];
                     int vertexIndexB = faceB * resolution * resolution + faceBIndices[i];
 
                     Vector3 newNormal = normals[vertexIndexA] + normals[vertexIndexB];
-                    
+
                     normals[vertexIndexA] = newNormal;
                     normals[vertexIndexB] = newNormal;
                 }
             }
 
+            foreach ((int faceA, int faceB, int faceC, Direction directionA, Direction directionB, Direction directionC) in corners)
+            {
+                int localCornerAIndex = GetCornerIndex(directionA, resolution);
+                int localCornerBIndex = GetCornerIndex(directionB, resolution);
+                int localCornerCIndex = GetCornerIndex(directionC, resolution);
+
+                int vertexIndexA = faceA * resolution * resolution + localCornerAIndex;
+                int vertexIndexB = faceB * resolution * resolution + localCornerBIndex;
+                int vertexIndexC = faceC * resolution * resolution + localCornerCIndex;
+
+                Vector3 newNormal = normals[vertexIndexA] + normals[vertexIndexB] + normals[vertexIndexC];
+
+                normals[vertexIndexA] = newNormal;
+                normals[vertexIndexB] = newNormal;
+                normals[vertexIndexC] = newNormal;
+            }
+
             for (int i = 0; i < normals.Length; i++)
                 normals[i] = normals[i].Normalized();
-            
+
         }
 
         public static async Task GenerateMesh(Image image, int maxMipIndex, int padding)

@@ -16,6 +16,7 @@ sky_material = SubResource("PanoramaSkyMaterial_eodwd")
 
 [sub_resource type="Environment" id="Environment_qqt2a"]
 background_mode = 2
+background_color = Color(1, 1, 1, 1)
 sky = SubResource("Sky_emtpu")
 tonemap_mode = 2
 glow_enabled = true
@@ -49,7 +50,7 @@ environment = SubResource("Environment_qtwtp")
 [node name="Planet" type="Node3D" unique_id=830740909 node_paths=PackedStringArray("CameraController", "SurfaceAttachment", "UIController", "MainLightSource", "WorldEnvironment")]
 script = ExtResource("1_qtwtp")
 Radius = 8000.0
-HeightScale = 18.46
+HeightScale = 200.0
 CameraController = NodePath("CameraController")
 SurfaceAttachment = NodePath("SurfaceAttachment")
 UIController = NodePath("UIController")
@@ -103,7 +104,7 @@ RotationEasing = 0.3
 DistanceFromTarget = 800.0
 
 [node name="Camera" parent="CameraController/Main" unique_id=696527352 instance=ExtResource("6_qtwtp")]
-transform = Transform3D(-0.165, 0, 2.4914309e-08, 0, 0.165, 0, -2.4914309e-08, 0, -0.165, 0, -0.235, 0.95)
+transform = Transform3D(-0.165, 0, 2.4914309e-08, 0, 0.165, 0, -2.4914309e-08, 0, -0.165, 0, -0.235, 0.669)
 
 [node name="Helper" type="Camera3D" parent="CameraController" unique_id=1743926697]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.3)
