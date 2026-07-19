@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://bqpc8iy3kq2fp"
+path="res://.godot/imported/ResolveTileTexturePass.glsl-0b65010845d3f16b7528c3ec940e183e.res"
+
+[deps]
+
+source_file="res://ComputeShaders/GLSL/ResolveTileTexturePass.glsl"
+dest_files=["res://.godot/imported/ResolveTileTexturePass.glsl-0b65010845d3f16b7528c3ec940e183e.res"]
+
+[params]
+

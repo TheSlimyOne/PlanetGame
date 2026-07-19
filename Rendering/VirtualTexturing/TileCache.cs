@@ -12,7 +12,6 @@ namespace PlanetGame.Rendering.VirtualTexturing
             protected set => StorageTexture = value;
         }
         public uint TileSize { get; private set; }
-        public uint TilePadding { get; private set; }
         public uint TotalSubdivisions { get; private set; }
         public uint GridSize { get; private set; }
         public uint TotalTextureSlots { get; private set; }
@@ -20,22 +19,18 @@ namespace PlanetGame.Rendering.VirtualTexturing
         public Image.Format Format { get; private set; }
         public Image Placeholder { get; private set; }
 
-        public uint FullSize => TileSize + 2 * TilePadding;
+        public const uint DEFAULT_TILE_SLOTS_COUNT = 256;
 
-        public static uint TotalTileSlots = 256;
-
-        // TODO need to recognize if there is border pixels 
-        public TileCache(uint tileSize, uint tilePadding, uint totalSubdivisions, string tileDirectory, Color placeholderColor, Image.Format format)
+        public TileCache(uint tileSize, uint totalSubdivisions, uint totalTileSlots, string tileDirectory, Color placeholderColor, Image.Format format)
         {
             TileSize = tileSize;
-            TilePadding = tilePadding;
             TotalSubdivisions = totalSubdivisions;
+            TotalTextureSlots = totalTileSlots;
             GridSize = (uint)Mathf.Pow(2, totalSubdivisions - 1);
             TileDirectory = tileDirectory;
             Format = format;
-            TotalTextureSlots = TotalTileSlots;
 
-            Placeholder = Image.CreateEmpty((int)FullSize, (int)FullSize, false, Format);
+            Placeholder = Image.CreateEmpty((int)TileSize, (int)TileSize, false, Format);
             Placeholder.Fill(placeholderColor);
 
             Cache = new()
@@ -43,9 +38,9 @@ namespace PlanetGame.Rendering.VirtualTexturing
                 TextureRdRid = RenderingServer.GetRenderingDevice().TextureCreate(
                     new RDTextureFormat()
                     {
-                        Width = FullSize,
-                        Height = FullSize,
-                        ArrayLayers = TotalTileSlots,
+                        Width = TileSize,
+                        Height = TileSize,
+                        ArrayLayers = TotalTextureSlots,
                         Format = FormatConverter.MatchDataFormat(Format),
                         TextureType = RenderingDevice.TextureType.Type2DArray,
                         UsageBits = RenderingDevice.TextureUsageBits.StorageBit | RenderingDevice.TextureUsageBits.CanCopyFromBit | RenderingDevice.TextureUsageBits.CanUpdateBit | RenderingDevice.TextureUsageBits.SamplingBit | RenderingDevice.TextureUsageBits.CanCopyToBit
@@ -126,6 +121,24 @@ namespace PlanetGame.Rendering.VirtualTexturing
                 RenderingServer.GetRenderingDevice().FreeRid(Cache.TextureRdRid);
         }
 
+        public Image[] GetFallbackTiles()
+        {
+            Image[] tiles = new Image[6];
+            for (uint i = 0; i < 6; i++)
+            {
+                string tilePath = $"{TileDirectory}/{TotalSubdivisions - 1}-{i}-0-0.png";
+                Image rootTile = FileAccess.FileExists(tilePath) ?
+                    Image.LoadFromFile(tilePath) : Placeholder;
+
+                if (rootTile.GetFormat() != Format)
+                    rootTile.Convert(Format);
+
+                tiles[i] = rootTile;
+            }
+
+            return tiles;
+        }
+
         public override void SetFallbackSlots()
         {
             for (uint i = 0; i < 6; i++)
@@ -144,6 +157,12 @@ namespace PlanetGame.Rendering.VirtualTexturing
         public override Color GetPixel(int x, int y, int z)
         {
             throw new NotImplementedException();
+        }
+
+        public Image GetTile(uint slot)
+        {
+            byte[] data = RenderingServer.GetRenderingDevice().TextureGetData(Cache.TextureRdRid, slot);
+            return Image.CreateFromData((int)TileSize, (int)TileSize, false, Format, data);
         }
 
     }

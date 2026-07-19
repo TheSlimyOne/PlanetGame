@@ -1,49 +1,51 @@
+using Godot;
 using PlanetGame.ComputeShaders.Dispatcher;
 
 namespace PlanetGame.Rendering.Surface
 {
     public class TerrainTessellator
     {
-        public RenderSurfaceDispatcher RenderSurface { get; private set; }
-        public CopyKeysDispatcher CopyKeys { get; private set; }
+        public ExecuteTessellationPassDispatcher ExecuteTessellationPass { get; private set; }
+        public PrepareTessellationPassDispatcher PrepareTessellationPass { get; private set; }
 
         public int CurrentLod;
         public int CulledCount;
         public int TotalCount;
+        public int RenderedCount;
 
         public bool Ready { get; private set; } = true;
         public bool Paused = false;
 
         public TerrainTessellator(PlanetController planetController, MultiMeshRD planetMultiMesh, CustomCamera mainCamera, CustomCamera helperCamera)
         {
-            RenderSurface = new();
-            CopyKeys = new();
+            ExecuteTessellationPass = new();
+            PrepareTessellationPass = new();
 
-            RenderSurface.CopyKeysDispatcher = CopyKeys;
-            RenderSurface.PlanetController = planetController;
-            RenderSurface.MainCamera = mainCamera;
-            RenderSurface.HelperCamera = helperCamera;
-            RenderSurface.PlanetMultiMesh = planetMultiMesh;
+            ExecuteTessellationPass.PrepareTessellationPass = PrepareTessellationPass;
+            ExecuteTessellationPass.PlanetController = planetController;
+            ExecuteTessellationPass.MainCamera = mainCamera;
+            ExecuteTessellationPass.HelperCamera = helperCamera;
+            ExecuteTessellationPass.PlanetMultiMesh = planetMultiMesh;
 
-            CopyKeys.RenderSurfaceDispatcher = RenderSurface;
-            CopyKeys.PlanetMultimesh = planetMultiMesh;
+            PrepareTessellationPass.ExecuteTessellationPass = ExecuteTessellationPass;
+            PrepareTessellationPass.PlanetMultimesh = planetMultiMesh;
 
-            RenderSurface.CreateUniforms();
-            CopyKeys.CreateUniforms();
+            ExecuteTessellationPass.CreateUniforms();
+            PrepareTessellationPass.CreateUniforms();
         }
 
         public void CleanupGPUResources()
         {
-            CopyKeys.CleanupGPU();
-            RenderSurface.CleanupGPU();
+            PrepareTessellationPass.CleanupGPU();
+            ExecuteTessellationPass.CleanupGPU();
 
-            CopyKeys = null;
-            RenderSurface = null;
+            PrepareTessellationPass = null;
+            ExecuteTessellationPass = null;
         }
 
         public bool IsValidForProcessing()
         {
-            return RenderSurface != null && CopyKeys != null;
+            return ExecuteTessellationPass?.IsValid() == true && PrepareTessellationPass?.IsValid() == true;
         }
 
         public void Invoke()
@@ -51,17 +53,19 @@ namespace PlanetGame.Rendering.Surface
             if (!Ready || !IsValidForProcessing() || Paused)
                 return;
 
-            RenderSurface.ClearGlobalKeys();
+            Ready = false;
+            ExecuteTessellationPass.ClearGlobalKeyData();
 
-            RenderSurface.Invoke();
+            ExecuteTessellationPass.Invoke();
 
-            CurrentLod = RenderSurface.GetCurrentLod();
+            CurrentLod = ExecuteTessellationPass.GetCurrentLod();
 
-            CopyKeys.Invoke();
+            PrepareTessellationPass.Invoke();
 
-            RenderSurface.UpdateUniforms();
+            ExecuteTessellationPass.UpdateUniforms();
 
-            (TotalCount, CulledCount) = RenderSurface.GetPrimitiveCounts();
+            (TotalCount, CulledCount, RenderedCount) = ExecuteTessellationPass.GetPrimitiveCounts();
+            Ready = true;
         }
     }
 }

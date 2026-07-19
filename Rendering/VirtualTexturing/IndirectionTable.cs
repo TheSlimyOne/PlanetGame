@@ -23,8 +23,6 @@ namespace PlanetGame.Rendering.VirtualTexturing
             MipDepth = totalSubdivisions;
             RootTileAmount = 6;
 
-            // GD.Print($"Creating 6 sets {MipDepth} textures, with size of {GridSize}");
-
             Table = new()
             {
                 TextureRdRid = RenderingServer.GetRenderingDevice().TextureCreate(
@@ -44,8 +42,6 @@ namespace PlanetGame.Rendering.VirtualTexturing
             ClearStorageTexture();
             SetFallbackSlots();
             CreateVisualization();
-
-            // GD.Print($"Total textures {MipDepth * 6}");
         }
 
         //TODO not a fan of this one
@@ -125,7 +121,12 @@ namespace PlanetGame.Rendering.VirtualTexturing
 
         public override Color GetPixel(int x, int y, int z)
         {
-            throw new NotImplementedException();
+            byte[] data = RenderingServer.GetRenderingDevice().TextureGetData(Table.TextureRdRid, (uint)z);
+            Image image = Image.CreateFromData((int)GridSize, (int)GridSize, false, FormatConverter.MatchDataFormat(RenderingDevice.DataFormat.R32G32B32A32Sfloat), data);
+            return image.GetPixel(x, y);
         }
+
+        public uint GetSlot(Vector3I indirectionIndex) => BitConverter.SingleToUInt32Bits(GetPixel(indirectionIndex.X, indirectionIndex.Y, indirectionIndex.Z).R);
+        
     }
 }

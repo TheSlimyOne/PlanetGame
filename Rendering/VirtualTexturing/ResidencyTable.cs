@@ -16,7 +16,6 @@ namespace PlanetGame.Rendering.VirtualTexturing
         public uint GridSize { get; private set; }
         public uint TotalSubdivisions { get; private set; }
 
-        // TODO need to recognize if there is border pixels 
         public ResidencyTable(uint totalSubdivisions)
         {
             TotalSubdivisions = totalSubdivisions;
@@ -37,6 +36,7 @@ namespace PlanetGame.Rendering.VirtualTexturing
                 )
             };
             ClearStorageTexture();
+            SetFallbackSlots();
             CreateVisualization();
         }
 
@@ -79,7 +79,6 @@ namespace PlanetGame.Rendering.VirtualTexturing
                 image.SetPixel(i, 0, TileManager.EncodeTilePath(1, 1, i, (int)TotalSubdivisions - 1, (int)TotalSubdivisions));
             }
             RenderingServer.GetRenderingDevice().TextureUpdate(Table.TextureRdRid, 0, image.GetData());
-
         }
 
         public override Color GetPixel(int x, int y, int z = 0)

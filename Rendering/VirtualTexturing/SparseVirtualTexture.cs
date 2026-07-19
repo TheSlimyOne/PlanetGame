@@ -3,12 +3,15 @@ using System.Threading;
 using System.Threading.Tasks;
 using PlanetGame.ComputeShaders.Dispatcher;
 using Godot;
+using System.Collections.Generic;
+using System.Collections.Concurrent;
+using System.Linq;
 
 namespace PlanetGame.Rendering.VirtualTexturing
 {
     public class SparseVirtualTexture
     {
-        public ReadFramebufferDispatcher ReadFramebuffer { get; private set; }
+        public ResolveTileTextureDispatcher ReadFramebuffer { get; private set; }
         public ValidateCacheDispatcher ValidateTileCache { get; private set; }
 
         public Viewport Viewport { get; private set; }
@@ -19,8 +22,7 @@ namespace PlanetGame.Rendering.VirtualTexturing
         public TileCache HeightTileCache { get; private set; }
         public ResidencyTable ResidencyTable { get; private set; }
         public StateTable StateTable { get; private set; }
-        
-        public uint TilePadding { get; private set; }
+
         public uint TileSize { get; private set; }
 
         public bool Ready { get; private set; } = true;
@@ -29,13 +31,11 @@ namespace PlanetGame.Rendering.VirtualTexturing
         public SparseVirtualTexture(SaveManager.WorldSave worldSave, Viewport viewport)
         {
             Viewport = viewport;
-
             TileSize = worldSave.TileSize;
-            TilePadding = worldSave.TilePadding;
             uint totalSubdivisions = worldSave.TotalLods;
 
-            AlbedoTileCache = new(TileSize, TilePadding, totalSubdivisions, worldSave.TilesAlbedo, Colors.Magenta, Image.Format.Rgba8);
-            HeightTileCache = new(TileSize, TilePadding, totalSubdivisions, worldSave.TilesHeightmap, Colors.Black, Image.Format.R8);
+            AlbedoTileCache = new(TileSize, totalSubdivisions, TileCache.DEFAULT_TILE_SLOTS_COUNT, worldSave.TilesAlbedo, Colors.Magenta, Image.Format.Rgba8);
+            HeightTileCache = new(TileSize, totalSubdivisions, TileCache.DEFAULT_TILE_SLOTS_COUNT, worldSave.TilesHeightmap, Colors.Black, Image.Format.R8);
 
             IndirectionTable = new(totalSubdivisions);
             ResidencyTable = new(totalSubdivisions);
@@ -58,7 +58,7 @@ namespace PlanetGame.Rendering.VirtualTexturing
 
         public bool IsValidForProcessing()
         {
-            return ReadFramebuffer != null && ValidateTileCache != null;
+            return ReadFramebuffer?.IsValid() == true && ValidateTileCache?.IsValid() == true;
         }
 
         public void CreateDebugWindow(Node sceneReference)
@@ -83,24 +83,17 @@ namespace PlanetGame.Rendering.VirtualTexturing
 
             if (data.Length > 0)
             {
-                // GD.Print($"Tile amount: {data.Length}");
-
-                // (Image, uint)[] tileArray = new (Image, uint)[data.Length];
                 await Parallel.ForEachAsync(data, new ParallelOptions { MaxDegreeOfParallelism = 4 }, (tileData, _) =>
                 {
-                    uint x_coord = tileData & 0xF;
-                    uint y_coord = (tileData >> 4) & 0xF;
+                    uint xCoord = tileData & 0xF;
+                    uint yCoord = (tileData >> 4) & 0xF;
                     uint mipIndex = (tileData >> 8) & 0xF;
                     uint normalId = (tileData >> 12) & 0xF;
                     uint tileSlot = (tileData >> 16) & 0xFF;
-                    string tilePath = $"{mipIndex}-{normalId}-{x_coord}-{y_coord}.png";
-
-                    // // GD.Print("Requesting: ", tilePath);
+                    string tilePath = $"{mipIndex}-{normalId}-{xCoord}-{yCoord}.png";
 
                     HeightTileCache.InsertTile(tilePath, tileSlot);
                     AlbedoTileCache.InsertTile(tilePath, tileSlot);
-
-                    // GD.PrintS((tileData >> 24) & 0xFF, (tileData >> 16) & 0xFF, (tileData >> 8) & 0xFF);
 
                     return new ValueTask();
                 });
@@ -127,8 +120,16 @@ namespace PlanetGame.Rendering.VirtualTexturing
 
         public void Invoke()
         {
-            if (!Ready || !IsValidForProcessing() || Paused)
+            if (!Ready || !IsValidForProcessing())
                 return;
+            
+
+            if (Paused)
+            {
+                GD.Print("stopped");
+                return;
+            }
+                
 
             Ready = false;
             StateTable.ClearStorageTexture();

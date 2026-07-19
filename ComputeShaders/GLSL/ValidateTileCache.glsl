@@ -8,14 +8,7 @@ layout(set = 0, binding = 0, rgba32f) restrict uniform image2DArray indirectionT
 
 layout(set = 0, binding = 1, rgba32f) restrict uniform image2D residencyTable;
 
-void set_indirection_entry(ivec3 indirection_index, int lod_size, uvec4 data)
-{
-    for (int i = 0; i < lod_size; i++) {
-        for (int j = 0; j < lod_size; j++) {
-            imageStore(indirectionTable, indirection_index + ivec3(i, j, 0), uintBitsToFloat(data));
-        }
-    }
-}
+#[include] res://ComputeShaders/GLSL/ShaderIncludes/VirtualTextureFunctions.inc.glsl
 
 void main() {
     ivec2 texture_size = imageSize(residencyTable);
@@ -36,5 +29,5 @@ void main() {
 
     uvec4 indirection_data = floatBitsToUint(imageLoad(indirectionTable, indirection_index));
 
-    set_indirection_entry(indirection_index, lod_size, uvec4(indirection_data.x, indirection_data.y, 255, indirection_data.w));
+    set_indirection_entry(indirection_index, lod_size, uvec4(indirection_data.xy, 255u, indirection_data.w));
 }

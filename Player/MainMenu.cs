@@ -137,7 +137,7 @@ public partial class MainMenu : MarginContainer
 		Image image = Image.LoadFromFile("res://Assets/Images/test-image small.png");
 
 
-		TileManager.GenerateTilesAsync(image, 10, 3, testDir);
+		TileManager.GenerateTilesAsync(image, 3, testDir, 0);
 	}
 
 	public void OnLoad()
@@ -159,8 +159,8 @@ public partial class MainMenu : MarginContainer
 		// string saveName = "TEST BORDER";
 		// Image test1 = Image.LoadFromFile("user://Albedo.png");
 		// Image test2 = Image.LoadFromFile("user://Heightmap.png");
-		// WriteNewSave(saveName, test1, test2, 5, 0, [4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
-		WriteNewSave(saveName, NewSaveAlbedo, NewSaveHeightmap, 5, 40, [4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+		// WriteNewSave(saveName, test1, test2, 5, [4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+		WriteNewSave(saveName, NewSaveAlbedo, NewSaveHeightmap, 5, [4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
 		GD.Print("Creating Save:", saveName);
 		CurrentSave = saveName;
 	}
@@ -178,5 +178,4 @@ public partial class MainMenu : MarginContainer
 		instance.GenerateDebugTilesAsync(GetTree(), 5);
 
 	}
-
 }

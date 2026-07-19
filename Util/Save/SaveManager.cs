@@ -28,30 +28,8 @@ public static class SaveManager
         public uint BorderSize { get; set; }
         public uint TotalLods { get; set; }
         public uint TileSize { get; set; }
-        public uint TilePadding { get; set; }
 
         public int[] LodToMipMap { get; set; }
-
-
-        public static int GetAsInt(Dictionary<string, object> from, string key)
-        {
-            if (from.TryGetValue(key, out object value) && value is JsonElement element && element.ValueKind == JsonValueKind.Number)
-            {
-                return element.GetInt32();
-            }
-
-            throw new InvalidOperationException($"Key '{key}' not found or not an integer.");
-        }
-
-        public static uint GetAsUInt(Dictionary<string, object> from, string key)
-        {
-            if (from.TryGetValue(key, out object value) && value is JsonElement element && element.ValueKind == JsonValueKind.Number)
-            {
-                return element.GetUInt32();
-            }
-
-            throw new InvalidOperationException($"Key '{key}' not found or not an integer.");
-        }
     }
 
     public struct SavePaths
@@ -106,6 +84,7 @@ public static class SaveManager
     private static readonly Dictionary<string, WorldSave> Saves = GetSaves();
     static readonly JsonSerializerOptions Options = new() { PropertyNameCaseInsensitive = true, WriteIndented = true, AllowTrailingCommas = true };
 
+    // TODO bug here if the jsons are corrupted could cause a crash
     private static Dictionary<string, WorldSave> GetSaves()
     {
         FileAccess fileAccess = FileAccess.Open(SAVE_PATH, FileAccess.ModeFlags.Read);
@@ -159,9 +138,10 @@ public static class SaveManager
         };
     }
 
-    public static async Task WriteNewSave(string saveName, Image albedo, Image heightmap, int mipCount, int tilePadding, int[] lodToMipMap)
+    public static async Task WriteNewSave(string saveName, Image albedo, Image heightmap, int mipCount, int[] lodToMipMap)
     {
-        albedo.ResizeToPo2();
+        Vector2I size = new (16384, 8192);
+        albedo.Resize(size.X, size.Y, Image.Interpolation.Bilinear);
         if (albedo.GetSize() != heightmap.GetSize())
         {
             heightmap.Resize(albedo.GetSize().X, albedo.GetSize().Y);
@@ -178,11 +158,9 @@ public static class SaveManager
             ThumbnailHeightmap = paths.ThumbnailHeightmap,
             TilesAlbedo = paths.TileAlbedoDir,
             TilesHeightmap = paths.TileHeightmapDir,
-            TotalTileSlots = TileCache.TotalTileSlots,
             BorderSize = 0u,
             TotalLods = (uint)mipCount,
             TileSize = (uint)(albedo.GetHeight() / Mathf.Pow(2, mipCount - 1)),
-            TilePadding = (uint)tilePadding,
             LodToMipMap = lodToMipMap
         };
 
@@ -192,11 +170,9 @@ public static class SaveManager
         GenerateThumbnail(albedo).SavePng(paths.ThumbnailAlbedo);
         GenerateThumbnail(heightmap).SavePng(paths.ThumbnailHeightmap);
 
-        GD.Print("Generating Albedo map");
-        await TileManager.GenerateTilesAsync(albedo, tilePadding, mipCount - 1, worldSave.TilesAlbedo);
 
-        GD.Print("Generating Heightmap");
-        await TileManager.GenerateTilesAsync(heightmap, tilePadding, mipCount - 1, worldSave.TilesHeightmap);
+        // Image normalMap = TileManager.GenerateNormalMap(heightmap);
+        await GenerateTiles(worldSave, albedo, heightmap);
 
         if (!Saves.TryAdd(saveName, worldSave))
         {
@@ -206,19 +182,22 @@ public static class SaveManager
         WriteSaves();
     }
 
-    public static async Task RegenerateGenerateTiles(string saveName)
+    public static async Task GenerateTiles(WorldSave save, Image albedo, Image heightmap)
     {
-        WorldSave save = GetSave(saveName);
-        Image albedo = Image.LoadFromFile(save.BaseAlbedo);
-        Image heightmap = Image.LoadFromFile(save.BaseHeightmap);
+        GD.Print("Generating");
+
+    
         int mipCount = (int)save.TotalLods;
-        int tilePadding = (int)save.TilePadding;
 
         GD.Print("Generating Albedo map");
-        await TileManager.GenerateTilesAsync(albedo, tilePadding, mipCount - 1, save.TilesAlbedo);
+        await TileManager.GenerateTilesAsync(albedo, mipCount - 1, save.TilesAlbedo, 0);
 
         GD.Print("Generating Heightmap");
-        await TileManager.GenerateTilesAsync(heightmap, tilePadding, mipCount - 1, save.TilesHeightmap);
+        await TileManager.GenerateTilesAsync(heightmap, mipCount - 1, save.TilesHeightmap, 0);
+
+        // GD.Print("Generating Normal map");
+        // await TileManager.GenerateTilesAsync(normalMap, mipCount - 1, save.TilesNormalMap, 0);
+        
     }
 
     private static Image GenerateThumbnail(Image originalImage)
@@ -229,15 +208,16 @@ public static class SaveManager
         return thumbnail;
     }
 
+
     public static bool IsValidDirectory(string saveName, SaveDataIdentifier directory)
     {
-        return DirAccess.Open(GetDirectoryPath(saveName, directory)) == null;
+        return DirectoryExist(GetDirectoryPath(saveName, directory));
     }
 
     public static void EnsureDirectoryExists(string saveName, SaveDataIdentifier directory)
     {
         string path = GetDirectoryPath(saveName, directory);
-        if (!DirectoryExist(saveName))
+        if (!DirectoryExist(path))
             DirAccess.MakeDirRecursiveAbsolute(path);
     }
 
@@ -285,12 +265,15 @@ public static class SaveManager
 
     public static bool SaveNameExist(string saveName)
     {
-        return DirectoryExist(Saves.GetValueOrDefault(saveName).BaseDirectory);
+        if (!Saves.TryGetValue(saveName, out var save))
+            return false;
+
+        return DirectoryExist(save.BaseDirectory);
     }
 
     public static string[] GetSaveNames()
     {
-        return [.. GetSaves().Select(x => x.Key)];
+        return [.. Saves.Keys];
     }
 
     public static Dictionary<SaveDataIdentifier, Texture2D> GetThumbnails(string saveName)

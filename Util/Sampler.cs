@@ -45,6 +45,36 @@ public static class Sampler
         return cx0.Lerp(cx1, ty);
     }
 
+    public static Color SampleNormalBilinear(Image image, float u, float v)
+    {
+        int width = image.GetWidth();
+        int height = image.GetHeight();
+
+        u = Mathf.Clamp(u, 0, 1);
+        v = Mathf.Clamp(v, 0, 1);
+
+        float x = u * (width - 1);
+        float y = v * (height - 1);
+
+        int x0 = Mathf.FloorToInt(x);
+        int y0 = Mathf.FloorToInt(y);
+        int x1 = Mathf.Min(x0 + 1, width - 1);
+        int y1 = Mathf.Min(y0 + 1, height - 1);
+        
+        float tx = x - x0;
+        float ty = y - y0;
+
+        Color c00 = image.GetPixel(x0, y0);
+        Color c10 = image.GetPixel(x1, y0);
+        Color c01 = image.GetPixel(x0, y1);
+        Color c11 = image.GetPixel(x1, y1);
+
+        Color cx0 = c00.Lerp(c10, tx);
+        Color cx1 = c01.Lerp(c11, tx);
+        return cx0.Lerp(cx1, ty);
+    }
+
+
     public static Color SampleBicubic(Image image, Vector2 uv) => SampleBicubic(image, uv.X, uv.Y);
     public static Color SampleBicubic(Image image, float u, float v)
     {

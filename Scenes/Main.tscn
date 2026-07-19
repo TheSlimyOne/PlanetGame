@@ -1,4 +1,4 @@
-[gd_scene load_steps=6 format=3 uid="uid://b51tva3mp4mna"]
+[gd_scene format=3 uid="uid://b51tva3mp4mna"]
 
 [ext_resource type="Script" uid="uid://bg23ka1dyr38v" path="res://Player/MainMenu.cs" id="1_idj7w"]
 [ext_resource type="Script" uid="uid://o8r7ootm7ppm" path="res://Menu/DemoPlanet.cs" id="2_idj7w"]
@@ -6,10 +6,16 @@
 
 [sub_resource type="SphereMesh" id="SphereMesh_kln2b"]
 
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_qdvrb"]
+
+[sub_resource type="Sky" id="Sky_jxero"]
+sky_material = SubResource("ShaderMaterial_qdvrb")
+
 [sub_resource type="Environment" id="Environment_idj7w"]
 background_mode = 1
+sky = SubResource("Sky_jxero")
 
-[node name="Main Menu" type="MarginContainer" node_paths=PackedStringArray("LoadOptions", "LoadSave", "AlbedoSave", "HeightmapSave", "StartNewGame", "ProgressBar", "ProgressLabel", "DemoPlanet", "FileDialog", "SaveName")]
+[node name="Main Menu" type="MarginContainer" unique_id=2119700644 node_paths=PackedStringArray("LoadOptions", "LoadSave", "AlbedoSave", "HeightmapSave", "StartNewGame", "ProgressBar", "ProgressLabel", "DemoPlanet", "FileDialog", "SaveName")]
 custom_minimum_size = Vector2(512, 256)
 anchors_preset = 15
 anchor_right = 1.0
@@ -32,74 +38,74 @@ DemoPlanet = NodePath("CenterContainer/VBoxContainer/ScrollContainer/MarginConta
 FileDialog = NodePath("FileDialog")
 SaveName = NodePath("CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/New Game Section/txtSaveName")
 
-[node name="CenterContainer" type="CenterContainer" parent="."]
+[node name="CenterContainer" type="CenterContainer" parent="." unique_id=103280605]
 custom_minimum_size = Vector2(640, 480)
 layout_mode = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="CenterContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="CenterContainer" unique_id=1161922362]
 layout_mode = 2
 
-[node name="Button" type="Button" parent="CenterContainer/VBoxContainer"]
+[node name="Button" type="Button" parent="CenterContainer/VBoxContainer" unique_id=1451153398]
 layout_mode = 2
 text = "Generate Tiles"
 
-[node name="Button2" type="Button" parent="CenterContainer/VBoxContainer"]
+[node name="Button2" type="Button" parent="CenterContainer/VBoxContainer" unique_id=1011551450]
 layout_mode = 2
 text = "Generate Debug Tiles"
 
-[node name="ScrollContainer" type="ScrollContainer" parent="CenterContainer/VBoxContainer"]
+[node name="ScrollContainer" type="ScrollContainer" parent="CenterContainer/VBoxContainer" unique_id=901680090]
 custom_minimum_size = Vector2(640, 480)
 layout_mode = 2
 horizontal_scroll_mode = 0
 
-[node name="MarginContainer" type="MarginContainer" parent="CenterContainer/VBoxContainer/ScrollContainer"]
+[node name="MarginContainer" type="MarginContainer" parent="CenterContainer/VBoxContainer/ScrollContainer" unique_id=1427269847]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 
-[node name="SectionSpliter" type="VBoxContainer" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer"]
+[node name="SectionSpliter" type="VBoxContainer" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer" unique_id=857924851]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 
-[node name="lblTitle" type="Label" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter"]
+[node name="lblTitle" type="Label" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter" unique_id=1558421919]
 layout_mode = 2
 theme_override_font_sizes/font_size = 82
 text = "PLANET GAME!"
 horizontal_alignment = 1
 uppercase = true
 
-[node name="HSeperator" type="HSeparator" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter"]
+[node name="HSeperator" type="HSeparator" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter" unique_id=874868460]
 layout_mode = 2
 
-[node name="HBoxContainer" type="HBoxContainer" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter"]
+[node name="HBoxContainer" type="HBoxContainer" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter" unique_id=101580448]
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="Load Section" type="VBoxContainer" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer"]
+[node name="Load Section" type="VBoxContainer" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer" unique_id=429244096]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 14
 
-[node name="Load Group" type="HBoxContainer" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/Load Section"]
+[node name="Load Group" type="HBoxContainer" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/Load Section" unique_id=365370588]
 custom_minimum_size = Vector2(256, 0)
 layout_mode = 2
 
-[node name="lblLoad" type="Label" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/Load Section/Load Group"]
+[node name="lblLoad" type="Label" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/Load Section/Load Group" unique_id=694688801]
 layout_mode = 2
 text = "Load"
 
-[node name="obtLoadOptions" type="OptionButton" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/Load Section/Load Group"]
+[node name="obtLoadOptions" type="OptionButton" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/Load Section/Load Group" unique_id=1175906602]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_type_variation = &"NoRadioButton"
 
-[node name="SubViewportContainer" type="SubViewportContainer" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/Load Section"]
+[node name="SubViewportContainer" type="SubViewportContainer" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/Load Section" unique_id=275538270]
 custom_minimum_size = Vector2(0, 148)
 layout_mode = 2
 stretch = true
 
-[node name="SubViewport" type="SubViewport" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/Load Section/SubViewportContainer" node_paths=PackedStringArray("Planet")]
+[node name="SubViewport" type="SubViewport" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/Load Section/SubViewportContainer" unique_id=1813063158 node_paths=PackedStringArray("Planet")]
 handle_input_locally = false
 size = Vector2i(309, 148)
 render_target_update_mode = 4
@@ -107,43 +113,43 @@ script = ExtResource("2_idj7w")
 RotationSpeed = 0.5
 Planet = NodePath("Demo Planet")
 
-[node name="Camera3D" type="Camera3D" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/Load Section/SubViewportContainer/SubViewport"]
+[node name="Camera3D" type="Camera3D" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/Load Section/SubViewportContainer/SubViewport" unique_id=609657157]
 transform = Transform3D(1, 0, 0, 0, 0.961764, 0.27388, 0, -0.27388, 0.961764, 0, 0.592433, 1.7)
 
-[node name="Demo Planet" type="MeshInstance3D" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/Load Section/SubViewportContainer/SubViewport"]
+[node name="Demo Planet" type="MeshInstance3D" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/Load Section/SubViewportContainer/SubViewport" unique_id=471270949]
 transform = Transform3D(1, 0, 0, 0, 0.974226, 0.225575, 0, -0.225575, 0.974226, 0, 0, 0)
 mesh = SubResource("SphereMesh_kln2b")
 
-[node name="WorldEnvironment" type="WorldEnvironment" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/Load Section/SubViewportContainer/SubViewport"]
+[node name="WorldEnvironment" type="WorldEnvironment" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/Load Section/SubViewportContainer/SubViewport" unique_id=998869799]
 environment = SubResource("Environment_idj7w")
 
-[node name="DirectionalLight3D" type="DirectionalLight3D" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/Load Section/SubViewportContainer/SubViewport"]
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/Load Section/SubViewportContainer/SubViewport" unique_id=1046532836]
 transform = Transform3D(-3.9e-08, 0.451609, -0.892216, 1.97404e-08, 0.892216, 0.451609, 1, 1.71783e-15, -4.37114e-08, 0, 0, 0)
 
-[node name="btnRegenerate" type="Button" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/Load Section"]
+[node name="btnRegenerate" type="Button" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/Load Section" unique_id=1968795857]
 layout_mode = 2
 size_flags_vertical = 3
 text = "Regenerate Tiles"
 
-[node name="btnLoad" type="Button" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/Load Section"]
+[node name="btnLoad" type="Button" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/Load Section" unique_id=1294862171]
 layout_mode = 2
 size_flags_vertical = 3
 text = "Load Save"
 
-[node name="VSeparator" type="VSeparator" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer"]
+[node name="VSeparator" type="VSeparator" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer" unique_id=1640734653]
 layout_mode = 2
 
-[node name="New Game Section" type="VBoxContainer" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer"]
+[node name="New Game Section" type="VBoxContainer" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer" unique_id=1194194305]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 14
 
-[node name="lblNew" type="Label" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/New Game Section"]
+[node name="lblNew" type="Label" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/New Game Section" unique_id=1720122840]
 custom_minimum_size = Vector2(256, 0)
 layout_mode = 2
 text = "New"
 
-[node name="txtSaveName" type="LineEdit" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/New Game Section"]
+[node name="txtSaveName" type="LineEdit" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/New Game Section" unique_id=749353965]
 layout_mode = 2
 size_flags_vertical = 3
 placeholder_text = "Enter Save Name"
@@ -151,29 +157,29 @@ alignment = 1
 emoji_menu_enabled = false
 middle_mouse_paste_enabled = false
 
-[node name="btnUploadAlbedo" type="Button" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/New Game Section"]
+[node name="btnUploadAlbedo" type="Button" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/New Game Section" unique_id=1447225982]
 layout_mode = 2
 size_flags_vertical = 3
 text = "Upload Albedo Texture"
 
-[node name="btnUploadHeight" type="Button" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/New Game Section"]
+[node name="btnUploadHeight" type="Button" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/New Game Section" unique_id=1843745267]
 layout_mode = 2
 size_flags_vertical = 3
 text = "Upload Heightmap"
 
-[node name="btnStartNewGame" type="Button" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/New Game Section"]
+[node name="btnStartNewGame" type="Button" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/New Game Section" unique_id=2041839390]
 layout_mode = 2
 size_flags_vertical = 3
 text = "Start New Game"
 
-[node name="pgbProgressBar" type="ProgressBar" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter"]
+[node name="pgbProgressBar" type="ProgressBar" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter" unique_id=1223674671]
 layout_mode = 2
 
-[node name="lblProgressLabel" type="Label" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter"]
+[node name="lblProgressLabel" type="Label" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter" unique_id=446834019]
 layout_mode = 2
 horizontal_alignment = 1
 
-[node name="FileDialog" type="FileDialog" parent="."]
+[node name="FileDialog" type="FileDialog" parent="." unique_id=1580509217]
 title = "Open a File"
 initial_position = 1
 ok_button_text = "Open"

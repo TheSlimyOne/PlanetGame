@@ -1,60 +1,4 @@
-#include "res://Constants.gdshaderinc"
-
-float w0(float a) { return (1.0/6.0)*(a*(a*(-a + 3.0) - 3.0) + 1.0); }
-float w1(float a) { return (1.0/6.0)*(a*a*(3.0*a - 6.0) + 4.0); }
-float w2(float a) { return (1.0/6.0)*(a*(a*(-3.0*a + 3.0) + 3.0) + 1.0); }
-float w3(float a) { return (1.0/6.0)*(a*a*a); }
-float g0(float a) { return w0(a) + w1(a); }
-float g1(float a) { return w2(a) + w3(a); }
-float h0(float a) { return -1.0 + w1(a) / (w0(a) + w1(a)); }
-float h1(float a) { return 1.0 + w3(a) / (w2(a) + w3(a)); }
-
-
-vec4 texture2D_bicubic(sampler2DArray tex, vec3 uv, vec2 res) {
-	uv.xy = uv.xy * res + 0.5;
-	vec2 iuv = floor( uv.xy );
-	vec2 fuv = fract( uv.xy );
-
-	float g0x = g0(fuv.x);
-	float g1x = g1(fuv.x);
-	float h0x = h0(fuv.x);
-	float h1x = h1(fuv.x);
-	float h0y = h0(fuv.y);
-	float h1y = h1(fuv.y);
-
-	vec2 p0 = (vec2(iuv.x + h0x, iuv.y + h0y) - 0.5) / res;
-	vec2 p1 = (vec2(iuv.x + h1x, iuv.y + h0y) - 0.5) / res;
-	vec2 p2 = (vec2(iuv.x + h0x, iuv.y + h1y) - 0.5) / res;
-	vec2 p3 = (vec2(iuv.x + h1x, iuv.y + h1y) - 0.5) / res;
-
-    return g0(fuv.y) * (g0x * textureLod(tex, vec3(p0, uv.z), 0.0)  +
-                        g1x * textureLod(tex, vec3(p1, uv.z), 0.0)) +
-           g1(fuv.y) * (g0x * textureLod(tex, vec3(p2, uv.z), 0.0)  +
-                        g1x * textureLod(tex, vec3(p3, uv.z), 0.0));
-}
-
-vec4 texture2D_linear(sampler2DArray tex, vec3 uv)
-{
-    vec2 texSize = vec2(textureSize(tex, 0).xy);
-    vec2 st = uv.xy * texSize - 0.5;
-
-    vec2 iuv = floor(st);
-    vec2 fuv = fract(st);
-
-    vec4 a = texture(tex, vec3((iuv + vec2(0.0, 0.0) + 0.5) / texSize, uv.z));
-    vec4 b = texture(tex, vec3((iuv + vec2(1.0, 0.0) + 0.5) / texSize, uv.z));
-    vec4 c = texture(tex, vec3((iuv + vec2(0.0, 1.0) + 0.5) / texSize, uv.z));
-    vec4 d = texture(tex, vec3((iuv + vec2(1.0, 1.0) + 0.5) / texSize, uv.z));
-
-    vec4 mixAB = mix(a, b, fuv.x);
-    vec4 mixCD = mix(c, d, fuv.x);
-    return mix(mixAB, mixCD, fuv.y);
-}
-
-bool is_on_edge(vec3 p) {
-    int count = int(abs(p.x) == 1.0) + int(abs(p.y) == 1.0) + int(abs(p.z) == 1.0);
-    return count == 2;
-}
+#include "res://Assets/Shaders/Constants.gdshaderinc"
 
 vec2 get_cube_uv(int normal_id, vec3 point) {
 	vec2 uv = vec2(0);
@@ -64,6 +8,45 @@ vec2 get_cube_uv(int normal_id, vec3 point) {
 	uv.y = normal_id == 2 || normal_id == 3 ? 1.0 - point.z : 1.0 - point.y;
 
 	return clamp(uv, vec2(0.0), vec2(1.0 - EPS));
+}
+
+vec3 get_cube_point(int normal_id, vec2 uv) {
+	vec3 point = vec3(0);
+	uv = uv * 2.0 - 1.0;
+
+	switch(normal_id) {
+		case 0:
+			point.x = 1.0;
+			point.y = -uv.y;
+			point.z = -uv.x;
+			break;
+		case 1:
+			point.x = -1.0;
+			point.y = -uv.y;
+			point.z = uv.x;
+			break;
+		case 2:
+			point.x = -uv.x;
+			point.y = 1.0;
+			point.z = -uv.y;
+			break;
+		case 3:
+			point.x = uv.x;
+			point.y = -1.0;
+			point.z = -uv.y;
+			break;
+		case 4:
+			point.x = uv.x;
+			point.y = -uv.y;
+			point.z = 1.0;
+			break;
+		case 5:
+			point.x = -uv.x;
+			point.y = -uv.y;
+			point.z = -1.0;
+			break;
+	}
+	return point;
 }
 
 vec3 point_to_point_on_cube(int normal_id, vec2 uv) {
@@ -97,35 +80,28 @@ vec3 point_to_point_on_cube(int normal_id, vec2 uv) {
     return point;
 }
 
+int[4] get_adjecent_normal_ids(int normal_id)
+{
+	switch(normal_id){
+		case 0: 
+			return {4, 5, 3, 2};
+		case 1: 
+			return {5, 4, 3, 2};
+		case 2: 
+			return {0, 1, 5, 4};
+		case 3: 
+			return {1, 0, 5, 4};
+		case 4: 
+			return {1, 0, 3, 2};
+		case 5: 
+			return {0, 1, 3, 2};
+	}
+	return {-1, -1, -1, -1};
+}
+
 vec3 point_on_cube_to_point_on_sphere(vec3 p) {
     vec3 square = p * p;
     return p * sqrt(1.0 - (square.yxx + square.zzy) / 2.0 + square.yxx * square.zzy / 3.0);
-}
-
-vec3 get_sphere_normal(sampler2DArray height_texture, vec3 uv, int normal_id, float sample_pixels, mat4 rotation) {
-	float hC = texture2D_bicubic(height_texture, uv, vec2(512.0)).r;
-    float hU = texture2D_bicubic(height_texture, uv + vec3(0, sample_pixels, 0), vec2(512.0)).r;
-    float hD = texture2D_bicubic(height_texture, uv + vec3(0, -sample_pixels, 0), vec2(512.0)).r;
-    float hR = texture2D_bicubic(height_texture, uv + vec3(sample_pixels, 0, 0), vec2(512.0)).r;
-	float hL = texture2D_bicubic(height_texture, uv + vec3(-sample_pixels, 0, 0), vec2(512.0)).r;
-
-	vec3 pC = point_on_cube_to_point_on_sphere(point_to_point_on_cube(normal_id, uv.xy));
-    vec3 pU = point_on_cube_to_point_on_sphere(point_to_point_on_cube(normal_id, uv.xy + vec2(0, sample_pixels)));
-    vec3 pD = point_on_cube_to_point_on_sphere(point_to_point_on_cube(normal_id, uv.xy + vec2(0, -sample_pixels)));
-    vec3 pR = point_on_cube_to_point_on_sphere(point_to_point_on_cube(normal_id, uv.xy + vec2(sample_pixels, 0)));
-	vec3 pL = point_on_cube_to_point_on_sphere(point_to_point_on_cube(normal_id, uv.xy + vec2(-sample_pixels, 0)));
-
-	float normal_strength = 1.0;
-	pC += pC * hC;
-	pL += pL * hL;
-	pR += pR * hR;
-	pU += pU * hU;
-	pD += pD * hD;
-
-	vec3 dx = pR - pL;
-	vec3 dy = pU - pD;
-	vec3 normal_vector = normalize(cross(dy, dx));
-	return normal_vector;
 }
 
 vec4 get_tile(sampler2DArray tile_cache, vec3 tile_uv) {
@@ -136,7 +112,6 @@ vec4 get_tile(sampler2DArray tile_cache, vec3 tile_uv) {
 vec3 get_tile_uv(
     sampler2DArray indirection_table,
     int target_lod_index,
-	int tile_padding,
 	int tile_size,
     vec2 uv,
     int total_texture_subdivisions,
@@ -149,9 +124,7 @@ vec3 get_tile_uv(
 	vec2 cell_uv = floor(tile_pos) / lod_grid_size;
 	vec2 tile_uv = fract(tile_pos);
 
-	tile_uv = (tile_uv * float(tile_size) + float(tile_padding)) / float(tile_size + 2 * tile_padding);
-
-	//float real_tile_size = float(tile_size + 2 * tile_padding); float scale = float(tile_size) / real_tile_size; float offset = float(tile_padding) / real_tile_size; tile_uv = tile_uv * scale + offset;
+	tile_uv = (tile_uv * float(tile_size) / float(tile_size));
 
 	vec2 indirection_texture_size = vec2(textureSize(indirection_table, 0).xy);
 	ivec3 indirection_index = ivec3(
@@ -162,42 +135,18 @@ vec3 get_tile_uv(
 	uvec4 indirection_table_data = floatBitsToUint(texelFetch(indirection_table, indirection_index, 0));
 	uint virtual_texture_tile_index = indirection_table_data.r;
 	uint valid_flag = indirection_table_data.b;
-		// ignore the else{} causes flickering (not working atm)
+	// ignore the else{} causes flickering (not working atm)
 	if (valid_flag == 255u)
+	{
 		return vec3(tile_uv, float(virtual_texture_tile_index));
+	}
 	else
-		return vec3(tile_uv, float(polygon_id));
+	{
+		return vec3(uv, float(polygon_id));
+	}
 }
 
 
-vec3 compute_sphere_normal_from_heightmap(
-	sampler2DArray heightmap,
-	vec2 uv,
-	int normal_id,
-	vec3 vertex_position,
-	float height_scale
-) {
-	vec2 texel_size = 1.0 / vec2(textureSize(heightmap, 0).xy);
-
-	float hL = texture(heightmap, vec3(uv - vec2(texel_size.x, 0), float(normal_id))).r;
-	float hR = texture(heightmap, vec3(uv + vec2(texel_size.x, 0), float(normal_id))).r;
-	float hD = texture(heightmap, vec3(uv - vec2(0, texel_size.y), float(normal_id))).r;
-	float hU = texture(heightmap, vec3(uv + vec2(0, texel_size.y), float(normal_id))).r;
-
-	vec3 grad = vec3((hR - hL), (hU - hD), 2.0 / height_scale);
-	grad.xy *= height_scale;
-
-	vec3 normal = normalize(vertex_position);
-	vec3 up = abs(normal.y) < 0.999 ? vec3(0.0, 1.0, 0.0) : vec3(0.0, 0.0, 1.0);
-	vec3 tangent = normalize(cross(up, normal));
-	vec3 bitangent = normalize(cross(normal, tangent));
-
-	return normalize(
-		-grad.x * tangent +
-		-grad.y * bitangent +
-		grad.z * normal
-	);
-}
 
 mat4 get_rotation_from_matrix(mat4 transform_matrix) {
     return mat4(

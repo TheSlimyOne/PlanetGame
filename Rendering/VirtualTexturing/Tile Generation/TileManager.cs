@@ -54,7 +54,7 @@ namespace PlanetGame.Rendering.VirtualTexturing
 
         public static event Action<int, string, int> OnTileGeneratedProgress;
 
-        public static async Task GenerateTilesAsync(Image image, int padding, int maxMipIndex, string destination)
+        public static async Task GenerateTilesAsync(Image image, int maxMipIndex, string destination, int padding)
         {
             Image[] mipmaps = GetMipmapSections(image, maxMipIndex);
 
@@ -83,8 +83,8 @@ namespace PlanetGame.Rendering.VirtualTexturing
                             Source = mipmap,
                             TilesPerSide = tilesPerSide,
                             TileSize = mipmap.GetSize().Y / tilesPerSide,
-                            Padding = padding,
-                            Destination = destination
+                            Destination = destination,
+                            Padding = padding
                         };
 
                         tasks.Add(new Task(() =>
@@ -193,6 +193,246 @@ namespace PlanetGame.Rendering.VirtualTexturing
             uint mipIndex = BitConverter.SingleToUInt32Bits(data.G);
             uint normalId = BitConverter.SingleToUInt32Bits(data.B);
             return ((int)tileIndexX, (int)tileIndexY, (int)normalId, (int)mipIndex);
+        }
+
+        // public static Image GenerateNormalMap(Image heightmap)
+        // {
+
+        // }
+
+        public static ArrayMesh GetPlanetMesh(int resolution, Image heightmap, float strength)
+        {
+            int faces = 6;
+            Vector3[] vertices = new Vector3[faces * resolution * resolution];
+            Vector3[] normals = new Vector3[faces * resolution * resolution];
+            Vector2[] uvs = new Vector2[faces * resolution * resolution];
+            int[] triangles = new int[faces * (resolution - 1) * (resolution - 1) * 6];
+
+            int triIndex = 0;
+            int vertexIndex = 0;
+
+            for (int i = 0; i < faces; i++)
+            {
+                for (int y = 0; y < resolution; y++)
+                {
+                    for (int x = 0; x < resolution; x++)
+                    {
+                        int currentIndex = vertexIndex++;
+                        Vector2 percentage = new Vector2(x, y) / (resolution - 1);
+                        Vector3 cubePoint = VectorUtils.UVToPointOnCube(i, percentage);
+                        Vector3 spherePoint = VectorUtils.PointOnCubeToPointOnSphere(cubePoint);
+                        Vector2 uv = VectorUtils.PointOnSphereToUV(spherePoint);
+
+                        Color pixel = Sampler.SampleBilinear(heightmap, uv);
+                        Vector3 vertex = spherePoint + spherePoint.Normalized() * pixel.R * strength;
+
+                        vertices[currentIndex] = vertex;
+                        uvs[currentIndex] = uv;
+                        normals[currentIndex] = Vector3.Zero;
+
+                        if (cubePoint.X == 1 && cubePoint.Y == -1 && cubePoint.Z == -1)
+                        {
+                            GD.PrintS($"{i} {currentIndex % (resolution * resolution)} {cubePoint}");
+                        }
+
+                        if (x != resolution - 1 && y != resolution - 1)
+                        {
+                            bool isXEven = x % 2 == 0;
+                            bool isYEven = y % 2 == 0;
+                            if ((isXEven && isYEven) || (!isXEven && !isYEven))
+                            {
+                                triangles[triIndex++] = currentIndex;
+                                triangles[triIndex++] = currentIndex + resolution + 1;
+                                triangles[triIndex++] = currentIndex + resolution;
+
+                                triangles[triIndex++] = currentIndex;
+                                triangles[triIndex++] = currentIndex + 1;
+                                triangles[triIndex++] = currentIndex + resolution + 1;
+                            }
+                            else
+                            {
+                                triangles[triIndex++] = currentIndex;
+                                triangles[triIndex++] = currentIndex + 1;
+                                triangles[triIndex++] = currentIndex + resolution;
+
+                                triangles[triIndex++] = currentIndex + 1;
+                                triangles[triIndex++] = currentIndex + resolution + 1;
+                                triangles[triIndex++] = currentIndex + resolution;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // GD.Print("\n\nfor desmos:\n", forDesmos);
+
+            CalculateNormals(vertices, triangles, normals, resolution);
+
+
+            // GD.Print(triangles.Length / 3);
+            // GD.Print(Key.FormatForDesmos(vertices, triangles));
+
+            Godot.Collections.Array arrays = [];
+            arrays.Resize((int)Mesh.ArrayType.Max);
+            arrays[(int)Mesh.ArrayType.Vertex] = vertices;
+            arrays[(int)Mesh.ArrayType.Index] = triangles;
+            arrays[(int)Mesh.ArrayType.Normal] = normals;
+            arrays[(int)Mesh.ArrayType.TexUV] = uvs;
+
+            ArrayMesh triangleMesh = new();
+            triangleMesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
+            return triangleMesh;
+        }
+
+
+        private enum Direction
+        {
+            up, down, left, right, _
+        }
+
+        private static void CalculateNormals(Vector3[] vertices, int[] triangles, Vector3[] normals, int resolution)
+        {
+            (int faceA, int faceB, Direction directionA, Direction directionB, bool isReversedA, bool isReversedB)[] adjecencies = [
+                (0, 2, Direction.down,  Direction.left,  false, false),
+                (0, 3, Direction.up,    Direction.right, false, false),
+                (0, 4, Direction.left,  Direction.right, false, false),
+                (0, 5, Direction.right, Direction.left,  false, false),
+
+                (1, 2, Direction.down,  Direction.right, true,  false),
+                (1, 3, Direction.up,    Direction.left,  true,  false),
+                (1, 4, Direction.right, Direction.left,  false, false),
+                (1, 5, Direction.left,  Direction.right, false, false),
+
+                (2, 4, Direction.down,  Direction.down,  false, true),
+                (2, 5, Direction.up,    Direction.down,  false, false),
+
+                (3, 4, Direction.down,  Direction.up,    true,  true),
+                (3, 5, Direction.up,    Direction.up,    true,  false),
+            ];
+
+            for (int i = 0; i < triangles.Length; i += 3)
+            {
+                int indexA = triangles[i];
+                int indexB = triangles[i + 1];
+                int indexC = triangles[i + 2];
+
+                Vector3 edge1 = vertices[indexB] - vertices[indexA];
+                Vector3 edge2 = vertices[indexC] - vertices[indexA];
+
+                Vector3 faceNormal = edge2.Cross(edge1).Normalized();
+
+                normals[indexA] += faceNormal;
+                normals[indexB] += faceNormal;
+                normals[indexC] += faceNormal;
+            }
+    
+            static List<int> GetIndicesFromDirection(Direction direction, int resolution, bool isReversed)
+            {
+                IEnumerable<int> indices = direction switch
+                {
+                    Direction.up => Enumerable.Range(0, resolution).Select(value => resolution * (resolution - 1) + value),
+                    Direction.down => Enumerable.Range(0, resolution),
+                    Direction.left => Enumerable.Range(0, resolution).Select(value => value * resolution),
+                    Direction.right => Enumerable.Range(0, resolution).Select(value => value * resolution + resolution - 1),
+                    _ => []
+                };
+                return [.. isReversed ? indices.Reverse() : indices];
+            }
+
+            bool IsCorner(int localPoint, int resolution)
+            {
+                int x = localPoint % resolution; 
+                int y = localPoint / resolution;
+                
+                return (x == 0 && y == 0) || (x == 0 && y == resolution - 1) || (x == resolution - 1 && y == 0) || (x == resolution - 1 && y == resolution - 1);
+            }
+
+
+            foreach ((int faceA, int faceB, Direction directionA, Direction directionB, bool isReversedA, bool isReversedB) in adjecencies)
+            {
+                List<int> faceAIndices = GetIndicesFromDirection(directionA, resolution, isReversedA);
+                List<int> faceBIndices = GetIndicesFromDirection(directionB, resolution, isReversedB);
+
+                for (int i = 0; i < faceAIndices.Count; i++)
+                {
+                    // if you are a corner we know A and B just map C s
+                    // if (IsCorner(faceAIndices[i], resolution) || IsCorner(faceBIndices[i], resolution))
+                    //     continue;
+                    
+                    int vertexIndexA = faceA * resolution * resolution + faceAIndices[i];
+                    int vertexIndexB = faceB * resolution * resolution + faceBIndices[i];
+
+                    Vector3 newNormal = normals[vertexIndexA] + normals[vertexIndexB];
+                    
+                    normals[vertexIndexA] = newNormal;
+                    normals[vertexIndexB] = newNormal;
+                }
+            }
+
+            for (int i = 0; i < normals.Length; i++)
+                normals[i] = normals[i].Normalized();
+            
+        }
+
+        public static async Task GenerateMesh(Image image, int maxMipIndex, int padding)
+        {
+            Image[] mipmaps = GetMipmapSections(image, maxMipIndex);
+
+            int processedTiles = 0;
+            int totalTiles = GetTileCount(maxMipIndex);
+            List<Task> tasks = [];
+
+            for (int mipIndex = mipmaps.Length - 1; mipIndex >= 0; mipIndex--)
+            {
+                int tilesPerSide = (int)Mathf.Pow(2, mipmaps.Length - 1 - mipIndex);
+                Image mipmap = mipmaps[mipIndex];
+
+                for (int normalId = 0; normalId < 6; normalId++)
+                {
+                    for (int tileIndex = 0; tileIndex < tilesPerSide * tilesPerSide; tileIndex++)
+                    {
+                        int tileY = tileIndex / tilesPerSide;
+                        int tileX = tileIndex % tilesPerSide;
+
+                        TileGenerationParams parameters = new()
+                        {
+                            TileIndexX = tileX,
+                            TileIndexY = tileY,
+                            MipIndex = mipIndex,
+                            NormalId = normalId,
+                            Source = mipmap,
+                            TilesPerSide = tilesPerSide,
+                            TileSize = mipmap.GetSize().Y / tilesPerSide,
+                            Padding = padding
+                        };
+
+                        tasks.Add(new Task(() =>
+                        {
+                            Image tile = GenerateTile(parameters);
+
+                            int current = Interlocked.Increment(ref processedTiles);
+                            tile.SavePng($"{parameters.Destination}\\{parameters.MipIndex}-{parameters.NormalId}-{parameters.TileIndexX}-{parameters.TileIndexY}.png");
+                            string outputText = $"Processing Normal: {parameters.NormalId} at Mip: {parameters.MipIndex} for tile coords: ({parameters.TileIndexX}, {parameters.TileIndexY})";
+                            OnTileGeneratedProgress?.Invoke(current, outputText, totalTiles);
+                        }));
+                    }
+                }
+            }
+
+            Stopwatch stopwatch = new();
+            stopwatch.Start();
+            const int BATCH_SIZE = 32;
+            for (int i = 0; i < tasks.Count; i += BATCH_SIZE)
+            {
+                List<Task> batch = [.. tasks.Skip(i).Take(BATCH_SIZE)];
+                foreach (Task task in batch)
+                {
+                    task.Start();
+                }
+                await Task.WhenAll(batch);
+            }
+            stopwatch.Stop();
+            GD.Print($"Done in: {stopwatch.Elapsed}");
         }
     }
 }

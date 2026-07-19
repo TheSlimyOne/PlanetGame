@@ -1,4 +1,4 @@
-[gd_scene load_steps=3 format=3 uid="uid://dw6xke4ovskkx"]
+[gd_scene format=3 uid="uid://dw6xke4ovskkx"]
 
 [ext_resource type="Script" uid="uid://dmhjqmw6g7d2t" path="res://Player/UI/UIController.cs" id="1_jxero"]
 
@@ -7,7 +7,7 @@ font_size = 28
 outline_size = 5
 outline_color = Color(0.0768358, 0.0768358, 0.0768358, 1)
 
-[node name="UI" type="Control" node_paths=PackedStringArray("_lblKeyCount", "_lblFPS", "_lblDistance", "_lblLOD", "_lblCameraMode", "_btnProcessLod", "_btnCubeMode", "_btnCulling", "_btnMorphing", "_btnRenderFramebuffer", "_btnRenderSurface", "_btnVirtualTexturing")]
+[node name="UI" type="Control" unique_id=1911682816 node_paths=PackedStringArray("_lblKeyCount", "_lblFPS", "_lblDistance", "_lblLOD", "_lblCameraMode", "_btnProcessLod", "_btnCubeMode", "_btnCulling", "_btnMorphing", "_btnRenderSurface", "_btnVirtualTexturing")]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -24,41 +24,40 @@ _btnProcessLod = NodePath("Buttons/btnProcessLod")
 _btnCubeMode = NodePath("Buttons/btnCubeMode")
 _btnCulling = NodePath("Buttons/btnCulling")
 _btnMorphing = NodePath("Buttons/btnMorphing")
-_btnRenderFramebuffer = NodePath("Buttons/btnRenderFramebuffer")
 _btnRenderSurface = NodePath("Buttons/btnRenderSurface")
 _btnVirtualTexturing = NodePath("Buttons/btnVirtualTexturing")
 
-[node name="DebugStats" type="VBoxContainer" parent="."]
+[node name="DebugStats" type="VBoxContainer" parent="." unique_id=1817362206]
 layout_mode = 0
 offset_right = 222.0
 offset_bottom = 211.0
 
-[node name="KeyCount" type="Label" parent="DebugStats"]
+[node name="KeyCount" type="Label" parent="DebugStats" unique_id=545999096]
 layout_mode = 2
 text = "Triangles: X"
 label_settings = SubResource("LabelSettings_nf4gj")
 
-[node name="FPS" type="Label" parent="DebugStats"]
+[node name="FPS" type="Label" parent="DebugStats" unique_id=1617313256]
 layout_mode = 2
 text = "FPS: X"
 label_settings = SubResource("LabelSettings_nf4gj")
 
-[node name="Distance" type="Label" parent="DebugStats"]
+[node name="Distance" type="Label" parent="DebugStats" unique_id=94208793]
 layout_mode = 2
 text = "Distance: X"
 label_settings = SubResource("LabelSettings_nf4gj")
 
-[node name="LOD" type="Label" parent="DebugStats"]
+[node name="LOD" type="Label" parent="DebugStats" unique_id=1166626918]
 layout_mode = 2
 text = "Current LOD: X"
 label_settings = SubResource("LabelSettings_nf4gj")
 
-[node name="CameraMode" type="Label" parent="DebugStats"]
+[node name="CameraMode" type="Label" parent="DebugStats" unique_id=307604866]
 layout_mode = 2
 text = "Camera Mode: X"
 label_settings = SubResource("LabelSettings_nf4gj")
 
-[node name="Buttons" type="VBoxContainer" parent="."]
+[node name="Buttons" type="VBoxContainer" parent="." unique_id=690976271]
 layout_mode = 1
 anchors_preset = 1
 anchor_left = 1.0
@@ -67,58 +66,58 @@ offset_left = -222.0
 offset_bottom = 311.0
 grow_horizontal = 0
 
-[node name="btnProcessLod" type="Button" parent="Buttons"]
+[node name="btnProcessLod" type="Button" parent="Buttons" unique_id=825046170]
 layout_mode = 2
 focus_mode = 0
 text = "Stop Processing LOD"
 
-[node name="btnCubeMode" type="Button" parent="Buttons"]
+[node name="btnCubeMode" type="Button" parent="Buttons" unique_id=1818185159]
 layout_mode = 2
 focus_mode = 0
 text = "Enable Cube Mode
 "
 
-[node name="btnCulling" type="Button" parent="Buttons"]
+[node name="btnCulling" type="Button" parent="Buttons" unique_id=528804509]
 layout_mode = 2
 focus_mode = 0
 text = "Disable Culling"
 
-[node name="btnMorphing" type="Button" parent="Buttons"]
+[node name="btnMorphing" type="Button" parent="Buttons" unique_id=944143448]
 layout_mode = 2
 focus_mode = 0
 text = "Disable Morphing"
 
-[node name="btnRenderFramebuffer" type="Button" parent="Buttons"]
+[node name="btnRenderFramebuffer" type="Button" parent="Buttons" unique_id=1234958526]
 layout_mode = 2
 focus_mode = 0
 text = "Render Framebuffer"
 
-[node name="btnRenderSurface" type="Button" parent="Buttons"]
+[node name="btnRenderSurface" type="Button" parent="Buttons" unique_id=987258348]
 layout_mode = 2
 focus_mode = 0
 text = "Render Surface"
 
-[node name="btnVirtualTexturing" type="Button" parent="Buttons"]
+[node name="btnVirtualTexturing" type="Button" parent="Buttons" unique_id=536388811]
 layout_mode = 2
 focus_mode = 0
 text = "Disable Virtual Texturing"
 
-[node name="btnWipeVirtualTexture" type="Button" parent="Buttons"]
+[node name="btnWipeVirtualTexture" type="Button" parent="Buttons" unique_id=2002445325]
 layout_mode = 2
 focus_mode = 0
 text = "Wipe Virtual Texture"
 
-[node name="btnQuit" type="Button" parent="Buttons"]
+[node name="btnQuit" type="Button" parent="Buttons" unique_id=2012464010]
 layout_mode = 2
 focus_mode = 0
 text = "Quit"
 
-[node name="btnFunction" type="Button" parent="Buttons"]
+[node name="btnFunction" type="Button" parent="Buttons" unique_id=1233115701]
 layout_mode = 2
 focus_mode = 0
 text = "Function"
 
-[node name="btnFunction2" type="Button" parent="Buttons"]
+[node name="btnFunction2" type="Button" parent="Buttons" unique_id=489418401]
 layout_mode = 2
 focus_mode = 0
 text = "Function"

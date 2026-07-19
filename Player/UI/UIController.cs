@@ -14,7 +14,6 @@ public partial class UIController : Control
 	[Export] private Button _btnCubeMode;
 	[Export] private Button _btnCulling;
 	[Export] private Button _btnMorphing;
-	[Export] private Button _btnRenderFramebuffer;
 	[Export] private Button _btnRenderSurface;
 	[Export] private Button _btnVirtualTexturing;
 
@@ -54,52 +53,36 @@ public partial class UIController : Control
 		_lblCameraMode.Text = $"Camera Mode: {PlanetController.CameraController.GetViewport().DebugDraw}";
 	}
 
-	// public void EnableOrDisableProcessing()
-	// {
-	// 	if (PlanetController.TerrainTessellator.Paused)
-	// 		PlanetController.TerrainTessellator.Resume();
-	// 	else
-	// 		PlanetController.TerrainTessellator.Pause();
-
-	// 	_btnProcessLod.Text = PlanetController.TerrainTessellator.Paused ? "Stop Processing LOD" : "Start Processing LOD";
-	// }
-
 	public void EnableOrDisableVirtualTexturing()
 	{
-		PlanetController.SparseVirtualTexture.Paused = !PlanetController.SparseVirtualTexture.Paused;
-		_btnVirtualTexturing.Text = PlanetController.SparseVirtualTexture.Paused ? "Enable Virtual Texturing" : "Disable Virtual Texturing";
+		PlanetController.DisableVirtualTexturing = !PlanetController.DisableVirtualTexturing;
+		_btnVirtualTexturing.Text = PlanetController.DisableVirtualTexturing ? "Enable Virtual Texturing" : "Disable Virtual Texturing";
 	}
 	public void WipeVirtualTexture()
 	{
 		PlanetController.SparseVirtualTexture.ClearVirtualTexture();
 	}
 
-	// public void UpdateProcessingText()
-	// {
-	// 	_btnProcessLod.Text = PlanetController.TerrainTessellator.Paused ? "Stop Processing LOD" : "Start Processing LOD";
-	// }
-
 	public void EnableOrDisableCubeMode()
 	{
-		bool currentSetting = !PlanetController.CubeMode;
-		PlanetController.CubeMode = currentSetting;
+		bool currentSetting = !PlanetController.IsCube;
+		PlanetController.IsCube = currentSetting;
 		_btnCubeMode.Text = currentSetting ? "Disable Cube Mode" : "Enable Cube Mode";
 	}
 
 	public void EnableOrDisableCulling()
 	{
-		bool currentSetting = !PlanetController.Culling;
-		PlanetController.Culling = currentSetting;
+		bool currentSetting = !PlanetController.IsCulling;
+		PlanetController.IsCulling = currentSetting;
 		_btnCulling.Text = currentSetting ? "Disable Culling" : "Enable Culling";
 	}
 
 	public void EnableOrDisableMorphing()
 	{
-		bool currentSetting = !PlanetController.Morphing;
-		PlanetController.Morphing = currentSetting;
+		bool currentSetting = !PlanetController.IsMorphing;
+		PlanetController.IsMorphing = currentSetting;
 		_btnMorphing.Text = currentSetting ? "Disable Morphing" : "Enable Morphing";
 	}
-
 
 	public void RenderFramebuffer()
 	{
@@ -119,47 +102,4 @@ public partial class UIController : Control
 	{
 		GetTree().ChangeSceneToFile("res://Scenes/Main.tscn");
 	}
-
-	private bool previousValue = true;
-	public void OnFunctionButton()
-	{
-		int newPadding = (int)PlanetController.SurfaceShader.GetShaderParameter("tile_padding") + 1;
-		GD.Print($"Current Padding: {PlanetController.SurfaceShader.GetShaderParameter("tile_padding")}, New Padding {newPadding}");
-		PlanetController.SurfaceShader.SetShaderParameter("tile_padding", newPadding);
-		
-		// PlanetController.SurfaceShader.SetShaderParameter("render_padded_uvs", !previousValue);
-		// PlanetController.SurfaceShader.SetShaderParameter("render_tile_uvs", !previousValue);
-		// previousValue = !previousValue;
-	}
-	public void OnFunction2Button()
-	{
-		int newPadding = (int)PlanetController.SurfaceShader.GetShaderParameter("tile_padding") - 1;
-		GD.Print($"Current Padding: {PlanetController.SurfaceShader.GetShaderParameter("tile_padding")}, New Padding {newPadding}");
-		PlanetController.SurfaceShader.SetShaderParameter("tile_padding", newPadding);
-		
-		// PlanetController.SurfaceShader.SetShaderParameter("render_padded_uvs", !previousValue);
-		// PlanetController.SurfaceShader.SetShaderParameter("render_tile_uvs", !previousValue);
-		// previousValue = !previousValue;
-	}
-	// public void GenerateAlbedoMap()
-	// {
-	// 	Image image = Image.LoadFromFile($"{PlanetController.SaveRootPath}/Base Images/{PlanetController.BaseAlbedoImageName}");
-	// 	image.ResizeToPo2(square: true);
-	// 	Vector2I baseImageSize = image.GetSize();
-	// 	// ChunkManager chunkManager = new(baseImageSize, PlanetController.TilePartitionCount, PlanetController.BorderSize);
-	// 	// chunkManager.BorderSize = 
-	// 	// chunkManager.QueueGenerateChunksFromImage(SaveRootPath, "Albedo", $"Base Images/{BaseAlbedoImageName}", "Tiles/Albedo Tiles", "Cubemap/Albedo");
-	// 	// _ = chunkManager.CreateChunks().ContinueWith(_ => chunkManager.CleanupGPUResources());
-	// }
-
-	// public void GenerateHeightmap()
-	// {
-	// 	Image image = Image.LoadFromFile($"{PlanetController.SaveRootPath}/Base Images/{PlanetController.BaseHeightmapImageName}");
-	// 	image.ResizeToPo2(square: true);
-	// 	Vector2I baseImageSize = image.GetSize();
-
-	// 	// ChunkManager chunkManager = new(baseImageSize, CenterSize, BorderSize);
-	// 	// chunkManager.QueueGenerateChunksFromImage(SaveRootPath, "Heightmap", $"Base Images/{BaseHeightmapImageName}", "Tiles/Heightmap Tiles", "Cubemap/Heightmap", Image.Interpolation.Trilinear);
-	// 	// _ = chunkManager.CreateChunks().ContinueWith(_ => chunkManager.CleanupGPUResources());
-	// }
 }

@@ -6,6 +6,24 @@ public static class VectorUtils
     public const double INVERSE_SQUARE_ROOT_2 = 0.70710677;
     public const double SQUARE_ROOT_2_2 = 0.707106781187;
     public const double SQUARE_ROOT_2 = 1.41421356237;
+    public static readonly Vector3[] Normals =
+    {
+        Vector3.Right,
+        Vector3.Left,
+        Vector3.Up,
+        Vector3.Down,
+        Vector3.Back,
+        Vector3.Forward,
+    };
+    public static readonly int[] NormalIDs =
+    {
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+    };
 
     public static readonly Vector3[] Corners =
     [
@@ -161,12 +179,15 @@ public static class VectorUtils
         return cubePoint;
     }
 
-    public static Vector2 PointOnCubeToUV(Vector3 point)
+    public static Vector2 PointOnCubeToUV(int normalId, Vector3 point)
     {
-        if (point.X == 1 || point.X == -1) return (new Vector2(point.Y, point.Z) + Vector2.One) / 2;
-        if (point.Y == 1 || point.Y == -1) return (new Vector2(point.X, point.Y) + Vector2.One) / 2;
-        if (point.Z == 1 || point.Z == -1) return (new Vector2(point.X, point.Y) + Vector2.One) / 2;
-        return Vector2.Zero;
+        Vector2 uv = Vector2.Zero;
+        point = (point + Vector3.One * 1.0f) / 2.0f;
+        uv.X = normalId == 0 || normalId == 1 ? point.Z : point.X;
+        uv.X = normalId == 0 || normalId == 2 || normalId == 5 ? 1.0f - uv.X : uv.X;
+        uv.Y = normalId == 2 || normalId == 3 ? 1.0f - point.Z : 1.0f - point.Y;
+       
+        return uv;
     }
 
     public static Vector2 PointOnSphereToUV(Vector3 point)

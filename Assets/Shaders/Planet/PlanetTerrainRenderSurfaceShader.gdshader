@@ -33,29 +33,95 @@ vec3 hsl_to_rgb(vec3 c) {
 	return c.z * mix(k.xxx, clamp(p - k.xxx, 0.0, 1.0), c.y);
 }
 
-float checker(vec2 _uv, float size) {
-    vec2 grid = floor(_uv * size);
-    return mod(grid.x + grid.y, 2.0);
+vec3 to_checkers(vec2 uv, float size) {
+	vec2 grid = floor(uv * size);
+	vec3 color = mod(grid.x + grid.y, 2.0) == 0.0
+	? vec3(1.0, 0.0, 0.0)
+	: vec3(0.0, 1.0, 0.0);
+    return color;
+}
+
+vec3 to_cells(vec2 uv, float size) {
+	vec2 cell_uv = floor(uv * size);
+	return vec3(cell_uv / (size - 1.0), 0.0);
+}
+
+vec3 displayBranches() {
+	int root_id = int(key.z);
+	int msb = find_msb_64(key.xy);
+	int branching_index = int(get_branching(key.xy, (msb / 2) - 1, msb));
+	return hsl_to_rgb(vec3(float(lod) / 16.0, 1.0, float(branching_index + 1) / 4.0));
+}
+
+void calculate_normal(vec3 base_normal, float height) {
+	vec3 tangent = normalize(cross(base_normal, vec3(0, 1, 0)));
+	vec3 bitangent = cross(base_normal, tangent);
+
+}
+
+vec3 color_base_normal_and_adjecenies(vec2 uv, float coverage, int normal_id) {
+	vec3 color = vec3(0);
+
+	int[4] adjecent_normals = get_adjecent_normal_ids(normal_id);
+
+	float left = uv.x;
+	float right = 1.0 - uv.x;
+	float bottom = uv.y;
+	float top = 1.0 - uv.y;
+
+	float d = min(min(left, right), min(bottom, top));
+	if (d < coverage) {
+		if (left == d)
+			color = normals_to_colors[adjecent_normals[0]];
+		else if (bottom == d)
+			color = normals_to_colors[adjecent_normals[1]];
+		else if (right == d)
+			color = normals_to_colors[adjecent_normals[2]];
+		else if (top == d)
+			color = normals_to_colors[adjecent_normals[3]];
+	} else {
+		color = normals_to_colors[normal_id];
+	}
+	return color;
+}
+
+bool in_bounds(vec3 p) { return max(abs(p.x), max(abs(p.y), abs(p.z))) <= 1.0; }
+
+vec3 compute_sphere_normal_from_heightmap( vec2 uv, int normal_id, vec3 vertex_position, int lod_index) {
+	int[4] adjecent_normals_ids = get_adjecent_normal_ids(normal_id);
+	float step_amount = 0.0001;
+	vec3 normal = normals[normal_id];
+	float[4] heights;
+	for (int i = 0; i < 4; i++) {
+		vec3 adjecent_normal = normals[adjecent_normals_ids[i]];
+		vec3 new_cube_position = vertex_position + adjecent_normal * step_amount;
+		int selected_normal_id = normal_id;
+		if (!in_bounds(new_cube_position)) {
+			new_cube_position = vertex_position - normal * step_amount;
+			selected_normal_id = adjecent_normals_ids[i];
+		}
+		vec2 uv = get_cube_uv(selected_normal_id, new_cube_position);
+		vec3 tile_uv = get_tile_uv(terrain_indirection_table, lod_index, tile_size, uv, total_texture_subdivisions, selected_normal_id);
+			heights[i] = get_tile(height_map_tile_cache, tile_uv).r;
+	}
+	float hL = heights[0];
+	float hR = heights[1];
+	float hU = heights[2];
+	float hD = heights[3];
+
+	float dx = hR - hL;
+	float dy = hU - hD;
+
+	return vec3(dx, dy, 0);
 }
 
 void fragment() {
-	//vec3 debug_color = hsl_to_rgb(vec3(float(lod) / 16.0, 1.0, 0.5));
 	vec3 normal = normals[key.z];
-	int normal_id = get_normal_id(ivec3(normal));
-	//NORMAL = height_to_normal(elevation, normal_strength, VERTEX, NORMAL);
-
-
-	int lod = int(calculate_lod_to_cam(morphed_sphere_local_position, camera_position, planet_transform_matrix, fovy, sub_factor, radius, maximum_lod));
+	int normal_id = int(key.z);
 	int lod_index = lod_to_mip_map[lod];
 
-	vec3 tile_uv = vec3(0);
-	//if (render_padded_uvs)
-	//{
-	tile_uv = get_tile_uv(terrain_indirection_table, lod_index, tile_padding, tile_size, vertex_uv, total_texture_subdivisions, int(key.z));
+	vec3 tile_uv = get_tile_uv(terrain_indirection_table, lod_index, tile_size, vertex_uv, total_texture_subdivisions, int(key.z));
 
-	//} else {
-		//tile_uv = get_tile_uv(terrain_indirection_table, lod_index, 0, vertex_uv, total_texture_subdivisions, int(key.z));
-	//}
 	if (render_tile_uvs)
 	{
 		ALBEDO = vec3(tile_uv.xy, 0);
@@ -64,25 +130,21 @@ void fragment() {
 	{
 		ALBEDO = pow(get_tile(albedo_tile_cache, tile_uv).xyz, vec3(2.2));
 	}
-	
-	//vec2 wave = 0.5 + 0.5 * sin( (vertex_uv * 40.0) + TIME * 4.0);
-	//vec3 uv_color = vec3(vertex_uv, 0.0);
-	//ALBEDO = mix(uv_color, vec3(wave, 1.0), 0.5);
-	//ALBEDO = vec3(tile_uv.xy, 0);
 
-	//ALBEDO = pow(get_tile(height_map_tile_cache, tile_uv).xyz, vec3(2.2));
-	//ALBEDO = vec3(vertex_uv.xy, 0);
-	//vec3 a = get_sphere_normal(height_map_tile_cache, vec3(vertex_uv, float(key.z)), normal_id, normal_strength, get_rotation_from_matrix(planet_transform_matrix) );
-	//ALBEDO = a;
-	//ALBEDO = point_to_point_on_cube(normal_id, vertex_uv);
+	int[4] adjecent_normals_ids = get_adjecent_normal_ids(normal_id);
+	float step_amount = 0.0001;
+	float[4] heights;
 
-	//ALBEDO = vec3(dot(NORMAL, a), 0, 0);
- 	//float lod_grid_size = grid_size / pow(2.0, float(lod_index));
-    //vec2 cell_uv = floor(uv * lod_grid_size) / lod_grid_size;
-
-	//ALBEDO = render_frame_buffer_on_top ? mix(ALBEDO, vec3(cell_uv, 0), 0.75) : ALBEDO;
-	//
-	//float checker_value = checker(uv, lod_grid_size);
-	//vec3 checker_color = mix(ALBEDO, ALBEDO * 0.5, checker_value);
-	//ALBEDO = render_frame_buffer_on_top ? mix(checker_color, vec3(cell_uv, 0), 0.75) : checker_color;
+	vec3 cube_local_position = get_cube_point(normal_id, vertex_uv);
+	//ALBEDO = compute_sphere_normal_from_heightmap(vertex_uv, normal_id, cube_local_position, lod_index);
+	//vec3 sphere_local_position = point_on_cube_to_point_on_sphere(cube_local_position);
+	/*
+	vec3 color = vec3(1, 0, 0);
+	if (lod % 2 == 0)
+	{
+		color = vec3(0, 0, 1);
+	}
+	int bit = find_msb_64(key.xy);
+	ALBEDO = hsl_to_rgb(vec3(float(lod) / 16.0, 1, 1));
+	*/
 }

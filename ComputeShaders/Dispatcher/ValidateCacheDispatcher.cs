@@ -23,9 +23,9 @@ namespace PlanetGame.ComputeShaders.Dispatcher
         {
             _computeShaderUniforms = new System.Collections.Generic.Dictionary<Enum, ComputeShaderUniform>()
             {
-                [BufferNames.INDIRECTION_TABLE] = SparseVirtualTexture.ReadFramebuffer[ReadFramebufferDispatcher.BufferNames.INDIRECTION_TABLE],
+                [BufferNames.INDIRECTION_TABLE] = SparseVirtualTexture.ReadFramebuffer[ResolveTileTextureDispatcher.BufferNames.INDIRECTION_TABLE],
 
-                [BufferNames.RESIDENCY_TABLE] = SparseVirtualTexture.ReadFramebuffer[ReadFramebufferDispatcher.BufferNames.RESIDENCY_TABLE]
+                [BufferNames.RESIDENCY_TABLE] = SparseVirtualTexture.ReadFramebuffer[ResolveTileTextureDispatcher.BufferNames.RESIDENCY_TABLE]
             };
 
             CreateUniformSet();
@@ -34,12 +34,12 @@ namespace PlanetGame.ComputeShaders.Dispatcher
         public override void Invoke()
         {
             uint gridSize = SparseVirtualTexture.ResidencyTable.GridSize;
-            long computeList = _RenderingDevice.ComputeListBegin();
-            _RenderingDevice.ComputeListBindComputePipeline(computeList, _pipeline);
-            _RenderingDevice.ComputeListBindUniformSet(computeList, _uniformSet, 0);
-            _RenderingDevice.ComputeListAddBarrier(computeList);
-            _RenderingDevice.ComputeListDispatch(computeList, gridSize, gridSize, 1);
-            _RenderingDevice.ComputeListEnd();
+            long computeList = RenderingDevice.ComputeListBegin();
+            RenderingDevice.ComputeListBindComputePipeline(computeList, _pipeline);
+            RenderingDevice.ComputeListBindUniformSet(computeList, _uniformSet, 0);
+            RenderingDevice.ComputeListAddBarrier(computeList);
+            RenderingDevice.ComputeListDispatch(computeList, gridSize, gridSize, 1);
+            RenderingDevice.ComputeListEnd();
         }
 
         public override void UpdateUniforms()

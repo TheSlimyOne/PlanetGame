@@ -26,7 +26,7 @@ public partial class CustomCamera : Camera3D
 
 	public override void _PhysicsProcess(double delta)
 	{
-		if (GetTree().Root.GetViewport().GetCamera3D() == this)
+		// if (GetTree().Root.GetViewport().GetCamera3D() == this)
 		{
 			_keyRotation.X += Input.GetActionStrength("rotate_right") - Input.GetActionStrength("rotate_left");
 			_keyRotation.Y += Input.GetActionStrength("rotate_up") - Input.GetActionStrength("rotate_down");
