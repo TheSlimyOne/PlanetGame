@@ -147,3 +147,8 @@ switch_cam={
 3d_render/layer_1="All"
 3d_render/layer_2="Planet"
 3d_render/layer_3="Debug"
+
+[rendering]
+
+lights_and_shadows/directional_shadow/size=8192
+lights_and_shadows/directional_shadow/soft_shadow_filter_quality=3

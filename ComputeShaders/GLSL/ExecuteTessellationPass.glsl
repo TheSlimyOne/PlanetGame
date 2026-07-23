@@ -54,6 +54,8 @@ layout(set = 0, binding = 6, std430) buffer restrict OutputBuffer {
 
 layout(set = 0, binding = 7, r32f) restrict uniform image2D GlobalKeyData;
 
+layout(set = 0, binding = 8, rgba32f) restrict uniform image2D base_mesh_data;
+
 // vec3 apply_height_to_point(vec3 point, uint normal_id)
 // {
 //     vec3 rotated_point = (vec4(point, 1) * get_rotation_from_matrix(planet_transform_matrix)).xyz;
@@ -170,6 +172,26 @@ void process_triangle(Triangle source_triangle, uvec4 source_key, Triangle paren
     cull_key(source_key, source_triangle, lod); 
 }
 
+vec3[3] get_base_primitive(uint mesh_polygon_id, uint root_id)
+{
+	int tri_index_a = 12 * int(mesh_polygon_id) + 3 * int(root_id);
+	int tri_index_b = tri_index_a + 2;
+	int tri_index_c = tri_index_a + 1;
+
+	int vertex_index_a = int(imageLoad(base_mesh_data, ivec2(tri_index_a, 2)).x);
+	int vertex_index_b = int(imageLoad(base_mesh_data, ivec2(tri_index_b, 2)).x);
+	int vertex_index_c = int(imageLoad(base_mesh_data, ivec2(tri_index_c, 2)).x);
+
+
+	vec3 base_primitive[3] = vec3[3] (
+		imageLoad(base_mesh_data, ivec2(vertex_index_a, 1)).xyz,
+		imageLoad(base_mesh_data, ivec2(vertex_index_b, 1)).xyz,
+		imageLoad(base_mesh_data, ivec2(vertex_index_c, 1)).xyz
+	);
+
+    return base_primitive;
+}
+
 void main() {
     uint invocationID = gl_GlobalInvocationID.x;
     if (invocationID >= primitive_count_full[read_index])
@@ -181,18 +203,21 @@ void main() {
     uvec4 parent_key = get_parent_key(key);
     uvec4 grand_parent_key = get_parent_key(parent_key);
 
-    Triangle triangle = create_triangle(key);
-    Triangle parent_triangle = create_triangle(parent_key);
-    Triangle grand_parent_triangle = create_triangle(grand_parent_key);
+    vec3[3] base_primitive = get_base_primitive(key.z, key.w);
+
+    Triangle triangle = create_triangle(key, base_primitive);
+    Triangle parent_triangle = create_triangle(parent_key, base_primitive);
+    Triangle grand_parent_triangle = create_triangle(grand_parent_key, base_primitive);
 
     float current_LOD = get_lod_of_key(key.xy);
     float parent_target_LOD = calculate_lod_to_cam(parent_triangle.origin, planet_transform_matrix, sub_factor, radius, fovy, minimum_lod, maximum_lod);
     float target_LOD = calculate_lod_to_cam(triangle.origin, planet_transform_matrix, sub_factor, radius, fovy, minimum_lod, maximum_lod);
 
+
    if (target_LOD > current_LOD && current_LOD < maximum_lod) { // Subdivide 
         uvec4 children_keys[4] = get_child_keys(key); 
         for (int i = 0; i < 4; i++) { 
-            Triangle child_triangle = create_triangle(children_keys[i]); 
+            Triangle child_triangle = create_triangle(children_keys[i], base_primitive); 
             process_triangle(child_triangle, children_keys[i], triangle, current_LOD + 1);
         } 
     } else if (parent_target_LOD < current_LOD - 1 && current_LOD > minimum_lod) { // Merge

@@ -110,36 +110,34 @@ mat3 leaf_space_to_quadtree_space(uvec2 key) {
     return transform_matrix;
 }
 
-vec3[3] get_base_primitive(uint mesh_polygon_id, uint root_id) {
-	vec3 normal = normals[mesh_polygon_id];
-    vec3 axis_a = normal.yzx;
-    vec3 axis_b = cross(normal, axis_a);
+//vec3[3] get_base_primitive(uint mesh_polygon_id, uint root_id) {
+	//vec3 normal = normals[mesh_polygon_id];
+    //vec3 axis_a = normal.yzx;
+    //vec3 axis_b = cross(normal, axis_a);
+//
+	//uint b1b2 = root_id;
+    //int b1 = int(b1b2 >> 1u);
+    //int b2 = int(b1b2 & 1u);
+//
+    //int l0 = 2 * b2 - 1;
+    //int r0 = 2 * b1 - 1;
+    //int l1 = -r0;
+    //int r1 = l0;
+//
+    //vec3[] base_primitive = {
+        //float(l0) * axis_a + float(l1) * axis_b + normal,
+        //float(r0) * axis_a + float(r1) * axis_b + normal,
+        //normal
+    //};
+//
+    //return base_primitive;
+//}
 
-	uint b1b2 = root_id;
-    int b1 = int(b1b2 >> 1u);
-    int b2 = int(b1b2 & 1u);
-
-    int l0 = 2 * b2 - 1;
-    int r0 = 2 * b1 - 1;
-    int l1 = -r0;
-    int r1 = l0;
-
-    vec3[] base_primitive = {
-        float(l0) * axis_a + float(l1) * axis_b + normal,
-        float(r0) * axis_a + float(r1) * axis_b + normal,
-        normal
-    };
-
-    return base_primitive;
-}
-
-mat3 quadtree_space_to_polygon_space(uint mesh_polygon_id, uint root_id) {
-    vec3[3] base_primitive = get_base_primitive(mesh_polygon_id, root_id);
-
+mat3 quadtree_space_to_polygon_space(vec3[3] base_primitive) {
     return mat3(
-		base_primitive[0] - base_primitive[2],
-		base_primitive[1] - base_primitive[2],
-		base_primitive[2]
+        base_primitive[2] - base_primitive[0],
+        base_primitive[1] - base_primitive[0],
+        base_primitive[0]
     );
 }
 

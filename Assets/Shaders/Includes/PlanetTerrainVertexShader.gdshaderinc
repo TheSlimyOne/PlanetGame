@@ -12,7 +12,7 @@ uniform mat4 planet_transform_matrix;
 
 uniform sampler2DArray height_map_tile_cache : repeat_disable, source_color, filter_linear;
 uniform sampler2DArray terrain_indirection_table : repeat_disable, source_color, filter_nearest;
-
+uniform sampler2D base_mesh_data : repeat_disable, filter_nearest;
 
 uniform bool is_cube;
 
@@ -35,13 +35,31 @@ uniform int total_texture_subdivisions;
 uniform int[32] lod_to_mip_map;
 
 
+vec3[3] get_base_primitive(uint mesh_polygon_id, uint root_id)
+{
+	int tri_index_a = 12 * int(mesh_polygon_id) + 3 * int(root_id);
+	int tri_index_b = tri_index_a + 1;
+	int tri_index_c = tri_index_a + 2;
+
+	int vertex_index_a = int(texelFetch(base_mesh_data, ivec2(tri_index_a, 2), 0).x);
+	int vertex_index_b = int(texelFetch(base_mesh_data, ivec2(tri_index_b, 2), 0).x);
+	int vertex_index_c = int(texelFetch(base_mesh_data, ivec2(tri_index_c, 2), 0).x);
+
+	return vec3[3](
+		texelFetch(base_mesh_data, ivec2(vertex_index_a, 1), 0).xyz,
+		texelFetch(base_mesh_data, ivec2(vertex_index_b, 1), 0).xyz,
+		texelFetch(base_mesh_data, ivec2(vertex_index_c, 1), 0).xyz
+	);
+}
+
 void vertex() {
 	key = floatBitsToUint(INSTANCE_CUSTOM);
 	flags = key.w >> 29u;
 	key.w &= 0xFu;
-
+	
+	vec3[3] base_primitive = get_base_primitive(key.z, key.w);
 	mat3 quadtree_space = leaf_space_to_quadtree_space(key.xy);
-	mat3 polygon_space = quadtree_space_to_polygon_space(key.z, key.w);
+	mat3 polygon_space = quadtree_space_to_polygon_space(base_primitive);
 
 	vec2 quad_position = get_quadtree_space_point(VERTEX.xy, quadtree_space);
 	vec3 cube_local_position = get_polygon_space_point(quad_position, polygon_space);

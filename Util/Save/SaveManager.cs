@@ -289,4 +289,18 @@ public static class SaveManager
         }
         return images;
     }
+
+    public static Dictionary<SaveDataIdentifier, Texture2D> GetBaseImages(string saveName)
+    {
+        Dictionary<SaveDataIdentifier, Texture2D> images = [];
+
+        for (int i = 0; i < BaseImages.Length; i++)
+        {
+            SaveDataIdentifier baseImage = BaseImages[i];
+            string path = GetDirectoryPath(saveName, baseImage);
+
+            images[baseImage] = FileExists(path) ? ImageTexture.CreateFromImage(Image.LoadFromFile(path)) : new PlaceholderTexture2D();
+        }
+        return images;
+    }
 }

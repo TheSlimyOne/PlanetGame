@@ -77,6 +77,8 @@ public partial class PlanetController : Node3D
     public Transform3D PlanetRotation { get; private set; } = Transform3D.Identity;
     public Transform3D PlanetScale { get; private set; } = Transform3D.Identity;
 
+    [Export] public TextureRect A;
+
     public void TranslatePlanet(Vector3 offset)
     {
         PlanetTranslation = PlanetTranslation.Translated(offset);
@@ -360,6 +362,8 @@ public partial class PlanetController : Node3D
 
         bindableShaderMaterial.Bind("height_map_tile_cache", () => SparseVirtualTexture.HeightTileCache.Cache);
         bindableShaderMaterial.Bind("terrain_indirection_table", () => SparseVirtualTexture.IndirectionTable.Table);
+        bindableShaderMaterial.Bind("base_mesh_data", () => TerrainTessellator.ExecuteTessellationPass.MeshImageData);
+
     }
 
     public void SurfaceShaderBindParameters()

@@ -21,9 +21,6 @@ sky = SubResource("Sky_emtpu")
 tonemap_mode = 2
 glow_enabled = true
 
-[sub_resource type="ViewportTexture" id="ViewportTexture_qtwtp"]
-viewport_path = NodePath("CameraController/SubViewport")
-
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_6uokv"]
 albedo_color = Color(0.490196, 1, 0, 1)
 
@@ -47,10 +44,9 @@ environment = SubResource("Environment_qtwtp")
 
 [sub_resource type="SphereShape3D" id="SphereShape3D_tgghh"]
 
-[node name="Planet" type="Node3D" unique_id=830740909 node_paths=PackedStringArray("CameraController", "SurfaceAttachment", "UIController", "MainLightSource", "WorldEnvironment")]
+[node name="Planet" type="Node3D" unique_id=830740909 node_paths=PackedStringArray("CameraController", "SurfaceAttachment", "UIController", "MainLightSource", "WorldEnvironment", "A")]
 script = ExtResource("1_qtwtp")
-Radius = 8000.0
-HeightScale = 200.0
+Radius = 227.36
 CameraController = NodePath("CameraController")
 SurfaceAttachment = NodePath("SurfaceAttachment")
 UIController = NodePath("UIController")
@@ -60,14 +56,15 @@ WorldEnvironment = NodePath("WorldEnvironment")
 BaseZoomSpeed = 1.0
 BaseRotationSpeed = 1.0
 MovementEasing = 10.0
-Resolution = 17
+Resolution = 2
 MorphRange = Vector2(0.4, 0.8)
 StartingLod = 0
 NormalStrength = 149.0
-ShowDebugWindow = true
+IsCube = true
 IsMorphing = false
 Bias1 = 0.5
 Verbose = true
+A = NodePath("UIController/TextureRect")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1223459526]
 environment = SubResource("Environment_qqt2a")
@@ -79,6 +76,7 @@ PlanetController = NodePath("..")
 
 [node name="TextureRect" type="TextureRect" parent="UIController" unique_id=1683705948]
 visible = false
+texture_filter = 1
 layout_mode = 1
 anchors_preset = 2
 anchor_top = 1.0
@@ -86,7 +84,6 @@ anchor_bottom = 1.0
 offset_top = -329.0
 offset_right = 593.0
 grow_vertical = 0
-texture = SubResource("ViewportTexture_qtwtp")
 
 [node name="CameraController" type="Node" parent="." unique_id=1791366834]
 script = ExtResource("5_usljo")

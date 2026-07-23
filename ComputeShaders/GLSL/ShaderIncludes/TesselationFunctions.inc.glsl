@@ -148,28 +148,28 @@ vec2 rotate(uint rotation_index, vec2 translation) {
     +--+-------------+------------+-------------+-------------+----------+---------+
 */
 
-vec3[3] get_base_primitive(uint mesh_polygon_id, uint root_id) {
-    vec3 normal = face_normal(mesh_polygon_id);
-    vec3 axis_a = normal.yzx;
-    vec3 axis_b = cross(normal, axis_a);
+// vec3[3] get_base_primitive(uint mesh_polygon_id, uint root_id) {
+//     vec3 normal = face_normal(mesh_polygon_id);
+//     vec3 axis_a = normal.yzx;
+//     vec3 axis_b = cross(normal, axis_a);
 
-    uint b1b2 = root_id;
-    int b1 = int(b1b2 >> 1);
-    int b2 = int(b1b2 & 1);
+//     uint b1b2 = root_id;
+//     int b1 = int(b1b2 >> 1);
+//     int b2 = int(b1b2 & 1);
 
-    int l0 = 2 * b2 - 1;
-    int r0 = 2 * b1 - 1;
-    int l1 = -r0;
-    int r1 = l0;
+//     int l0 = 2 * b2 - 1;
+//     int r0 = 2 * b1 - 1;
+//     int l1 = -r0;
+//     int r1 = l0;
 
-    vec3[] base_primitive = {
-            (l0 * axis_a) + (l1 * axis_b) + normal,
-            (r0 * axis_a) + (r1 * axis_b) + normal,
-            normal
-        };
+//     vec3[] base_primitive = {
+//             (l0 * axis_a) + (l1 * axis_b) + normal,
+//             (r0 * axis_a) + (r1 * axis_b) + normal,
+//             normal
+//         };
 
-    return base_primitive;
-}
+//     return base_primitive;
+// }
 
 
 // ---------- Transform Helpers ----------
@@ -201,13 +201,11 @@ mat3 leaf_space_to_quadtree_space(uvec2 key) {
     return transform_matrix;
 }
 
-mat3 quadtree_space_to_polygon_space(uint mesh_polygon_id, uint root_id) {
-    vec3[3] base_primitive = get_base_primitive(mesh_polygon_id, root_id);
-
+mat3 quadtree_space_to_polygon_space(vec3[3] base_primitive) {
     return mat3(
-        base_primitive[0] - base_primitive[2],
-        base_primitive[1] - base_primitive[2],
-        base_primitive[2]
+        base_primitive[2] - base_primitive[0],
+        base_primitive[1] - base_primitive[0],
+        base_primitive[0]
     );
 }
 
@@ -223,7 +221,7 @@ vec3 get_polygon_space_point(vec2 point, mat3 polygon_space_matrix) {
     return (polygon_space_matrix * vec3(point, 1)).xyz;
 }
 
-Triangle create_triangle(uvec4 key) {
+Triangle create_triangle(uvec4 key, vec3[3] base_primitive) {
     mat3 quadtree_space = leaf_space_to_quadtree_space(key.xy);
 
     vec2 point_a = get_quadtree_point(vec2(0.5, 0.5), quadtree_space);
@@ -234,7 +232,7 @@ Triangle create_triangle(uvec4 key) {
     vec2 point_e = get_quadtree_point(vec2(1, 0), quadtree_space);
     vec2 point_f = get_quadtree_point(vec2(0, 1), quadtree_space);
 
-    mat3 polygon_space = quadtree_space_to_polygon_space(key.z, key.w);
+    mat3 polygon_space = quadtree_space_to_polygon_space(base_primitive);
 
     Triangle t;
 

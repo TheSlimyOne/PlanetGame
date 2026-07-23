@@ -71,7 +71,7 @@ size_flags_vertical = 3
 [node name="lblTitle" type="Label" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter" unique_id=1558421919]
 layout_mode = 2
 theme_override_font_sizes/font_size = 82
-text = "PLANET GAME!"
+text = "World Works"
 horizontal_alignment = 1
 uppercase = true
 
