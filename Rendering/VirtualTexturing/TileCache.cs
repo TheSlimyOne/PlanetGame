@@ -1,7 +1,7 @@
 using System;
 using System.Linq;
 using Godot;
-using PlanetGame.ComputeShaders;
+using PlanetGame.Shaders;
 namespace PlanetGame.Rendering.VirtualTexturing
 {
     public class TileCache : VirtualTextureTable
@@ -51,13 +51,12 @@ namespace PlanetGame.Rendering.VirtualTexturing
 
             ClearStorageTexture();
             SetFallbackSlots();
-            CreateVisualization();
         }
 
         //TODO not a fan of this one
         public override void ClearStorageTexture()
         {
-            RenderingServer.GetRenderingDevice().TextureClear(Cache.TextureRdRid, new Color("00000000"), 0, 1, 0, TotalTextureSlots);
+            RenderingServer.GetRenderingDevice().TextureClear(GetTableRid(), new Color("00000000"), 0, 1, 0, TotalTextureSlots);
         }
 
         public void InsertTile(string tilePath, uint slot)
@@ -71,54 +70,36 @@ namespace PlanetGame.Rendering.VirtualTexturing
 
             RenderingServer.CallOnRenderThread(Callable.From(() =>
             {
-                RenderingServer.GetRenderingDevice().TextureUpdate(Cache.TextureRdRid, slot, tile.GetData());
+                RenderingServer.GetRenderingDevice().TextureUpdate(GetTableRid(), slot, tile.GetData());
             }));
         }
 
-        protected override void CreateVisualization()
+        public override Control CreateVisualization(string name)
         {
-            Shader shader = GD.Load<Shader>(ShaderPaths.ARRAY_TEXTURE_VISUALIZER);
-            GridContainer gridContainer = new()
+            Shader shader = GD.Load<Shader>(ShaderPaths.TEXTURE_2D_ARRAY_SHADER);
+            Vector2I tileCount = new((int)Mathf.Sqrt(TotalTextureSlots), (int)Mathf.Sqrt(TotalTextureSlots));
+
+            Image image = Image.CreateEmpty(tileCount.X, tileCount.Y, false, Image.Format.Rgbaf);
+
+            TextureRect texture = new()
             {
-                Columns = (int)GridSize,
-                Name = "Tile Cache",
+                Name = $"Tile Cache {name}",
                 SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
-                SizeFlagsVertical = Control.SizeFlags.ExpandFill
+                SizeFlagsVertical = Control.SizeFlags.ExpandFill,
+                Texture = ImageTexture.CreateFromImage(image),
+                Material = new ShaderMaterial() { Shader = shader },
             };
-            gridContainer.SetAnchorsPreset(Control.LayoutPreset.FullRect);
 
-            for (int index = 0; index < TotalTextureSlots; index++)
-            {
-                ColorRect rect = new()
-                {
-                    SizeFlagsHorizontal = Control.SizeFlags.Fill | Control.SizeFlags.Expand,
-                    SizeFlagsVertical = Control.SizeFlags.Fill | Control.SizeFlags.Expand,
-                    // StretchMode = TextureRect.StretchModeEnum.KeepAspect,
-                    TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
-                    Material = new ShaderMaterial() { Shader = shader }
-                };
+            ((ShaderMaterial)texture.Material).SetShaderParameter("grid_size", tileCount);
+            ((ShaderMaterial)texture.Material).SetShaderParameter("image", Cache);
 
-                ((ShaderMaterial)rect.Material).SetShaderParameter("index", index);
-                ((ShaderMaterial)rect.Material).SetShaderParameter("table", Cache);
-
-                gridContainer.AddChild(rect);
-            }
-
-            Visualization = gridContainer;
+            return texture;
         }
 
         public override void CleanupGPU()
         {
-            Visualization.GetChildren().OfType<ColorRect>()
-                .ToList().ForEach(x =>
-                {
-                    ((ShaderMaterial)x.Material).SetShaderParameter("table", new PlaceholderTexture2D());
-                    x.Material = null;
-                    x.QueueFree();
-                });
-            Visualization.QueueFree();
-            if (Cache.TextureRdRid.IsValid)
-                RenderingServer.GetRenderingDevice().FreeRid(Cache.TextureRdRid);
+            if (GetTableRid().IsValid)
+                RenderingServer.GetRenderingDevice().FreeRid(GetTableRid());
         }
 
         public Image[] GetFallbackTiles()
@@ -150,7 +131,7 @@ namespace PlanetGame.Rendering.VirtualTexturing
                 if (rootTile.GetFormat() != Format)
                     rootTile.Convert(Format);
 
-                RenderingServer.GetRenderingDevice().TextureUpdate(Cache.TextureRdRid, i, rootTile.GetData());
+                RenderingServer.GetRenderingDevice().TextureUpdate(GetTableRid(), i, rootTile.GetData());
             }
         }
 
@@ -161,9 +142,10 @@ namespace PlanetGame.Rendering.VirtualTexturing
 
         public Image GetTile(uint slot)
         {
-            byte[] data = RenderingServer.GetRenderingDevice().TextureGetData(Cache.TextureRdRid, slot);
+            byte[] data = RenderingServer.GetRenderingDevice().TextureGetData(GetTableRid(), slot);
             return Image.CreateFromData((int)TileSize, (int)TileSize, false, Format, data);
         }
 
+        public override Rid GetTableRid() => Cache.TextureRdRid;
     }
 }

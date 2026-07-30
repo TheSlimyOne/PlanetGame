@@ -1,7 +1,7 @@
 using System;
 using System.Linq;
 using Godot;
-using PlanetGame.ComputeShaders;
+using PlanetGame.Shaders;
 
 namespace PlanetGame.Rendering.VirtualTexturing
 {
@@ -39,63 +39,91 @@ namespace PlanetGame.Rendering.VirtualTexturing
             };
 
             ClearStorageTexture();
-            CreateVisualization();
         }
 
         //TODO not a fan of this one
         public override void ClearStorageTexture()
         {
-            RenderingServer.GetRenderingDevice().TextureClear(Table.TextureRdRid, new Color("00000000"), 0, 1, 0, MipDepth * 6);
+            RenderingServer.GetRenderingDevice().TextureClear(GetTableRid(), new Color("00000000"), 0, 1, 0, MipDepth * 6);
         }
 
-        protected override void CreateVisualization()
+        public override Control CreateVisualization(string name = "")
         {
-            Shader shader = GD.Load<Shader>(ShaderPaths.ARRAY_TEXTURE_VISUALIZER);
-            GridContainer gridContainer = new()
-            {
-                Columns = (int)MipDepth,
-                Name = "Indirection State Table",
-                SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
-                SizeFlagsVertical = Control.SizeFlags.ExpandFill
-            };
-            gridContainer.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+            string shaderCode = """
+            shader_type canvas_item;
+            render_mode unshaded;
 
-            for (uint pageIndex = 0; pageIndex < 6; pageIndex++)
-            {
-                for (uint mipIndex = 0; mipIndex < MipDepth; mipIndex++)
-                {
-                    uint index = MipDepth * pageIndex + mipIndex;
-                    ColorRect rect = new()
+            uniform ivec2 grid_size;
+            uniform sampler2DArray state_table : repeat_disable, filter_nearest;
+
+            void fragment() {
+                vec2 grid_position = UV * vec2(grid_size);
+                vec2 grid_cell_uv = fract(grid_position);
+                ivec2 tile_position = ivec2(floor(grid_position));
+
+                ivec2 tile_size = textureSize(state_table, 0).xy;
+
+                int array_index = tile_position.y * grid_size.x + tile_position.x;
+
+                vec3 texture_coordinate = vec3(grid_cell_uv, float(array_index));
+
+                vec4 color = textureLod(state_table, texture_coordinate, 0.0);
+                if (color.w != 0.0)
+                    switch(tile_position.y)
                     {
-                        SizeFlagsHorizontal = Control.SizeFlags.Fill | Control.SizeFlags.Expand,
-                        SizeFlagsVertical = Control.SizeFlags.Fill | Control.SizeFlags.Expand,
-                        // StretchMode = TextureRect.StretchModeEnum.KeepAspect,
-                        TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
-                        Material = new ShaderMaterial() { Shader = shader }
-                    };
-
-                    ((ShaderMaterial)rect.Material).SetShaderParameter("index", index);
-                    ((ShaderMaterial)rect.Material).SetShaderParameter("table", Table);
-
-                    gridContainer.AddChild(rect);
-                }
+                    
+                        case 0:
+                            COLOR = vec4(1.0, 0.0, 0.0, 1.0);
+                            break;
+                        case 1:
+                            COLOR = vec4(0.0, 1.0, 0.0, 1.0);
+                            break;
+                        case 2:
+                            COLOR = vec4(0.0, 0.0, 1.0, 1.0);
+                            break;
+                        case 3:
+                            COLOR = vec4(1.0, 1.0, 0.0, 1.0);
+                            break;
+                        case 4:
+                            COLOR = vec4(0.0, 1.0, 1.0, 1.0);
+                            break;
+                        case 5:
+                            COLOR = vec4(1.0, 0.0, 1.0, 1.0);
+                            break;
+                        default:
+                            COLOR = vec4(1.0, 1.0, 1.0, 1.0);
+                            break;
+                    }
+                else
+                    COLOR = vec4(0, 0, 0, 1);
             }
-            Visualization = gridContainer;
+            """;
+
+            Vector2I tileCount = new((int)Mathf.Sqrt(MipDepth * 6), 6);
+
+            
+            Image image = Image.CreateEmpty(tileCount.X, tileCount.Y, false, Image.Format.Rgbaf);
+
+            TextureRect texture = new()
+            {
+                Name = $"State Table {name}",
+                SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
+                SizeFlagsVertical = Control.SizeFlags.ExpandFill,
+                Texture = ImageTexture.CreateFromImage(image),
+                TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
+                Material = new ShaderMaterial() { Shader = new() { Code = shaderCode } }
+            };
+
+            ((ShaderMaterial)texture.Material).SetShaderParameter("grid_size", tileCount);
+            ((ShaderMaterial)texture.Material).SetShaderParameter("state_table", Table);
+
+            return texture;
         }
 
         public override void CleanupGPU()
         {
-            Visualization.GetChildren().OfType<ColorRect>()
-                .ToList().ForEach(x =>
-                {
-                    ((ShaderMaterial)x.Material).SetShaderParameter("table", new PlaceholderTexture2D());
-                    x.Material = null;
-                    x.QueueFree();
-                });
-            Visualization.QueueFree();
-
-            if (Table.TextureRdRid.IsValid)
-                RenderingServer.GetRenderingDevice().FreeRid(Table.TextureRdRid);
+            if (GetTableRid().IsValid)
+                RenderingServer.GetRenderingDevice().FreeRid(GetTableRid());
         }
 
         public override void SetFallbackSlots()
@@ -107,5 +135,7 @@ namespace PlanetGame.Rendering.VirtualTexturing
         {
             throw new NotImplementedException();
         }
+
+        public override Rid GetTableRid() => Table.TextureRdRid;
     }
 }

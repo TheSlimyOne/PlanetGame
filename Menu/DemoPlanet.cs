@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using Godot;
-using PlanetGame.ComputeShaders;
+using PlanetGame.Shaders;
 using static SaveManager;
 
 public partial class DemoPlanet : SubViewport

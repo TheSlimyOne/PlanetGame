@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Godot;
-using PlanetGame.ComputeShaders;
+using PlanetGame.Shaders;
 using PlanetGame.Rendering.VirtualTexturing;
 using PlanetGame.Util;
 using static SaveManager;

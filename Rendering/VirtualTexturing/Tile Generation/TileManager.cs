@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using PlanetGame.ComputeShaders.Dispatcher;
+using PlanetGame.Shaders.Dispatchers;
 using Godot;
 using PlanetGame.Util;
 using System.Threading;

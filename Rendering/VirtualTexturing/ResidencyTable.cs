@@ -1,7 +1,7 @@
 using System;
 using System.Linq;
 using Godot;
-using PlanetGame.ComputeShaders;
+using PlanetGame.Shaders;
 
 namespace PlanetGame.Rendering.VirtualTexturing
 {
@@ -37,21 +37,20 @@ namespace PlanetGame.Rendering.VirtualTexturing
             };
             ClearStorageTexture();
             SetFallbackSlots();
-            CreateVisualization();
         }
 
         //TODO not a fan of this one
         public override void ClearStorageTexture()
         {
-            RenderingServer.GetRenderingDevice().TextureClear(Table.TextureRdRid, new Color("00000000"), 0, 1, 0, 1);
+            RenderingServer.GetRenderingDevice().TextureClear(GetTableRid(), new Color("00000000"), 0, 1, 0, 1);
         }
 
-        protected override void CreateVisualization()
+        public override Control CreateVisualization(string name = "")
         {
             Shader shader = GD.Load<Shader>(ShaderPaths.RESIDENCY_TABLE_SHADER);
             TextureRect textureRect = new()
             {
-                Name = "Residency Table",
+                Name = $"Residency Table {name}",
                 SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
                 SizeFlagsVertical = Control.SizeFlags.ExpandFill,
                 Texture = Table,
@@ -60,31 +59,31 @@ namespace PlanetGame.Rendering.VirtualTexturing
             };
             ((ShaderMaterial)textureRect.Material).SetShaderParameter("total_mips", (int)TotalSubdivisions);
             textureRect.SetAnchorsPreset(Control.LayoutPreset.FullRect);
-            Visualization = textureRect;
+            return textureRect;
         }
 
         public override void CleanupGPU()
         {
-            Visualization.QueueFree();
-
-            if (Table.TextureRdRid.IsValid)
-                RenderingServer.GetRenderingDevice().FreeRid(Table.TextureRdRid);
+            if (GetTableRid().IsValid)
+                RenderingServer.GetRenderingDevice().FreeRid(GetTableRid());
         }
 
         public override void SetFallbackSlots()
         {
-            Image image = Image.CreateFromData((int)GridSize, (int)GridSize, false, Image.Format.Rgbaf, RenderingServer.GetRenderingDevice().TextureGetData(Table.TextureRdRid, 0));
+            Image image = Image.CreateFromData((int)GridSize, (int)GridSize, false, Image.Format.Rgbaf, RenderingServer.GetRenderingDevice().TextureGetData(GetTableRid(), 0));
             for (int i = 0; i < 6; i++)
             {
                 image.SetPixel(i, 0, TileManager.EncodeTilePath(1, 1, i, (int)TotalSubdivisions - 1, (int)TotalSubdivisions));
             }
-            RenderingServer.GetRenderingDevice().TextureUpdate(Table.TextureRdRid, 0, image.GetData());
+            RenderingServer.GetRenderingDevice().TextureUpdate(GetTableRid(), 0, image.GetData());
         }
 
         public override Color GetPixel(int x, int y, int z = 0)
         {
-            Image image = Image.CreateFromData((int)GridSize, (int)GridSize, false, Image.Format.Rgbaf, RenderingServer.GetRenderingDevice().TextureGetData(Table.TextureRdRid, 0));
+            Image image = Image.CreateFromData((int)GridSize, (int)GridSize, false, Image.Format.Rgbaf, RenderingServer.GetRenderingDevice().TextureGetData(GetTableRid(), 0));
             return image.GetPixel(x, y);
         }
+
+        public override Rid GetTableRid() => Table.TextureRdRid;
     }
 }

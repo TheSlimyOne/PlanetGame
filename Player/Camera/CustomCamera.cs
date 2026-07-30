@@ -200,7 +200,7 @@ public partial class CustomCamera : Camera3D
 			nbl, fbl,
 			nbr, fbr,
 
-			origin, centerLineEnd
+			// origin, centerLineEnd
 		];
 
 		ArrayMesh frustumMesh = new();
@@ -219,7 +219,8 @@ public partial class CustomCamera : Camera3D
 		MeshInstance3D meshInstance = new()
 		{
 			Mesh = mesh,
-			Name = "Frustum"
+			Name = "Frustum",
+			Layers = 4
 		};
 		return meshInstance;
 	}

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
@@ -140,7 +141,7 @@ public static class SaveManager
 
     public static async Task WriteNewSave(string saveName, Image albedo, Image heightmap, int mipCount, int[] lodToMipMap)
     {
-        Vector2I size = new (16384, 8192);
+        Vector2I size = new(16384, 8192);
         albedo.Resize(size.X, size.Y, Image.Interpolation.Bilinear);
         if (albedo.GetSize() != heightmap.GetSize())
         {
@@ -186,7 +187,7 @@ public static class SaveManager
     {
         GD.Print("Generating");
 
-    
+
         int mipCount = (int)save.TotalLods;
 
         GD.Print("Generating Albedo map");
@@ -197,7 +198,7 @@ public static class SaveManager
 
         // GD.Print("Generating Normal map");
         // await TileManager.GenerateTilesAsync(normalMap, mipCount - 1, save.TilesNormalMap, 0);
-        
+
     }
 
     private static Image GenerateThumbnail(Image originalImage)
@@ -288,5 +289,108 @@ public static class SaveManager
             images[thumbnail] = FileExists(path) ? ImageTexture.CreateFromImage(Image.LoadFromFile(path)) : new PlaceholderTexture2D();
         }
         return images;
+    }
+
+    public static Dictionary<SaveDataIdentifier, Texture2D> GetBaseImages(string saveName)
+    {
+        Dictionary<SaveDataIdentifier, Texture2D> images = [];
+
+        for (int i = 0; i < BaseImages.Length; i++)
+        {
+            SaveDataIdentifier baseImage = BaseImages[i];
+            string path = GetDirectoryPath(saveName, baseImage);
+
+            images[baseImage] = FileExists(path) ? ImageTexture.CreateFromImage(Image.LoadFromFile(path)) : new PlaceholderTexture2D();
+        }
+        return images;
+    }
+
+    public static RDShaderSource LoadComputeShaderWithIncludes(string shaderPath)
+    {
+        string shaderSrc = FileAccess.GetFileAsString(shaderPath);
+        string[] lines = shaderSrc.Split('\n');
+
+        StringBuilder stringBuilder = new();
+
+        for (int i = 0; i < lines.Length; i++)
+        {
+            if (lines[i].Contains("#[compute]"))
+            {
+                continue;
+            }
+            else if (lines[i].TrimStart().Contains("#[include]"))
+            {
+                string path = lines[i][11..].TrimEnd();
+                string includeSrc = FileAccess.GetFileAsString(path);
+                stringBuilder.AppendLine("// --- begin include: " + path + " ---");
+                stringBuilder.AppendLine(includeSrc);
+                stringBuilder.AppendLine("// --- end include: " + path + " ---");
+            }
+            else
+            {
+                stringBuilder.AppendLine(lines[i]);
+            }
+        }
+
+        return new RDShaderSource() { SourceCompute = stringBuilder.ToString(), Language = RenderingDevice.ShaderLanguage.Glsl };
+    }
+
+    public static RDShaderSource LoadGraphicsShaderWithIncludes(string vertexShaderPath, string fragmentShaderPath)
+    {
+        string shaderSrc = FileAccess.GetFileAsString(vertexShaderPath);
+        string[] lines = shaderSrc.Split('\n');
+
+        StringBuilder vertexStringBuilder = new();
+        StringBuilder fragmentStringBuilder = new();
+
+        for (int i = 0; i < lines.Length; i++)
+        {
+            if (lines[i].Contains("#[vertex]"))
+            {
+                continue;
+            }
+            else if (lines[i].TrimStart().Contains("#[include]"))
+            {
+                string path = lines[i][11..].TrimEnd();
+                string includeSrc = FileAccess.GetFileAsString(path);
+                vertexStringBuilder.AppendLine("// --- begin include: " + path + " ---");
+                vertexStringBuilder.AppendLine(includeSrc);
+                vertexStringBuilder.AppendLine("// --- end include: " + path + " ---");
+            }
+            else
+            {
+                vertexStringBuilder.AppendLine(lines[i]);
+            }
+        }
+
+        shaderSrc = FileAccess.GetFileAsString(fragmentShaderPath);
+        lines = shaderSrc.Split('\n');
+
+        for (int i = 0; i < lines.Length; i++)
+        {
+            if (lines[i].Contains("#[fragment]"))
+            {
+                continue;
+            }
+            else if (lines[i].TrimStart().Contains("#[include]"))
+            {
+                string path = lines[i][11..].TrimEnd();
+                string includeSrc = FileAccess.GetFileAsString(path);
+                fragmentStringBuilder.AppendLine("// --- begin include: " + path + " ---");
+                fragmentStringBuilder.AppendLine(includeSrc);
+                fragmentStringBuilder.AppendLine("// --- end include: " + path + " ---");
+            }
+            else
+            {
+                fragmentStringBuilder.AppendLine(lines[i]);
+            }
+        }
+
+        return new RDShaderSource()
+        {
+            SourceVertex = vertexStringBuilder.ToString(),
+            SourceFragment = fragmentStringBuilder.ToString(),
+            Language = RenderingDevice.ShaderLanguage.Glsl
+        };
     }
 }

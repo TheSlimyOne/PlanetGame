@@ -1,11 +1,9 @@
-using System;
-using System.Threading;
 using System.Threading.Tasks;
-using PlanetGame.ComputeShaders.Dispatcher;
+using PlanetGame.Shaders.Dispatchers;
 using Godot;
-using System.Collections.Generic;
-using System.Collections.Concurrent;
 using System.Linq;
+using PlanetGame.Shaders.RenderPasses;
+using PlanetGame.Rendering.Surface;
 
 namespace PlanetGame.Rendering.VirtualTexturing
 {
@@ -13,10 +11,8 @@ namespace PlanetGame.Rendering.VirtualTexturing
     {
         public ResolveTileTextureDispatcher ReadFramebuffer { get; private set; }
         public ValidateCacheDispatcher ValidateTileCache { get; private set; }
-
+        public SvtFeedbackRenderPass SvtFeedbackRenderPass { get; private set; }
         public Viewport Viewport { get; private set; }
-        public Window DebugWindow { get; private set; }
-
         public IndirectionTable IndirectionTable { get; private set; }
         public TileCache AlbedoTileCache { get; private set; }
         public TileCache HeightTileCache { get; private set; }
@@ -28,7 +24,7 @@ namespace PlanetGame.Rendering.VirtualTexturing
         public bool Ready { get; private set; } = true;
         public bool Paused = false;
 
-        public SparseVirtualTexture(SaveManager.WorldSave worldSave, Viewport viewport)
+        public SparseVirtualTexture(TerrainTessellator terrainTessellator, SaveManager.WorldSave worldSave, Viewport viewport, Mesh mesh)
         {
             Viewport = viewport;
             TileSize = worldSave.TileSize;
@@ -44,7 +40,7 @@ namespace PlanetGame.Rendering.VirtualTexturing
             ReadFramebuffer = new()
             {
                 SparseVirtualTexture = this,
-                Viewport = Viewport
+                // Viewport = Viewport
             };
 
             ValidateTileCache = new()
@@ -52,48 +48,92 @@ namespace PlanetGame.Rendering.VirtualTexturing
                 SparseVirtualTexture = this
             };
 
+            SvtFeedbackRenderPass = new(terrainTessellator, this, new Vector2I(1024, 512), mesh);
+
             ReadFramebuffer.CreateUniforms();
             ValidateTileCache.CreateUniforms();
+            SvtFeedbackRenderPass.CreateUniforms();
         }
 
         public bool IsValidForProcessing()
         {
-            return ReadFramebuffer?.IsValid() == true && ValidateTileCache?.IsValid() == true;
+            return ReadFramebuffer?.IsValid() == true && ValidateTileCache?.IsValid() == true && SvtFeedbackRenderPass?.IsValid() == true;
         }
 
-        public void CreateDebugWindow(Node sceneReference)
+        public async void CreateDebugWindow(Control container)
         {
-            DebugWindow = GD.Load<PackedScene>("res://Scenes/window.tscn").Instantiate<Window>();
-            DebugWindow.Title = "Debug Window";
-            sceneReference.AddChild(DebugWindow);
-            Control node = DebugWindow.GetChild<Control>(0);
-            node.SetAnchorsPreset(Control.LayoutPreset.FullRect);
-            node.AddChild(IndirectionTable.Visualization);
+            if (!container.IsNodeReady())
+                await container.ToSignal(container, Node.SignalName.Ready);
 
-            node.AddChild(AlbedoTileCache.Visualization);
-            node.AddChild(HeightTileCache.Visualization);
+            await container.ToSignal(container, Control.SignalName.Resized);
 
-            node.AddChild(ResidencyTable.Visualization);
-            node.AddChild(StateTable.Visualization);
+
+            ScrollContainer scrollContainer = new()
+            {
+                Name = "SVTDebugTextures",
+                // LayoutMode = 1,
+                AnchorsPreset = (int)Control.LayoutPreset.FullRect,
+                AnchorRight = 1.0f,
+                AnchorBottom = 1.0f,
+                OffsetRight = 0.0f,
+                OffsetBottom = 0.0f,
+                LayoutDirection = Control.LayoutDirectionEnum.Rtl
+            };
+
+            BoxContainer boxContainer = container.Size.X <= container.Size.Y ? new VBoxContainer() : new HBoxContainer();
+
+            boxContainer.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+            boxContainer.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
+            boxContainer.LayoutDirection = Control.LayoutDirectionEnum.Ltr;
+            
+
+            container.AddChild(scrollContainer);
+            scrollContainer.AddChild(boxContainer);
+
+           
+            boxContainer.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+            boxContainer.AddChild(StateTable.CreateVisualization());
+            boxContainer.AddChild(IndirectionTable.CreateVisualization());
+            boxContainer.AddChild(ResidencyTable.CreateVisualization());
+
+            boxContainer.AddChild(AlbedoTileCache.CreateVisualization("Albedo"));
+            boxContainer.AddChild(HeightTileCache.CreateVisualization("Heightmap"));
+
+            TextureRect rect = new() { Texture = SvtFeedbackRenderPass.GetFrameBufferTexture() };
+            boxContainer.AddChild(rect);
+
+            foreach (TextureRect texture in boxContainer.GetChildren().Cast<TextureRect>())
+            {
+                if (boxContainer is VBoxContainer)
+                    texture.ExpandMode = TextureRect.ExpandModeEnum.FitHeightProportional;
+                else
+                    texture.ExpandMode = TextureRect.ExpandModeEnum.FitWidthProportional;
+
+            }
+
         }
 
         public async void RequestTileSlot(byte[] bytes)
         {
-            uint[] data = [.. Util.Utilities.FromBytes<uint>(bytes)];
+            (uint a, uint b, uint c, uint d)[] data = [.. Util.Utilities.FromBytes<(uint a, uint b, uint c, uint d)>(bytes)];
+
+            // GD.Print(data.Length);
 
             if (data.Length > 0)
             {
                 await Parallel.ForEachAsync(data, new ParallelOptions { MaxDegreeOfParallelism = 4 }, (tileData, _) =>
                 {
-                    uint xCoord = tileData & 0xF;
-                    uint yCoord = (tileData >> 4) & 0xF;
-                    uint mipIndex = (tileData >> 8) & 0xF;
-                    uint normalId = (tileData >> 12) & 0xF;
-                    uint tileSlot = (tileData >> 16) & 0xFF;
+                    uint xCoord = tileData.a;
+                    uint yCoord = tileData.b;
+                    uint mipIndex =  tileData.c % IndirectionTable.MipDepth;
+                    uint normalId = (tileData.c - mipIndex) / IndirectionTable.MipDepth;
+                    uint slot = tileData.d;
+                    // uint tileSlot = (tileData >> 16) & 0xFF;
+
                     string tilePath = $"{mipIndex}-{normalId}-{xCoord}-{yCoord}.png";
 
-                    HeightTileCache.InsertTile(tilePath, tileSlot);
-                    AlbedoTileCache.InsertTile(tilePath, tileSlot);
+                    HeightTileCache.InsertTile(tilePath, slot);
+                    AlbedoTileCache.InsertTile(tilePath, slot);
 
                     return new ValueTask();
                 });
@@ -101,6 +141,7 @@ namespace PlanetGame.Rendering.VirtualTexturing
                 ValidateTileCache.Invoke();
             }
             Ready = true;
+            
         }
 
         public void ClearVirtualTexture()
@@ -120,46 +161,44 @@ namespace PlanetGame.Rendering.VirtualTexturing
 
         public void Invoke()
         {
-            if (!Ready || !IsValidForProcessing())
+            if (!Ready || !IsValidForProcessing() || Paused)
                 return;
-            
-
-            if (Paused)
-            {
-                GD.Print("stopped");
-                return;
-            }
-                
 
             Ready = false;
             StateTable.ClearStorageTexture();
+
+            SvtFeedbackRenderPass.Invoke();
+
             ReadFramebuffer.UpdateUniforms();
             ReadFramebuffer.Invoke();
             ReadFramebuffer.GetTextureIds(Callable.From<byte[]>(RequestTileSlot));
+
         }
 
         public void CleanupGPUResources()
         {
             IndirectionTable.CleanupGPU();
-            IndirectionTable = null;
+            IndirectionTable = default;
 
             AlbedoTileCache.CleanupGPU();
-            AlbedoTileCache = null;
+            AlbedoTileCache = default;
 
             HeightTileCache.CleanupGPU();
-            HeightTileCache = null;
+            HeightTileCache = default;
 
             ResidencyTable.CleanupGPU();
-            ResidencyTable = null;
+            ResidencyTable = default;
 
             StateTable.CleanupGPU();
-            StateTable = null;
+            StateTable = default;
 
             ReadFramebuffer.CleanupGPU();
             ValidateTileCache.CleanupGPU();
+            SvtFeedbackRenderPass.CleanupGPU();
 
-            ReadFramebuffer = null;
-            ValidateTileCache = null;
+            ReadFramebuffer = default;
+            ValidateTileCache = default;
+            SvtFeedbackRenderPass = default;
         }
     }
 }

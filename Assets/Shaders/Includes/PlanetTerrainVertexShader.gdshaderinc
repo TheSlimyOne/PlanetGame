@@ -50,7 +50,9 @@ void vertex() {
 
 	if (is_morphing) {
 		morph = calculate_morph(local_point, key.xy, morph_range, camera_position, planet_transform_matrix, fovy, sub_factor, radius, maximum_lod, minimum_lod);
-		vec2 morphed_quad_position = get_quadtree_space_point(morph_vertex(VERTEX.xy, morph, resolution), quadtree_space);
+		vec2 morphed_vertex = morph_vertex(VERTEX.xy, morph, resolution);
+		
+		vec2 morphed_quad_position = get_quadtree_space_point(morphed_vertex, quadtree_space);
 		vec3 morphed_cube_local_position = get_polygon_space_point(morphed_quad_position, polygon_space);
 		vec3 morphed_sphere_local_position = point_on_cube_to_point_on_sphere(morphed_cube_local_position);
 
@@ -65,9 +67,8 @@ void vertex() {
 		lod = int(calculate_lod_to_cam(sphere_local_position, camera_position, planet_transform_matrix, fovy, sub_factor, radius, maximum_lod, minimum_lod));
 
 	}
-
+	
 	vec3 world_position = get_world_space_point(local_point, planet_transform_matrix);
-
 	
 	int mip_index = lod_to_mip_map[lod];
 	vec3 tile_uv = get_tile_uv(terrain_indirection_table, mip_index, tile_size, vertex_uv, total_texture_subdivisions, int(key.z));

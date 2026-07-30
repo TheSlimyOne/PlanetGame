@@ -1,30 +1,75 @@
 using Godot;
+using System;
 
 public partial class UIController : Control
 {
 	[Export] public PlanetController PlanetController { get; private set; }
+
 	[ExportGroup("Labels")]
 	[Export] private Label _lblKeyCount;
 	[Export] private Label _lblFPS;
 	[Export] private Label _lblDistance;
 	[Export] private Label _lblLOD;
 	[Export] private Label _lblCameraMode;
+
 	[ExportGroup("Buttons")]
-	[Export] private Button _btnProcessLod;
+	[Export] private Button _btnTerrainTesselation;
 	[Export] private Button _btnCubeMode;
 	[Export] private Button _btnCulling;
 	[Export] private Button _btnMorphing;
-	[Export] private Button _btnRenderSurface;
 	[Export] private Button _btnVirtualTexturing;
+	[Export] private Button _btnWipeVirtualTexutre;
+	[Export] private Button _btnDebug;
+	[Export] private Button _btnQuit;
 
-	private int _all_max;
-	private int _culled_max;
+	[ExportGroup("Containers")]
+	[Export] public Control DebugContainer;
+
+	private int _allMax;
+	private int _culledMax;
+
+	public override void _Ready()
+	{
+		ConnectButton(_btnCubeMode, EnableOrDisableCubeMode);
+		ConnectButton(_btnCulling, EnableOrDisableCulling);
+		ConnectButton(_btnMorphing, EnableOrDisableMorphing);
+		ConnectButton(_btnTerrainTesselation, EnableOrDisableTerrainTesselation);
+		ConnectButton(_btnVirtualTexturing, EnableOrDisableVirtualTexturing);
+		ConnectButton(_btnWipeVirtualTexutre, WipeVirtualTexture);
+		ConnectButton(_btnDebug, EnableOrDisableDebugWindow);
+		ConnectButton(_btnQuit, Quit);
+
+		// Callable.From(() => ).CallDeferred();
+
+		UpdateButtonLabels();
+	}
+	
+
+	public override void _ExitTree()
+	{
+		DisconnectButton(_btnCubeMode, EnableOrDisableCubeMode);
+		DisconnectButton(_btnCulling, EnableOrDisableCulling);
+		DisconnectButton(_btnMorphing, EnableOrDisableMorphing);
+		DisconnectButton(_btnTerrainTesselation, EnableOrDisableTerrainTesselation);
+		DisconnectButton(_btnVirtualTexturing, EnableOrDisableVirtualTexturing);
+		DisconnectButton(_btnWipeVirtualTexutre, WipeVirtualTexture);
+		DisconnectButton(_btnDebug, EnableOrDisableDebugWindow);
+		DisconnectButton(_btnQuit, Quit);
+	}
+
+	public override void _Process(double delta)
+	{
+		SetFPSCount((int)Engine.GetFramesPerSecond());
+		SetCameraMode();
+	}
 
 	public void SetLabelKeyCount(int culled, int all)
 	{
-		_culled_max = culled > _culled_max ? culled : _culled_max;
-		_all_max = all > _all_max ? all : _all_max;
-		_lblKeyCount.Text = $"Keys: {culled}/{all} | Max: {_culled_max}/{_all_max}";
+		_culledMax = Math.Max(_culledMax, culled);
+		_allMax = Math.Max(_allMax, all);
+
+		_lblKeyCount.Text =
+			$"Keys: {culled}/{all} | Max: {_culledMax}/{_allMax}";
 	}
 
 	public void SetFPSCount(int amount)
@@ -42,22 +87,35 @@ public partial class UIController : Control
 		_lblLOD.Text = $"Current LOD: {current}";
 	}
 
-	public override void _Process(double delta)
-	{
-		SetFPSCount((int)Engine.GetFramesPerSecond());
-		SetCameraMode();
-	}
-
 	public void SetCameraMode()
 	{
-		_lblCameraMode.Text = $"Camera Mode: {PlanetController.CameraController.GetViewport().DebugDraw}";
+		_lblCameraMode.Text =
+			$"Camera Mode: {PlanetController.CameraController.GetViewport().DebugDraw}";
 	}
 
+	public void EnableOrDisableTerrainTesselation()
+	{
+		PlanetController.DisableTesselation =
+			!PlanetController.DisableTesselation;
+
+		UpdateToggleButton(
+			_btnTerrainTesselation,
+			!PlanetController.DisableTesselation,
+			"Terrain Tesselation"
+		);
+	}
 	public void EnableOrDisableVirtualTexturing()
 	{
-		PlanetController.DisableVirtualTexturing = !PlanetController.DisableVirtualTexturing;
-		_btnVirtualTexturing.Text = PlanetController.DisableVirtualTexturing ? "Enable Virtual Texturing" : "Disable Virtual Texturing";
+		PlanetController.DisableVirtualTexturing =
+			!PlanetController.DisableVirtualTexturing;
+
+		UpdateToggleButton(
+			_btnVirtualTexturing,
+			!PlanetController.DisableVirtualTexturing,
+			"Virtual Texturing"
+		);
 	}
+
 	public void WipeVirtualTexture()
 	{
 		PlanetController.SparseVirtualTexture.ClearVirtualTexture();
@@ -65,41 +123,97 @@ public partial class UIController : Control
 
 	public void EnableOrDisableCubeMode()
 	{
-		bool currentSetting = !PlanetController.IsCube;
-		PlanetController.IsCube = currentSetting;
-		_btnCubeMode.Text = currentSetting ? "Disable Cube Mode" : "Enable Cube Mode";
+		PlanetController.IsCube = !PlanetController.IsCube;
+
+		UpdateToggleButton(
+			_btnCubeMode,
+			PlanetController.IsCube,
+			"Cube Mode"
+		);
 	}
 
 	public void EnableOrDisableCulling()
 	{
-		bool currentSetting = !PlanetController.IsCulling;
-		PlanetController.IsCulling = currentSetting;
-		_btnCulling.Text = currentSetting ? "Disable Culling" : "Enable Culling";
+		PlanetController.IsCulling = !PlanetController.IsCulling;
+
+		UpdateToggleButton(
+			_btnCulling,
+			PlanetController.IsCulling,
+			"Culling"
+		);
 	}
 
 	public void EnableOrDisableMorphing()
 	{
-		bool currentSetting = !PlanetController.IsMorphing;
-		PlanetController.IsMorphing = currentSetting;
-		_btnMorphing.Text = currentSetting ? "Disable Morphing" : "Enable Morphing";
+		PlanetController.IsMorphing = !PlanetController.IsMorphing;
+
+		UpdateToggleButton(
+			_btnMorphing,
+			PlanetController.IsMorphing,
+			"Morphing"
+		);
 	}
 
-	public void RenderFramebuffer()
-	{
-		RenderingServer.InstanceGeometrySetMaterialOverride(
-			PlanetController.PlanetMultiMesh.Instances[0],
-			PlanetController.FramebufferShader.GetRid());
-	}
-
-	public void RenderSurface()
-	{
-		RenderingServer.InstanceGeometrySetMaterialOverride(
-			PlanetController.PlanetMultiMesh.Instances[0],
-			PlanetController.SurfaceShader.GetRid());
-	}
-
-	public void OnClickQuit()
+	public void Quit()
 	{
 		GetTree().ChangeSceneToFile("res://Scenes/Main.tscn");
+	}
+	public void EnableOrDisableDebugWindow()
+	{
+		Control parent = DebugContainer.GetParent<Control>();
+		parent.Visible = !parent.Visible;
+
+		UpdateToggleButton(
+			_btnDebug,
+			parent.Visible,
+			"Debug View"
+		);
+	}
+
+	private void UpdateButtonLabels()
+	{
+		UpdateToggleButton(
+			_btnVirtualTexturing,
+			!PlanetController.DisableVirtualTexturing,
+			"Virtual Texturing"
+		);
+
+		UpdateToggleButton(
+			_btnCubeMode,
+			PlanetController.IsCube,
+			"Cube Mode"
+		);
+
+		UpdateToggleButton(
+			_btnCulling,
+			PlanetController.IsCulling,
+			"Culling"
+		);
+
+		UpdateToggleButton(
+			_btnMorphing,
+			PlanetController.IsMorphing,
+			"Morphing"
+		);
+	}
+
+	private static void ConnectButton(Button button, Action handler)
+	{
+		button.Pressed += handler;
+	}
+
+	private static void DisconnectButton(Button button, Action handler)
+	{
+		button.Pressed -= handler;
+	}
+
+	private static void UpdateToggleButton(
+		Button button,
+		bool isEnabled,
+		string settingName)
+	{
+		button.Text = isEnabled
+			? $"Disable {settingName}"
+			: $"Enable {settingName}";
 	}
 }

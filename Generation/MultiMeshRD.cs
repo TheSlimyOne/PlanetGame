@@ -1,11 +1,12 @@
 using System.Collections.Generic;
+using System.Linq;
 using Godot;
+using PlanetGame.Util;
 
 public class MultiMeshRD
 {
 
     public Rid Rid { get; private set; }
-
     public Mesh Mesh { get; private set; }
     public Rid CommandBuffer => RenderingServer.MultimeshGetCommandBufferRdRid(Rid);
     public Rid Buffer => RenderingServer.MultimeshGetBufferRdRid(Rid);
@@ -37,7 +38,16 @@ public class MultiMeshRD
         return instance;
     }
 
-
+    public (Vector3[] vertices, int[] indices, Vector3[] normals, Vector2[] uvs) GetMeshData()
+    {
+        Godot.Collections.Array arrays = Mesh.SurfaceGetArrays(0);
+        Vector3[] vertices = arrays[(int)Mesh.ArrayType.Vertex].AsVector3Array();
+        int[] indices = arrays[(int)Mesh.ArrayType.Index].AsInt32Array();
+        Vector3[] normals = arrays[(int)Mesh.ArrayType.Normal].AsVector3Array();
+        Vector2[] uvs = arrays[(int)Mesh.ArrayType.TexUV].AsVector2Array();
+        
+        return (vertices, indices, normals, uvs);
+    }
 
     public void CleanupGPU()
     {

@@ -9,14 +9,14 @@ namespace PlanetGame.Rendering.VirtualTexturing
 		[Export] private Label _lblMipIndex;
 		[Export] private Label _lblNormalId;
 		[Export] private Label _lblTileCoords;
-		[Export] public Vector2I Size;
+		[Export] public Vector2I TileSize;
 		[Export] public Viewport Viewport;
 
 		public async Task GenerateDebugTilesAsync(SceneTree tree, int totalMips)
 		{
 			tree.Root.AddChild(this);
 
-			((SubViewport)Viewport).Size = Size;
+			((SubViewport)Viewport).Size = TileSize;
 			for (int mipIndex = totalMips - 1; mipIndex >= 0; mipIndex--)
 			{
 				int tilesPerSide = (int)Mathf.Pow(2, totalMips - 1 - mipIndex);

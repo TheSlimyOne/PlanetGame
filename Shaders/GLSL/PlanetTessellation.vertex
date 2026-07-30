@@ -1,0 +1,118 @@
+#[vertex] 
+#version 450 
+
+struct InstanceData
+{
+    mat4 transform;
+    vec4 custom;
+};
+
+layout(set = 0, binding = 0, std430) readonly buffer InstanceBuffer
+{
+    InstanceData instances[];
+};
+
+layout(set = 0, binding = 1, std430) buffer restrict readonly ExternalData {
+    int tile_size;
+	int total_texture_subdivisions;
+	int lod_to_mip_map[32];
+
+	float radius;
+	int resolution;
+	float height_scale;
+	float sub_factor;
+	uint debug_flags;
+
+	int maximum_lod;
+	int minimum_lod;
+
+	float padding;
+	vec2 morph_range;
+
+	mat4 planet_transform_matrix;
+	mat4 view_projection_matrix;
+	vec4 camera_position_fovy;
+};
+
+
+layout(set = 0, binding = 2) uniform sampler2DArray height_map_tile_cache;
+layout(set = 0, binding = 3) uniform sampler2DArray terrain_indirection_table;
+layout(set = 0, binding = 4, r32ui) restrict uniform uimage2DArray state_table;
+
+
+layout(location = 0) in vec3 vertex_pos; 
+layout(location = 1) in vec3 vertex_normal;
+
+layout(location = 0) flat out uvec4 key;
+layout(location = 1) flat out uint flags;
+layout(location = 2) out float morph;
+layout(location = 3) out float elevation;
+layout(location = 4) out vec2 vertex_uv;
+layout(location = 5) flat out int lod;
+layout(location = 6) out vec3 normal;
+
+
+#[include] res://Shaders/GLSL/ShaderIncludes/TesselationFunctions.inc
+
+#[include] res://Shaders/GLSL/ShaderIncludes/Functions.inc
+
+void main() 
+{ 
+    bool is_morphing = (debug_flags & 2u) != 0u;
+    bool is_cube = (debug_flags & 4u) != 0u;
+
+    InstanceData instance = instances[gl_InstanceIndex];
+    key = floatBitsToUint(instance.custom);
+    flags = key.w >> 29u;
+	key.w &= 0xFu;
+
+    mat3 quadtree_space = leaf_space_to_quadtree_space(key.xy);
+	mat3 polygon_space = quadtree_space_to_polygon_space(key.z, key.w);
+
+	vec2 quad_position = get_quadtree_space_point(vertex_pos.xy, quadtree_space);
+	vec3 cube_local_position = get_polygon_space_point(quad_position, polygon_space);
+	vec3 sphere_local_position = point_on_cube_to_point_on_sphere(cube_local_position);
+    vec3 local_point = is_cube ? cube_local_position : sphere_local_position;
+
+    LodContext lod_context = LodContext(
+        planet_transform_matrix,
+        camera_position_fovy.xyz,
+        sub_factor,
+        radius,
+        camera_position_fovy.w,
+        minimum_lod,
+        maximum_lod
+    );
+
+    if (is_morphing) {
+		morph = calculate_morph(local_point, key.xy, morph_range, lod_context);
+        vec2 morphed_vertex = morph_vertex(vertex_pos.xy, morph, resolution);
+
+		vec2 morphed_quad_position = get_quadtree_space_point(morphed_vertex, quadtree_space);
+		vec3 morphed_cube_local_position = get_polygon_space_point(morphed_quad_position, polygon_space);
+		vec3 morphed_sphere_local_position = point_on_cube_to_point_on_sphere(morphed_cube_local_position);
+
+		local_point = is_cube ? morphed_cube_local_position : morphed_sphere_local_position;
+		vertex_uv = get_cube_uv(int(key.z), morphed_cube_local_position);
+		
+		lod = int(polygon_space_point_to_lod(morphed_cube_local_position, lod_context));
+	}
+	else 
+    {
+		vertex_uv = get_cube_uv(int(key.z), cube_local_position);
+		lod = int(polygon_space_point_to_lod(cube_local_position, lod_context));
+	}
+
+
+    vec3 world_position = get_world_space_point(local_point, planet_transform_matrix);
+
+    int mip_index = lod_to_mip_map[lod];
+    vec3 tile_cache_uv = get_tile_cache_uv(terrain_indirection_table, mip_index, tile_size, vertex_uv, total_texture_subdivisions, int(key.z));
+    elevation = get_tile(height_map_tile_cache, tile_cache_uv).r;
+
+    normal = (vec4(local_point, 1) * get_rotation_from_matrix(planet_transform_matrix)).xyz;    
+    gl_Position = vec4(world_position + normal * height_scale * elevation, 1.0); 
+
+    gl_Position = view_projection_matrix * gl_Position; 
+    gl_Position.y = -gl_Position.y;
+}

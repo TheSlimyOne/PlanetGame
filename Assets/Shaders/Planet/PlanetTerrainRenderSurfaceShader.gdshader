@@ -116,35 +116,60 @@ vec3 compute_sphere_normal_from_heightmap( vec2 uv, int normal_id, vec3 vertex_p
 }
 
 void fragment() {
-	vec3 normal = normals[key.z];
-	int normal_id = int(key.z);
-	int lod_index = lod_to_mip_map[lod];
 
-	vec3 tile_uv = get_tile_uv(terrain_indirection_table, lod_index, tile_size, vertex_uv, total_texture_subdivisions, int(key.z));
+    vec2 adjusted_uv = clamp(vertex_uv, vec2(0.0), vec2(1.0 - EPS));
+
+	int mip_index = lod_to_mip_map[lod];
+	float grid_size = exp2(float(total_texture_subdivisions - 1));
+	float lod_grid_size = grid_size / exp2(float(mip_index));
+	
+	vec2 cell_uv = floor(adjusted_uv * lod_grid_size) / lod_grid_size;
+
+	vec3 tile_uv = get_tile_uv(terrain_indirection_table, mip_index, tile_size, vertex_uv, total_texture_subdivisions, int(key.z));
 
 	if (render_tile_uvs)
 	{
-		ALBEDO = vec3(tile_uv.xy, 0);
+		vec3 output_color = vec3(1,1,1);
+	    float depth = 1.0 - float(mip_index) / float(total_texture_subdivisions - 1); 
+	    switch(key.z)
+	    {
+	        case 0u:
+	            output_color = vec3(cell_uv.x, cell_uv.y, depth);
+	            break;
+	        case 1u:
+	            output_color = vec3(cell_uv.y, cell_uv.x, depth);
+	            break;
+	        case 2u:
+	            output_color = vec3(depth, cell_uv.x, cell_uv.y);
+	            break;
+	        case 3u:
+	            output_color = vec3(depth, cell_uv.y, cell_uv.x);
+	            break;
+	        case 4u:
+	            output_color = vec3(cell_uv.x, depth, cell_uv.y);
+	            break;
+	        case 5u:
+	            output_color = vec3(cell_uv.y, depth, cell_uv.x);
+	            break;
+	        default:
+	            break;
+	    }
+	    float edge_threshold = 1.0/64.0;
+
+		bool is_tile_edge =
+	        tile_uv.x < edge_threshold ||
+	        tile_uv.x > 1.0 - edge_threshold ||
+	        tile_uv.y < edge_threshold ||
+	        tile_uv.y > 1.0 - edge_threshold;
+
+	    if (is_tile_edge) {
+	        ALBEDO = vec3(0.5);
+	    } else {
+	        ALBEDO = output_color;
+	    }
 	}
 	else
 	{
 		ALBEDO = pow(get_tile(albedo_tile_cache, tile_uv).xyz, vec3(2.2));
 	}
-
-	int[4] adjecent_normals_ids = get_adjecent_normal_ids(normal_id);
-	float step_amount = 0.0001;
-	float[4] heights;
-
-	vec3 cube_local_position = get_cube_point(normal_id, vertex_uv);
-	//ALBEDO = compute_sphere_normal_from_heightmap(vertex_uv, normal_id, cube_local_position, lod_index);
-	//vec3 sphere_local_position = point_on_cube_to_point_on_sphere(cube_local_position);
-	/*
-	vec3 color = vec3(1, 0, 0);
-	if (lod % 2 == 0)
-	{
-		color = vec3(0, 0, 1);
-	}
-	int bit = find_msb_64(key.xy);
-	ALBEDO = hsl_to_rgb(vec3(float(lod) / 16.0, 1, 1));
-	*/
 }

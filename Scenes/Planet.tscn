@@ -1,8 +1,8 @@
 [gd_scene format=3 uid="uid://c1roirj1ei3ci"]
 
 [ext_resource type="Script" uid="uid://b4tv1heidhb4j" path="res://Planet/PlanetController.cs" id="1_qtwtp"]
-[ext_resource type="PackedScene" uid="uid://dw6xke4ovskkx" path="res://Scenes/ui.tscn" id="3_ebyhs"]
 [ext_resource type="Texture2D" uid="uid://ejlq5akl3icw" path="res://Assets/Images/panorama_image.png" id="3_ldv5r"]
+[ext_resource type="Script" uid="uid://dmhjqmw6g7d2t" path="res://Player/UI/UIController.cs" id="3_qtwtp"]
 [ext_resource type="Script" uid="uid://b6ndo6pet2jv4" path="res://Player/Camera/CameraController.cs" id="5_usljo"]
 [ext_resource type="Script" uid="uid://bker53ypetnsk" path="res://Player/Camera/OrbitalCamera3D.cs" id="6_ldv5r"]
 [ext_resource type="PackedScene" uid="uid://dopn8o46guiih" path="res://Assets/Models/Camera.blend" id="6_qtwtp"]
@@ -21,8 +21,10 @@ sky = SubResource("Sky_emtpu")
 tonemap_mode = 2
 glow_enabled = true
 
-[sub_resource type="ViewportTexture" id="ViewportTexture_qtwtp"]
-viewport_path = NodePath("CameraController/SubViewport")
+[sub_resource type="LabelSettings" id="LabelSettings_usljo"]
+font_size = 28
+outline_size = 5
+outline_color = Color(0.0768358, 0.0768358, 0.0768358, 1)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_6uokv"]
 albedo_color = Color(0.490196, 1, 0, 1)
@@ -47,14 +49,17 @@ environment = SubResource("Environment_qtwtp")
 
 [sub_resource type="SphereShape3D" id="SphereShape3D_tgghh"]
 
-[node name="Planet" type="Node3D" unique_id=830740909 node_paths=PackedStringArray("CameraController", "SurfaceAttachment", "UIController", "MainLightSource", "WorldEnvironment")]
+[node name="Planet" type="Node3D" unique_id=1057872115 node_paths=PackedStringArray("CameraController", "SurfaceAttachment", "UIController", "InnerCollision", "OuterCollision", "CubicalCollision", "MainLightSource", "WorldEnvironment")]
 script = ExtResource("1_qtwtp")
-Radius = 8000.0
-HeightScale = 200.0
+Radius = 10000.0
+HeightScale = 250.0
 CameraController = NodePath("CameraController")
 SurfaceAttachment = NodePath("SurfaceAttachment")
 UIController = NodePath("UIController")
-PointRadius = 0.025
+InnerCollision = NodePath("SurfaceAttachment/InnerCollision")
+OuterCollision = NodePath("SurfaceAttachment/OuterCollision")
+CubicalCollision = NodePath("SurfaceAttachment/CubicalCollision")
+PointRadius = 0.125
 MainLightSource = NodePath("SurfaceAttachment/MainLightSource")
 WorldEnvironment = NodePath("WorldEnvironment")
 BaseZoomSpeed = 1.0
@@ -64,35 +69,135 @@ Resolution = 17
 MorphRange = Vector2(0.4, 0.8)
 StartingLod = 0
 NormalStrength = 149.0
-ShowDebugWindow = true
-IsMorphing = false
-Bias1 = 0.5
+IsCulling = false
 Verbose = true
 
-[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1223459526]
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=113934984]
 environment = SubResource("Environment_qqt2a")
 
-[node name="UIController" parent="." unique_id=2120184088 node_paths=PackedStringArray("PlanetController") instance=ExtResource("3_ebyhs")]
-size_flags_horizontal = 0
-size_flags_vertical = 4
-PlanetController = NodePath("..")
-
-[node name="TextureRect" type="TextureRect" parent="UIController" unique_id=1683705948]
-visible = false
-layout_mode = 1
-anchors_preset = 2
-anchor_top = 1.0
+[node name="UIController" type="Control" parent="." unique_id=1610127994 node_paths=PackedStringArray("PlanetController", "_lblKeyCount", "_lblFPS", "_lblDistance", "_lblLOD", "_lblCameraMode", "_btnTerrainTesselation", "_btnCubeMode", "_btnCulling", "_btnMorphing", "_btnVirtualTexturing", "_btnWipeVirtualTexutre", "_btnDebug", "_btnQuit", "DebugContainer")]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
 anchor_bottom = 1.0
-offset_top = -329.0
-offset_right = 593.0
-grow_vertical = 0
-texture = SubResource("ViewportTexture_qtwtp")
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("3_qtwtp")
+PlanetController = NodePath("..")
+_lblKeyCount = NodePath("DebugStats/KeyCount")
+_lblFPS = NodePath("DebugStats/FPS")
+_lblDistance = NodePath("DebugStats/Distance")
+_lblLOD = NodePath("DebugStats/LOD")
+_lblCameraMode = NodePath("DebugStats/CameraMode")
+_btnTerrainTesselation = NodePath("Buttons/btnTerrainTesselation")
+_btnCubeMode = NodePath("Buttons/btnCubeMode")
+_btnCulling = NodePath("Buttons/btnCulling")
+_btnMorphing = NodePath("Buttons/btnMorphing")
+_btnVirtualTexturing = NodePath("Buttons/btnVirtualTexturing")
+_btnWipeVirtualTexutre = NodePath("Buttons/btnWipeVirtualTexture")
+_btnDebug = NodePath("Buttons/btnHideDebug")
+_btnQuit = NodePath("Buttons/btnQuit")
+DebugContainer = NodePath("DebugContainer/Panel")
 
-[node name="CameraController" type="Node" parent="." unique_id=1791366834]
+[node name="DebugContainer" type="PanelContainer" parent="UIController" unique_id=1146187140]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -206.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="Panel" type="Panel" parent="UIController/DebugContainer" unique_id=1090241571]
+layout_mode = 2
+
+[node name="DebugStats" type="VBoxContainer" parent="UIController" unique_id=1244037009]
+layout_mode = 0
+offset_right = 222.0
+offset_bottom = 211.0
+
+[node name="KeyCount" type="Label" parent="UIController/DebugStats" unique_id=1004083098]
+layout_mode = 2
+text = "Triangles: X"
+label_settings = SubResource("LabelSettings_usljo")
+
+[node name="FPS" type="Label" parent="UIController/DebugStats" unique_id=1715380148]
+layout_mode = 2
+text = "FPS: X"
+label_settings = SubResource("LabelSettings_usljo")
+
+[node name="Distance" type="Label" parent="UIController/DebugStats" unique_id=418668063]
+layout_mode = 2
+text = "Distance: X"
+label_settings = SubResource("LabelSettings_usljo")
+
+[node name="LOD" type="Label" parent="UIController/DebugStats" unique_id=1238472856]
+layout_mode = 2
+text = "Current LOD: X"
+label_settings = SubResource("LabelSettings_usljo")
+
+[node name="CameraMode" type="Label" parent="UIController/DebugStats" unique_id=451109012]
+layout_mode = 2
+text = "Camera Mode: X"
+label_settings = SubResource("LabelSettings_usljo")
+
+[node name="Buttons" type="VBoxContainer" parent="UIController" unique_id=952700245]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -222.0
+offset_bottom = 311.0
+grow_horizontal = 0
+
+[node name="btnCubeMode" type="Button" parent="UIController/Buttons" unique_id=1562243158]
+layout_mode = 2
+focus_mode = 0
+text = "Enable Cube Mode
+"
+
+[node name="btnCulling" type="Button" parent="UIController/Buttons" unique_id=339004026]
+layout_mode = 2
+focus_mode = 0
+text = "Disable Culling"
+
+[node name="btnMorphing" type="Button" parent="UIController/Buttons" unique_id=554367241]
+layout_mode = 2
+focus_mode = 0
+text = "Disable Morphing"
+
+[node name="btnTerrainTesselation" type="Button" parent="UIController/Buttons" unique_id=876394929]
+layout_mode = 2
+focus_mode = 0
+text = "Disable Terrain Tesselation"
+
+[node name="btnVirtualTexturing" type="Button" parent="UIController/Buttons" unique_id=461967048]
+layout_mode = 2
+focus_mode = 0
+text = "Disable Virtual Texturing"
+
+[node name="btnWipeVirtualTexture" type="Button" parent="UIController/Buttons" unique_id=266530907]
+layout_mode = 2
+focus_mode = 0
+text = "Wipe Virtual Texture"
+
+[node name="btnHideDebug" type="Button" parent="UIController/Buttons" unique_id=828592354]
+layout_mode = 2
+focus_mode = 0
+text = "Disable Debug View"
+
+[node name="btnQuit" type="Button" parent="UIController/Buttons" unique_id=108972055]
+layout_mode = 2
+focus_mode = 0
+text = "Quit"
+
+[node name="CameraController" type="Node" parent="." unique_id=2045805659]
 script = ExtResource("5_usljo")
 Debug = true
 
-[node name="Main" type="Camera3D" parent="CameraController" unique_id=633723308]
+[node name="Main" type="Camera3D" parent="CameraController" unique_id=675408362]
+cull_mask = 1048571
 current = true
 fov = 70.0
 near = 0.001
@@ -103,21 +208,21 @@ RotationRangeX = Vector2(0, 180)
 RotationEasing = 0.3
 DistanceFromTarget = 800.0
 
-[node name="Camera" parent="CameraController/Main" unique_id=696527352 instance=ExtResource("6_qtwtp")]
+[node name="Camera" parent="CameraController/Main" unique_id=464412187 instance=ExtResource("6_qtwtp")]
 transform = Transform3D(-0.165, 0, 2.4914309e-08, 0, 0.165, 0, -2.4914309e-08, 0, -0.165, 0, -0.235, 0.669)
 
-[node name="Helper" type="Camera3D" parent="CameraController" unique_id=1743926697]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.3)
-visible = false
+[node name="Helper" type="Camera3D" parent="CameraController" unique_id=758465782]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.58196956)
 fov = 100.0
 near = 0.001
 far = 30000.0
 script = ExtResource("8_ldv5r")
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="CameraController/Helper" unique_id=1020541538]
+[node name="MeshInstance3D" type="MeshInstance3D" parent="CameraController/Helper" unique_id=1771665852]
+visible = false
 mesh = SubResource("SphereMesh_w1xx6")
 
-[node name="SubViewport" type="SubViewport" parent="CameraController" unique_id=1928027568]
+[node name="SubViewport" type="SubViewport" parent="CameraController" unique_id=197116711]
 own_world_3d = true
 world_3d = SubResource("World3D_usljo")
 handle_input_locally = false
@@ -127,32 +232,29 @@ size = Vector2i(64, 64)
 render_target_clear_mode = 1
 render_target_update_mode = 4
 
-[node name="Lookup" type="Camera3D" parent="CameraController/SubViewport" unique_id=1179075100]
+[node name="Lookup" type="Camera3D" parent="CameraController/SubViewport" unique_id=935588181]
 script = ExtResource("8_ldv5r")
 
-[node name="SurfaceAttachment" type="Node3D" parent="." unique_id=403408040]
+[node name="SurfaceAttachment" type="Node3D" parent="." unique_id=1972403850]
 
-[node name="MainLightSource" type="DirectionalLight3D" parent="SurfaceAttachment" unique_id=579467951]
+[node name="MainLightSource" type="DirectionalLight3D" parent="SurfaceAttachment" unique_id=1376334723]
 directional_shadow_max_distance = 2000.0
 sky_mode = 1
 
-[node name="DebugMesh" type="MultiMeshInstance3D" parent="SurfaceAttachment" unique_id=1184486005]
+[node name="DebugMesh" type="MultiMeshInstance3D" parent="SurfaceAttachment" unique_id=948609030]
 multimesh = SubResource("MultiMesh_ldv5r")
 
-[node name="CubicalCollision" type="StaticBody3D" parent="SurfaceAttachment" unique_id=1722442253]
-visible = false
+[node name="CubicalCollision" type="StaticBody3D" parent="SurfaceAttachment" unique_id=1628197415]
 
-[node name="CubicalCollisionShape" type="CollisionShape3D" parent="SurfaceAttachment/CubicalCollision" unique_id=1674596790]
+[node name="CubicalCollisionShape" type="CollisionShape3D" parent="SurfaceAttachment/CubicalCollision" unique_id=1516863623]
 shape = SubResource("BoxShape3D_wsrnx")
 
-[node name="InnerCollision" type="StaticBody3D" parent="SurfaceAttachment" unique_id=2063194098]
-visible = false
+[node name="InnerCollision" type="StaticBody3D" parent="SurfaceAttachment" unique_id=1453248356]
 
-[node name="InnerCollisionShape" type="CollisionShape3D" parent="SurfaceAttachment/InnerCollision" unique_id=1228060948]
+[node name="InnerCollisionShape" type="CollisionShape3D" parent="SurfaceAttachment/InnerCollision" unique_id=470921419]
 shape = SubResource("SphereShape3D_7pbfy")
 
-[node name="OuterCollision" type="StaticBody3D" parent="SurfaceAttachment" unique_id=1622877944]
-visible = false
+[node name="OuterCollision" type="StaticBody3D" parent="SurfaceAttachment" unique_id=1277717404]
 
-[node name="OuterCollisionShape3D" type="CollisionShape3D" parent="SurfaceAttachment/OuterCollision" unique_id=567373321]
+[node name="OuterCollisionShape3D" type="CollisionShape3D" parent="SurfaceAttachment/OuterCollision" unique_id=511418679]
 shape = SubResource("SphereShape3D_tgghh")

@@ -15,7 +15,7 @@ sky_material = SubResource("ShaderMaterial_qdvrb")
 background_mode = 1
 sky = SubResource("Sky_jxero")
 
-[node name="Main Menu" type="MarginContainer" unique_id=2119700644 node_paths=PackedStringArray("LoadOptions", "LoadSave", "AlbedoSave", "HeightmapSave", "StartNewGame", "ProgressBar", "ProgressLabel", "DemoPlanet", "FileDialog", "SaveName")]
+[node name="Main Menu" type="MarginContainer" unique_id=2119700644 node_paths=PackedStringArray("LoadOptions", "LoadSave", "AlbedoSave", "HeightmapSave", "StartNewGame", "Quit", "ProgressBar", "ProgressLabel", "DemoPlanet", "FileDialog", "SaveName")]
 custom_minimum_size = Vector2(512, 256)
 anchors_preset = 15
 anchor_right = 1.0
@@ -32,6 +32,7 @@ LoadSave = NodePath("CenterContainer/VBoxContainer/ScrollContainer/MarginContain
 AlbedoSave = NodePath("CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/New Game Section/btnUploadAlbedo")
 HeightmapSave = NodePath("CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/New Game Section/btnUploadHeight")
 StartNewGame = NodePath("CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/New Game Section/btnStartNewGame")
+Quit = NodePath("CenterContainer/VBoxContainer/btnQuit")
 ProgressBar = NodePath("CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/pgbProgressBar")
 ProgressLabel = NodePath("CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/lblProgressLabel")
 DemoPlanet = NodePath("CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/Load Section/SubViewportContainer/SubViewport")
@@ -71,7 +72,7 @@ size_flags_vertical = 3
 [node name="lblTitle" type="Label" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter" unique_id=1558421919]
 layout_mode = 2
 theme_override_font_sizes/font_size = 82
-text = "PLANET GAME!"
+text = "World Works"
 horizontal_alignment = 1
 uppercase = true
 

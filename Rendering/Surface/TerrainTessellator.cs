@@ -1,5 +1,5 @@
 using Godot;
-using PlanetGame.ComputeShaders.Dispatcher;
+using PlanetGame.Shaders.Dispatchers;
 
 namespace PlanetGame.Rendering.Surface
 {
@@ -16,7 +16,7 @@ namespace PlanetGame.Rendering.Surface
         public bool Ready { get; private set; } = true;
         public bool Paused = false;
 
-        public TerrainTessellator(PlanetController planetController, MultiMeshRD planetMultiMesh, CustomCamera mainCamera, CustomCamera helperCamera)
+        public TerrainTessellator(PlanetController planetController, SaveManager.WorldSave worldSave, MultiMeshRD planetMultiMesh, CustomCamera mainCamera, CustomCamera helperCamera)
         {
             ExecuteTessellationPass = new();
             PrepareTessellationPass = new();
@@ -48,7 +48,7 @@ namespace PlanetGame.Rendering.Surface
             return ExecuteTessellationPass?.IsValid() == true && PrepareTessellationPass?.IsValid() == true;
         }
 
-        public void Invoke()
+        public void Invoke(CustomCamera camera)
         {
             if (!Ready || !IsValidForProcessing() || Paused)
                 return;

@@ -184,12 +184,6 @@ float calculate_lod_to_cam(vec3 from, vec3 camera_position, mat4 planet_transfor
     return calculate_lod(distance_from_cam(from, camera_position, planet_transform_matrix), fovy, sub_factor, radius, maximum_lod, minimum_lod);
 }
 
-float get_percentage(vec3 point, uvec2 key, vec3 camera_position, mat4 planet_transform_matrix, float fovy, float sub_factor, float radius, float maximum_lod, float minimum_lod) {
-    float current_lod = float(get_lod_of_key(key));
-    float calculated_lod = clamp(calculate_lod_to_cam(point, camera_position, planet_transform_matrix, fovy, sub_factor, radius, maximum_lod, minimum_lod), current_lod - 1.0, current_lod);
-    return current_lod - calculated_lod;
-}
-
 vec2 morph_vertex(vec2 vertex, float morph_k, int resolution) {
     float patch_tess_factor = float(resolution - 1);
     vec2 fract_part = fract(vertex * patch_tess_factor * 0.5f);
@@ -197,6 +191,12 @@ vec2 morph_vertex(vec2 vertex, float morph_k, int resolution) {
     vec2 int_part = floor(vertex.xy * patch_tess_factor * 0.5);
     vec2 sign_vec = mod(int_part, 2.0) * vec2(-2.0) + vec2(1.0);
     return vertex - (sign_vec * fract_part) * morph_k;
+}
+
+float get_percentage(vec3 point, uvec2 key, vec3 camera_position, mat4 planet_transform_matrix, float fovy, float sub_factor, float radius, float maximum_lod, float minimum_lod) {
+    float current_lod = float(get_lod_of_key(key));
+    float calculated_lod = clamp(calculate_lod_to_cam(point, camera_position, planet_transform_matrix, fovy, sub_factor, radius, maximum_lod, minimum_lod), current_lod - 1.0, current_lod);
+    return current_lod - calculated_lod;
 }
 
 const float quantize_factor = 12.0;

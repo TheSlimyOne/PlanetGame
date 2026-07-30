@@ -1,0 +1,131 @@
+#[fragment] 
+#version 450 
+
+layout(location = 0) flat in uvec4 key;
+layout(location = 1) flat in uint flags;
+layout(location = 2) in float morph;
+layout(location = 3) in float elevation;
+layout(location = 4) in vec2 vertex_uv;
+layout(location = 5) flat in int lod;
+layout(location = 6) in vec3 normal;
+
+layout(location = 0) out vec4 frag_color; 
+
+layout(set = 0, binding = 1, std430) buffer restrict readonly ExternalData {
+    int tile_size;
+	int total_texture_subdivisions;
+	int lod_to_mip_map[32];
+
+	float radius;
+	int resolution;
+	float height_scale;
+	float sub_factor;
+	uint debug_flags;
+
+	int maximum_lod;
+	int minimum_lod;
+
+	float padding;
+	vec2 morph_range;
+
+	mat4 planet_transform_matrix;
+	mat4 view_projection_matrix;
+	vec4 camera_position_fovy;
+};
+
+layout(set = 0, binding = 2) uniform sampler2DArray height_map_tile_cache;
+layout(set = 0, binding = 3) uniform sampler2DArray terrain_indirection_table;
+layout(set = 0, binding = 4, r32ui) uniform uimage2DArray state_table;
+
+
+#[include] res://Shaders/GLSL/ShaderIncludes/TesselationFunctions.inc
+
+#[include] res://Shaders/GLSL/ShaderIncludes/Functions.inc
+
+
+void main() 
+{
+    vec2 adjusted_uv = clamp(vertex_uv, vec2(0.0), vec2(1.0 - EPS));
+
+	int mip_index = lod_to_mip_map[lod];
+    int normal_id = int(key.z);
+
+	float grid_size = exp2(float(total_texture_subdivisions - 1));
+	float lod_grid_size = grid_size / exp2(float(mip_index));
+
+    vec2 grid_position = floor(adjusted_uv * lod_grid_size) / lod_grid_size;
+    frag_color = vec4(grid_position, 0.0, 1.0);
+
+    ivec3 indirection_index = ivec3(
+        grid_position * grid_size, 
+        total_texture_subdivisions * normal_id + mip_index);
+    
+        const uint PROCESSING = 0xFFFFFFFF;
+    const uint NOT_PROCESSING = 0x00000000;
+    uint results = imageAtomicCompSwap(state_table, indirection_index, NOT_PROCESSING, PROCESSING);
+
+
+
+    // vec2 cell_uv = get_cell_uv(adjusted_uv, lod_grid_size);
+	// vec2 cell_position = vec2(floor(adjusted_uv * lod_grid_size) / lod_grid_size);
+
+
+    // vec3 output_color = vec3(1,1,1);
+    // float depth = 1 - mip_index / float(total_texture_subdivisions - 1); 
+    // switch(key.z)
+    // {
+    //     case 0:
+    //         output_color = vec3(cell_position.x, cell_position.y, depth);
+    //         break;
+    //     case 1:
+    //         output_color = vec3(cell_position.y, cell_position.x, depth);
+    //         break;
+    //     case 2:
+    //         output_color = vec3(depth, cell_position.x, cell_position.y);
+    //         break;
+    //     case 3:
+    //         output_color = vec3(depth, cell_position.y, cell_position.x);
+    //         break;
+    //     case 4:
+    //         output_color = vec3(cell_position.x, depth, cell_position.y);
+    //         break;
+    //     case 5:
+    //         output_color = vec3(cell_position.y, depth, cell_position.x);
+    //         break;
+    //     default:
+    //         break;
+    // }
+
+    // float edge_threshold = 1.0/128.0;
+    // // vec3 tile_uv = get_tile_cache_uv(terrain_indirection_table, mip_index, tile_size, vertex_uv, total_texture_subdivisions, int(key.z));
+    // // vec3 color = get_tile(height_map_tile_cache, tile_uv).xyz;
+
+    
+    // bool is_cell_edge =
+    //     cell_uv.x < edge_threshold ||
+    //     cell_uv.x > 1.0 - edge_threshold ||
+    //     cell_uv.y < edge_threshold ||
+    //     cell_uv.y > 1.0 - edge_threshold;
+
+    // if (is_cell_edge) {
+    //     frag_color = vec4(0.5);
+    // } else {
+    //     frag_color = vec4(output_color, 1.0);
+    // }
+    
+
+    // ivec3 indirection_index = ivec3(
+    //     cell_uv * lod_grid_size,
+    //     total_texture_subdivisions * key.z + mip_index
+    // );
+
+    // imageStore(state_table, indirection_index, uvec4(1u, 0u, 0u, 0u));
+    // const uint PROCESSING = 0xFFFFFFFF;
+    // const uint NOT_PROCESSING = 0x00000000;
+    // uint results = imageAtomicCompSwap(state_table, indirection_index, NOT_PROCESSING, PROCESSING);
+
+
+
+    // frag_color = vec4(cell_uv, 0.0, 1.0);
+
+}

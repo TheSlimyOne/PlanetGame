@@ -1,31 +1,26 @@
 shader_type canvas_item;
 render_mode unshaded;
-uniform int grid_size;
-uniform int index;
-uniform sampler2DArray table : repeat_disable, source_color, filter_nearest;
 
+uniform ivec2 grid_size;
+uniform sampler2DArray image : repeat_disable, filter_nearest;
 
 void fragment() {
-	//vec4 table_value = texture(table, vec3(UV, float(index)), 0);
-//
-	ivec2 tex_size = textureSize(table, 0).xy;
-    ivec2 pixel_coords = ivec2(UV * vec2(tex_size));
-	uvec4 indirection_data = floatBitsToUint(texelFetch(table, ivec3(pixel_coords, index), 0));
-	float slot = float(indirection_data.x) / 255.0;
-	COLOR = vec4(slot, 0, 0, 1);
+	vec2 grid_position = UV * vec2(grid_size);
+	ivec2 tile_position = ivec2(floor(grid_position));
 
-	//
-	////vec4 table_value = texture(table, vec3(UV, float(index)), 0);
-////
-	////COLOR = vec4(table_value.xyz, 1);
-//
-	//if (indirection_data == uvec4(0))
-		//COLOR = vec4(0, 0, 0, 1);
-	//else
-	//{
-		//uint slot = indirection_data.x;
-		//ivec2 slot_coords = ivec2(int(slot) % grid_size, int(slot) / grid_size);
-	  	//vec2 normalized_slot_coords = vec2(slot_coords) / float(grid_size - 1);
-		//COLOR = vec4(normalized_slot_coords.xy, 0, 1);
-	//}
+	ivec3 image_size = textureSize(image, 0);
+
+	vec2 tile_uv = fract(grid_position);
+	
+	ivec2 pixel_coordinates = ivec2(tile_uv * vec2(image_size.xy));
+
+	ivec3 texture_index = ivec3(pixel_coordinates, tile_position.y * grid_size.x + tile_position.x);
+
+	vec4 raw_value = texelFetch(image, texture_index, 0);
+
+	uvec4 indirection_data = floatBitsToUint(raw_value);
+
+	float slot = float(indirection_data.x) / 255.0;
+	
+	COLOR = vec4(slot, 0.0, 0.0, 1.0);
 }

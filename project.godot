@@ -147,3 +147,7 @@ switch_cam={
 3d_render/layer_1="All"
 3d_render/layer_2="Planet"
 3d_render/layer_3="Debug"
+
+[rendering]
+
+environment/defaults/default_clear_color=Color(0.05882353, 0.05882353, 0.05882353, 1)

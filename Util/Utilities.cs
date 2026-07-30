@@ -21,6 +21,19 @@ namespace PlanetGame.Util
             return ToBytes<T>(new T[] { data });
         }
 
+        public static uint ToBitFlags(ReadOnlySpan<bool> values)
+        {
+            uint flags = 0;
+
+            for (int index = 0; index < values.Length && index < 32; index++)
+            {
+                if (values[index])
+                    flags |= 1u << index;
+            }
+
+            return flags;
+        }
+
         public static (float[,] data, float max, float min) To2Darray(Image image, bool normalized = false)
         {
             int width = image.GetWidth();
