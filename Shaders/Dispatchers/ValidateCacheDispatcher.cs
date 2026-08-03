@@ -24,11 +24,11 @@ namespace PlanetGame.Shaders.Dispatchers
         {
             _computeShaderUniforms = new System.Collections.Generic.Dictionary<Enum, ShaderUniform>()
             {
-                [BufferNames.INDIRECTION_TABLE] = SparseVirtualTexture.ReadFramebuffer[ResolveTileTextureDispatcher.BufferNames.INDIRECTION_TABLE],
+                [BufferNames.INDIRECTION_TABLE] = SparseVirtualTexture.ResolveTileRequest[ResolveTileRequestDispatcher.BufferNames.INDIRECTION_TABLE],
 
-                [BufferNames.RESIDENCY_TABLE] = SparseVirtualTexture.ReadFramebuffer[ResolveTileTextureDispatcher.BufferNames.RESIDENCY_TABLE],
+                [BufferNames.RESIDENCY_TABLE] = SparseVirtualTexture.ResolveTileRequest[ResolveTileRequestDispatcher.BufferNames.RESIDENCY_TABLE],
 
-                [BufferNames.VIRTUAL_TEXTURE_DATA] = SparseVirtualTexture.ReadFramebuffer[ResolveTileTextureDispatcher.BufferNames.VIRTUAL_TEXTURE_DATA]
+                [BufferNames.VIRTUAL_TEXTURE_DATA] = SparseVirtualTexture.ResolveTileRequest[ResolveTileRequestDispatcher.BufferNames.VIRTUAL_TEXTURE_DATA]
             };
 
             CreateUniformSet();
@@ -37,8 +37,10 @@ namespace PlanetGame.Shaders.Dispatchers
         #nullable enable
         public override void Invoke(byte[]? pushConstants = null)
         {
-            uint x = (SparseVirtualTexture.ResidencyTable.GridSize + 32) / 32;
-            uint y = (SparseVirtualTexture.ResidencyTable.GridSize + 32) / 32;
+            uint gridSize = SparseVirtualTexture.VirtualTextureData.GridSize;
+
+            uint x = (gridSize + 32) / 32;
+            uint y = (gridSize + 32) / 32;
 
             long computeList = RenderingDevice.ComputeListBegin();
             RenderingDevice.ComputeListBindComputePipeline(computeList, _pipeline);

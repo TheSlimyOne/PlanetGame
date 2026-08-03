@@ -56,6 +56,7 @@ public partial class PlanetController : Node3D
     [Export] public bool DisableVirtualTexturing { get; set; } = false;
     [Export] public bool DisableTesselation { get; set; } = false;
     [Export] public bool DisableInputMouseInput { get; set; } = false;
+    [Export] public bool IsSimulateRotation { get; set; } = true;
 
     [Export] public bool Verbose { get => Dispatcher<Enum>.Verbose; set => Dispatcher<Enum>.Verbose = value; }
 
@@ -113,7 +114,7 @@ public partial class PlanetController : Node3D
                 SurfaceShader.UnbindAll();
                 RenderingServer.FreeRid(SurfaceShader.GetRid());
             }
-           
+
             PlanetMultiMesh?.CleanupGPU();
             PlanetMultiMesh = null;
 
@@ -127,10 +128,13 @@ public partial class PlanetController : Node3D
         }
     }
 
-    private readonly List<Rid> _terrainInstances = [];
+    private Rid _terrainInstance;
     private Image _heightmap;
     public override void _Ready()
     {
+        string saveName = !string.IsNullOrWhiteSpace(SaveManager.CurrentSave) ? SaveManager.CurrentSave : "Test";
+        SaveManager.WorldSave save = SaveManager.GetSave(saveName);
+
         SurfaceShader = new() { Shader = GD.Load<Shader>(ShaderPaths.SURFACE_SHADER_PATH) };
 
         SetupCameras();
@@ -142,19 +146,17 @@ public partial class PlanetController : Node3D
 
 
         PlanetMultiMesh = new(MaximumKeys, Key.GetTriangleMesh(Resolution), -1);
-        _terrainInstances.Add(PlanetMultiMesh.CreateMultimeshInstance(Transform3D.Identity, SurfaceShader.GetRid(), GetWorld3D().Scenario, 2 * Radius, 0b1u));
+        _terrainInstance = PlanetMultiMesh.CreateMultimeshInstance(Transform3D.Identity, SurfaceShader.GetRid(), GetWorld3D().Scenario, 2 * Radius, 0b1u);
 
-        string saveName = !string.IsNullOrWhiteSpace(SaveManager.CurrentSave) ? SaveManager.CurrentSave : "Test";
-        
-        
-        TerrainTessellator = new(this, SaveManager.GetSave(saveName), PlanetMultiMesh, MainCamera, CameraController.GetCamera("Helper"));
-        SparseVirtualTexture = new(TerrainTessellator, SaveManager.GetSave(saveName), CameraController.GetCamera("Lookup").GetViewport(), PlanetMultiMesh.Mesh);
 
-        SurfaceShaderBindParameters();
+        TerrainTessellator = new(this, save, PlanetMultiMesh, MainCamera);
+        SparseVirtualTexture = new(TerrainTessellator, save, PlanetMultiMesh.Mesh);
+
+        BindShaderParameters(SurfaceShader, CameraController.GetCamera("Main"));
 
         _heightmap = SaveManager.GetBaseImages(SaveManager.CurrentSave)[SaveManager.SaveDataIdentifier.BASE_HEIGHT_MAP].GetImage();
 
-        SparseVirtualTexture.CreateDebugWindow(UIController.DebugContainer);
+        SparseVirtualTexture.CreateDebugWindow(UIController.DebugContainer, CameraController.GetCamera("Main"));
     }
 
     #region Process
@@ -178,8 +180,7 @@ public partial class PlanetController : Node3D
         // float elevationAtPoint = point.DistanceTo(GlobalPosition) - Radius;
         // GD.Print(elevationAtPoint);
 
-        CustomCamera helperCamera = CameraController.GetCamera("Helper");
-        TerrainTessellator.Invoke(helperCamera);
+        TerrainTessellator.Invoke();
         SparseVirtualTexture.Invoke();
 
         UIController.SetCurrentLOD(TerrainTessellator.CurrentLod);
@@ -192,15 +193,7 @@ public partial class PlanetController : Node3D
     public void SetupCameras()
     {
         MainCamera = (OrbitalCamera3D)CameraController.GetCamera("Main");
-        CustomCamera helperCamera = CameraController.GetCamera("Helper");
-        CustomCamera lookupCamera = CameraController.GetCamera("Lookup");
-
-        helperCamera.Follow(MainCamera);
-        lookupCamera.Follow(MainCamera);
-
         MainCamera.Far = 32768; // Max far value for cameras
-        helperCamera.Far = MainCamera.Far;
-        lookupCamera.Far = MainCamera.Far;
 
         MainCamera.MinDistance = Radius + 0.999f;
         MainCamera.MaxDistance = MainCamera.Far - Radius;
@@ -208,9 +201,9 @@ public partial class PlanetController : Node3D
         MainCamera.GlobalPosition = Vector3.Back * MainCamera.DistanceFromTarget;
         CameraController.SetCurrent("Main");
 
-        MainCamera.AddChild(helperCamera.GetFrustumMeshInstance());
-
-        lookupCamera.SetSize(DisplayServer.WindowGetSize() / 4);
+        MeshInstance3D frustum = MainCamera.GetFrustumMeshInstance();
+        MainCamera.AddChild(frustum);
+        frustum.GlobalPosition = new Vector3(0.0f, 0.0f, -MainCamera.Near);
     }
 
     public const float MINIMUM_RADIUS_SCALE = 0.999f;
@@ -218,7 +211,19 @@ public partial class PlanetController : Node3D
     {
         SurfaceAttachment.CallDeferred("add_child", _debugPlot);
         _debugPlot.ExtraCullMargin = 2 * Radius;
-        _debugPlot.Multimesh = new MultiMesh() { UseColors = true, Mesh = new SphereMesh() { RadialSegments = 8, Rings = 4, Material = new StandardMaterial3D() { VertexColorUseAsAlbedo = true }, Radius = PointRadius, Height = 2 * PointRadius }, TransformFormat = MultiMesh.TransformFormatEnum.Transform3D };
+        _debugPlot.Multimesh = new MultiMesh()
+        {
+            UseColors = true,
+            Mesh = new SphereMesh()
+            {
+                RadialSegments = 8,
+                Rings = 4,
+                Material = new StandardMaterial3D() { VertexColorUseAsAlbedo = true },
+                Radius = PointRadius,
+                Height = 2 * PointRadius
+            },
+            TransformFormat = MultiMesh.TransformFormatEnum.Transform3D
+        };
 
         CollisionShape3D InnerCollisionShape = new() { Shape = new SphereShape3D() { Radius = MINIMUM_RADIUS_SCALE * Radius } };
         CollisionShape3D OuterCollisionShape = new() { Shape = new SphereShape3D() { Radius = Radius + HeightScale } };
@@ -261,9 +266,13 @@ public partial class PlanetController : Node3D
         RotatePlanet(right, rotationSpeed * by * _direction.Z);
         RotatePlanet(up, rotationSpeed * by * _direction.X);
 
-        // External Objects that need to rotate to simulate the effect
-        WorldEnvironment.Environment.SkyRotation = PlanetRotation.Basis.GetEuler();
-        SurfaceAttachment.Transform = GetPlanetTRMatrix();
+        if (IsSimulateRotation)
+        {
+            // External Objects that need to rotate to simulate the rotation effect
+            WorldEnvironment.Environment.SkyRotation = PlanetRotation.Basis.GetEuler();
+            SurfaceAttachment.Transform = GetPlanetTRMatrix();
+        }
+
         MainCamera.DistanceFromTarget += zoomSpeed * Radius * _direction.Y * by;
 
         MainCamera.DistanceFromTarget = Mathf.Clamp(MainCamera.DistanceFromTarget, 1.06f, MainCamera.MaxDistance);
@@ -278,7 +287,7 @@ public partial class PlanetController : Node3D
     {
         if (@event is InputEventMouseButton mouseEvent)
         {
-            if(DisableInputMouseInput)
+            if (DisableInputMouseInput)
                 return;
 
             if (mouseEvent.ButtonIndex == MouseButton.Right && mouseEvent.Pressed)
@@ -287,9 +296,60 @@ public partial class PlanetController : Node3D
             }
             if (mouseEvent.ButtonIndex == MouseButton.Left && mouseEvent.Pressed)
             {
-                // CustomCamera lookupCamera = CameraController.GetCamera("Lookup");
+
+
+
+                // Image image = SparseVirtualTexture.SvtFeedbackRenderPass.GetPickingImage();
+
 
                 // Vector2 mousePosition = MainCamera.GetViewport().GetMousePosition();
+                // Vector2 viewportSize = MainCamera.GetViewport().GetVisibleRect().Size;
+
+                // Vector2 normalizedMousePosition = mousePosition / viewportSize;
+
+                // Vector2I pixelPosition = new(
+                //     Mathf.Clamp((int)(normalizedMousePosition.X * image.GetWidth()), 0, image.GetWidth() - 1),
+                //     Mathf.Clamp((int)(normalizedMousePosition.Y * image.GetHeight()), 0, image.GetHeight() - 1)
+                // );
+
+                // Color pickingData = image.GetPixelv(pixelPosition);
+
+                Vector3 coordinate =  new Vector3(0, 0, 1) * PlanetRotation;
+                Color pickingData = new(coordinate.X, coordinate.Y, coordinate.Z, 1);
+                if (pickingData.A != -1)
+                {
+                    Vector3 localSpaceMousePosition = new(pickingData.R, pickingData.G, pickingData.B);
+
+                    Vector3 worldSpacePosition = PlanetTranslation * PlanetRotation * PlanetScale * localSpaceMousePosition;
+
+    
+                    float distance = worldSpacePosition.DistanceTo(MainCamera.GlobalPosition);
+
+                    float num = Mathf.Sqrt2 * SubFactor * Radius;
+                    float den = distance * Mathf.Tan(MainCamera.GetCameraFov(true) / 2);
+
+                    int lod = Mathf.FloorToInt(Mathf.Log(num / den) / Mathf.Log(2));
+
+                    Vector2 uv = VectorUtils.PointOnSphereToUV(localSpaceMousePosition);
+                    
+
+                    GD.Print(SaveManager.GetCurrentSave().LodToMipMap[lod]);
+                    // GD.Print(uv);
+
+
+
+
+
+
+
+                    _debugPlot.Multimesh.InstanceCount = 1;
+                    _debugPlot.Multimesh.SetInstanceColor(0, new Color(uv.X, uv.Y, 0, 1));
+                    _debugPlot.Multimesh.SetInstanceTransform(0, new(Basis.Identity, localSpaceMousePosition * Radius));
+                }
+
+
+                // CustomCamera lookupCamera = CameraController.GetCamera("Lookup");
+
                 // Vector2 viewportUV = mousePosition / (MainCamera.GetViewport().GetVisibleRect().Size - Vector2.One);
 
 
@@ -342,8 +402,10 @@ public partial class PlanetController : Node3D
 
     #region Material Settings
 
-    public void BindSharedShaderParameters(BindableShaderMaterial bindableShaderMaterial, CustomCamera main, CustomCamera helper)
+    public void BindShaderParameters(BindableShaderMaterial bindableShaderMaterial, CustomCamera main)
     {
+        VTData vtData = SaveManager.GetSVTData(SaveManager.GetCurrentSave());
+
         bindableShaderMaterial.Bind("radius", () => Radius);
         bindableShaderMaterial.FrameDependentBind("height_scale", () => HeightScale);
         bindableShaderMaterial.Bind("resolution", () => Resolution);
@@ -357,25 +419,23 @@ public partial class PlanetController : Node3D
         bindableShaderMaterial.FrameDependentBind("morph_range", () => MorphRange);
 
         bindableShaderMaterial.FrameDependentBind("camera_position", () => main.GlobalPosition);
-        bindableShaderMaterial.FrameDependentBind("fovy", () => Mathf.Tan(helper.GetCameraFov(true) / 2));
+        bindableShaderMaterial.FrameDependentBind("fovy", () => Mathf.Tan(MainCamera.GetCameraFov(true) / 2));
         bindableShaderMaterial.Bind("sub_factor", () => SubFactor);
-        bindableShaderMaterial.Bind("total_texture_subdivisions", () => SparseVirtualTexture.IndirectionTable.MipDepth);
-        bindableShaderMaterial.FrameDependentBind("lod_to_mip_map", () => SaveManager.GetCurrentSave().LodToMipMap);
 
-        bindableShaderMaterial.Bind("tile_size", () => SaveManager.GetCurrentSave().TileSize);
+        bindableShaderMaterial.FrameDependentBind("lod_to_mip_map", () => vtData.LodToMipMap);
+
+        bindableShaderMaterial.Bind("tile_size", () => vtData.TileSize);
 
         bindableShaderMaterial.Bind("height_map_tile_cache", () => SparseVirtualTexture.HeightTileCache.Cache);
         bindableShaderMaterial.Bind("terrain_indirection_table", () => SparseVirtualTexture.IndirectionTable.Table);
-    }
 
-    public void SurfaceShaderBindParameters()
-    {
-        BindSharedShaderParameters(SurfaceShader, CameraController.GetCamera("Main"), CameraController.GetCamera("Helper"));
-        SurfaceShader.Bind("albedo_tile_cache", () => SparseVirtualTexture.AlbedoTileCache.Cache);
-        SurfaceShader.FrameDependentBind("normal_strength", () => NormalStrength);
-        SurfaceShader.UpdateAllParameters();
-    }
+        bindableShaderMaterial.Bind("low_resolution_mip_count", () => vtData.LowResolutionMipCount);
+        bindableShaderMaterial.Bind("high_resolution_mip_count", () => vtData.HighResolutionMipCount);
 
+        bindableShaderMaterial.Bind("albedo_tile_cache", () => SparseVirtualTexture.AlbedoTileCache.Cache);
+        bindableShaderMaterial.FrameDependentBind("normal_strength", () => NormalStrength);
+        bindableShaderMaterial.UpdateAllParameters();
+    }
     private const string POSITION = "position";
     public Vector3 FindPointOnPlanetSurface(Vector3 from, Vector3 to, int stepAmount)
     {

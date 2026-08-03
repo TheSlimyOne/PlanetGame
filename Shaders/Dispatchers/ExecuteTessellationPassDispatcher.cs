@@ -3,6 +3,7 @@ using Uniform;
 using Godot;
 using Godot.Collections;
 using PlanetGame.Util;
+using PlanetGame.Rendering.VirtualTexturing;
 
 namespace PlanetGame.Shaders.Dispatchers
 {
@@ -11,8 +12,9 @@ namespace PlanetGame.Shaders.Dispatchers
 		public PlanetController PlanetController { get; set; }
 		public PrepareTessellationPassDispatcher PrepareTessellationPass { get; set; }
 		public CustomCamera MainCamera { get; set; }
-		public CustomCamera HelperCamera { get; set; }
 		public MultiMeshRD PlanetMultiMesh { get; set; }
+
+		public SaveManager.WorldSave worldSave;
 
 		public enum BufferNames
 		{
@@ -141,11 +143,14 @@ namespace PlanetGame.Shaders.Dispatchers
 				PlanetController.IsCube,
 			]);
 
+			VTData vTData = SaveManager.GetSVTData(worldSave);
+
 			Array<byte> data =
 			[
-				.. Utilities.ToBytesSingle(SaveManager.GetCurrentSave().TileSize),
-				.. Utilities.ToBytesSingle(SaveManager.GetCurrentSave().TotalLods),
-				.. Utilities.ToBytes<int>(SaveManager.GetCurrentSave().LodToMipMap),
+				.. Utilities.ToBytesSingle(vTData.LowResolutionMipCount),
+				.. Utilities.ToBytesSingle(vTData.HighResolutionMipCount),
+				.. Utilities.ToBytesSingle(vTData.TileSize),
+				.. Utilities.ToBytes<int>(vTData.LodToMipMap),
 
 				.. Utilities.ToBytesSingle(PlanetController.Radius),
 				.. Utilities.ToBytesSingle(PlanetController.Resolution),
@@ -156,14 +161,13 @@ namespace PlanetGame.Shaders.Dispatchers
 				.. Utilities.ToBytesSingle(PlanetController.MaximumLod),
 				.. Utilities.ToBytesSingle(PlanetController.MinimumLod),
 
-				.. Utilities.ToBytesSingle(0),
 
 				.. Utilities.ToBytesSingle(PlanetController.MorphRange.X),
 				.. Utilities.ToBytesSingle(PlanetController.MorphRange.Y),
 
 				.. Utilities.ToBytesSingle(Utilities.ToProjection(PlanetController.GetPlanetTransformMatrix())),
-				.. Utilities.ToBytesSingle(HelperCamera.GetViewProjectionMatrix()),
-				.. Utilities.ToBytesSingle(VectorUtils.ToVector4( MainCamera.GlobalPosition, Mathf.Tan(HelperCamera.GetCameraFov(true) / 2))),
+				.. Utilities.ToBytesSingle(MainCamera.GetViewProjectionMatrix()),
+				.. Utilities.ToBytesSingle(VectorUtils.ToVector4( MainCamera.GlobalPosition, Mathf.Tan(MainCamera.GetCameraFov(true) / 2))),
 			];
 
 			return [.. data];

@@ -4,43 +4,41 @@ using Godot;
 using System.Linq;
 using PlanetGame.Shaders.RenderPasses;
 using PlanetGame.Rendering.Surface;
+using Shaders;
 
 namespace PlanetGame.Rendering.VirtualTexturing
 {
     public class SparseVirtualTexture
     {
-        public ResolveTileTextureDispatcher ReadFramebuffer { get; private set; }
+        public ResolveTileRequestDispatcher ResolveTileRequest { get; private set; }
         public ValidateCacheDispatcher ValidateTileCache { get; private set; }
+        // public SvtDepthPrepass DepthPrepass { get; private set; }
         public SvtFeedbackRenderPass SvtFeedbackRenderPass { get; private set; }
-        public Viewport Viewport { get; private set; }
+
         public IndirectionTable IndirectionTable { get; private set; }
         public TileCache AlbedoTileCache { get; private set; }
         public TileCache HeightTileCache { get; private set; }
         public ResidencyTable ResidencyTable { get; private set; }
         public StateTable StateTable { get; private set; }
-
-        public uint TileSize { get; private set; }
+        public VTData VirtualTextureData { get; private set; }        
 
         public bool Ready { get; private set; } = true;
         public bool Paused = false;
 
-        public SparseVirtualTexture(TerrainTessellator terrainTessellator, SaveManager.WorldSave worldSave, Viewport viewport, Mesh mesh)
+        public SparseVirtualTexture(TerrainTessellator terrainTessellator, SaveManager.WorldSave worldSave, Mesh mesh)
         {
-            Viewport = viewport;
-            TileSize = worldSave.TileSize;
-            uint totalSubdivisions = worldSave.TotalLods;
+            VirtualTextureData = SaveManager.GetSVTData(worldSave);
 
-            AlbedoTileCache = new(TileSize, totalSubdivisions, TileCache.DEFAULT_TILE_SLOTS_COUNT, worldSave.TilesAlbedo, Colors.Magenta, Image.Format.Rgba8);
-            HeightTileCache = new(TileSize, totalSubdivisions, TileCache.DEFAULT_TILE_SLOTS_COUNT, worldSave.TilesHeightmap, Colors.Black, Image.Format.R8);
+            AlbedoTileCache = new(VirtualTextureData, worldSave.TilesAlbedo, Colors.Magenta, Image.Format.Rgba8);
+            HeightTileCache = new(VirtualTextureData, worldSave.TilesHeightmap, Colors.Black, Image.Format.R8);
 
-            IndirectionTable = new(totalSubdivisions);
-            ResidencyTable = new(totalSubdivisions);
-            StateTable = new(totalSubdivisions);
+            IndirectionTable = new(VirtualTextureData);
+            ResidencyTable = new(VirtualTextureData);
+            StateTable = new(VirtualTextureData);
 
-            ReadFramebuffer = new()
+            ResolveTileRequest = new()
             {
-                SparseVirtualTexture = this,
-                // Viewport = Viewport
+                SparseVirtualTexture = this
             };
 
             ValidateTileCache = new()
@@ -48,30 +46,32 @@ namespace PlanetGame.Rendering.VirtualTexturing
                 SparseVirtualTexture = this
             };
 
-            SvtFeedbackRenderPass = new(terrainTessellator, this, new Vector2I(1024, 512), mesh);
+            Vector2 viewSize =  new Vector2I(1024, 512);
+            
 
-            ReadFramebuffer.CreateUniforms();
+
+            SvtFeedbackRenderPass = new(terrainTessellator, this, new Vector2I(1024, 512), mesh);
+            
+
+            ResolveTileRequest.CreateUniforms();
             ValidateTileCache.CreateUniforms();
             SvtFeedbackRenderPass.CreateUniforms();
         }
 
         public bool IsValidForProcessing()
         {
-            return ReadFramebuffer?.IsValid() == true && ValidateTileCache?.IsValid() == true && SvtFeedbackRenderPass?.IsValid() == true;
+            return ResolveTileRequest?.IsValid() == true && ValidateTileCache?.IsValid() == true && SvtFeedbackRenderPass?.IsValid() == true;
         }
-
-        public async void CreateDebugWindow(Control container)
+        public async void CreateDebugWindow(Control container, CustomCamera camera)
         {
             if (!container.IsNodeReady())
                 await container.ToSignal(container, Node.SignalName.Ready);
 
             await container.ToSignal(container, Control.SignalName.Resized);
 
-
             ScrollContainer scrollContainer = new()
             {
                 Name = "SVTDebugTextures",
-                // LayoutMode = 1,
                 AnchorsPreset = (int)Control.LayoutPreset.FullRect,
                 AnchorRight = 1.0f,
                 AnchorBottom = 1.0f,
@@ -100,10 +100,59 @@ namespace PlanetGame.Rendering.VirtualTexturing
             boxContainer.AddChild(HeightTileCache.CreateVisualization("Heightmap"));
 
             TextureRect rect = new() { Texture = SvtFeedbackRenderPass.GetFrameBufferTexture() };
-            boxContainer.AddChild(rect);
+            boxContainer.AddChild(rect);  
+
+            // shader = new BindableShaderMaterial()
+            // {
+            //     Shader = new Shader()
+            //     {
+            //         Code = """
+            //             shader_type canvas_item;
+            //             render_mode unshaded;
+
+            //             uniform mat4 inverse_projection_matrix;
+            //             uniform float depth_display_range = 200.0;
+
+            //             void fragment()
+            //             {
+            //                 float depth = texture(TEXTURE, UV).r;
+
+
+
+            //                 float linear_depth = 1.0 / (depth * inverse_projection_matrix[2].w + inverse_projection_matrix[3].w);
+            //                 linear_depth = clamp(linear_depth / depth_display_range, 0, 1);
+
+
+            //                 COLOR = vec4(
+            //                     vec3(linear_depth),
+            //                     1.0
+            //                 );
+            //             }
+            //         """
+            //     }
+            // };
+
+            // shader.FrameDependentBind("inverse_projection_matrix", () =>
+            // {
+            //     return camera.GetCameraProjection().Inverse();
+            // });
+            // shader.FrameDependentBind("depth_display_range", () =>
+            // {
+            //     return camera.DistanceFromTarget;
+            // });
+            TextureRect rect1 = new() 
+            { 
+                Texture = SvtFeedbackRenderPass.GetPickingTexture(),
+            };
+
+            
+
+            boxContainer.AddChild(rect1);
+
 
             foreach (TextureRect texture in boxContainer.GetChildren().Cast<TextureRect>())
             {
+                // texture.ExpandMode = (TextureRect.ExpandModeEnum)1;
                 if (boxContainer is VBoxContainer)
                     texture.ExpandMode = TextureRect.ExpandModeEnum.FitHeightProportional;
                 else
@@ -115,25 +164,45 @@ namespace PlanetGame.Rendering.VirtualTexturing
 
         public async void RequestTileSlot(byte[] bytes)
         {
-            (uint a, uint b, uint c, uint d)[] data = [.. Util.Utilities.FromBytes<(uint a, uint b, uint c, uint d)>(bytes)];
-
-            // GD.Print(data.Length);
+            (uint tileX, uint tileY, uint tileZ, uint slot)[] data =
+                 [.. Util.Utilities.FromBytes<(uint, uint, uint, uint)>(bytes)];
+            // Ready = true;
+            // return;
 
             if (data.Length > 0)
             {
                 await Parallel.ForEachAsync(data, new ParallelOptions { MaxDegreeOfParallelism = 4 }, (tileData, _) =>
                 {
-                    uint xCoord = tileData.a;
-                    uint yCoord = tileData.b;
-                    uint mipIndex =  tileData.c % IndirectionTable.MipDepth;
-                    uint normalId = (tileData.c - mipIndex) / IndirectionTable.MipDepth;
-                    uint slot = tileData.d;
-                    // uint tileSlot = (tileData >> 16) & 0xFF;
+                    uint xCoord = tileData.tileX;
+                    uint yCoord = tileData.tileY;
+                    uint mipIndex = tileData.tileZ % VirtualTextureData.TotalSubdivisions;
+                    uint normalId = (tileData.tileZ - mipIndex) / VirtualTextureData.TotalSubdivisions;
+                    uint slot = tileData.slot;
 
-                    string tilePath = $"{mipIndex}-{normalId}-{xCoord}-{yCoord}.png";
+                    int realMipIndex = (int)(mipIndex - VirtualTextureData.HighResolutionMipCount);
 
-                    HeightTileCache.InsertTile(tilePath, slot);
-                    AlbedoTileCache.InsertTile(tilePath, slot);
+
+                    string tileName = $"{realMipIndex}_{normalId}_{xCoord}_{yCoord}";
+
+                    if (!AlbedoTileCache.TileExist(tileName) && realMipIndex < 0)
+                    {
+                        Image tile = AlbedoTileCache.CreateTile(tileName);
+                        AlbedoTileCache.InsertTile(tile, slot);
+                    }
+                    else
+                        AlbedoTileCache.InsertTile(tileName, slot);
+                    
+                    if(!HeightTileCache.TileExist(tileName) && realMipIndex < 0)
+                    {
+                        Image tile = HeightTileCache.CreateTile(tileName);
+                        HeightTileCache.InsertTile(tile, slot);
+                    }  
+                    else
+                        HeightTileCache.InsertTile(tileName, slot);
+                    
+                    
+                    
+
 
                     return new ValueTask();
                 });
@@ -157,6 +226,8 @@ namespace PlanetGame.Rendering.VirtualTexturing
 
             ResidencyTable.ClearStorageTexture();
             ResidencyTable.SetFallbackSlots();
+
+            ResolveTileRequest.ResetTileSlotCounter();
         }
 
         public void Invoke()
@@ -167,13 +238,27 @@ namespace PlanetGame.Rendering.VirtualTexturing
             Ready = false;
             StateTable.ClearStorageTexture();
 
+            // DepthPrepass.Invoke();
+
             SvtFeedbackRenderPass.Invoke();
 
-            ReadFramebuffer.UpdateUniforms();
-            ReadFramebuffer.Invoke();
-            ReadFramebuffer.GetTextureIds(Callable.From<byte[]>(RequestTileSlot));
+            ResolveTileRequest.UpdateUniforms();
+            ResolveTileRequest.Invoke();
+            
+
+            ResolveTileRequest.GetTextureIds(Callable.From<byte[]>(RequestTileSlot));
+
+            
+
 
         }
+
+        // public Vector3 GetMouseClickPosition(Vector2 mousePosition)
+        // {
+        //     // Vector3 mouse = SvtFeedbackRenderPass.GetMousePosition(mousePosition);
+            
+        //     return mouse;
+        // }
 
         public void CleanupGPUResources()
         {
@@ -192,11 +277,11 @@ namespace PlanetGame.Rendering.VirtualTexturing
             StateTable.CleanupGPU();
             StateTable = default;
 
-            ReadFramebuffer.CleanupGPU();
+            ResolveTileRequest.CleanupGPU();
             ValidateTileCache.CleanupGPU();
             SvtFeedbackRenderPass.CleanupGPU();
 
-            ReadFramebuffer = default;
+            ResolveTileRequest = default;
             ValidateTileCache = default;
             SvtFeedbackRenderPass = default;
         }

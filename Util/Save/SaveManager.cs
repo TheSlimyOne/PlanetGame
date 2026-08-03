@@ -24,13 +24,11 @@ public static class SaveManager
         public string TilesAlbedo { get; set; }
         public string TilesHeightmap { get; set; }
         public string TilesNormalMap { get; set; }
-
-        public uint TotalTileSlots { get; set; }
-        public uint BorderSize { get; set; }
-        public uint TotalLods { get; set; }
         public uint TileSize { get; set; }
-
+        public uint LowResolutionMipCount { get; set; }
+        public uint HighResolutionMipCount { get; set; }
         public int[] LodToMipMap { get; set; }
+        public string[] FallBackTiles { get; set; }
     }
 
     public struct SavePaths
@@ -63,18 +61,18 @@ public static class SaveManager
         SAVE_DATA,
     }
 
-    public static SaveDataIdentifier[] Thumbnails = [
+    public readonly static SaveDataIdentifier[] Thumbnails = [
         SaveDataIdentifier.THUMBNAIL_ALEBDO,
         SaveDataIdentifier.THUMBNAIL_HEIGHT_MAP
     ];
 
-    public static SaveDataIdentifier[] BaseImages = [
+    public readonly static SaveDataIdentifier[] BaseImages = [
         SaveDataIdentifier.BASE_ALBEDO,
         SaveDataIdentifier.BASE_HEIGHT_MAP,
         SaveDataIdentifier.BASE_NORMAL_MAP
     ];
 
-    public static SaveDataIdentifier[] Tiles = [
+    public readonly static SaveDataIdentifier[] Tiles = [
         SaveDataIdentifier.TILE_ALBEDO,
         SaveDataIdentifier.TILE_HEIGHT_MAP,
         SaveDataIdentifier.TILE_NORMAL_MAP
@@ -139,7 +137,9 @@ public static class SaveManager
         };
     }
 
-    public static async Task WriteNewSave(string saveName, Image albedo, Image heightmap, int mipCount, int[] lodToMipMap)
+    public static VTData GetSVTData(WorldSave save) => new(save.TileSize, save.LowResolutionMipCount, save.HighResolutionMipCount, save.LodToMipMap, save.FallBackTiles);
+    
+    public static async Task WriteNewSave(string saveName, Image albedo, Image heightmap, int lowResolutionMipCount, int highResolutionMipCount, int[] lodToMipMap)
     {
         Vector2I size = new(16384, 8192);
         albedo.Resize(size.X, size.Y, Image.Interpolation.Bilinear);
@@ -159,10 +159,18 @@ public static class SaveManager
             ThumbnailHeightmap = paths.ThumbnailHeightmap,
             TilesAlbedo = paths.TileAlbedoDir,
             TilesHeightmap = paths.TileHeightmapDir,
-            BorderSize = 0u,
-            TotalLods = (uint)mipCount,
-            TileSize = (uint)(albedo.GetHeight() / Mathf.Pow(2, mipCount - 1)),
-            LodToMipMap = lodToMipMap
+            LowResolutionMipCount = (uint)lowResolutionMipCount,
+            TileSize = (uint)(albedo.GetHeight() / Mathf.Pow(2, lowResolutionMipCount - 1)),
+            HighResolutionMipCount = (uint)highResolutionMipCount,
+            LodToMipMap = lodToMipMap,
+            FallBackTiles = [
+                "4_0_0_0",
+                "4_1_0_0",
+                "4_2_0_0",
+                "4_3_0_0",
+                "4_4_0_0",
+                "4_5_0_0",
+            ]
         };
 
         albedo.SavePng(paths.BaseAlbedo);
@@ -174,6 +182,8 @@ public static class SaveManager
 
         // Image normalMap = TileManager.GenerateNormalMap(heightmap);
         await GenerateTiles(worldSave, albedo, heightmap);
+
+
 
         if (!Saves.TryAdd(saveName, worldSave))
         {
@@ -188,7 +198,7 @@ public static class SaveManager
         GD.Print("Generating");
 
 
-        int mipCount = (int)save.TotalLods;
+        int mipCount = (int)save.LowResolutionMipCount + (int)save.HighResolutionMipCount;
 
         GD.Print("Generating Albedo map");
         await TileManager.GenerateTilesAsync(albedo, mipCount - 1, save.TilesAlbedo, 0);

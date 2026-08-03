@@ -7,16 +7,14 @@ namespace PlanetGame.Rendering.Surface
     {
         public ExecuteTessellationPassDispatcher ExecuteTessellationPass { get; private set; }
         public PrepareTessellationPassDispatcher PrepareTessellationPass { get; private set; }
-
-        public int CurrentLod;
-        public int CulledCount;
-        public int TotalCount;
-        public int RenderedCount;
-
+        public int CurrentLod { get; private set; } 
+        public int CulledCount { get; private set; }
+        public int TotalCount { get; private set; }
+        public int RenderedCount { get; private set; }
         public bool Ready { get; private set; } = true;
         public bool Paused = false;
 
-        public TerrainTessellator(PlanetController planetController, SaveManager.WorldSave worldSave, MultiMeshRD planetMultiMesh, CustomCamera mainCamera, CustomCamera helperCamera)
+        public TerrainTessellator(PlanetController planetController, SaveManager.WorldSave worldSave, MultiMeshRD planetMultiMesh, CustomCamera mainCamera)
         {
             ExecuteTessellationPass = new();
             PrepareTessellationPass = new();
@@ -24,8 +22,8 @@ namespace PlanetGame.Rendering.Surface
             ExecuteTessellationPass.PrepareTessellationPass = PrepareTessellationPass;
             ExecuteTessellationPass.PlanetController = planetController;
             ExecuteTessellationPass.MainCamera = mainCamera;
-            ExecuteTessellationPass.HelperCamera = helperCamera;
             ExecuteTessellationPass.PlanetMultiMesh = planetMultiMesh;
+            ExecuteTessellationPass.worldSave = worldSave;
 
             PrepareTessellationPass.ExecuteTessellationPass = ExecuteTessellationPass;
             PrepareTessellationPass.PlanetMultimesh = planetMultiMesh;
@@ -48,7 +46,7 @@ namespace PlanetGame.Rendering.Surface
             return ExecuteTessellationPass?.IsValid() == true && PrepareTessellationPass?.IsValid() == true;
         }
 
-        public void Invoke(CustomCamera camera)
+        public void Invoke()
         {
             if (!Ready || !IsValidForProcessing() || Paused)
                 return;

@@ -21,6 +21,8 @@ public partial class UIController : Control
 	[Export] private Button _btnWipeVirtualTexutre;
 	[Export] private Button _btnDebug;
 	[Export] private Button _btnQuit;
+	[Export] private Button _btnSimulateRotation;
+	[Export] public Button[] Buttons;
 
 	[ExportGroup("Containers")]
 	[Export] public Control DebugContainer;
@@ -33,13 +35,12 @@ public partial class UIController : Control
 		ConnectButton(_btnCubeMode, EnableOrDisableCubeMode);
 		ConnectButton(_btnCulling, EnableOrDisableCulling);
 		ConnectButton(_btnMorphing, EnableOrDisableMorphing);
+		ConnectButton(_btnSimulateRotation, EnableOrDisableRotationEffect);
 		ConnectButton(_btnTerrainTesselation, EnableOrDisableTerrainTesselation);
 		ConnectButton(_btnVirtualTexturing, EnableOrDisableVirtualTexturing);
 		ConnectButton(_btnWipeVirtualTexutre, WipeVirtualTexture);
-		ConnectButton(_btnDebug, EnableOrDisableDebugWindow);
+		ConnectButton(_btnDebug, EnableOrDisableDebug);
 		ConnectButton(_btnQuit, Quit);
-
-		// Callable.From(() => ).CallDeferred();
 
 		UpdateButtonLabels();
 	}
@@ -50,10 +51,11 @@ public partial class UIController : Control
 		DisconnectButton(_btnCubeMode, EnableOrDisableCubeMode);
 		DisconnectButton(_btnCulling, EnableOrDisableCulling);
 		DisconnectButton(_btnMorphing, EnableOrDisableMorphing);
+		DisconnectButton(_btnSimulateRotation, EnableOrDisableRotationEffect);
 		DisconnectButton(_btnTerrainTesselation, EnableOrDisableTerrainTesselation);
 		DisconnectButton(_btnVirtualTexturing, EnableOrDisableVirtualTexturing);
 		DisconnectButton(_btnWipeVirtualTexutre, WipeVirtualTexture);
-		DisconnectButton(_btnDebug, EnableOrDisableDebugWindow);
+		DisconnectButton(_btnDebug, EnableOrDisableDebug);
 		DisconnectButton(_btnQuit, Quit);
 	}
 
@@ -111,7 +113,7 @@ public partial class UIController : Control
 
 		UpdateToggleButton(
 			_btnVirtualTexturing,
-			!PlanetController.DisableVirtualTexturing,
+			PlanetController.DisableVirtualTexturing,
 			"Virtual Texturing"
 		);
 	}
@@ -154,14 +156,27 @@ public partial class UIController : Control
 		);
 	}
 
+	public void EnableOrDisableRotationEffect()
+	{
+		PlanetController.IsSimulateRotation = !PlanetController.IsSimulateRotation;
+
+		UpdateToggleButton(
+			_btnSimulateRotation,
+			PlanetController.IsSimulateRotation,
+			"Simulate Rotation"
+		);
+	}
+
 	public void Quit()
 	{
 		GetTree().ChangeSceneToFile("res://Scenes/Main.tscn");
 	}
-	public void EnableOrDisableDebugWindow()
+	public void EnableOrDisableDebug()
 	{
 		Control parent = DebugContainer.GetParent<Control>();
 		parent.Visible = !parent.Visible;
+
+		PlanetController.SurfaceShader.SetShaderParameter("render_tile_uvs", parent.Visible);
 
 		UpdateToggleButton(
 			_btnDebug,

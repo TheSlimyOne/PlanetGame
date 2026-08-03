@@ -236,8 +236,7 @@ vec3 get_polygon_space_point(vec2 point, mat3 polygon_space_matrix) {
 }
 
 vec3 get_world_space_point(vec3 point, mat4 transform_matrix) {
-    point = (vec4(point, 1) * transform_matrix).xyz;
-    return point;
+    return (vec4(point, 1) * transform_matrix).xyz;
 }
 
 Triangle create_triangle(uvec4 key) {

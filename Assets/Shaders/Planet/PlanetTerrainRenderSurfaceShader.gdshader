@@ -87,69 +87,65 @@ vec3 color_base_normal_and_adjecenies(vec2 uv, float coverage, int normal_id) {
 
 bool in_bounds(vec3 p) { return max(abs(p.x), max(abs(p.y), abs(p.z))) <= 1.0; }
 
-vec3 compute_sphere_normal_from_heightmap( vec2 uv, int normal_id, vec3 vertex_position, int lod_index) {
-	int[4] adjecent_normals_ids = get_adjecent_normal_ids(normal_id);
-	float step_amount = 0.0001;
-	vec3 normal = normals[normal_id];
-	float[4] heights;
-	for (int i = 0; i < 4; i++) {
-		vec3 adjecent_normal = normals[adjecent_normals_ids[i]];
-		vec3 new_cube_position = vertex_position + adjecent_normal * step_amount;
-		int selected_normal_id = normal_id;
-		if (!in_bounds(new_cube_position)) {
-			new_cube_position = vertex_position - normal * step_amount;
-			selected_normal_id = adjecent_normals_ids[i];
-		}
-		vec2 uv = get_cube_uv(selected_normal_id, new_cube_position);
-		vec3 tile_uv = get_tile_uv(terrain_indirection_table, lod_index, tile_size, uv, total_texture_subdivisions, selected_normal_id);
-			heights[i] = get_tile(height_map_tile_cache, tile_uv).r;
-	}
-	float hL = heights[0];
-	float hR = heights[1];
-	float hU = heights[2];
-	float hD = heights[3];
-
-	float dx = hR - hL;
-	float dy = hU - hD;
-
-	return vec3(dx, dy, 0);
-}
 
 void fragment() {
-
     vec2 adjusted_uv = clamp(vertex_uv, vec2(0.0), vec2(1.0 - EPS));
+	int non_negative_mip_index = lod_to_mip_map[lod] + high_resolution_mip_count;
+	int normal_id = int(key.z);
+	//int total_resolution_mip_count = low_resolution_mip_count + high_resolution_mip_count;
+//
+	//float grid_size = exp2(float(total_resolution_mip_count - 1));
+	//float lod_grid_size = grid_size / exp2(float(non_negative_mip_index));
+	//
+	//vec2 cell_uv = floor(adjusted_uv * lod_grid_size) / lod_grid_size;
+//
+	vec3 tile_uv = get_tile_uv(terrain_indirection_table, non_negative_mip_index, tile_size, vertex_uv, int(key.z), low_resolution_mip_count, high_resolution_mip_count);
+	//
+    //vec2 grid_position = floor(adjusted_uv * lod_grid_size) / lod_grid_size;
+	//ALBEDO = vec3(grid_position, 0.0);
+	int total_resolution_mip_count = low_resolution_mip_count + high_resolution_mip_count;
 
-	int mip_index = lod_to_mip_map[lod];
-	float grid_size = exp2(float(total_texture_subdivisions - 1));
-	float lod_grid_size = grid_size / exp2(float(mip_index));
+	float grid_size = exp2(float(total_resolution_mip_count - 1));
+	float lod_grid_size = grid_size / exp2(float(non_negative_mip_index));
+
+	vec2 lod_grid_position = adjusted_uv * lod_grid_size;
+
+	vec2 grid_uv = fract(lod_grid_position);
+
+	vec2 grid_position = floor(lod_grid_position) / lod_grid_size;
+	int layer = total_resolution_mip_count * normal_id + non_negative_mip_index;
+
+	ivec3 indirection_index = ivec3(
+		ivec2(grid_position * grid_size), 
+		layer
+	);
 	
-	vec2 cell_uv = floor(adjusted_uv * lod_grid_size) / lod_grid_size;
-
-	vec3 tile_uv = get_tile_uv(terrain_indirection_table, mip_index, tile_size, vertex_uv, total_texture_subdivisions, int(key.z));
-
+	//ALBEDO = vec3(grid_uv, 0.0);
+	ALBEDO = pow(get_tile(albedo_tile_cache, tile_uv).xyz, vec3(2.2));
+	
 	if (render_tile_uvs)
 	{
 		vec3 output_color = vec3(1,1,1);
-	    float depth = 1.0 - float(mip_index) / float(total_texture_subdivisions - 1); 
+	    float depth = 1.0 - float(non_negative_mip_index) / float(total_resolution_mip_count - 1); 
 	    switch(key.z)
 	    {
 	        case 0u:
-	            output_color = vec3(cell_uv.x, cell_uv.y, depth);
+	            output_color = vec3(grid_uv.x, grid_uv.y, depth);
 	            break;
 	        case 1u:
-	            output_color = vec3(cell_uv.y, cell_uv.x, depth);
+	            output_color = vec3(grid_uv.y, grid_uv.x, depth);
 	            break;
 	        case 2u:
-	            output_color = vec3(depth, cell_uv.x, cell_uv.y);
+	            output_color = vec3(depth, grid_uv.x, grid_uv.y);
 	            break;
 	        case 3u:
-	            output_color = vec3(depth, cell_uv.y, cell_uv.x);
+	            output_color = vec3(depth, grid_uv.y, grid_uv.x);
 	            break;
 	        case 4u:
-	            output_color = vec3(cell_uv.x, depth, cell_uv.y);
+	            output_color = vec3(grid_uv.x, depth, grid_uv.y);
 	            break;
 	        case 5u:
-	            output_color = vec3(cell_uv.y, depth, cell_uv.x);
+	            output_color = vec3(grid_uv.y, depth, grid_uv.x);
 	            break;
 	        default:
 	            break;
@@ -171,5 +167,8 @@ void fragment() {
 	else
 	{
 		ALBEDO = pow(get_tile(albedo_tile_cache, tile_uv).xyz, vec3(2.2));
+		//ALBEDO = is_tile_in_cache(terrain_indirection_table, non_negative_mip_index, tile_size, vertex_uv, int(key.z), low_resolution_mip_count, high_resolution_mip_count) ? vec3(0,1,0) : vec3(0);
 	}
+
+	
 }

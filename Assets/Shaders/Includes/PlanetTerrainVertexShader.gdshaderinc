@@ -31,9 +31,9 @@ varying vec2 vertex_uv;
 
 varying flat int lod;
 
-uniform int total_texture_subdivisions;
+uniform int low_resolution_mip_count;
+uniform int high_resolution_mip_count;
 uniform int[32] lod_to_mip_map;
-
 
 void vertex() {
 	key = floatBitsToUint(INSTANCE_CUSTOM);
@@ -70,8 +70,9 @@ void vertex() {
 	
 	vec3 world_position = get_world_space_point(local_point, planet_transform_matrix);
 	
-	int mip_index = lod_to_mip_map[lod];
-	vec3 tile_uv = get_tile_uv(terrain_indirection_table, mip_index, tile_size, vertex_uv, total_texture_subdivisions, int(key.z));
+	int non_negative_mip_index = lod_to_mip_map[lod] + high_resolution_mip_count;
+	int total_resolution_mip_count = low_resolution_mip_count + high_resolution_mip_count;
+	vec3 tile_uv = get_tile_uv(terrain_indirection_table, non_negative_mip_index, tile_size, vertex_uv, int(key.z), low_resolution_mip_count, high_resolution_mip_count);
 	elevation = get_tile(height_map_tile_cache, tile_uv).r;
 
 

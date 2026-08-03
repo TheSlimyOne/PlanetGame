@@ -109,40 +109,94 @@ vec4 get_tile(sampler2DArray tile_cache, vec3 tile_uv) {
 	return textureLod(tile_cache, tile_uv, 0.0);
 }
 
-vec3 get_tile_uv(
+bool is_tile_in_cache(
     sampler2DArray indirection_table,
-    int target_lod_index,
+    int mip_index,
 	int tile_size,
     vec2 uv,
-    int total_texture_subdivisions,
-    int polygon_id) {
+    int normal_id, 
+	int low_resolution_mip_count,
+	int high_resolution_mip_count) 
+	{
+	
+	int total_resolution_mip_count = low_resolution_mip_count + high_resolution_mip_count;
 
-	float grid_size = pow(2.0, float(total_texture_subdivisions - 1));
+	float grid_size = exp2(float(total_resolution_mip_count - 1));
+	float lod_grid_size = grid_size / exp2(float(mip_index));
 
-	float lod_grid_size = grid_size / pow(2.0, float(target_lod_index));
-	vec2 tile_pos = uv * lod_grid_size;
-	vec2 cell_uv = floor(tile_pos) / lod_grid_size;
-	vec2 tile_uv = fract(tile_pos);
+	vec2 lod_grid_position = uv * lod_grid_size;
 
-	tile_uv = (tile_uv * float(tile_size) / float(tile_size));
+	vec2 grid_uv = fract(lod_grid_position);
 
-	vec2 indirection_texture_size = vec2(textureSize(indirection_table, 0).xy);
+	vec2 grid_position = floor(lod_grid_position) / lod_grid_size;
+	int layer = total_resolution_mip_count * normal_id + mip_index;
+
 	ivec3 indirection_index = ivec3(
-		ivec2(cell_uv * indirection_texture_size),
-		total_texture_subdivisions * polygon_id + target_lod_index
+		ivec2(grid_position * grid_size), 
+		layer
 	);
 
-	uvec4 indirection_table_data = floatBitsToUint(texelFetch(indirection_table, indirection_index, 0));
-	uint virtual_texture_tile_index = indirection_table_data.r;
-	uint valid_flag = indirection_table_data.b;
-	// ignore the else{} causes flickering (not working atm)
+	uvec4 indirection_data = floatBitsToUint(
+		texelFetch(
+			indirection_table,
+			indirection_index,
+			0
+		)
+	);
+
+	
+	uint tile_index = indirection_data.r;
+	uint valid_flag = indirection_data.b;
+	
+	return valid_flag == 255u;
+}
+
+vec3 get_tile_uv(
+    sampler2DArray indirection_table,
+    int mip_index,
+	int tile_size,
+    vec2 uv,
+    int normal_id, 
+	int low_resolution_mip_count,
+	int high_resolution_mip_count) 
+	{
+	
+	int total_resolution_mip_count = low_resolution_mip_count + high_resolution_mip_count;
+
+	float grid_size = exp2(float(total_resolution_mip_count - 1));
+	float lod_grid_size = grid_size / exp2(float(mip_index));
+
+	vec2 lod_grid_position = uv * lod_grid_size;
+
+	vec2 grid_uv = fract(lod_grid_position);
+
+	vec2 grid_position = floor(lod_grid_position) / lod_grid_size;
+	int layer = total_resolution_mip_count * normal_id + mip_index;
+
+	ivec3 indirection_index = ivec3(
+		ivec2(grid_position * grid_size), 
+		layer
+	);
+
+	uvec4 indirection_data = floatBitsToUint(
+		texelFetch(
+			indirection_table,
+			indirection_index,
+			0
+		)
+	);
+
+	
+	uint tile_index = indirection_data.r;
+	uint valid_flag = indirection_data.b;
+	
 	if (valid_flag == 255u)
 	{
-		return vec3(tile_uv, float(virtual_texture_tile_index));
+		return vec3(grid_uv, float(tile_index));
 	}
 	else
 	{
-		return vec3(uv, float(polygon_id));
+		return vec3(uv, float(normal_id));
 	}
 }
 

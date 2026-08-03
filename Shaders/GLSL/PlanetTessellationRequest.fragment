@@ -8,12 +8,15 @@ layout(location = 3) in float elevation;
 layout(location = 4) in vec2 vertex_uv;
 layout(location = 5) flat in int lod;
 layout(location = 6) in vec3 normal;
+layout(location = 7) in vec3 world_position;
 
 layout(location = 0) out vec4 frag_color; 
+layout(location = 1) out vec4 picking_texture;
 
 layout(set = 0, binding = 1, std430) buffer restrict readonly ExternalData {
+	int low_resolution_mip_count;
+	int high_resolution_mip_count;
     int tile_size;
-	int total_texture_subdivisions;
 	int lod_to_mip_map[32];
 
 	float radius;
@@ -25,7 +28,6 @@ layout(set = 0, binding = 1, std430) buffer restrict readonly ExternalData {
 	int maximum_lod;
 	int minimum_lod;
 
-	float padding;
 	vec2 morph_range;
 
 	mat4 planet_transform_matrix;
@@ -42,28 +44,58 @@ layout(set = 0, binding = 4, r32ui) uniform uimage2DArray state_table;
 
 #[include] res://Shaders/GLSL/ShaderIncludes/Functions.inc
 
-
-void main() 
+mat4 remove_scale(mat4 transform)
 {
+    transform[0].xyz = normalize(transform[0].xyz);
+    transform[1].xyz = normalize(transform[1].xyz);
+    transform[2].xyz = normalize(transform[2].xyz);
+
+    return transform;
+}
+
+void main() {
+    
     vec2 adjusted_uv = clamp(vertex_uv, vec2(0.0), vec2(1.0 - EPS));
 
-	int mip_index = lod_to_mip_map[lod];
+    int non_negative_mip_index = lod_to_mip_map[lod] + high_resolution_mip_count;
     int normal_id = int(key.z);
+    int total_resolution_mip_count = low_resolution_mip_count + high_resolution_mip_count;
 
-	float grid_size = exp2(float(total_texture_subdivisions - 1));
-	float lod_grid_size = grid_size / exp2(float(mip_index));
+	float grid_size = exp2(float(total_resolution_mip_count - 1));
+	float lod_grid_size = grid_size / exp2(float(non_negative_mip_index));
 
-    vec2 grid_position = floor(adjusted_uv * lod_grid_size) / lod_grid_size;
-    frag_color = vec4(grid_position, 0.0, 1.0);
+    vec2 lod_grid_position = adjusted_uv * lod_grid_size;
+
+    vec2 grid_uv = fract(lod_grid_position);
+
+    vec2 grid_position = floor(lod_grid_position) / lod_grid_size;
+    int layer = total_resolution_mip_count * normal_id + non_negative_mip_index;
 
     ivec3 indirection_index = ivec3(
         grid_position * grid_size, 
-        total_texture_subdivisions * normal_id + mip_index);
-    
-        const uint PROCESSING = 0xFFFFFFFF;
-    const uint NOT_PROCESSING = 0x00000000;
-    uint results = imageAtomicCompSwap(state_table, indirection_index, NOT_PROCESSING, PROCESSING);
+        layer
+    );
 
+    
+    const uint PROCESSING = 0xFFFFFFFF;
+    const uint NOT_PROCESSING = 0x00000000;
+    uint results = imageAtomicCompSwap(
+        state_table, 
+        indirection_index, 
+        NOT_PROCESSING, 
+        PROCESSING
+    );
+
+    
+
+    frag_color = vec4(fract(grid_uv), float(results), 1.0);
+
+    vec3 picking_position = (
+        vec4(world_position, 1.0) *
+        inverse(planet_transform_matrix)
+    ).xyz;
+    
+    picking_texture = vec4(picking_position, 1.0);
 
 
     // vec2 cell_uv = get_cell_uv(adjusted_uv, lod_grid_size);
@@ -71,7 +103,7 @@ void main()
 
 
     // vec3 output_color = vec3(1,1,1);
-    // float depth = 1 - mip_index / float(total_texture_subdivisions - 1); 
+    // float depth = 1 - non_negative_mip_index / float(total_texture_subdivisions - 1); 
     // switch(key.z)
     // {
     //     case 0:
@@ -97,7 +129,7 @@ void main()
     // }
 
     // float edge_threshold = 1.0/128.0;
-    // // vec3 tile_uv = get_tile_cache_uv(terrain_indirection_table, mip_index, tile_size, vertex_uv, total_texture_subdivisions, int(key.z));
+    // // vec3 tile_uv = get_tile_cache_uv(terrain_indirection_table, non_negative_mip_index, tile_size, vertex_uv, total_texture_subdivisions, int(key.z));
     // // vec3 color = get_tile(height_map_tile_cache, tile_uv).xyz;
 
     
@@ -116,7 +148,7 @@ void main()
 
     // ivec3 indirection_index = ivec3(
     //     cell_uv * lod_grid_size,
-    //     total_texture_subdivisions * key.z + mip_index
+    //     total_texture_subdivisions * key.z + non_negative_mip_index
     // );
 
     // imageStore(state_table, indirection_index, uvec4(1u, 0u, 0u, 0u));

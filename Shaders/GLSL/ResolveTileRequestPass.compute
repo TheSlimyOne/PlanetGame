@@ -1,8 +1,7 @@
 #[compute]
 #version 450
-#extension GL_EXT_shader_atomic_float2 : require
 
-layout (local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
+layout(local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
 
 layout(set = 0, binding = 0, rgba32f) restrict uniform image2DArray indirectionTable;
 
@@ -10,19 +9,29 @@ layout(set = 0, binding = 1, r32ui) restrict uniform uimage2DArray stateTable;
 
 layout(set = 0, binding = 2, rgba32f) restrict uniform image2D residencyTable;
 
-layout (std430, binding = 3) buffer restrict virtual_texture_data  {
+layout(std430, binding = 3) buffer restrict VirtualTextureData {
+    int low_resolution_mip_count;
+    int high_resolution_mip_count;
+
     uint grid_size;
-    uint total_mips;
-    uint tile_offset;
+    uint fallback_tile_offset;
+
     uint total_texture_slots;
+    uint sqrt_total_texture_slots;
 
     uint request_buffer_size;
-    uint requested_tile_id_counter;
-    uint virtual_texture_index;
-    uint _padding;
+    int _padding0;
 };
 
-layout (std430, binding = 4) buffer restrict TileIDs {
+layout(std430, binding = 4) restrict buffer TileSlotCounter {
+    uint tile_slot_counter;
+};
+
+layout(std430, set = 0, binding = 5) restrict buffer RequestBufferCounter {
+    uint request_buffer_counter;
+};
+
+layout(std430, binding = 6) buffer restrict TileIDs {
     uvec4 requested_tile_ids[];
 };
 
@@ -35,7 +44,10 @@ void main() {
     if (indirection_index.x >= size.x || indirection_index.y >= size.y || indirection_index.z >= size.z)
         return;
 
-    int mip_index = indirection_index.z % int(total_mips);
+    int total_resolution_mip_count = low_resolution_mip_count + high_resolution_mip_count;
+
+
+    int mip_index = indirection_index.z % int(total_resolution_mip_count);
     int lod_size = 1 << mip_index;
 
     int mip_grid_size = max(int(grid_size) >> mip_index, 1);
@@ -49,26 +61,26 @@ void main() {
     // Ignore entries not being requested
     if (!is_requesting)
         return;
-
+   
 
     uvec4 indirection_data = floatBitsToUint(imageLoad(indirectionTable, indirection_index));
 
     // The tile is already loaded in the tile cache
     if (indirection_data.w != 0)
         return;
-
-    uint request_index = atomicAdd(requested_tile_id_counter, 1);
+    
+    uint request_index = atomicAdd(request_buffer_counter, 1);
 
     if (request_index >= request_buffer_size)
         return;
 
-    uint tile_index = atomicAdd(virtual_texture_index, 1);
-    uint usable_slots = total_texture_slots - tile_offset;
-    uint slot = tile_offset + (tile_index % usable_slots);
+    uint tile_index = atomicAdd(tile_slot_counter, 1);
+    uint usable_slots = total_texture_slots - fallback_tile_offset;
+    uint slot = fallback_tile_offset + (tile_index % usable_slots);
 
     ivec2 residency_index = ivec2(
-        slot % grid_size,
-        slot / grid_size
+        slot % sqrt_total_texture_slots,
+        slot / sqrt_total_texture_slots
     );
 
     uvec3 request_coords = uvec3(
@@ -77,11 +89,10 @@ void main() {
         indirection_index.z
     );
 
-
     // Only invalidate if we actually had a previous tile
     uvec4 prev_tile_data = floatBitsToUint(imageLoad(residencyTable, residency_index));
     if (prev_tile_data.w != 0u) {
-        int prev_mip_index = int(prev_tile_data.z % total_mips);
+        int prev_mip_index = int(prev_tile_data.z % total_resolution_mip_count);
         int prev_lod_size = 1 << prev_mip_index;
         set_indirection_entry(ivec3(prev_tile_data.xyz), prev_lod_size, uvec4(0u));
     }

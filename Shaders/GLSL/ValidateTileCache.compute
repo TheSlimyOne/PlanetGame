@@ -9,15 +9,16 @@ layout(set = 0, binding = 0, rgba32f) restrict uniform image2DArray indirectionT
 layout(set = 0, binding = 1, rgba32f) restrict uniform image2D residencyTable;
 
 layout (std430, binding = 2) buffer restrict virtual_texture_data  {
+    int low_resolution_mip_count;
+    int high_resolution_mip_count;
+
     uint grid_size;
-    uint total_mips;
     uint tile_offset;
     uint total_texture_slots;
 
     uint request_buffer_size;
-    uint requested_tile_id_counter;
-    uint virtual_texture_index;
-    uint _padding;
+    int _padding0;
+    int _padding1;
 };
 
 #[include] res://Shaders/GLSL/ShaderIncludes/VirtualTextureFunctions.inc
@@ -30,11 +31,12 @@ void main() {
     uvec4 tile_data = floatBitsToUint(imageLoad(residencyTable, residency_index));
     if (tile_data.w == 0) return;
 
-    
+    int total_resolution_mip_count = low_resolution_mip_count + high_resolution_mip_count;
+
     ivec3 indirection_index = ivec3(tile_data.xyz);
     uvec4 indirection_data = floatBitsToUint(imageLoad(indirectionTable, indirection_index));
 
-    int mip_index = indirection_index.z % int(total_mips);
+    int mip_index = indirection_index.z % int(total_resolution_mip_count);
     int lod_size = 1 << mip_index;
 
 

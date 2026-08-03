@@ -12,26 +12,25 @@ namespace PlanetGame.Rendering.VirtualTexturing
             protected set => StorageTexture = value;
         }
 
-        public uint GridSize { get; private set; }
-        public uint MipDepth { get; private set; }
-        public uint RootTileAmount { get; private set; }
-
-        public IndirectionTable(uint totalSubdivisions)
+        public VTData VirtualTextureData { get; }
+        public IndirectionTable(VTData virtualTextureData)
         {
             //TODO make sure gridSize is a power of 2?
-            GridSize = (uint)Mathf.Pow(2, totalSubdivisions - 1);
-            MipDepth = totalSubdivisions;
-            RootTileAmount = 6;
+            VirtualTextureData = virtualTextureData;
+            
+            uint gridSize = VirtualTextureData.GridSize;
+
+            Format = RenderingDevice.DataFormat.R32G32B32A32Sfloat;
 
             Table = new()
             {
                 TextureRdRid = RenderingServer.GetRenderingDevice().TextureCreate(
                     new RDTextureFormat()
                     {
-                        Width = GridSize,
-                        Height = GridSize,
-                        ArrayLayers = MipDepth * 6,
-                        Format = RenderingDevice.DataFormat.R32G32B32A32Sfloat,
+                        Width = gridSize,
+                        Height = gridSize,
+                        ArrayLayers = VirtualTextureData.TotalMipLayers,
+                        Format = Format,
                         TextureType = RenderingDevice.TextureType.Type2DArray,
                         UsageBits = RenderingDevice.TextureUsageBits.StorageBit | RenderingDevice.TextureUsageBits.CanCopyFromBit | RenderingDevice.TextureUsageBits.CanUpdateBit | RenderingDevice.TextureUsageBits.SamplingBit | RenderingDevice.TextureUsageBits.CanCopyToBit
                     },
@@ -46,13 +45,41 @@ namespace PlanetGame.Rendering.VirtualTexturing
         //TODO not a fan of this one
         public override void ClearStorageTexture()
         {
-            RenderingServer.GetRenderingDevice().TextureClear(GetTableRid(), new Color("00000000"), 0, 1, 0, MipDepth * 6);
+            RenderingServer.GetRenderingDevice().TextureClear(GetRdRid(), new Color("00000000"), 0, 1, 0, VirtualTextureData.TotalMipLayers);
         }
 
         public override Control CreateVisualization(string name = "")
         {
-            Shader shader = GD.Load<Shader>(ShaderPaths.INDIRECTION_TABLE_SHADER);
-            Vector2I tileCount = new((int)Mathf.Sqrt(MipDepth * 6), 6);
+            string shaderCode = """
+            shader_type canvas_item;
+            render_mode unshaded;
+
+            uniform ivec2 grid_size;
+            uniform sampler2DArray image : repeat_disable, filter_nearest;
+
+            void fragment() {
+                vec2 grid_position = UV * vec2(grid_size);
+                ivec2 tile_position = ivec2(floor(grid_position));
+
+                ivec3 image_size = textureSize(image, 0);
+
+                vec2 tile_uv = fract(grid_position);
+                
+                ivec2 pixel_coordinates = ivec2(tile_uv * vec2(image_size.xy));
+
+                ivec3 texture_index = ivec3(pixel_coordinates, tile_position.y * grid_size.x + tile_position.x);
+
+                vec4 raw_value = texelFetch(image, texture_index, 0);
+
+                uvec4 indirection_data = floatBitsToUint(raw_value);
+
+                float slot = float(indirection_data.x) / 255.0;
+                
+                COLOR = vec4(slot, 0.0, 0.0, 1.0);
+            }
+            """;
+
+            Vector2I tileCount = new((int)Mathf.Sqrt(VirtualTextureData.TotalMipLayers), 6);
 
             Image image = Image.CreateEmpty(tileCount.X, tileCount.Y, false, Image.Format.Rgbaf);
 
@@ -63,49 +90,80 @@ namespace PlanetGame.Rendering.VirtualTexturing
                 SizeFlagsVertical = Control.SizeFlags.ExpandFill,
                 Texture = ImageTexture.CreateFromImage(image),
                 TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
-                Material = new ShaderMaterial() { Shader = shader },
+                Material = new ShaderMaterial() { Shader = new() { Code = shaderCode } }
             };
 
             ((ShaderMaterial)texture.Material).SetShaderParameter("grid_size", tileCount);
             ((ShaderMaterial)texture.Material).SetShaderParameter("image", Table);
-            
+
             return texture;
         }
 
         public override void CleanupGPU()
         {
-            if (GetTableRid().IsValid)
-                RenderingServer.GetRenderingDevice().FreeRid(GetTableRid());
+            if (GetRdRid().IsValid)
+                RenderingServer.GetRenderingDevice().FreeRid(GetRdRid());
         }
 
         public override void SetFallbackSlots()
         {
-            for (uint i = 0; i < RootTileAmount; i++)
-            {
-                uint tileLayer = MipDepth * i + (MipDepth - 1);
-                Image image = Image.CreateEmpty((int)GridSize, (int)GridSize, false, Image.Format.Rgbaf);
-                Color data = new()
-                {
-                    R = BitConverter.UInt32BitsToSingle(i),
-                    G = BitConverter.UInt32BitsToSingle(0),
-                    B = BitConverter.UInt32BitsToSingle(255),
-                    A = BitConverter.UInt32BitsToSingle(255),
-                };
-                image.Fill(data);
+            uint totalMipLayers = VirtualTextureData.TotalSubdivisions;
+            string[] fallBackTiles = VirtualTextureData.FallBackTiles;
+            uint gridSize = VirtualTextureData.GridSize;
+            int size = (int)Mathf.Sqrt(TileCache.DEFAULT_TILE_SLOTS_COUNT);
+            // GD.Print(fallbackLod, totalMipLayers);
+            
+            Image[] images = new Image[VirtualTextureData.TotalMipLayers];
 
-                RenderingServer.GetRenderingDevice().TextureUpdate(GetTableRid(), tileLayer, image.GetData());
+            for (uint i = 0; i < fallBackTiles.Length; i++)
+            {
+                string[] tileData = fallBackTiles[i].Split('_');
+                int realMipIndex = int.Parse(tileData[0]);
+
+                int mipIndex = realMipIndex + (int)VirtualTextureData.HighResolutionMipCount;
+                int normalId = int.Parse(tileData[1]);
+                int tileX = int.Parse(tileData[2]);
+                int tileY = int.Parse(tileData[3]);
+
+                int tileLayer = (int)totalMipLayers * normalId + mipIndex;
+                int lodSize = 1 << mipIndex;
+
+                if(images[tileLayer] == null)
+                    images[tileLayer] = Image.CreateEmpty((int)gridSize, (int)gridSize, false, FormatConverter.MatchDataFormat(Format));
+
+                Color data = new(
+                    BitConverter.UInt32BitsToSingle(i),
+                    BitConverter.UInt32BitsToSingle(0),
+                    BitConverter.UInt32BitsToSingle(255),
+                    BitConverter.UInt32BitsToSingle(255)
+                );
+
+                Vector2I slotIndex = new((int)i % size, (int)i / size);
+                Vector3I indirectionIndex = new(tileX, tileY, tileLayer);
+
+                // GD.PrintS(slotIndex, indirectionIndex);
+
+                for (int j = 0; j < lodSize; j++)                   
+                    for (int k = 0; k < lodSize; k++)
+                        images[tileLayer].SetPixel(tileX + j, tileY + k, data);
             }
+                    
+            for(uint i = 0; i < images.Length; i++)
+                if (images[i] != null)
+                    RenderingServer.GetRenderingDevice().TextureUpdate(GetRdRid(), i, images[i].GetData());
         }
 
         public override Color GetPixel(int x, int y, int z)
         {
-            byte[] data = RenderingServer.GetRenderingDevice().TextureGetData(GetTableRid(), (uint)z);
-            Image image = Image.CreateFromData((int)GridSize, (int)GridSize, false, FormatConverter.MatchDataFormat(RenderingDevice.DataFormat.R32G32B32A32Sfloat), data);
-            return image.GetPixel(x, y);
+            // uint gridSize = VirtualTextureData.GridSize;
+            // byte[] data = RenderingServer.GetRenderingDevice().TextureGetData(GetRdRid(), (uint)z);
+            // Image image = Image.CreateFromData((int)gridSize, (int)gridSize, false, FormatConverter.MatchDataFormat(RenderingDevice.DataFormat.R32G32B32A32Sfloat), data);
+            // return image.GetPixel(x, y);
+            throw new NotImplementedException();
         }
 
-        public uint GetSlot(Vector3I indirectionIndex) => BitConverter.SingleToUInt32Bits(GetPixel(indirectionIndex.X, indirectionIndex.Y, indirectionIndex.Z).R);
-        
-        public override Rid GetTableRid() => Table.TextureRdRid;
+        // public uint GetSlot(Vector3I indirectionIndex) => BitConverter.SingleToUInt32Bits(GetPixel(indirectionIndex.X, indirectionIndex.Y, indirectionIndex.Z).R);
+
+        public override Rid GetRdRid() => Table.TextureRdRid;
     }
 }

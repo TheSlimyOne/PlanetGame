@@ -31,8 +31,9 @@ layout(set = 0, binding = 4, std430) buffer restrict writeonly WriteCullList {
 };
 
 layout(set = 0, binding = 5, std430) buffer restrict readonly ExternalData {
+    int low_resolution_mip_count;
+    int high_resolution_mip_count;
     int tile_size;
-	int total_texture_subdivisions;
 	int lod_to_mip_map[32];
 
 	float radius;
@@ -44,7 +45,6 @@ layout(set = 0, binding = 5, std430) buffer restrict readonly ExternalData {
 	int maximum_lod;
 	int minimum_lod;
 
-	float padding;
 	vec2 morph_range;
 
 	mat4 planet_transform_matrix;
@@ -173,6 +173,7 @@ void process_triangle(Triangle source_triangle, uvec4 source_key, Triangle paren
 
     source_key.w |= get_junction_flags(source_key, parent_triangle, lod); 
     //TODO fix this
+    // how?
     if (write_full_index >= maximum_keys)
         return;
     

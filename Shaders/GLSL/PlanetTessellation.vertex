@@ -13,8 +13,9 @@ layout(set = 0, binding = 0, std430) readonly buffer InstanceBuffer
 };
 
 layout(set = 0, binding = 1, std430) buffer restrict readonly ExternalData {
+	int low_resolution_mip_count;
+    int high_resolution_mip_count;
     int tile_size;
-	int total_texture_subdivisions;
 	int lod_to_mip_map[32];
 
 	float radius;
@@ -26,7 +27,6 @@ layout(set = 0, binding = 1, std430) buffer restrict readonly ExternalData {
 	int maximum_lod;
 	int minimum_lod;
 
-	float padding;
 	vec2 morph_range;
 
 	mat4 planet_transform_matrix;
@@ -50,6 +50,7 @@ layout(location = 3) out float elevation;
 layout(location = 4) out vec2 vertex_uv;
 layout(location = 5) flat out int lod;
 layout(location = 6) out vec3 normal;
+layout(location = 7) out vec3 world_position;
 
 
 #[include] res://Shaders/GLSL/ShaderIncludes/TesselationFunctions.inc
@@ -104,15 +105,24 @@ void main()
 	}
 
 
-    vec3 world_position = get_world_space_point(local_point, planet_transform_matrix);
 
-    int mip_index = lod_to_mip_map[lod];
-    vec3 tile_cache_uv = get_tile_cache_uv(terrain_indirection_table, mip_index, tile_size, vertex_uv, total_texture_subdivisions, int(key.z));
+    int non_negative_mip_index = lod_to_mip_map[lod] + high_resolution_mip_count;
+    vec3 tile_cache_uv = get_tile_cache_uv(terrain_indirection_table, non_negative_mip_index, tile_size, vertex_uv, int(key.z), low_resolution_mip_count, high_resolution_mip_count);
     elevation = get_tile(height_map_tile_cache, tile_cache_uv).r;
+    
 
-    normal = (vec4(local_point, 1) * get_rotation_from_matrix(planet_transform_matrix)).xyz;    
-    gl_Position = vec4(world_position + normal * height_scale * elevation, 1.0); 
+   normal = (
+        vec4(local_point, 0.0) *
+        get_rotation_from_matrix(planet_transform_matrix)
+    ).xyz;
 
-    gl_Position = view_projection_matrix * gl_Position; 
+    
+    world_position = vec3(
+        get_world_space_point(local_point, planet_transform_matrix) +
+        normal * height_scale * elevation
+    );
+
+    gl_Position = view_projection_matrix * vec4(world_position, 1.0);
     gl_Position.y = -gl_Position.y;
+    
 }

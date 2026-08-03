@@ -89,10 +89,8 @@ namespace PlanetGame.Rendering.VirtualTexturing
 
                         tasks.Add(new Task(() =>
                         {
-                            Image tile = GenerateTile(parameters);
-
+                            GenerateTile(parameters);
                             int current = Interlocked.Increment(ref processedTiles);
-                            tile.SavePng($"{parameters.Destination}\\{parameters.MipIndex}-{parameters.NormalId}-{parameters.TileIndexX}-{parameters.TileIndexY}.png");
                             string outputText = $"Processing Normal: {parameters.NormalId} at Mip: {parameters.MipIndex} for tile coords: ({parameters.TileIndexX}, {parameters.TileIndexY})";
                             OnTileGeneratedProgress?.Invoke(current, outputText, totalTiles);
                         }));
@@ -123,13 +121,23 @@ namespace PlanetGame.Rendering.VirtualTexturing
             public int NormalId { get; set; }
             public int MipIndex { get; set; }
             public Image Source { get; set; }
+            public Image.Format SourceFormat { get; set; }
             public int TilesPerSide { get; set; }
             public int TileSize { get; set; }
             public int Padding { get; set; }
             public string Destination { get; set; }
         }
 
-        private static Image GenerateTile(TileGenerationParams parameters)
+        public static Image GenerateBlankTile(TileGenerationParams parameters)
+        {
+            int paddedSize = parameters.TileSize + 2 * parameters.Padding;
+            Image tile = Image.CreateEmpty(paddedSize, paddedSize, false, parameters.SourceFormat);
+            tile.Fill(new(0, 0, 0, 0));
+            tile.SavePng($"{parameters.Destination}/{parameters.MipIndex}_{parameters.NormalId}_{parameters.TileIndexX}_{parameters.TileIndexY}.png");
+            return tile;
+        }
+
+        public static Image GenerateTile(TileGenerationParams parameters)
         {
             int paddedSize = parameters.TileSize + 2 * parameters.Padding;
             Image tile = Image.CreateEmpty(paddedSize, paddedSize, false, parameters.Source.GetFormat());
@@ -151,9 +159,10 @@ namespace PlanetGame.Rendering.VirtualTexturing
                 }
             }
 
+            tile.SavePng($"{parameters.Destination}//{parameters.MipIndex}_{parameters.NormalId}-{parameters.TileIndexX}-{parameters.TileIndexY}.png");
+
             return tile;
         }
-
 
         public static int GetValidMipIndex(Image image, int mipCount)
         {
@@ -162,25 +171,6 @@ namespace PlanetGame.Rendering.VirtualTexturing
 
             int realMipCount = image.GetMipmapCount() + 1;
             return Mathf.Clamp(mipCount, 0, realMipCount - 1);
-        }
-
-        public static Color EncodeTilePath(int tileIndexX, int tileIndexY, int normalId, int mipIndex, int totalSubdivisions)
-        {
-            int tileIndex = totalSubdivisions * normalId + mipIndex;
-            uint packed_indirection_index = (uint)(
-                ((tileIndexX & 0xFF) << 24) |
-                ((tileIndexY & 0xFF) << 16) |
-                ((tileIndex & 0xFF) << 8)
-            );
-
-            Color encoded = new()
-            {
-                R = BitConverter.UInt32BitsToSingle(packed_indirection_index),
-                G = BitConverter.UInt32BitsToSingle((uint)mipIndex),
-                B = BitConverter.UInt32BitsToSingle((uint)normalId),
-                A = BitConverter.UInt32BitsToSingle(255)
-            };
-            return encoded;
         }
 
         public static (int tileIndexX, int tileIndexY, int normalId, int mipIndex) DecodeTilePath(Color data)
@@ -355,8 +345,8 @@ namespace PlanetGame.Rendering.VirtualTexturing
                     _ => -1
                 };
 
-               
-                return  indices;
+
+                return indices;
             }
 
             foreach ((int faceA, int faceB, Direction directionA, Direction directionB, bool isReversedA, bool isReversedB) in adjecencies)
@@ -435,7 +425,7 @@ namespace PlanetGame.Rendering.VirtualTexturing
                             Image tile = GenerateTile(parameters);
 
                             int current = Interlocked.Increment(ref processedTiles);
-                            tile.SavePng($"{parameters.Destination}\\{parameters.MipIndex}-{parameters.NormalId}-{parameters.TileIndexX}-{parameters.TileIndexY}.png");
+                            tile.SavePng($"{parameters.Destination}//{parameters.MipIndex}-{parameters.NormalId}-{parameters.TileIndexX}-{parameters.TileIndexY}.png");
                             string outputText = $"Processing Normal: {parameters.NormalId} at Mip: {parameters.MipIndex} for tile coords: ({parameters.TileIndexX}, {parameters.TileIndexY})";
                             OnTileGeneratedProgress?.Invoke(current, outputText, totalTiles);
                         }));

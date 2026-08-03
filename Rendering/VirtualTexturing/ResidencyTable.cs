@@ -13,22 +13,24 @@ namespace PlanetGame.Rendering.VirtualTexturing
             protected set => StorageTexture = value;
         }
 
-        public uint GridSize { get; private set; }
-        public uint TotalSubdivisions { get; private set; }
-
-        public ResidencyTable(uint totalSubdivisions)
+        public VTData VirtualTextureData { get; }
+        
+        public ResidencyTable(VTData virtualTextureData)
         {
-            TotalSubdivisions = totalSubdivisions;
-            GridSize = (uint)Mathf.Pow(2, TotalSubdivisions - 1);
+            VirtualTextureData = virtualTextureData;
+
+            uint size = (uint)Mathf.Sqrt(TileCache.DEFAULT_TILE_SLOTS_COUNT);
+
+            Format = RenderingDevice.DataFormat.R32G32B32A32Sfloat;
 
             Table = new()
             {
                 TextureRdRid = RenderingServer.GetRenderingDevice().TextureCreate(
                     new RDTextureFormat()
                     {
-                        Width = GridSize,
-                        Height = GridSize,
-                        Format = RenderingDevice.DataFormat.R32G32B32A32Sfloat,
+                        Width = size,
+                        Height = size,
+                        Format = Format,
                         TextureType = RenderingDevice.TextureType.Type2D,
                         UsageBits = RenderingDevice.TextureUsageBits.StorageBit | RenderingDevice.TextureUsageBits.CanCopyFromBit | RenderingDevice.TextureUsageBits.CanUpdateBit | RenderingDevice.TextureUsageBits.SamplingBit | RenderingDevice.TextureUsageBits.CanCopyToBit
                     },
@@ -42,12 +44,46 @@ namespace PlanetGame.Rendering.VirtualTexturing
         //TODO not a fan of this one
         public override void ClearStorageTexture()
         {
-            RenderingServer.GetRenderingDevice().TextureClear(GetTableRid(), new Color("00000000"), 0, 1, 0, 1);
+            RenderingServer.GetRenderingDevice().TextureClear(GetRdRid(), new Color("00000000"), 0, 1, 0, 1);
         }
 
         public override Control CreateVisualization(string name = "")
         {
-            Shader shader = GD.Load<Shader>(ShaderPaths.RESIDENCY_TABLE_SHADER);
+            string shaderCode = """
+            shader_type canvas_item;
+            uniform uint total_resolution_mip_count;
+
+            void fragment() {
+                ivec2 tex_size = textureSize(TEXTURE, 0);
+                ivec2 pixel_coords = ivec2(UV * vec2(tex_size));
+                uvec4 tile_data = floatBitsToUint(texelFetch(TEXTURE, pixel_coords, 0));
+                
+                if (tile_data.w != 0u) {
+
+                    ivec3 indirection_index = ivec3(uvec3(
+                        tile_data.x,
+                        tile_data.y,
+                        tile_data.z
+                    ));
+
+
+                    uint mip_index = uint(indirection_index.z) % total_resolution_mip_count;
+                    float lod_size = float(1u << mip_index);
+
+                    float x = float(indirection_index.x) / lod_size;
+                    float y = float(indirection_index.y) / lod_size;
+                    float z = float(mip_index / total_resolution_mip_count); 
+                    COLOR = vec4(x, y, z, 1);
+                }
+                else {
+                    COLOR = vec4(0, 0, 0, 1);
+                }
+
+        
+                
+            }
+            """;
+
             TextureRect textureRect = new()
             {
                 Name = $"Residency Table {name}",
@@ -55,35 +91,81 @@ namespace PlanetGame.Rendering.VirtualTexturing
                 SizeFlagsVertical = Control.SizeFlags.ExpandFill,
                 Texture = Table,
                 TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
-                Material = new ShaderMaterial() { Shader = shader }
+                Material = new ShaderMaterial() { Shader = new() { Code = shaderCode } }
             };
-            ((ShaderMaterial)textureRect.Material).SetShaderParameter("total_mips", (int)TotalSubdivisions);
+            ((ShaderMaterial)textureRect.Material).SetShaderParameter("total_resolution_mip_count", VirtualTextureData.TotalSubdivisions);
             textureRect.SetAnchorsPreset(Control.LayoutPreset.FullRect);
             return textureRect;
         }
 
         public override void CleanupGPU()
         {
-            if (GetTableRid().IsValid)
-                RenderingServer.GetRenderingDevice().FreeRid(GetTableRid());
+            if (GetRdRid().IsValid)
+                RenderingServer.GetRenderingDevice().FreeRid(GetRdRid());
         }
 
         public override void SetFallbackSlots()
         {
-            Image image = Image.CreateFromData((int)GridSize, (int)GridSize, false, Image.Format.Rgbaf, RenderingServer.GetRenderingDevice().TextureGetData(GetTableRid(), 0));
-            for (int i = 0; i < 6; i++)
+            uint totalMipLayers = VirtualTextureData.TotalSubdivisions;
+            string[] fallBackTiles = VirtualTextureData.FallBackTiles;
+            int size = (int)Mathf.Sqrt(TileCache.DEFAULT_TILE_SLOTS_COUNT);
+
+            Image image = Image.CreateEmpty(size, size, false, FormatConverter.MatchDataFormat(Format));
+
+            for (int i = 0; i < fallBackTiles.Length; i++)
             {
-                image.SetPixel(i, 0, TileManager.EncodeTilePath(1, 1, i, (int)TotalSubdivisions - 1, (int)TotalSubdivisions));
+                string[] tileData = fallBackTiles[i].Split('_');
+                int realMipIndex = int.Parse(tileData[0]);
+
+                int nonNegativeMipIndex = realMipIndex + (int)VirtualTextureData.HighResolutionMipCount;
+                int normalId = int.Parse(tileData[1]);
+                int tileX = int.Parse(tileData[2]);
+                int tileY = int.Parse(tileData[3]);
+
+                int tileLayer = (int)totalMipLayers * normalId + nonNegativeMipIndex;
+                // int lodSize = 1 << nonNegativeMipIndex;
+
+                // int gridSize = (int)Mathf.Pow(2, totalMipLayers - 1);
+                // int lodGridSize = gridSize / (int)Mathf.Pow(2, nonNegativeMipIndex);
+                
+
+
+                
+
+                Vector2I slotIndex = new(i % size, i / size);
+                Vector3I indirectionIndex = new(
+                    tileX, tileY, tileLayer
+                );
+
+
+                Color data = new(
+                    BitConverter.UInt32BitsToSingle((uint)indirectionIndex.X),
+                    BitConverter.UInt32BitsToSingle((uint)indirectionIndex.Y),
+                    BitConverter.UInt32BitsToSingle((uint)indirectionIndex.Z),
+                    BitConverter.UInt32BitsToSingle(255)
+                );
+
+                // GD.PrintS(slotIndex, indirectionIndex);
+                GD.PrintS((float)realMipIndex / (float)totalMipLayers, realMipIndex, totalMipLayers, nonNegativeMipIndex);
+
+                image.SetPixelv(slotIndex, data);
             }
-            RenderingServer.GetRenderingDevice().TextureUpdate(GetTableRid(), 0, image.GetData());
+
+            // for (int i = 0; i < 6; i++)
+            // {
+            //     image.SetPixel(i, 0, TileManager.EncodeTilePath(1, 1, i, totalSubdivisions - 1, totalSubdivisions, highResolutionMipCount));
+            // }
+            // Image image = Image.CreateFromData(gridSize, gridSize, false, Image.Format.Rgbaf, RenderingServer.GetRenderingDevice().TextureGetData(GetRdRid(), 0));
+            
+            // RenderingServer.GetRenderingDevice().TextureUpdate(GetRdRid(), 0, image.GetData());
         }
 
-        public override Color GetPixel(int x, int y, int z = 0)
+        public override Rid GetRdRid() => Table.TextureRdRid;
+
+        public override Color GetPixel(int x, int y, int z)
         {
-            Image image = Image.CreateFromData((int)GridSize, (int)GridSize, false, Image.Format.Rgbaf, RenderingServer.GetRenderingDevice().TextureGetData(GetTableRid(), 0));
-            return image.GetPixel(x, y);
+            throw new NotImplementedException();
         }
 
-        public override Rid GetTableRid() => Table.TextureRdRid;
     }
 }

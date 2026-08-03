@@ -6,29 +6,34 @@ vec2 get_cell_uv(vec2 global_uv, float grid_size) {
 
 vec3 get_tile_cache_uv(
 	sampler2DArray indirection_table,
-	int mip_index,
+	int non_negative_mip_index,
 	int tile_size,
 	vec2 uv,
-	int total_texture_subdivisions,
-	int normal_id
+	int normal_id,
+	int low_resolution_mip_count,
+	int high_resolution_mip_count
 ) {
-	int maximum_grid_size = 1 << (total_texture_subdivisions - 1);
-	int lod_grid_size = maximum_grid_size >> mip_index;
+    int total_resolution_mip_count = low_resolution_mip_count + high_resolution_mip_count;
 
-	vec2 grid_position = uv * float(lod_grid_size);
-	vec2 cell_uv = fract(grid_position);
+	float grid_size = exp2(float(total_resolution_mip_count - 1));
+	float lod_grid_size = grid_size / exp2(float(non_negative_mip_index));
 
-	ivec2 tile_position = ivec2(floor(grid_position));
-	ivec2 indirection_texture_size = textureSize(indirection_table, 0).xy;
+    vec2 lod_grid_position = uv * lod_grid_size;
 
-	ivec2 indirection_coord = tile_position * indirection_texture_size / lod_grid_size;
+    vec2 grid_uv = fract(lod_grid_position);
 
+    vec2 grid_position = floor(lod_grid_position) / lod_grid_size;
+    int layer = total_resolution_mip_count * normal_id + non_negative_mip_index;
+
+    ivec3 indirection_index = ivec3(
+        grid_position * grid_size, 
+        layer
+    );
 
 	uvec4 indirection_data = floatBitsToUint(
 		texelFetch(
 			indirection_table,
-			ivec3(indirection_coord, 
-			normal_id * total_texture_subdivisions + mip_index),
+			indirection_index,
 			0
 		)
 	);
@@ -37,7 +42,7 @@ vec3 get_tile_cache_uv(
 	uint valid_flag = indirection_data.b;
 
 	if (valid_flag == 255u) {
-		return vec3(cell_uv, float(tile_index));
+		return vec3(grid_uv, float(tile_index));
 	} else {
 		// use default tile
 		return vec3(uv, float(normal_id));

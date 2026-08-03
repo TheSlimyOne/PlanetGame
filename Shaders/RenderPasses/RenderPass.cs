@@ -212,13 +212,6 @@ public abstract class RenderPass<TEnum> : IRenderable where TEnum : Enum
             new()
         );
 
-        RDAttachmentFormat attachmentFormat = new()
-        {
-            Format = textureFormat.Format,
-            Samples = RenderingDevice.TextureSamples.Samples1,
-            UsageFlags = (uint)(RenderingDevice.TextureUsageBits.ColorAttachmentBit | RenderingDevice.TextureUsageBits.CanCopyFromBit)
-        };
-
         return RenderingDevice.FramebufferCreate(
             [_framebufferTexture]
         );
@@ -253,35 +246,53 @@ public abstract class RenderPass<TEnum> : IRenderable where TEnum : Enum
     static public bool Verbose = false;
     public virtual void CleanupGPU()
     {
-        if (RenderingDevice == null) return;
+        if (RenderingDevice == null)
+            return;
 
         if (RenderingDevice.UniformSetIsValid(_uniformSet))
             RenderingDevice.FreeRid(_uniformSet);
-        if (RenderingDevice.ComputePipelineIsValid(_pipeline))
+        if (RenderingDevice.RenderPipelineIsValid(_pipeline))
             RenderingDevice.FreeRid(_pipeline);
         if (_shader.IsValid)
             RenderingDevice.FreeRid(_shader);
         if (_framebuffer.IsValid)
             RenderingDevice.FreeRid(_framebuffer);
         if (_framebufferTexture.IsValid)
-            RenderingDevice.FreeRid(_framebufferTexture);        
+            RenderingDevice.FreeRid(_framebufferTexture);
 
-        foreach (KeyValuePair<Enum, ShaderUniform> kvp in _renderShaderUniforms)
+        if (_geometry.VertexArray.IsValid)
+            RenderingDevice.FreeRid(_geometry.VertexArray);
+        if (_geometry.IndexArray.IsValid)
+            RenderingDevice.FreeRid(_geometry.IndexArray);
+        if (_geometry.VertexBuffer.IsValid)
+            RenderingDevice.FreeRid(_geometry.VertexBuffer);
+        if (_geometry.NormalBuffer.IsValid)
+            RenderingDevice.FreeRid(_geometry.NormalBuffer);
+        if (_geometry.IndexBuffer.IsValid)
+            RenderingDevice.FreeRid(_geometry.IndexBuffer);
+
+        _geometry = default;
+
+        if (_renderShaderUniforms != null)
         {
-            Enum uniformName = kvp.Key;
-            ShaderUniform computeShaderUniform = kvp.Value;
-
-            if (Verbose) GD.Print("========================");
-            if (Verbose) GD.Print($"Clearing {uniformName} in {GetType().Name} ID: {GetID()} Owner: {computeShaderUniform.Owner}");
-            if (computeShaderUniform.Owner == this)
+            foreach (KeyValuePair<Enum, ShaderUniform> kvp in _renderShaderUniforms)
             {
-                if (Verbose) GD.Print(computeShaderUniform.Rid);
-                computeShaderUniform.FreeRids();
+                Enum uniformName = kvp.Key;
+                ShaderUniform renderShaderUniform = kvp.Value;
+
+                if (Verbose) GD.Print("========================");
+                if (Verbose) GD.Print($"Clearing {uniformName} in {GetType().Name} ID: {GetID()} Owner: {renderShaderUniform.Owner}");
+                if (renderShaderUniform.Owner == this)
+                {
+                    if (Verbose) GD.Print(renderShaderUniform.Rid);
+                    renderShaderUniform.FreeRids();
+                }
+                else if (Verbose) GD.Print($"{GetType().Name} does not own this uniform. Not free rid");
+                if (Verbose) GD.Print("========================");
             }
-            else { if (Verbose) GD.Print($"{GetType().Name} does not own this uniform. Not free rid"); }
-            if (Verbose) GD.Print("========================");
         }
 
+        _renderShaderUniforms = null;
         RenderingDevice = null;
     }
 

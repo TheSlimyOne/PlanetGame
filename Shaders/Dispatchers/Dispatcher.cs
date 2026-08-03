@@ -124,7 +124,8 @@ public abstract class Dispatcher<TEnum> : IDispatchable where TEnum : Enum
     static public bool Verbose = false;
     public virtual void CleanupGPU()
     {
-        if (RenderingDevice == null) return;
+        if (RenderingDevice == null)
+            return;
 
         if (RenderingDevice.UniformSetIsValid(_uniformSet))
             RenderingDevice.FreeRid(_uniformSet);
@@ -133,22 +134,26 @@ public abstract class Dispatcher<TEnum> : IDispatchable where TEnum : Enum
         if (_shader.IsValid)
             RenderingDevice.FreeRid(_shader);
 
-        foreach (KeyValuePair<Enum, ShaderUniform> kvp in _computeShaderUniforms)
+        if (_computeShaderUniforms != null)
         {
-            Enum uniformName = kvp.Key;
-            ShaderUniform computeShaderUniform = kvp.Value;
-
-            if (Verbose) GD.Print("========================");
-            if (Verbose) GD.Print($"Clearing {uniformName} in {GetType().Name} ID: {GetID()} Owner: {computeShaderUniform.Owner}");
-            if (computeShaderUniform.Owner == this)
+            foreach (KeyValuePair<Enum, ShaderUniform> kvp in _computeShaderUniforms)
             {
-                if (Verbose) GD.Print(computeShaderUniform.Rid);
-                computeShaderUniform.FreeRids();
+                Enum uniformName = kvp.Key;
+                ShaderUniform computeShaderUniform = kvp.Value;
+
+                if (Verbose) GD.Print("========================");
+                if (Verbose) GD.Print($"Clearing {uniformName} in {GetType().Name} ID: {GetID()} Owner: {computeShaderUniform.Owner}");
+                if (computeShaderUniform.Owner == this)
+                {
+                    if (Verbose) GD.Print(computeShaderUniform.Rid);
+                    computeShaderUniform.FreeRids();
+                }
+                else if (Verbose) GD.Print($"{GetType().Name} does not own this uniform. Not free rid");
+                if (Verbose) GD.Print("========================");
             }
-            else { if (Verbose) GD.Print($"{GetType().Name} does not own this uniform. Not free rid"); }
-            if (Verbose) GD.Print("========================");
         }
 
+        _computeShaderUniforms = null;
         RenderingDevice = null;
     }
 

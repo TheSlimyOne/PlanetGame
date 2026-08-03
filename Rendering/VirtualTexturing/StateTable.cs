@@ -13,24 +13,26 @@ namespace PlanetGame.Rendering.VirtualTexturing
             protected set => StorageTexture = value;
         }
 
-        public uint GridSize { get; private set; }
-        public uint MipDepth { get; private set; }
+        public VTData VirtualTextureData { get; }
 
         // TODO need to recognize if there is border pixels 
-        public StateTable(uint totalSubdivisions)
+        public StateTable(VTData virtualTextureData)
         {
-            GridSize = (uint)Mathf.Pow(2, totalSubdivisions - 1);
-            MipDepth = totalSubdivisions;
+            VirtualTextureData = virtualTextureData;
 
+            uint gridSize = VirtualTextureData.GridSize;
+
+            Format = RenderingDevice.DataFormat.R8G8B8A8Unorm;
+            
             Table = new()
             {
                 TextureRdRid = RenderingServer.GetRenderingDevice().TextureCreate(
                     new RDTextureFormat()
                     {
-                        Format = RenderingDevice.DataFormat.R8G8B8A8Unorm,
-                        Width = GridSize,
-                        Height = GridSize,
-                        ArrayLayers = MipDepth * 6,
+                        Format = Format,
+                        Width = gridSize,
+                        Height = gridSize,
+                        ArrayLayers = VirtualTextureData.TotalMipLayers,
                         TextureType = RenderingDevice.TextureType.Type2DArray,
                         UsageBits = RenderingDevice.TextureUsageBits.StorageBit | RenderingDevice.TextureUsageBits.CanCopyFromBit | RenderingDevice.TextureUsageBits.CanUpdateBit | RenderingDevice.TextureUsageBits.SamplingBit | RenderingDevice.TextureUsageBits.CanCopyToBit
                     },
@@ -44,7 +46,7 @@ namespace PlanetGame.Rendering.VirtualTexturing
         //TODO not a fan of this one
         public override void ClearStorageTexture()
         {
-            RenderingServer.GetRenderingDevice().TextureClear(GetTableRid(), new Color("00000000"), 0, 1, 0, MipDepth * 6);
+            RenderingServer.GetRenderingDevice().TextureClear(GetRdRid(), new Color("00000000"), 0, 1, 0, VirtualTextureData.TotalMipLayers);
         }
 
         public override Control CreateVisualization(string name = "")
@@ -65,9 +67,26 @@ namespace PlanetGame.Rendering.VirtualTexturing
 
                 int array_index = tile_position.y * grid_size.x + tile_position.x;
 
-                vec3 texture_coordinate = vec3(grid_cell_uv, float(array_index));
+                int mip_index = tile_position.x;
 
-                vec4 color = textureLod(state_table, texture_coordinate, 0.0);
+                int mip_grid_size = max(tile_size.x >> mip_index, 1);
+                int mip_step = max(tile_size.x / mip_grid_size, 1);
+
+                ivec2 mip_position = ivec2(
+                    clamp(grid_cell_uv, vec2(0.0), vec2(1.0 - 0.000001))
+                    * float(mip_grid_size)
+                );
+
+                ivec2 state_position = mip_position * mip_step;
+
+                vec4 color = texelFetch(
+                    state_table,
+                    ivec3(state_position, array_index),
+                    0
+                );
+                
+                // vec3 texture_coordinate = vec3(grid_cell_uv, float(array_index));
+                // vec4 color = textureLod(state_table, texture_coordinate, 0.0);
                 if (color.w != 0.0)
                     switch(tile_position.y)
                     {
@@ -95,12 +114,19 @@ namespace PlanetGame.Rendering.VirtualTexturing
                             break;
                     }
                 else
-                    COLOR = vec4(0, 0, 0, 1);
+                {
+                    bool is_white = ((tile_position.x + tile_position.y) % 2) == 0;
+
+
+                    COLOR = is_white
+                        ? vec4(0.6, 0.6, 0.6, 0.5)
+                        : vec4(0.4, 0.4, 0.4, 0.5);
+                }
+                
             }
             """;
 
-            Vector2I tileCount = new((int)Mathf.Sqrt(MipDepth * 6), 6);
-
+            Vector2I tileCount = new((int)Mathf.Sqrt(VirtualTextureData.TotalMipLayers), 6);
             
             Image image = Image.CreateEmpty(tileCount.X, tileCount.Y, false, Image.Format.Rgbaf);
 
@@ -122,8 +148,8 @@ namespace PlanetGame.Rendering.VirtualTexturing
 
         public override void CleanupGPU()
         {
-            if (GetTableRid().IsValid)
-                RenderingServer.GetRenderingDevice().FreeRid(GetTableRid());
+            if (GetRdRid().IsValid)
+                RenderingServer.GetRenderingDevice().FreeRid(GetRdRid());
         }
 
         public override void SetFallbackSlots()
@@ -136,6 +162,6 @@ namespace PlanetGame.Rendering.VirtualTexturing
             throw new NotImplementedException();
         }
 
-        public override Rid GetTableRid() => Table.TextureRdRid;
+        public override Rid GetRdRid() => Table.TextureRdRid;
     }
 }

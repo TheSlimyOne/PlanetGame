@@ -11,11 +11,13 @@ namespace PlanetGame.Shaders
     {
         public const string EXECUTE_TESSELLATION_PASS = "res://Shaders/GLSL/ExecuteTessellationPass.compute";
         public const string PREPARE_TESSELLATION_PASS = "res://Shaders/GLSL/PrepareTessellationPass.compute";
-        public const string RESOLVE_TILE_TEXTURE_PASS = "res://Shaders/GLSL/ResolveTileTexturePass.compute";
+        public const string RESOLVE_TILE_REQUEST_PASS = "res://Shaders/GLSL/ResolveTileRequestPass.compute";
         public const string PLANET_TESSELLATION_VERTEX = "res://Shaders/GLSL/PlanetTessellation.vertex";
         public const string PLANET_TESSELLATION_REQUEST_FRAGMENT = "res://Shaders/GLSL/PlanetTessellationRequest.fragment";
         public const string VALIDATE_TILE_CACHE = "res://Shaders/GLSL/ValidateTileCache.compute";
-
+        
+        public const string EMPTY_FRAGMENT = "res://Shaders/GLSL/empty.fragment";
+        
         // Gdshaders
         public const string ARRAY_TEXTURE_VISUALIZER = "res://Assets/Shaders/Planet/array_texture_visualizer.gdshader";
         public const string TEXTURE_2D_ARRAY_SHADER = "res://Rendering/VirtualTexturing/Visualization Shaders/Texture2DArray.gdshader";
@@ -26,5 +28,7 @@ namespace PlanetGame.Shaders
         public const string FRAME_BUFFER_SHADER = "res://Assets/Shaders/Planet/PlanetTerrainFramebufferShader.gdshader";
 
         public const string DEMO_SHADER_PATH = "res://Assets/Shaders/Menu/demo_planet_shader.gdshader";
+
+
     }
 }
