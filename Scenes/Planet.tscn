@@ -35,8 +35,8 @@ outline_color = Color(0.0768358, 0.0768358, 0.0768358, 1)
 
 [node name="Planet" type="Node3D" unique_id=1057872115 node_paths=PackedStringArray("CameraController", "SurfaceAttachment", "UIController", "InnerCollision", "OuterCollision", "CubicalCollision", "MainLightSource", "WorldEnvironment")]
 script = ExtResource("1_qtwtp")
-Radius = 100.0
-HeightScale = 20.0
+Radius = 8000.0
+HeightScale = 80.0
 CameraController = NodePath("CameraController")
 SurfaceAttachment = NodePath("SurfaceAttachment")
 UIController = NodePath("UIController")

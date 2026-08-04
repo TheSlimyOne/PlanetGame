@@ -48,8 +48,14 @@ namespace PlanetGame.Rendering.Surface
 
         public void Invoke()
         {
-            if (!Ready || !IsValidForProcessing() || Paused)
+            if (!Ready || !IsValidForProcessing())
                 return;
+
+            else if (Paused)
+            {
+                ExecuteTessellationPass.UpdateUniforms();
+                return;
+            }
 
             Ready = false;
             ExecuteTessellationPass.ClearGlobalKeyData();

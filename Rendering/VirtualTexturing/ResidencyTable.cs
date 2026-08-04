@@ -57,7 +57,7 @@ namespace PlanetGame.Rendering.VirtualTexturing
                 ivec2 tex_size = textureSize(TEXTURE, 0);
                 ivec2 pixel_coords = ivec2(UV * vec2(tex_size));
                 uvec4 tile_data = floatBitsToUint(texelFetch(TEXTURE, pixel_coords, 0));
-                
+             
                 if (tile_data.w != 0u) {
 
                     ivec3 indirection_index = ivec3(uvec3(
@@ -72,15 +72,16 @@ namespace PlanetGame.Rendering.VirtualTexturing
 
                     float x = float(indirection_index.x) / lod_size;
                     float y = float(indirection_index.y) / lod_size;
-                    float z = float(mip_index / total_resolution_mip_count); 
-                    COLOR = vec4(x, y, z, 1);
+                    // float z = float(mip_index / total_resolution_mip_count); 
+                    float z = float(total_resolution_mip_count) - float(mip_index) + 1.0;
+
+                    COLOR = vec4(x, y, float(mip_index + 1u) / float(total_resolution_mip_count), 1);
+
+                    
                 }
                 else {
-                    COLOR = vec4(0, 0, 0, 1);
+                    COLOR = vec4(0, 0, 0, 0);
                 }
-
-        
-                
             }
             """;
 
@@ -127,10 +128,6 @@ namespace PlanetGame.Rendering.VirtualTexturing
 
                 // int gridSize = (int)Mathf.Pow(2, totalMipLayers - 1);
                 // int lodGridSize = gridSize / (int)Mathf.Pow(2, nonNegativeMipIndex);
-                
-
-
-                
 
                 Vector2I slotIndex = new(i % size, i / size);
                 Vector3I indirectionIndex = new(
@@ -142,22 +139,16 @@ namespace PlanetGame.Rendering.VirtualTexturing
                     BitConverter.UInt32BitsToSingle((uint)indirectionIndex.X),
                     BitConverter.UInt32BitsToSingle((uint)indirectionIndex.Y),
                     BitConverter.UInt32BitsToSingle((uint)indirectionIndex.Z),
-                    BitConverter.UInt32BitsToSingle(255)
+                    BitConverter.UInt32BitsToSingle(255u)
                 );
 
                 // GD.PrintS(slotIndex, indirectionIndex);
-                GD.PrintS((float)realMipIndex / (float)totalMipLayers, realMipIndex, totalMipLayers, nonNegativeMipIndex);
+                GD.PrintS(totalMipLayers, totalMipLayers - nonNegativeMipIndex + 1, nonNegativeMipIndex, realMipIndex);
 
                 image.SetPixelv(slotIndex, data);
             }
 
-            // for (int i = 0; i < 6; i++)
-            // {
-            //     image.SetPixel(i, 0, TileManager.EncodeTilePath(1, 1, i, totalSubdivisions - 1, totalSubdivisions, highResolutionMipCount));
-            // }
-            // Image image = Image.CreateFromData(gridSize, gridSize, false, Image.Format.Rgbaf, RenderingServer.GetRenderingDevice().TextureGetData(GetRdRid(), 0));
-            
-            // RenderingServer.GetRenderingDevice().TextureUpdate(GetRdRid(), 0, image.GetData());
+            RenderingServer.GetRenderingDevice().TextureUpdate(GetRdRid(), 0, image.GetData());
         }
 
         public override Rid GetRdRid() => Table.TextureRdRid;

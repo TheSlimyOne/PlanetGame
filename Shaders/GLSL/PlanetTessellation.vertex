@@ -1,6 +1,8 @@
 #[vertex] 
 #version 450 
 
+// invariant gl_Position;
+
 struct InstanceData
 {
     mat4 transform;
@@ -51,6 +53,7 @@ layout(location = 4) out vec2 vertex_uv;
 layout(location = 5) flat out int lod;
 layout(location = 6) out vec3 normal;
 layout(location = 7) out vec3 world_position;
+layout(location = 8) flat out uint instance_id;
 
 
 #[include] res://Shaders/GLSL/ShaderIncludes/TesselationFunctions.inc
@@ -111,10 +114,7 @@ void main()
     elevation = get_tile(height_map_tile_cache, tile_cache_uv).r;
     
 
-   normal = (
-        vec4(local_point, 0.0) *
-        get_rotation_from_matrix(planet_transform_matrix)
-    ).xyz;
+   normal = (vec4(local_point, 1) * get_rotation_from_matrix(planet_transform_matrix)).xyz; 
 
     
     world_position = vec3(
@@ -123,6 +123,5 @@ void main()
     );
 
     gl_Position = view_projection_matrix * vec4(world_position, 1.0);
-    gl_Position.y = -gl_Position.y;
-    
+    gl_Position.y = -gl_Position.y;    
 }

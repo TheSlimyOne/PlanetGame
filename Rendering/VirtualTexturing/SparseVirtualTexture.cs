@@ -20,10 +20,11 @@ namespace PlanetGame.Rendering.VirtualTexturing
         public TileCache HeightTileCache { get; private set; }
         public ResidencyTable ResidencyTable { get; private set; }
         public StateTable StateTable { get; private set; }
-        public VTData VirtualTextureData { get; private set; }        
+        public VTData VirtualTextureData { get; private set; }
 
         public bool Ready { get; private set; } = true;
         public bool Paused = false;
+
 
         public SparseVirtualTexture(TerrainTessellator terrainTessellator, SaveManager.WorldSave worldSave, Mesh mesh)
         {
@@ -46,15 +47,37 @@ namespace PlanetGame.Rendering.VirtualTexturing
                 SparseVirtualTexture = this
             };
 
-            Vector2 viewSize =  new Vector2I(1024, 512);
-            
+            Vector2I viewSize = new(1024, 512);
 
 
-            SvtFeedbackRenderPass = new(terrainTessellator, this, new Vector2I(1024, 512), mesh);
-            
+
+            SvtFeedbackRenderPass = new(terrainTessellator, this, viewSize, mesh);
+
+
+            // RDTextureFormat depthFormat = new()
+            // {
+            //     Width = (uint)viewSize.X,
+            //     Height = (uint)viewSize.Y,
+            //     Depth = 1,
+            //     ArrayLayers = 1,
+            //     Mipmaps = 1,
+            //     Format = RenderingDevice.DataFormat.D32Sfloat,
+            //     TextureType = RenderingDevice.TextureType.Type2D,
+            //     Samples = RenderingDevice.TextureSamples.Samples1,
+            //     UsageBits =
+            //         RenderingDevice.TextureUsageBits.DepthStencilAttachmentBit |
+            //         RenderingDevice.TextureUsageBits.SamplingBit |
+            //         RenderingDevice.TextureUsageBits.CanCopyFromBit
+
+            // };
+
+
+            // DepthPrepass = new(terrainTessellator, this, _depthTexture, viewSize, mesh);
+
 
             ResolveTileRequest.CreateUniforms();
             ValidateTileCache.CreateUniforms();
+            // DepthPrepass.CreateUniforms();
             SvtFeedbackRenderPass.CreateUniforms();
         }
 
@@ -85,12 +108,12 @@ namespace PlanetGame.Rendering.VirtualTexturing
             boxContainer.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
             boxContainer.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
             boxContainer.LayoutDirection = Control.LayoutDirectionEnum.Ltr;
-            
+
 
             container.AddChild(scrollContainer);
             scrollContainer.AddChild(boxContainer);
 
-           
+
             boxContainer.SetAnchorsPreset(Control.LayoutPreset.FullRect);
             boxContainer.AddChild(StateTable.CreateVisualization());
             boxContainer.AddChild(IndirectionTable.CreateVisualization());
@@ -100,7 +123,7 @@ namespace PlanetGame.Rendering.VirtualTexturing
             boxContainer.AddChild(HeightTileCache.CreateVisualization("Heightmap"));
 
             TextureRect rect = new() { Texture = SvtFeedbackRenderPass.GetFrameBufferTexture() };
-            boxContainer.AddChild(rect);  
+            boxContainer.AddChild(rect);
 
             // shader = new BindableShaderMaterial()
             // {
@@ -140,14 +163,42 @@ namespace PlanetGame.Rendering.VirtualTexturing
             // {
             //     return camera.DistanceFromTarget;
             // });
-            TextureRect rect1 = new() 
-            { 
+            TextureRect rect1 = new()
+            {
                 Texture = SvtFeedbackRenderPass.GetPickingTexture(),
             };
-
-            
-
             boxContainer.AddChild(rect1);
+
+
+
+            // TextureRect depthPreview = new()
+            // {
+            //     // Texture = new Texture2Drd() { TextureRdRid = _depthTexture },
+            //     Material = new ShaderMaterial
+            //     {
+            //         Shader = new Shader
+            //         {
+            //             Code = """
+            //                 shader_type canvas_item;
+            //                 render_mode unshaded;
+
+            //                 void fragment()
+            //                 {
+            //                     float depth = texture(TEXTURE, UV).r;
+            //                     float visible_depth =
+            //                         clamp((1.0 - depth) * 1000.0, 0.0, 1.0);
+
+            //                     COLOR = vec4(vec3(visible_depth), 1.0);
+            //                 }
+            //             """
+            //         }
+            //     }
+            // };
+
+            // boxContainer.AddChild(depthPreview);
+
+
+
 
 
             foreach (TextureRect texture in boxContainer.GetChildren().Cast<TextureRect>())
@@ -191,17 +242,17 @@ namespace PlanetGame.Rendering.VirtualTexturing
                     }
                     else
                         AlbedoTileCache.InsertTile(tileName, slot);
-                    
-                    if(!HeightTileCache.TileExist(tileName) && realMipIndex < 0)
+
+                    if (!HeightTileCache.TileExist(tileName) && realMipIndex < 0)
                     {
                         Image tile = HeightTileCache.CreateTile(tileName);
                         HeightTileCache.InsertTile(tile, slot);
-                    }  
+                    }
                     else
                         HeightTileCache.InsertTile(tileName, slot);
-                    
-                    
-                    
+
+
+
 
 
                     return new ValueTask();
@@ -210,7 +261,7 @@ namespace PlanetGame.Rendering.VirtualTexturing
                 ValidateTileCache.Invoke();
             }
             Ready = true;
-            
+
         }
 
         public void ClearVirtualTexture()
@@ -244,11 +295,11 @@ namespace PlanetGame.Rendering.VirtualTexturing
 
             ResolveTileRequest.UpdateUniforms();
             ResolveTileRequest.Invoke();
-            
+
 
             ResolveTileRequest.GetTextureIds(Callable.From<byte[]>(RequestTileSlot));
 
-            
+
 
 
         }
@@ -256,7 +307,7 @@ namespace PlanetGame.Rendering.VirtualTexturing
         // public Vector3 GetMouseClickPosition(Vector2 mousePosition)
         // {
         //     // Vector3 mouse = SvtFeedbackRenderPass.GetMousePosition(mousePosition);
-            
+
         //     return mouse;
         // }
 

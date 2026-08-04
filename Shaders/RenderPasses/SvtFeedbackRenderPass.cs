@@ -23,15 +23,15 @@ namespace PlanetGame.Shaders.RenderPasses
         private Rid _pickingTexture;
 
         public SvtFeedbackRenderPass(
-            TerrainTessellator terrainTessellator, 
-            SparseVirtualTexture sparseVirtualTexture, 
-            Vector2I viewSize, 
+            TerrainTessellator terrainTessellator,
+            SparseVirtualTexture sparseVirtualTexture,
+            Vector2I viewSize,
             Mesh arrayMesh
         ) : base(new()
-            {
-                Vertex = ShaderPaths.PLANET_TESSELLATION_VERTEX,
-                Fragment = ShaderPaths.PLANET_TESSELLATION_REQUEST_FRAGMENT
-            }, 
+        {
+            Vertex = ShaderPaths.PLANET_TESSELLATION_VERTEX,
+            Fragment = ShaderPaths.PLANET_TESSELLATION_REQUEST_FRAGMENT
+        },
             viewSize
         )
         {
@@ -79,7 +79,7 @@ namespace PlanetGame.Shaders.RenderPasses
                     new Color(-1, -1, -1, -1)
                 ],
                 1.0f,
-                1
+                0
             );
 
             RenderingDevice.DrawListBindRenderPipeline(drawList, _pipeline);
@@ -93,12 +93,12 @@ namespace PlanetGame.Shaders.RenderPasses
 
         public Texture2Drd GetFrameBufferTexture() => new() { TextureRdRid = _framebufferTexture };
         public Texture2Drd GetPickingTexture() => new() { TextureRdRid = _pickingTexture };
-        public Image GetPickingImage() 
-        { 
+        public Image GetPickingImage()
+        {
             byte[] data = RenderingDevice.TextureGetData(_pickingTexture, 0);
 
             Image image = Image.CreateFromData(ViewSize.X, ViewSize.Y, false, Image.Format.Rgbaf, data);
-            
+
 
             return image;
         }
@@ -203,7 +203,8 @@ namespace PlanetGame.Shaders.RenderPasses
                 Samples = RenderingDevice.TextureSamples.Samples1,
                 UsageBits = RenderingDevice.TextureUsageBits.ColorAttachmentBit |
                             RenderingDevice.TextureUsageBits.CanCopyFromBit |
-                            RenderingDevice.TextureUsageBits.SamplingBit
+                            RenderingDevice.TextureUsageBits.SamplingBit |
+                            RenderingDevice.TextureUsageBits.CpuReadBit
 
             };
 
@@ -253,10 +254,16 @@ namespace PlanetGame.Shaders.RenderPasses
                 )
             };
 
-            _framebufferFormat = RenderingDevice.FramebufferFormatCreate([colorAttachmentFormat, depthAttachmentFormat, pickingAttachmentFormat]);
+            _framebufferFormat = RenderingDevice.FramebufferFormatCreate(
+                [
+                    colorAttachmentFormat,
+                    pickingAttachmentFormat,
+                    depthAttachmentFormat
+                ]
+            );
 
             return RenderingDevice.FramebufferCreate(
-                [_framebufferTexture, _depthTexture, _pickingTexture]
+                [_framebufferTexture, _pickingTexture, _depthTexture]
             );
         }
 

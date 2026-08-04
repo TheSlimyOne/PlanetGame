@@ -16,7 +16,7 @@ namespace PlanetGame.Rendering.VirtualTexturing
         public Image.Format CacheFormat { get; private set; }
         public Image Placeholder { get; private set; }
 
-        public const uint DEFAULT_TILE_SLOTS_COUNT = 256;
+        public const uint DEFAULT_TILE_SLOTS_COUNT = 512;
 
         public TileCache(VTData virtualTextureData, string tileDirectory, Color placeholderColor, Image.Format format)
         {
