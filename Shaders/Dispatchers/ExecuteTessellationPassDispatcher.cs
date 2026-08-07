@@ -154,7 +154,7 @@ namespace PlanetGame.Shaders.Dispatchers
 
 				.. Utilities.ToBytesSingle(PlanetController.Radius),
 				.. Utilities.ToBytesSingle(PlanetController.Resolution),
-				.. Utilities.ToBytesSingle(PlanetController.HeightScale),
+				.. Utilities.ToBytesSingle(PlanetController.Radius * PlanetController.HeightScale),
 				.. Utilities.ToBytesSingle(PlanetController.SubFactor),
 				.. Utilities.ToBytesSingle(debugFlags),
 

@@ -27,23 +27,15 @@ outline_color = Color(0.0768358, 0.0768358, 0.0768358, 1)
 
 [sub_resource type="MultiMesh" id="MultiMesh_ldv5r"]
 
-[sub_resource type="BoxShape3D" id="BoxShape3D_wsrnx"]
-
-[sub_resource type="SphereShape3D" id="SphereShape3D_7pbfy"]
-
-[sub_resource type="SphereShape3D" id="SphereShape3D_tgghh"]
-
-[node name="Planet" type="Node3D" unique_id=1057872115 node_paths=PackedStringArray("CameraController", "SurfaceAttachment", "UIController", "InnerCollision", "OuterCollision", "CubicalCollision", "MainLightSource", "WorldEnvironment")]
+[node name="Planet" type="Node3D" unique_id=1057872115 node_paths=PackedStringArray("CameraController", "SurfaceAttachment", "UIController", "MainLightSource", "WorldEnvironment")]
 script = ExtResource("1_qtwtp")
 Radius = 5000.0
-HeightScale = 2.0
+HeightScale = 0.025
 CameraController = NodePath("CameraController")
 SurfaceAttachment = NodePath("SurfaceAttachment")
 UIController = NodePath("UIController")
-InnerCollision = NodePath("SurfaceAttachment/InnerCollision")
-OuterCollision = NodePath("SurfaceAttachment/OuterCollision")
-CubicalCollision = NodePath("SurfaceAttachment/CubicalCollision")
-PointRadius = 0.125
+PointRadius = 0.008
+TotalDebugInstances = 10
 MainLightSource = NodePath("SurfaceAttachment/MainLightSource")
 WorldEnvironment = NodePath("WorldEnvironment")
 BaseZoomSpeed = 1.0
@@ -212,18 +204,3 @@ sky_mode = 1
 
 [node name="DebugMesh" type="MultiMeshInstance3D" parent="SurfaceAttachment" unique_id=948609030]
 multimesh = SubResource("MultiMesh_ldv5r")
-
-[node name="CubicalCollision" type="StaticBody3D" parent="SurfaceAttachment" unique_id=1628197415]
-
-[node name="CubicalCollisionShape" type="CollisionShape3D" parent="SurfaceAttachment/CubicalCollision" unique_id=1516863623]
-shape = SubResource("BoxShape3D_wsrnx")
-
-[node name="InnerCollision" type="StaticBody3D" parent="SurfaceAttachment" unique_id=1453248356]
-
-[node name="InnerCollisionShape" type="CollisionShape3D" parent="SurfaceAttachment/InnerCollision" unique_id=470921419]
-shape = SubResource("SphereShape3D_7pbfy")
-
-[node name="OuterCollision" type="StaticBody3D" parent="SurfaceAttachment" unique_id=1277717404]
-
-[node name="OuterCollisionShape3D" type="CollisionShape3D" parent="SurfaceAttachment/OuterCollision" unique_id=511418679]
-shape = SubResource("SphereShape3D_tgghh")

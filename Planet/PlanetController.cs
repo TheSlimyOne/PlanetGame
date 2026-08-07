@@ -21,8 +21,8 @@ public partial class PlanetController : Node3D
     [Export] public UIController UIController { get; private set; }
     public OrbitalCamera3D MainCamera { get; private set; }
 
-    [Export] public float RayLength = 5000;
     [Export] public float PointRadius { get; set; }
+    [Export] public int TotalDebugInstances { get; set; }
     private MultiMeshInstance3D _debugPlot = new();
 
     [ExportGroup("Lighting")]
@@ -149,6 +149,18 @@ public partial class PlanetController : Node3D
         SetupCameras();
         SetupMultimesh();
         ReorientatePlanet();
+
+        _debugPlot.ExtraCullMargin = 2 * Radius;
+        _debugPlot.Multimesh = new MultiMesh
+        {
+            UseColors = true,
+            Mesh = new SphereMesh() { RadialSegments = 8, Rings = 4, Material = new StandardMaterial3D() { VertexColorUseAsAlbedo = true }, Radius = 1, Height = 2 },
+            TransformFormat = MultiMesh.TransformFormatEnum.Transform3D,
+            InstanceCount = TotalDebugInstances
+        };
+
+        SurfaceAttachment.CallDeferred("add_child", _debugPlot);
+
         
         TerrainTessellator = new(this, save, PlanetMultiMesh, MainCamera);
 
@@ -265,6 +277,7 @@ public partial class PlanetController : Node3D
         _direction = _direction.Lerp(Vector3.Zero, (float)(MovementEasing * delta));
     }
 
+    int instanceIndex = 0;
     public override async void _Input(InputEvent @event)
     {
         if (@event is InputEventMouseButton mouseEvent)
@@ -313,20 +326,17 @@ public partial class PlanetController : Node3D
                     int lod = Mathf.FloorToInt(Mathf.Log(num / den) / Mathf.Log(2));
 
                     Vector2 uv = VectorUtils.PointOnSphereToUV(localSpaceMousePosition);
-                    
-
-                    GD.Print(SaveManager.GetCurrentSave().LodToMipMap[lod]);
-                    // GD.Print(uv);
-
-
+                
+                    Transform3D transform = new(Basis.Identity, Vector3.Zero);
+                    transform = transform.Scaled(Vector3.One * PointRadius);
+                    transform = transform.Translated(localSpaceMousePosition * Radius);
 
 
+                    _debugPlot.Multimesh.SetInstanceColor(instanceIndex, new Color(uv.X, uv.Y, 0, 1));
+                    _debugPlot.Multimesh.SetInstanceTransform(instanceIndex, transform);
 
-
-
-                    _debugPlot.Multimesh.InstanceCount = 1;
-                    _debugPlot.Multimesh.SetInstanceColor(0, new Color(uv.X, uv.Y, 0, 1));
-                    _debugPlot.Multimesh.SetInstanceTransform(0, new(Basis.Identity, localSpaceMousePosition * Radius));
+                    instanceIndex++;
+                    instanceIndex %= TotalDebugInstances;
                 }
 
 
