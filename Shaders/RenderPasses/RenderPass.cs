@@ -246,6 +246,7 @@ public abstract class RenderPass<TEnum> : IRenderable where TEnum : Enum
     static public bool Verbose = false;
     public virtual void CleanupGPU()
     {
+        
         if (RenderingDevice == null)
             return;
 
@@ -255,11 +256,10 @@ public abstract class RenderPass<TEnum> : IRenderable where TEnum : Enum
             RenderingDevice.FreeRid(_pipeline);
         if (_shader.IsValid)
             RenderingDevice.FreeRid(_shader);
-        if (_framebuffer.IsValid)
+        if (RenderingDevice.TextureIsValid(_framebuffer))
             RenderingDevice.FreeRid(_framebuffer);
         if (_framebufferTexture.IsValid)
             RenderingDevice.FreeRid(_framebufferTexture);
-
         if (_geometry.VertexArray.IsValid)
             RenderingDevice.FreeRid(_geometry.VertexArray);
         if (_geometry.IndexArray.IsValid)

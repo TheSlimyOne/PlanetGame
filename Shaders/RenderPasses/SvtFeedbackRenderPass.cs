@@ -71,15 +71,14 @@ namespace PlanetGame.Shaders.RenderPasses
         public override void Invoke()
         {
             long drawList = RenderingDevice.DrawListBegin(
-                _framebuffer,
-                RenderingDevice.DrawFlags.ClearColorAll |
-                RenderingDevice.DrawFlags.ClearDepth,
-                [
-                    new Color(1, 1, 1, 1),
+                framebuffer: _framebuffer,
+                drawFlags: RenderingDevice.DrawFlags.ClearColorAll | RenderingDevice.DrawFlags.ClearDepth,
+                clearColorValues: [
+                    new Color(0, 0, 0, 0),
                     new Color(-1, -1, -1, -1)
                 ],
-                1.0f,
-                0
+                clearDepthValue: 1.0f,
+                clearStencilValue: 0
             );
 
             RenderingDevice.DrawListBindRenderPipeline(drawList, _pipeline);
@@ -92,6 +91,8 @@ namespace PlanetGame.Shaders.RenderPasses
 
 
         public Texture2Drd GetFrameBufferTexture() => new() { TextureRdRid = _framebufferTexture };
+        public Rid GetFeedbackTextureRid() => _framebufferTexture;
+        public Rid GetDepthTextureRid() => _depthTexture;
         public Texture2Drd GetPickingTexture() => new() { TextureRdRid = _pickingTexture };
         public Image GetPickingImage()
         {
@@ -171,7 +172,8 @@ namespace PlanetGame.Shaders.RenderPasses
                 Samples = RenderingDevice.TextureSamples.Samples1,
                 UsageBits = RenderingDevice.TextureUsageBits.ColorAttachmentBit |
                             RenderingDevice.TextureUsageBits.CanCopyFromBit |
-                            RenderingDevice.TextureUsageBits.SamplingBit
+                            RenderingDevice.TextureUsageBits.SamplingBit | 
+                            RenderingDevice.TextureUsageBits.StorageBit
             };
 
             RDTextureFormat depthFormat = new()

@@ -94,7 +94,7 @@ public partial class SvtDepthPrepass : RenderPass<SvtDepthPrepass.BufferNames>
             _framebuffer,
             RenderingDevice.DrawFlags.ClearDepth,
             [],
-            0.0f,
+            1.0f,
             0
         );
 
@@ -143,7 +143,7 @@ public partial class SvtDepthPrepass : RenderPass<SvtDepthPrepass.BufferNames>
                 EnableDepthTest = true,
                 EnableDepthWrite = true,
                 DepthCompareOperator =
-                    RenderingDevice.CompareOperator.Never
+                    RenderingDevice.CompareOperator.Less
             },
             new RDPipelineColorBlendState()
         );

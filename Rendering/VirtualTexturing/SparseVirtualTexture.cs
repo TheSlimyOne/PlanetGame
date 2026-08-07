@@ -12,7 +12,6 @@ namespace PlanetGame.Rendering.VirtualTexturing
     {
         public ResolveTileRequestDispatcher ResolveTileRequest { get; private set; }
         public ValidateCacheDispatcher ValidateTileCache { get; private set; }
-        // public SvtDepthPrepass DepthPrepass { get; private set; }
         public SvtFeedbackRenderPass SvtFeedbackRenderPass { get; private set; }
 
         public IndirectionTable IndirectionTable { get; private set; }
@@ -37,48 +36,18 @@ namespace PlanetGame.Rendering.VirtualTexturing
             ResidencyTable = new(VirtualTextureData);
             StateTable = new(VirtualTextureData);
 
-            ResolveTileRequest = new()
-            {
-                SparseVirtualTexture = this
-            };
-
-            ValidateTileCache = new()
-            {
-                SparseVirtualTexture = this
-            };
-
             Vector2I viewSize = new(1024, 512);
-
-
-
             SvtFeedbackRenderPass = new(terrainTessellator, this, viewSize, mesh);
 
+            ResolveTileRequest = new(viewSize) { SparseVirtualTexture = this };
 
-            // RDTextureFormat depthFormat = new()
-            // {
-            //     Width = (uint)viewSize.X,
-            //     Height = (uint)viewSize.Y,
-            //     Depth = 1,
-            //     ArrayLayers = 1,
-            //     Mipmaps = 1,
-            //     Format = RenderingDevice.DataFormat.D32Sfloat,
-            //     TextureType = RenderingDevice.TextureType.Type2D,
-            //     Samples = RenderingDevice.TextureSamples.Samples1,
-            //     UsageBits =
-            //         RenderingDevice.TextureUsageBits.DepthStencilAttachmentBit |
-            //         RenderingDevice.TextureUsageBits.SamplingBit |
-            //         RenderingDevice.TextureUsageBits.CanCopyFromBit
-
-            // };
+            ValidateTileCache = new() { SparseVirtualTexture = this };
 
 
-            // DepthPrepass = new(terrainTessellator, this, _depthTexture, viewSize, mesh);
 
-
+            SvtFeedbackRenderPass.CreateUniforms();
             ResolveTileRequest.CreateUniforms();
             ValidateTileCache.CreateUniforms();
-            // DepthPrepass.CreateUniforms();
-            SvtFeedbackRenderPass.CreateUniforms();
         }
 
         public bool IsValidForProcessing()
@@ -122,88 +91,93 @@ namespace PlanetGame.Rendering.VirtualTexturing
             boxContainer.AddChild(AlbedoTileCache.CreateVisualization("Albedo"));
             boxContainer.AddChild(HeightTileCache.CreateVisualization("Heightmap"));
 
-            TextureRect rect = new() { Texture = SvtFeedbackRenderPass.GetFrameBufferTexture() };
+            TextureRect rect = new()
+            {
+                Texture = SvtFeedbackRenderPass.GetFrameBufferTexture(),
+                Material = new ShaderMaterial
+                {
+                    Shader = new Shader
+                    {
+                        Code = """
+                            shader_type canvas_item;
+                            render_mode unshaded;
+
+                            uniform int low_resolution_mip_count;
+                            uniform int high_resolution_mip_count;
+                            uniform int grid_size;
+
+                            uint hash_uint(uint value)
+                            {
+                                value ^= value >> 16u;
+                                value *= 0x7FEB352Du;
+                                value ^= value >> 15u;
+                                value *= 0x846CA68Bu;
+                                value ^= value >> 16u;
+                                return value;
+                            }
+
+                            vec3 hash_color(uvec3 value)
+                            {
+                                uint hashed =
+                                    value.x * 0x9E3779B9u ^
+                                    value.y * 0x85EBCA6Bu ^
+                                    value.z * 0xC2B2AE35u;
+
+                                hashed = hash_uint(hashed);
+
+                                return vec3(
+                                    float(hashed & 0xFFu),
+                                    float((hashed >> 8u) & 0xFFu),
+                                    float((hashed >> 16u) & 0xFFu)
+                                ) / 255.0;
+                            }
+
+                            void fragment()
+                            {
+                                ivec2 texture_size = textureSize(TEXTURE, 0);
+                                ivec2 pixel_coords = min(
+                                    ivec2(UV * vec2(texture_size)),
+                                    texture_size - ivec2(1)
+                                );
+
+                                uvec4 feedback = floatBitsToUint(
+                                    texelFetch(TEXTURE, pixel_coords, 0)
+                                );
+
+                                uvec3 indirection_index = feedback.xyz;
+                                bool is_requesting = feedback.w == 1u;
+
+                                COLOR = is_requesting
+                                    ? vec4(hash_color(indirection_index), 1.0)
+                                    : vec4(0.0);
+                            }
+                            """
+                    }
+                }
+            };
+
+            ShaderMaterial material = (ShaderMaterial)rect.Material;
+            material.SetShaderParameter(
+                "low_resolution_mip_count",
+                VirtualTextureData.LowResolutionMipCount
+            );
+            material.SetShaderParameter(
+                "high_resolution_mip_count",
+                VirtualTextureData.HighResolutionMipCount
+            );
+            material.SetShaderParameter(
+                "grid_size",
+                (int)VirtualTextureData.GridSize
+            );
             boxContainer.AddChild(rect);
 
-            // shader = new BindableShaderMaterial()
-            // {
-            //     Shader = new Shader()
-            //     {
-            //         Code = """
-            //             shader_type canvas_item;
-            //             render_mode unshaded;
-
-            //             uniform mat4 inverse_projection_matrix;
-            //             uniform float depth_display_range = 200.0;
-
-            //             void fragment()
-            //             {
-            //                 float depth = texture(TEXTURE, UV).r;
-
-
-
-            //                 float linear_depth = 1.0 / (depth * inverse_projection_matrix[2].w + inverse_projection_matrix[3].w);
-            //                 linear_depth = clamp(linear_depth / depth_display_range, 0, 1);
-
-
-            //                 COLOR = vec4(
-            //                     vec3(linear_depth),
-            //                     1.0
-            //                 );
-            //             }
-            //         """
-            //     }
-            // };
-
-            // shader.FrameDependentBind("inverse_projection_matrix", () =>
-            // {
-            //     return camera.GetCameraProjection().Inverse();
-            // });
-            // shader.FrameDependentBind("depth_display_range", () =>
-            // {
-            //     return camera.DistanceFromTarget;
-            // });
-            TextureRect rect1 = new()
-            {
-                Texture = SvtFeedbackRenderPass.GetPickingTexture(),
-            };
+            TextureRect rect1 = new() { Texture = SvtFeedbackRenderPass.GetPickingTexture() };
             boxContainer.AddChild(rect1);
-
-
-
-            // TextureRect depthPreview = new()
-            // {
-            //     // Texture = new Texture2Drd() { TextureRdRid = _depthTexture },
-            //     Material = new ShaderMaterial
-            //     {
-            //         Shader = new Shader
-            //         {
-            //             Code = """
-            //                 shader_type canvas_item;
-            //                 render_mode unshaded;
-
-            //                 void fragment()
-            //                 {
-            //                     float depth = texture(TEXTURE, UV).r;
-            //                     float visible_depth =
-            //                         clamp((1.0 - depth) * 1000.0, 0.0, 1.0);
-
-            //                     COLOR = vec4(vec3(visible_depth), 1.0);
-            //                 }
-            //             """
-            //         }
-            //     }
-            // };
-
-            // boxContainer.AddChild(depthPreview);
-
-
 
 
 
             foreach (TextureRect texture in boxContainer.GetChildren().Cast<TextureRect>())
             {
-                // texture.ExpandMode = (TextureRect.ExpandModeEnum)1;
                 if (boxContainer is VBoxContainer)
                     texture.ExpandMode = TextureRect.ExpandModeEnum.FitHeightProportional;
                 else
@@ -235,24 +209,25 @@ namespace PlanetGame.Rendering.VirtualTexturing
 
                     string tileName = $"{realMipIndex}_{normalId}_{xCoord}_{yCoord}";
 
-                    if (!AlbedoTileCache.TileExist(tileName) && realMipIndex < 0)
-                    {
-                        Image tile = AlbedoTileCache.CreateTile(tileName);
-                        AlbedoTileCache.InsertTile(tile, slot);
-                    }
-                    else
-                        AlbedoTileCache.InsertTile(tileName, slot);
+                    // if (!AlbedoTileCache.TileExist(tileName) && realMipIndex < 0)
+                    // {
+                    //     Image tile = AlbedoTileCache.CreateTile(tileName);
+                    //     AlbedoTileCache.InsertTile(tile, slot);
+                    // }
+                    // else
+                    //     AlbedoTileCache.InsertTile(tileName, slot);
 
-                    if (!HeightTileCache.TileExist(tileName) && realMipIndex < 0)
-                    {
-                        Image tile = HeightTileCache.CreateTile(tileName);
-                        HeightTileCache.InsertTile(tile, slot);
-                    }
-                    else
-                        HeightTileCache.InsertTile(tileName, slot);
+                    // if (!HeightTileCache.TileExist(tileName) && realMipIndex < 0)
+                    // {
+                    //     Image tile = HeightTileCache.CreateTile(tileName);
+                    //     HeightTileCache.InsertTile(tile, slot);
+                    // }
+                    // else
+                    //     HeightTileCache.InsertTile(tileName, slot);
 
 
-
+                    AlbedoTileCache.InsertTile(tileName, slot);
+                    HeightTileCache.InsertTile(tileName, slot);
 
 
                     return new ValueTask();
@@ -289,7 +264,6 @@ namespace PlanetGame.Rendering.VirtualTexturing
             Ready = false;
             StateTable.ClearStorageTexture();
 
-            // DepthPrepass.Invoke();
 
             SvtFeedbackRenderPass.Invoke();
 

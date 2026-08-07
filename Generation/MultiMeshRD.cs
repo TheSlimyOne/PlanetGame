@@ -38,6 +38,14 @@ public class MultiMeshRD
         return instance;
     }
 
+    public void SetExtraVisibilityMargin(float extraVisibilityMargin) {
+        foreach(Rid instance in Instances)
+        {
+            RenderingServer.InstanceSetExtraVisibilityMargin(instance, extraVisibilityMargin);
+        }
+    }
+
+
     public (Vector3[] vertices, int[] indices, Vector3[] normals, Vector2[] uvs) GetMeshData()
     {
         Godot.Collections.Array arrays = Mesh.SurfaceGetArrays(0);

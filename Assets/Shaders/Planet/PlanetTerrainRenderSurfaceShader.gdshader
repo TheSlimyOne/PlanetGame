@@ -3,10 +3,8 @@ shader_type spatial;
 #include "res://Assets/Shaders/Includes/PlanetTerrainVertexShader.gdshaderinc"
 
 uniform sampler2DArray albedo_tile_cache : repeat_disable, source_color, filter_linear;
-uniform float normal_strength;
-uniform bool render_frame_buffer_on_top;
-uniform bool render_padded_uvs;
 uniform bool render_tile_uvs;
+uniform bool show_in_cache;
 
 vec3 height_to_normal(float height, float strength, vec3 vertex, vec3 normal) {
 	vec3 d_x = dFdx(vertex);
@@ -120,9 +118,6 @@ void fragment() {
 		layer
 	);
 	
-	//ALBEDO = vec3(grid_uv, 0.0);
-	ALBEDO = pow(get_tile(albedo_tile_cache, tile_uv).xyz, vec3(2.2));
-	
 	if (render_tile_uvs)
 	{
 		vec3 output_color = vec3(1,1,1);
@@ -164,11 +159,19 @@ void fragment() {
 	        ALBEDO = output_color;
 	    }
 	}
+	else if (show_in_cache)
+	{
+
+		vec3 in_cache = is_tile_in_cache(terrain_indirection_table, non_negative_mip_index, tile_size, vertex_uv, int(key.z), low_resolution_mip_count, high_resolution_mip_count) ? vec3(0,1,0) : vec3(0);
+		vec3 real_color = pow(get_tile(albedo_tile_cache, tile_uv).xyz, vec3(2.2));
+		ALBEDO = mix(real_color, in_cache, 0.15);
+	}
 	else
 	{
 		ALBEDO = pow(get_tile(albedo_tile_cache, tile_uv).xyz, vec3(2.2));
-		//ALBEDO = is_tile_in_cache(terrain_indirection_table, non_negative_mip_index, tile_size, vertex_uv, int(key.z), low_resolution_mip_count, high_resolution_mip_count) ? vec3(0,1,0) : vec3(0);
 	}
 
+	
+	
 	
 }

@@ -12,6 +12,7 @@ namespace PlanetGame.Shaders.Dispatchers
         public const uint REQUEST_AMOUNT = 256;
         public enum BufferNames
         {
+            FEEDBACK_TEXTURE,
             INDIRECTION_TABLE,
             STATE_TABLE,
             RESIDENCY_TABLE,
@@ -21,8 +22,11 @@ namespace PlanetGame.Shaders.Dispatchers
             REQUEST_BUFFER
         }
 
-        public ResolveTileRequestDispatcher() : base(new() { Compute = ShaderPaths.RESOLVE_TILE_REQUEST_PASS })
+        private Vector2I _viewSize;
+
+        public ResolveTileRequestDispatcher(Vector2I viewSize) : base(new() { Compute = ShaderPaths.RESOLVE_TILE_REQUEST_PASS })
         {
+            _viewSize = viewSize;
             SetupShader();
         }
 
@@ -30,7 +34,10 @@ namespace PlanetGame.Shaders.Dispatchers
         {
             _computeShaderUniforms = new System.Collections.Generic.Dictionary<Enum, ShaderUniform>()
             {
+                [BufferNames.FEEDBACK_TEXTURE] = new Texture2DUniform(this, (int)BufferNames.FEEDBACK_TEXTURE,
+                    SparseVirtualTexture.SvtFeedbackRenderPass.GetFeedbackTextureRid(), RenderingDevice.UniformType.Image, perserved: true
 
+                ),
                 [BufferNames.INDIRECTION_TABLE] = new Texture2DUniform(this, (int)BufferNames.INDIRECTION_TABLE,
                     SparseVirtualTexture.IndirectionTable.GetRdRid(), RenderingDevice.UniformType.Image, perserved: true
                 ),
@@ -53,7 +60,7 @@ namespace PlanetGame.Shaders.Dispatchers
                             (uint)SparseVirtualTexture.VirtualTextureData.FallBackTiles.Length,
                             
                             TileCache.DEFAULT_TILE_SLOTS_COUNT,
-                            (uint)Mathf.Sqrt(TileCache.DEFAULT_TILE_SLOTS_COUNT),
+                            (uint)Mathf.Ceil(Mathf.Sqrt(TileCache.DEFAULT_TILE_SLOTS_COUNT)),
 
                             REQUEST_AMOUNT,  
                             0u
@@ -76,10 +83,10 @@ namespace PlanetGame.Shaders.Dispatchers
         #nullable enable
         public override void Invoke(byte[]? pushConstants = null)
         {            
-            uint gridSize = SparseVirtualTexture.VirtualTextureData.GridSize;
-            uint x = (gridSize + 32) / 32;
-            uint y = (gridSize + 32) / 32;
-            uint z = SparseVirtualTexture.VirtualTextureData.TotalMipLayers;
+            // uint gridSize = SparseVirtualTexture.VirtualTextureData.GridSize;
+            uint x = (uint)((_viewSize.X + 31) / 32);
+            uint y = (uint)((_viewSize.Y + 31) / 32);
+            uint z = 1; //SparseVirtualTexture.VirtualTextureData.TotalMipLayers;
 
             long computeList = RenderingDevice.ComputeListBegin();
             RenderingDevice.ComputeListBindComputePipeline(computeList, _pipeline);
@@ -124,7 +131,7 @@ namespace PlanetGame.Shaders.Dispatchers
             GetUniform<StorageBufferUniform>(BufferNames.REQUEST_BUFFER).GetDataAsync(callback, sizeBytes: amount * Utilities.SizeOf<Vector4I>());
         }
 
-        internal void ResetTileSlotCounter()
+        public void ResetTileSlotCounter()
         {
             GetUniform<StorageBufferUniform>(BufferNames.TILE_SLOT_COUNTER).UpdateUniform(
                 [.. Utilities.ToBytesSingle(0)]

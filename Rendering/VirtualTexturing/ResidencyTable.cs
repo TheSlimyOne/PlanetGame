@@ -19,7 +19,7 @@ namespace PlanetGame.Rendering.VirtualTexturing
         {
             VirtualTextureData = virtualTextureData;
 
-            uint size = (uint)Mathf.Sqrt(TileCache.DEFAULT_TILE_SLOTS_COUNT);
+            uint size = (uint)Mathf.Ceil(Mathf.Sqrt(TileCache.DEFAULT_TILE_SLOTS_COUNT));
 
             Format = RenderingDevice.DataFormat.R32G32B32A32Sfloat;
 
@@ -109,7 +109,7 @@ namespace PlanetGame.Rendering.VirtualTexturing
         {
             uint totalMipLayers = VirtualTextureData.TotalSubdivisions;
             string[] fallBackTiles = VirtualTextureData.FallBackTiles;
-            int size = (int)Mathf.Sqrt(TileCache.DEFAULT_TILE_SLOTS_COUNT);
+            int size = (int)Mathf.Ceil(Mathf.Sqrt(TileCache.DEFAULT_TILE_SLOTS_COUNT));
 
             Image image = Image.CreateEmpty(size, size, false, FormatConverter.MatchDataFormat(Format));
 
@@ -124,16 +124,11 @@ namespace PlanetGame.Rendering.VirtualTexturing
                 int tileY = int.Parse(tileData[3]);
 
                 int tileLayer = (int)totalMipLayers * normalId + nonNegativeMipIndex;
-                // int lodSize = 1 << nonNegativeMipIndex;
-
-                // int gridSize = (int)Mathf.Pow(2, totalMipLayers - 1);
-                // int lodGridSize = gridSize / (int)Mathf.Pow(2, nonNegativeMipIndex);
-
+           
                 Vector2I slotIndex = new(i % size, i / size);
                 Vector3I indirectionIndex = new(
                     tileX, tileY, tileLayer
                 );
-
 
                 Color data = new(
                     BitConverter.UInt32BitsToSingle((uint)indirectionIndex.X),
@@ -141,9 +136,6 @@ namespace PlanetGame.Rendering.VirtualTexturing
                     BitConverter.UInt32BitsToSingle((uint)indirectionIndex.Z),
                     BitConverter.UInt32BitsToSingle(255u)
                 );
-
-                // GD.PrintS(slotIndex, indirectionIndex);
-                GD.PrintS(totalMipLayers, totalMipLayers - nonNegativeMipIndex + 1, nonNegativeMipIndex, realMipIndex);
 
                 image.SetPixelv(slotIndex, data);
             }

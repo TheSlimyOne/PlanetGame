@@ -1,5 +1,7 @@
 using Godot;
 using System;
+using System.Reflection;
+using System.Collections.Generic;
 
 public partial class UIController : Control
 {
@@ -17,12 +19,12 @@ public partial class UIController : Control
 	[Export] private Button _btnCubeMode;
 	[Export] private Button _btnCulling;
 	[Export] private Button _btnMorphing;
+	[Export] private Button _btnShowTileCache;
 	[Export] private Button _btnVirtualTexturing;
 	[Export] private Button _btnWipeVirtualTexutre;
 	[Export] private Button _btnDebug;
 	[Export] private Button _btnQuit;
 	[Export] private Button _btnSimulateRotation;
-	[Export] public Button[] Buttons;
 
 	[ExportGroup("Containers")]
 	[Export] public Control DebugContainer;
@@ -37,6 +39,7 @@ public partial class UIController : Control
 		ConnectButton(_btnMorphing, EnableOrDisableMorphing);
 		ConnectButton(_btnSimulateRotation, EnableOrDisableRotationEffect);
 		ConnectButton(_btnTerrainTesselation, EnableOrDisableTerrainTesselation);
+		ConnectButton(_btnShowTileCache, HideOrShowTilesInCache);
 		ConnectButton(_btnVirtualTexturing, EnableOrDisableVirtualTexturing);
 		ConnectButton(_btnWipeVirtualTexutre, WipeVirtualTexture);
 		ConnectButton(_btnDebug, EnableOrDisableDebug);
@@ -44,7 +47,7 @@ public partial class UIController : Control
 
 		UpdateButtonLabels();
 	}
-	
+
 
 	public override void _ExitTree()
 	{
@@ -52,6 +55,7 @@ public partial class UIController : Control
 		DisconnectButton(_btnCulling, EnableOrDisableCulling);
 		DisconnectButton(_btnMorphing, EnableOrDisableMorphing);
 		DisconnectButton(_btnSimulateRotation, EnableOrDisableRotationEffect);
+		DisconnectButton(_btnShowTileCache, HideOrShowTilesInCache);
 		DisconnectButton(_btnTerrainTesselation, EnableOrDisableTerrainTesselation);
 		DisconnectButton(_btnVirtualTexturing, EnableOrDisableVirtualTexturing);
 		DisconnectButton(_btnWipeVirtualTexutre, WipeVirtualTexture);
@@ -156,6 +160,19 @@ public partial class UIController : Control
 		);
 	}
 
+	public void HideOrShowTilesInCache()
+	{
+		bool newValue = !PlanetController.SurfaceShader.GetShaderParameter("show_in_cache").AsBool();
+		PlanetController.SurfaceShader.SetShaderParameter("show_in_cache", newValue);
+
+		UpdateToggleButton(
+			_btnShowTileCache,
+			newValue,
+			"Tiles in Cache"
+		);
+	}
+
+
 	public void EnableOrDisableRotationEffect()
 	{
 		PlanetController.IsSimulateRotation = !PlanetController.IsSimulateRotation;
@@ -188,9 +205,9 @@ public partial class UIController : Control
 	private void UpdateButtonLabels()
 	{
 		UpdateToggleButton(
-			_btnVirtualTexturing,
-			!PlanetController.DisableVirtualTexturing,
-			"Virtual Texturing"
+			_btnTerrainTesselation,
+			!PlanetController.DisableTesselation,
+			"Terrain Tesselation"
 		);
 
 		UpdateToggleButton(
@@ -210,6 +227,33 @@ public partial class UIController : Control
 			PlanetController.IsMorphing,
 			"Morphing"
 		);
+
+		if (PlanetController.SurfaceShader != null)
+		UpdateToggleButton(
+			_btnShowTileCache,
+			PlanetController.SurfaceShader
+				.GetShaderParameter("show_in_cache")
+				.AsBool(),
+			"Tiles in Cache"
+		);
+
+		UpdateToggleButton(
+			_btnVirtualTexturing,
+			!PlanetController.DisableVirtualTexturing,
+			"Virtual Texturing"
+		);
+
+		UpdateToggleButton(
+			_btnDebug,
+			DebugContainer.GetParent<Control>().Visible,
+			"Debug View"
+		);
+
+		UpdateToggleButton(
+			_btnSimulateRotation,
+			PlanetController.IsSimulateRotation,
+			"Simulate Rotation"
+		);
 	}
 
 	private static void ConnectButton(Button button, Action handler)
@@ -225,10 +269,11 @@ public partial class UIController : Control
 	private static void UpdateToggleButton(
 		Button button,
 		bool isEnabled,
-		string settingName)
+		string settingName,
+		string on = "on", string off = "off")
 	{
 		button.Text = isEnabled
-			? $"Disable {settingName}"
-			: $"Enable {settingName}";
+			? $"{on}: {settingName}"
+			: $"{off}: {settingName}";
 	}
 }

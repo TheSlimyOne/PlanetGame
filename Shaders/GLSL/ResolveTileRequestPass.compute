@@ -1,15 +1,18 @@
 #[compute]
 #version 450
+#extension GL_EXT_shader_atomic_float2 : require
 
 layout(local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
 
-layout(set = 0, binding = 0, rgba32f) restrict uniform image2DArray indirectionTable;
+layout(set = 0, binding = 0, rgba32f) restrict uniform image2D feedbackTexture;
 
-layout(set = 0, binding = 1, r32ui) restrict uniform uimage2DArray stateTable;
+layout(set = 0, binding = 1, rgba32f) restrict uniform image2DArray indirectionTable;
 
-layout(set = 0, binding = 2, rgba32f) restrict uniform image2D residencyTable;
+layout(set = 0, binding = 2, r32ui) restrict uniform uimage2DArray stateTable;
 
-layout(std430, binding = 3) buffer restrict VirtualTextureData {
+layout(set = 0, binding = 3, rgba32f) restrict uniform image2D residencyTable;
+
+layout(std430, binding = 4) buffer restrict VirtualTextureData {
     int low_resolution_mip_count;
     int high_resolution_mip_count;
 
@@ -23,52 +26,48 @@ layout(std430, binding = 3) buffer restrict VirtualTextureData {
     int _padding0;
 };
 
-layout(std430, binding = 4) restrict buffer TileSlotCounter {
+layout(std430, binding = 5) restrict buffer TileSlotCounter {
     uint tile_slot_counter;
 };
 
-layout(std430, set = 0, binding = 5) restrict buffer RequestBufferCounter {
+layout(std430, set = 0, binding = 6) restrict buffer RequestBufferCounter {
     uint request_buffer_counter;
 };
 
-layout(std430, binding = 6) buffer restrict TileIDs {
+layout(std430, binding = 7) buffer restrict TileIDs {
     uvec4 requested_tile_ids[];
 };
 
 #[include] res://Shaders/GLSL/ShaderIncludes/VirtualTextureFunctions.inc
 
 void main() {
-    ivec3 size = imageSize(stateTable);
-    ivec3 indirection_index = ivec3(gl_GlobalInvocationID.xyz);
+    const uint PROCESSING = 0xFFFFFFFF;
+    const uint NOT_PROCESSING = 0x00000000;
 
-    if (indirection_index.x >= size.x || indirection_index.y >= size.y || indirection_index.z >= size.z)
-        return;
+    ivec2 size = imageSize(feedbackTexture);
+    // ivec3 indirection_index = ivec3(gl_GlobalInvocationID.xyz);
 
-    int total_resolution_mip_count = low_resolution_mip_count + high_resolution_mip_count;
-
-
-    int mip_index = indirection_index.z % int(total_resolution_mip_count);
-    int lod_size = 1 << mip_index;
-
-    int mip_grid_size = max(int(grid_size) >> mip_index, 1);
-    int mip_step = max(int(grid_size) / mip_grid_size, 1);
-
-    if ((indirection_index.x % mip_step) != 0 || (indirection_index.y % mip_step) != 0)
-        return;
-
-    bool is_requesting = imageLoad(stateTable, indirection_index).x != 0;
+    ivec2 invocation_id = ivec2(gl_GlobalInvocationID.xy);
     
+    if (invocation_id.x >= size.x || invocation_id.y >= size.y) return;
+    
+    ivec4 feedback = floatBitsToInt(imageLoad(feedbackTexture, invocation_id).rgba);
+    ivec3 indirection_index = feedback.xyz;
+    bool is_requesting = feedback.w == 1;
+
     // Ignore entries not being requested
     if (!is_requesting)
         return;
-   
+
+    uint results = imageAtomicCompSwap(stateTable, indirection_index, NOT_PROCESSING, PROCESSING);
+    if (results == PROCESSING) return;
 
     uvec4 indirection_data = floatBitsToUint(imageLoad(indirectionTable, indirection_index));
 
     // The tile is already loaded in the tile cache
     if (indirection_data.w != 0)
         return;
-    
+
     uint request_index = atomicAdd(request_buffer_counter, 1);
 
     if (request_index >= request_buffer_size)
@@ -82,6 +81,13 @@ void main() {
         slot % sqrt_total_texture_slots,
         slot / sqrt_total_texture_slots
     );
+
+
+    int total_resolution_mip_count = low_resolution_mip_count + high_resolution_mip_count;
+    int mip_index = indirection_index.z % int(total_resolution_mip_count);
+    int lod_size = 1 << mip_index;
+    int mip_grid_size = int(grid_size) >> mip_index;
+    int mip_step = int(grid_size) / mip_grid_size;
 
     uvec3 request_coords = uvec3(
         indirection_index.x / mip_step,

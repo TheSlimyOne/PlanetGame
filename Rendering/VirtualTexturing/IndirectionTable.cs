@@ -75,7 +75,7 @@ namespace PlanetGame.Rendering.VirtualTexturing
 
                 float slot = float(indirection_data.x) / 255.0;
                 
-                COLOR = vec4(slot, 0.0, 0.0, 1.0);
+                COLOR = vec4(slot, float(indirection_data.b), 0.0, 1.0);
             }
             """;
 
@@ -111,7 +111,6 @@ namespace PlanetGame.Rendering.VirtualTexturing
             string[] fallBackTiles = VirtualTextureData.FallBackTiles;
             uint gridSize = VirtualTextureData.GridSize;
             int size = (int)Mathf.Sqrt(TileCache.DEFAULT_TILE_SLOTS_COUNT);
-            // GD.Print(fallbackLod, totalMipLayers);
             
             Image[] images = new Image[VirtualTextureData.TotalMipLayers];
 
@@ -141,7 +140,6 @@ namespace PlanetGame.Rendering.VirtualTexturing
                 Vector2I slotIndex = new((int)i % size, (int)i / size);
                 Vector3I indirectionIndex = new(tileX, tileY, tileLayer);
 
-                // GD.PrintS(slotIndex, indirectionIndex);
 
                 for (int j = 0; j < lodSize; j++)                   
                     for (int k = 0; k < lodSize; k++)

@@ -39,8 +39,8 @@ namespace PlanetGame.Shaders.Dispatchers
         {
             uint gridSize = SparseVirtualTexture.VirtualTextureData.GridSize;
 
-            uint x = (gridSize + 32) / 32;
-            uint y = (gridSize + 32) / 32;
+            uint x = (gridSize + 31) / 32;
+            uint y = (gridSize + 31) / 32;
 
             long computeList = RenderingDevice.ComputeListBegin();
             RenderingDevice.ComputeListBindComputePipeline(computeList, _pipeline);
