@@ -6,7 +6,20 @@ namespace PlanetGame.Rendering.VirtualTexturing
         public RenderingDevice.DataFormat Format { get; protected set; }
         protected Texture StorageTexture { get; set; }
         public abstract Rid GetRdRid();
-        public abstract Control CreateVisualization(string name);
+        public TextureRect Visualization;
+        public abstract TextureRect CreateVisualization(string name);
+        public virtual void DeleteVisualization()
+        {
+            if(Visualization != null)
+            {
+                Visualization.Free();
+                // if (Visualization.Texture is Texture2Drd texture2Drd)
+                //     texture2Drd.Free();
+
+                // if (Visualization.Texture is ImageTexture imageTexture)
+                //     imageTexture.Dispose();
+            }
+        }
         public abstract void CleanupGPU();
         public abstract void ClearStorageTexture();
         public abstract void SetFallbackSlots();

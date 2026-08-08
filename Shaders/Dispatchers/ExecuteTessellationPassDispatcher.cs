@@ -94,8 +94,8 @@ namespace PlanetGame.Shaders.Dispatchers
 				[BufferNames.GLOBAL_KEYS_DATA] = new Texture2DUniform(this, RenderingDevice, (int)BufferNames.GLOBAL_KEYS_DATA,
 					new RDTextureFormat()
 					{
-						Width = 10u,
-						Height = 10u,
+						Width = 32u,
+						Height = 32u,
 						TextureType = RenderingDevice.TextureType.Type2D,
 						Format = RenderingDevice.DataFormat.R32Sfloat,
 						UsageBits = RenderingDevice.TextureUsageBits.SamplingBit |
@@ -110,8 +110,8 @@ namespace PlanetGame.Shaders.Dispatchers
 			CreateUniformSet();
 		}
 
-		#nullable enable
-        public override void Invoke(byte[]? pushConstants = null)
+#nullable enable
+		public override void Invoke(byte[]? pushConstants = null)
 		{
 			long computeList = RenderingDevice.ComputeListBegin();
 			RenderingDevice.ComputeListBindComputePipeline(computeList, _pipeline);
@@ -202,7 +202,18 @@ namespace PlanetGame.Shaders.Dispatchers
 
 		public int GetCurrentLod()
 		{
-			return (int)GetUniform<Texture2DUniform>(BufferNames.GLOBAL_KEYS_DATA).GetPixel(0, 0).R - 1;
+			return (int)GetUniform<Texture2DUniform>(BufferNames.GLOBAL_KEYS_DATA).GetPixel(1, 0).R - 1;
+		}
+
+		public int[] GetLodCount()
+		{
+			int[] lodCount = new int[PlanetController.MaximumLod + 1];
+			for (int i = PlanetController.MinimumLod; i < PlanetController.MaximumLod + 1; i++)
+			{
+				lodCount[i] = (int)GetUniform<Texture2DUniform>(BufferNames.GLOBAL_KEYS_DATA).GetPixel(0, i).R;
+			}
+			
+			return lodCount;
 		}
 
 		public void ClearGlobalKeyData()

@@ -29,7 +29,7 @@ layout (set = 0, binding = 3, std430) buffer writeonly restrict DrawDispatchOut 
     uint first_instance;
 };
 
-layout(set = 0, binding = 4, r8) restrict uniform image2D GlobalKeyData;
+layout(set = 0, binding = 4, r32f) restrict uniform image2D GlobalKeyData;
 
 layout(set = 0, binding = 5, std430) buffer restrict CommandBuffer { int data[]; } command_buffer;
 
@@ -51,8 +51,6 @@ void main() {
     primCount_full[delete_index] = 0;
     primCount_culled[delete_index] = 0;
     primCount_rendered[delete_index] = 0;
-
-    imageStore(GlobalKeyData, ivec2(0, 0), vec4(0, 0, 0, 0));
 
     command_buffer.data[1] = int(culled_count);
 

@@ -11,6 +11,7 @@ namespace PlanetGame.Rendering.Surface
         public int CulledCount { get; private set; }
         public int TotalCount { get; private set; }
         public int RenderedCount { get; private set; }
+        public int[] LodCounts { get; private set; } = [];
         public bool Ready { get; private set; } = true;
         public bool Paused = false;
 
@@ -69,6 +70,9 @@ namespace PlanetGame.Rendering.Surface
             ExecuteTessellationPass.UpdateUniforms();
 
             (TotalCount, CulledCount, RenderedCount) = ExecuteTessellationPass.GetPrimitiveCounts();
+
+            LodCounts = ExecuteTessellationPass.GetLodCount();
+
             Ready = true;
         }
     }

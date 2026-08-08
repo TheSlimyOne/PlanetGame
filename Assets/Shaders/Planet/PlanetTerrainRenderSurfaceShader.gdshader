@@ -5,6 +5,7 @@ shader_type spatial;
 uniform sampler2DArray albedo_tile_cache : repeat_disable, source_color, filter_linear;
 uniform bool render_tile_uvs;
 uniform bool show_in_cache;
+uniform bool show_keys;
 
 vec3 height_to_normal(float height, float strength, vec3 vertex, vec3 normal) {
 	vec3 d_x = dFdx(vertex);
@@ -48,7 +49,8 @@ vec3 displayBranches() {
 	int root_id = int(key.z);
 	int msb = find_msb_64(key.xy);
 	int branching_index = int(get_branching(key.xy, (msb / 2) - 1, msb));
-	return hsl_to_rgb(vec3(float(lod) / 16.0, 1.0, float(branching_index + 1) / 4.0));
+	int key_lod = get_lod_of_key(key.xy);
+	return hsl_to_rgb(vec3(float(key_lod) / 16.0, 1.0, float(branching_index + 1) / 4.0));
 }
 
 void calculate_normal(vec3 base_normal, float height) {
@@ -165,6 +167,10 @@ void fragment() {
 		vec3 in_cache = is_tile_in_cache(terrain_indirection_table, non_negative_mip_index, tile_size, vertex_uv, int(key.z), low_resolution_mip_count, high_resolution_mip_count) ? vec3(0,1,0) : vec3(0);
 		vec3 real_color = pow(get_tile(albedo_tile_cache, tile_uv).xyz, vec3(2.2));
 		ALBEDO = mix(real_color, in_cache, 0.15);
+	}
+	else if (show_keys)
+	{
+		ALBEDO = displayBranches();
 	}
 	else
 	{

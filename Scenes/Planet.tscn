@@ -27,15 +27,24 @@ outline_color = Color(0.0768358, 0.0768358, 0.0768358, 1)
 
 [sub_resource type="MultiMesh" id="MultiMesh_ldv5r"]
 
-[node name="Planet" type="Node3D" unique_id=1057872115 node_paths=PackedStringArray("CameraController", "SurfaceAttachment", "UIController", "MainLightSource", "WorldEnvironment")]
+[sub_resource type="BoxShape3D" id="BoxShape3D_f8uwt"]
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_qtwtp"]
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_usljo"]
+
+[node name="Planet" type="Node3D" unique_id=1057872115 node_paths=PackedStringArray("CameraController", "SurfaceAttachment", "UIController", "InnerCollision", "OuterCollision", "CubicalCollision", "MainLightSource", "WorldEnvironment")]
 script = ExtResource("1_qtwtp")
-Radius = 5000.0
+Radius = 8000.0
 HeightScale = 0.025
 CameraController = NodePath("CameraController")
 SurfaceAttachment = NodePath("SurfaceAttachment")
 UIController = NodePath("UIController")
-PointRadius = 0.008
-TotalDebugInstances = 10
+PointRadius = 0.025
+TotalDebugInstances = 100
+InnerCollision = NodePath("SurfaceAttachment/InnerCollision")
+OuterCollision = NodePath("SurfaceAttachment/OuterCollision")
+CubicalCollision = NodePath("SurfaceAttachment/CubicalCollision")
 MainLightSource = NodePath("SurfaceAttachment/MainLightSource")
 WorldEnvironment = NodePath("WorldEnvironment")
 BaseZoomSpeed = 1.0
@@ -44,14 +53,13 @@ MovementEasing = 10.0
 Resolution = 17
 MorphRange = Vector2(0.4, 0.8)
 StartingLod = 0
-NormalStrength = 149.0
 IsCulling = false
 Verbose = true
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=113934984]
 environment = SubResource("Environment_qqt2a")
 
-[node name="UIController" type="Control" parent="." unique_id=1610127994 node_paths=PackedStringArray("PlanetController", "_lblKeyCount", "_lblFPS", "_lblDistance", "_lblLOD", "_lblCameraMode", "_btnTerrainTesselation", "_btnCubeMode", "_btnCulling", "_btnMorphing", "_btnShowTileCache", "_btnVirtualTexturing", "_btnWipeVirtualTexutre", "_btnDebug", "_btnQuit", "_btnSimulateRotation", "DebugContainer")]
+[node name="UIController" type="Control" parent="." unique_id=1610127994 node_paths=PackedStringArray("PlanetController", "_lblKeyCount", "_lblFPS", "_lblDistance", "_lblLOD", "_lblCameraMode", "_lblLods", "_btnTerrainTesselation", "_btnCubeMode", "_btnCulling", "_btnMorphing", "_btnShowTileCache", "_btnVirtualTexturing", "_btnWipeVirtualTexutre", "_btnDebug", "_btnQuit", "_btnSimulateRotation", "_btnShowKeys", "DebugContainer")]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -65,6 +73,7 @@ _lblFPS = NodePath("DebugStats/FPS")
 _lblDistance = NodePath("DebugStats/Distance")
 _lblLOD = NodePath("DebugStats/LOD")
 _lblCameraMode = NodePath("DebugStats/CameraMode")
+_lblLods = NodePath("DebugStats/Lods")
 _btnTerrainTesselation = NodePath("Buttons/btnTerrainTesselation")
 _btnCubeMode = NodePath("Buttons/btnCubeMode")
 _btnCulling = NodePath("Buttons/btnCulling")
@@ -75,14 +84,13 @@ _btnWipeVirtualTexutre = NodePath("Buttons/btnWipeVirtualTexture")
 _btnDebug = NodePath("Buttons/btnHideDebug")
 _btnQuit = NodePath("Buttons/btnQuit")
 _btnSimulateRotation = NodePath("Buttons/btnSimulateRotation")
-DebugContainer = NodePath("DebugStats/DebugContainer/Panel")
+_btnShowKeys = NodePath("Buttons/btnShowKeys")
+DebugContainer = NodePath("Buttons/DebugContainer/Panel")
 
 [node name="DebugStats" type="VBoxContainer" parent="UIController" unique_id=1244037009]
 layout_mode = 1
-anchors_preset = 9
-anchor_bottom = 1.0
 offset_right = 221.0
-grow_vertical = 2
+offset_bottom = 716.0
 
 [node name="KeyCount" type="Label" parent="UIController/DebugStats" unique_id=1004083098]
 layout_mode = 2
@@ -109,22 +117,31 @@ layout_mode = 2
 text = "Camera Mode: X"
 label_settings = SubResource("LabelSettings_usljo")
 
-[node name="DebugContainer" type="PanelContainer" parent="UIController/DebugStats" unique_id=1146187140]
-custom_maximum_size = Vector2(320, -1)
+[node name="Lods" type="Label" parent="UIController/DebugStats" unique_id=853479412]
 layout_mode = 2
-size_flags_vertical = 3
-
-[node name="Panel" type="Panel" parent="UIController/DebugStats/DebugContainer" unique_id=1090241571]
-layout_mode = 2
+text = "Lod X: XXX
+Lod X: XXX
+Lod X: XXX
+Lod X: XXX
+Lod X: XXX
+Lod X: XXX
+Lod X: XXX
+Lod X: XXX
+Lod X: XXX
+Lod X: XXX
+Lod X: XXX
+Lod X: XXX"
+label_settings = SubResource("LabelSettings_usljo")
 
 [node name="Buttons" type="VBoxContainer" parent="UIController" unique_id=952700245]
 layout_mode = 1
-anchors_preset = 1
+anchors_preset = 11
 anchor_left = 1.0
 anchor_right = 1.0
-offset_left = -222.0
-offset_bottom = 311.0
+anchor_bottom = 1.0
+offset_left = -231.0
 grow_horizontal = 0
+grow_vertical = 2
 
 [node name="btnCubeMode" type="Button" parent="UIController/Buttons" unique_id=1562243158]
 layout_mode = 2
@@ -146,6 +163,11 @@ text = "Morphing"
 layout_mode = 2
 focus_mode = 0
 text = "Tiles in Cache"
+
+[node name="btnShowKeys" type="Button" parent="UIController/Buttons" unique_id=1132113430]
+layout_mode = 2
+focus_mode = 0
+text = "Show Keys"
 
 [node name="btnSimulateRotation" type="Button" parent="UIController/Buttons" unique_id=698626305]
 layout_mode = 2
@@ -177,6 +199,14 @@ layout_mode = 2
 focus_mode = 0
 text = "Quit"
 
+[node name="DebugContainer" type="PanelContainer" parent="UIController/Buttons" unique_id=1146187140]
+custom_maximum_size = Vector2(320, -1)
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="Panel" type="Panel" parent="UIController/Buttons/DebugContainer" unique_id=1090241571]
+layout_mode = 2
+
 [node name="CameraController" type="Node" parent="." unique_id=2045805659]
 script = ExtResource("5_usljo")
 Debug = true
@@ -204,3 +234,18 @@ sky_mode = 1
 
 [node name="DebugMesh" type="MultiMeshInstance3D" parent="SurfaceAttachment" unique_id=948609030]
 multimesh = SubResource("MultiMesh_ldv5r")
+
+[node name="CubicalCollision" type="StaticBody3D" parent="SurfaceAttachment" unique_id=38269948]
+
+[node name="CubicalCollisionShape" type="CollisionShape3D" parent="SurfaceAttachment/CubicalCollision" unique_id=1048006096]
+shape = SubResource("BoxShape3D_f8uwt")
+
+[node name="InnerCollision" type="StaticBody3D" parent="SurfaceAttachment" unique_id=2135805904]
+
+[node name="InnerCollisionShape" type="CollisionShape3D" parent="SurfaceAttachment/InnerCollision" unique_id=1753532001]
+shape = SubResource("SphereShape3D_qtwtp")
+
+[node name="OuterCollision" type="StaticBody3D" parent="SurfaceAttachment" unique_id=1766312672]
+
+[node name="OuterCollisionShape3D" type="CollisionShape3D" parent="SurfaceAttachment/OuterCollision" unique_id=1195774683]
+shape = SubResource("SphereShape3D_usljo")

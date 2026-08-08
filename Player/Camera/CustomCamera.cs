@@ -23,6 +23,8 @@ public partial class CustomCamera : Camera3D
 	[Export] public Node3D Target { get; set; }
 
 	RemoteTransform3D FollowRemote;
+	public bool HasMoved { get; private set; }
+
 
 	public override void _PhysicsProcess(double delta)
 	{
@@ -47,6 +49,7 @@ public partial class CustomCamera : Camera3D
 
 			// float direction = Input.GetActionStrength("move_up") - Input.GetActionStrength("move_down");
 			// DistanceFromTarget += direction * (float)delta * 2f;
+			HasMoved = !_keyRotation.IsZeroApprox();
 			_keyRotation = _keyRotation.Lerp(Vector2.Zero, RotationEasing);
 		}
 		GlobalPosition = GlobalPosition with { Z = DistanceFromTarget };
@@ -82,6 +85,7 @@ public partial class CustomCamera : Camera3D
 		if (Locked && @event is InputEventMouseMotion mouseMotionEvent)
 		{
 			ApplyRotation(x: -mouseMotionEvent.Relative.Y * Sensitivity, z: mouseMotionEvent.Relative.X * Sensitivity);
+			HasMoved = true;
 		}
 	}
 

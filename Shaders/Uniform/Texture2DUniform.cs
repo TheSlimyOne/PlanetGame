@@ -168,9 +168,17 @@ namespace Uniform
 			return images;
 		}
 		public byte[] GetLayerByteData(uint layer) => RenderingDevice.TextureGetData(Rid, layer);
-		public Color GetPixel(int x, int y) => GetTexture2Drd().GetImage().GetPixel(x, y);
-		public Color GetPixel(Vector2I at) => GetTexture2Drd().GetImage().GetPixelv(at);
-		public Vector2I GetSize() => GetTexture2Drd().GetImage().GetSize();
+		public Color GetPixel(int x, int y)
+		{
+			Image.Format imageFormat = FormatConverter.MatchDataFormat(TextureFormat.Format);
+			return GetImage(imageFormat).GetPixel(x, y);
+		}
+		public Color GetPixel(Vector2I at)
+		{
+			Image.Format imageFormat = FormatConverter.MatchDataFormat(TextureFormat.Format);
+			return GetImage(imageFormat).GetPixelv(at);
+		}
+		public Vector2I GetSize() => new((int)TextureFormat.Width, (int)TextureFormat.Height);
 
 		public void ClearTexture(Color color) => RenderingDevice.TextureClear(Rid, color, 0, 1, 0, 1);
 		public void ClearTexture(Color color, uint baseMipmap = 0, uint mipmapCount = 1, uint baseLayer = 0, uint layerCount = 1) => RenderingDevice.TextureClear(Rid, color, baseMipmap, mipmapCount, baseLayer, layerCount);

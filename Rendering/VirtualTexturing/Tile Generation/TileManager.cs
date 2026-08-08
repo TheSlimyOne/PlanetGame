@@ -156,10 +156,10 @@ namespace PlanetGame.Rendering.VirtualTexturing
 
                     Color pixel = Sampler.SampleBilinear(parameters.Source, sphereUV.X, sphereUV.Y);
                     tile.SetPixel(x + parameters.Padding, y + parameters.Padding, pixel);
-                }
+            }
             }
 
-            tile.SavePng($"{parameters.Destination}//{parameters.MipIndex}_{parameters.NormalId}-{parameters.TileIndexX}-{parameters.TileIndexY}.png");
+            tile.SavePng($"{parameters.Destination}//{parameters.MipIndex}_{parameters.NormalId}_{parameters.TileIndexX}_{parameters.TileIndexY}.png");
 
             return tile;
         }
@@ -184,11 +184,6 @@ namespace PlanetGame.Rendering.VirtualTexturing
             uint normalId = BitConverter.SingleToUInt32Bits(data.B);
             return ((int)tileIndexX, (int)tileIndexY, (int)normalId, (int)mipIndex);
         }
-
-        // public static Image GenerateNormalMap(Image heightmap)
-        // {
-
-        // }
 
         public static ArrayMesh GetPlanetMesh(int resolution, Image heightmap, float strength)
         {

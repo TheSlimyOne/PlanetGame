@@ -15,6 +15,18 @@ sky_material = SubResource("ShaderMaterial_qdvrb")
 background_mode = 1
 sky = SubResource("Sky_jxero")
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_kln2b"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 4.0
+bg_color = Color(0.8627451, 0.101960786, 0.101960786, 0.6)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+corner_detail = 5
+
 [node name="Main Menu" type="MarginContainer" unique_id=2119700644 node_paths=PackedStringArray("LoadOptions", "LoadSave", "AlbedoSave", "HeightmapSave", "StartNewGame", "Quit", "ProgressBar", "ProgressLabel", "DemoPlanet", "FileDialog", "SaveName")]
 custom_minimum_size = Vector2(512, 256)
 anchors_preset = 15
@@ -128,6 +140,7 @@ environment = SubResource("Environment_idj7w")
 transform = Transform3D(-3.9e-08, 0.451609, -0.892216, 1.97404e-08, 0.892216, 0.451609, 1, 1.71783e-15, -4.37114e-08, 0, 0, 0)
 
 [node name="btnRegenerate" type="Button" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/Load Section" unique_id=1968795857]
+visible = false
 layout_mode = 2
 size_flags_vertical = 3
 text = "Regenerate Tiles"
@@ -136,6 +149,11 @@ text = "Regenerate Tiles"
 layout_mode = 2
 size_flags_vertical = 3
 text = "Load Save"
+
+[node name="btnOpenSaves" type="Button" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/Load Section" unique_id=732908345]
+layout_mode = 2
+size_flags_vertical = 3
+text = "Open Saves Folder"
 
 [node name="VSeparator" type="VSeparator" parent="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer" unique_id=1640734653]
 layout_mode = 2
@@ -182,6 +200,7 @@ horizontal_alignment = 1
 
 [node name="btnQuit" type="Button" parent="CenterContainer/VBoxContainer" unique_id=200122952]
 layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxFlat_kln2b")
 text = "Quit"
 
 [node name="FileDialog" type="FileDialog" parent="." unique_id=1580509217]
@@ -200,6 +219,7 @@ script = ExtResource("3_kln2b")
 [connection signal="pressed" from="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/Load Section/Load Group/obtLoadOptions" to="." method="OnOpenSavesList"]
 [connection signal="pressed" from="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/Load Section/btnRegenerate" to="." method="OnLoad"]
 [connection signal="pressed" from="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/Load Section/btnLoad" to="." method="OnLoad"]
+[connection signal="pressed" from="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/Load Section/btnOpenSaves" to="." method="OpenSavesFolder"]
 [connection signal="pressed" from="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/New Game Section/btnUploadAlbedo" to="." method="OpenFileDialog" binds= ["ALBEDO"]]
 [connection signal="pressed" from="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/New Game Section/btnUploadHeight" to="." method="OpenFileDialog" binds= ["HEIGHT"]]
 [connection signal="pressed" from="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/New Game Section/btnStartNewGame" to="." method="OnStartNewGame"]

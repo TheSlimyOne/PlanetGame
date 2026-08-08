@@ -49,7 +49,7 @@ namespace PlanetGame.Rendering.VirtualTexturing
             RenderingServer.GetRenderingDevice().TextureClear(GetRdRid(), new Color("00000000"), 0, 1, 0, VirtualTextureData.TotalMipLayers);
         }
 
-        public override Control CreateVisualization(string name = "")
+        public override TextureRect CreateVisualization(string name = "")
         {
             string shaderCode = """
             shader_type canvas_item;
@@ -143,6 +143,7 @@ namespace PlanetGame.Rendering.VirtualTexturing
             ((ShaderMaterial)texture.Material).SetShaderParameter("grid_size", tileCount);
             ((ShaderMaterial)texture.Material).SetShaderParameter("state_table", Table);
 
+            Visualization = texture;
             return texture;
         }
 

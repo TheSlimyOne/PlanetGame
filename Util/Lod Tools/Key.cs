@@ -324,8 +324,6 @@ public readonly struct Key(uint msb, uint lsb, uint meshPolygonID, uint meshData
                 vertices[currentIndex] = normal + (percentage.X * axisA + percentage.Y * axisB);
                 normals[currentIndex] = normal;
 
-                // GD.Print(vertices[currentIndex]);
-
                 if (x != resolution - y - 1)
                 {
                     if (x == resolution - y - 2)
@@ -364,6 +362,7 @@ public readonly struct Key(uint msb, uint lsb, uint meshPolygonID, uint meshData
 
 
         // GD.Print(FormatForDesmos(vertices, triangles));
+        // GD.PrintS(vertices.Length, triangles.Length / 3);
     
         Godot.Collections.Array arrays = [];
         arrays.Resize((int)Mesh.ArrayType.Max);

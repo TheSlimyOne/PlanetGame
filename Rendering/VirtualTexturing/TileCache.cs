@@ -16,7 +16,7 @@ namespace PlanetGame.Rendering.VirtualTexturing
         public Image.Format CacheFormat { get; private set; }
         public Image Placeholder { get; private set; }
 
-        public const uint DEFAULT_TILE_SLOTS_COUNT = 512;
+        public const uint DEFAULT_TILE_SLOTS_COUNT = 1024;
 
         public TileCache(VTData virtualTextureData, string tileDirectory, Color placeholderColor, Image.Format format)
         {
@@ -115,7 +115,7 @@ namespace PlanetGame.Rendering.VirtualTexturing
             return TileManager.GenerateBlankTile(parameters);
         }
 
-        public override Control CreateVisualization(string name)
+        public override TextureRect CreateVisualization(string name)
         {
             Shader shader = GD.Load<Shader>(ShaderPaths.TEXTURE_2D_ARRAY_SHADER);
             Vector2I tileCount = new((int)Mathf.Sqrt(DEFAULT_TILE_SLOTS_COUNT), (int)Mathf.Sqrt(DEFAULT_TILE_SLOTS_COUNT));
@@ -134,6 +134,8 @@ namespace PlanetGame.Rendering.VirtualTexturing
             ((ShaderMaterial)texture.Material).SetShaderParameter("grid_size", tileCount);
             ((ShaderMaterial)texture.Material).SetShaderParameter("image", Cache);
 
+
+            Visualization = texture;
             return texture;
         }
 

@@ -47,7 +47,7 @@ namespace PlanetGame.Rendering.VirtualTexturing
             RenderingServer.GetRenderingDevice().TextureClear(GetRdRid(), new Color("00000000"), 0, 1, 0, 1);
         }
 
-        public override Control CreateVisualization(string name = "")
+        public override TextureRect CreateVisualization(string name = "")
         {
             string shaderCode = """
             shader_type canvas_item;
@@ -85,7 +85,7 @@ namespace PlanetGame.Rendering.VirtualTexturing
             }
             """;
 
-            TextureRect textureRect = new()
+            TextureRect texture = new()
             {
                 Name = $"Residency Table {name}",
                 SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
@@ -94,9 +94,11 @@ namespace PlanetGame.Rendering.VirtualTexturing
                 TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
                 Material = new ShaderMaterial() { Shader = new() { Code = shaderCode } }
             };
-            ((ShaderMaterial)textureRect.Material).SetShaderParameter("total_resolution_mip_count", VirtualTextureData.TotalSubdivisions);
-            textureRect.SetAnchorsPreset(Control.LayoutPreset.FullRect);
-            return textureRect;
+            ((ShaderMaterial)texture.Material).SetShaderParameter("total_resolution_mip_count", VirtualTextureData.TotalSubdivisions);
+            texture.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+
+            Visualization = texture;
+            return texture;
         }
 
         public override void CleanupGPU()

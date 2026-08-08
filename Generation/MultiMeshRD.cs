@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Godot;
@@ -10,6 +11,8 @@ public class MultiMeshRD
     public Mesh Mesh { get; private set; }
     public Rid CommandBuffer => RenderingServer.MultimeshGetCommandBufferRdRid(Rid);
     public Rid Buffer => RenderingServer.MultimeshGetBufferRdRid(Rid);
+
+    // public event Action MeshChanged;
 
     public readonly List<Rid> Instances = [];
 
@@ -45,6 +48,15 @@ public class MultiMeshRD
         }
     }
 
+    public void SetMesh(Mesh mesh)
+    {
+        // ArgumentNullException.ThrowIfNull(mesh);
+
+        Mesh = mesh;
+        RenderingServer.MultimeshSetMesh(Rid, mesh.GetRid());
+
+        // MeshChanged.Invoke();
+    }
 
     public (Vector3[] vertices, int[] indices, Vector3[] normals, Vector2[] uvs) GetMeshData()
     {
@@ -59,16 +71,13 @@ public class MultiMeshRD
 
     public void CleanupGPU()
     {
-        // RenderingServer.FreeRid(RenderingServer.MultimeshGetMesh(Rid));
-        RenderingServer.FreeRid(Buffer);
-        RenderingServer.FreeRid(CommandBuffer);
-        RenderingServer.FreeRid(Rid);
         foreach (Rid instance in Instances)
-        {
             RenderingServer.FreeRid(instance);
-        }
 
         Instances.Clear();
-    }
 
+        RenderingServer.FreeRid(Rid);
+        Rid = default;
+        Mesh = null;
+    }
 }

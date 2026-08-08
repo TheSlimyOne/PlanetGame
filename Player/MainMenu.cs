@@ -55,6 +55,8 @@ public partial class MainMenu : MarginContainer
 		CallDeferred(nameof(UpdateProgressBar), current, outputText, maxValue);
 	}
 
+	public void OpenSavesFolder() => OS.ShellShowInFileManager(ProjectSettings.GlobalizePath("user://Saves"));
+
 	public void UpdateProgressBar(int currentCount, string outputText, int maxValue)
 	{
 		if (ProgressBar == null || ProgressLabel == null)

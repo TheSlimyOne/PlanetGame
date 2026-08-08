@@ -13,6 +13,7 @@ public partial class UIController : Control
 	[Export] private Label _lblDistance;
 	[Export] private Label _lblLOD;
 	[Export] private Label _lblCameraMode;
+    [Export] private Label _lblLods;
 
 	[ExportGroup("Buttons")]
 	[Export] private Button _btnTerrainTesselation;
@@ -25,6 +26,7 @@ public partial class UIController : Control
 	[Export] private Button _btnDebug;
 	[Export] private Button _btnQuit;
 	[Export] private Button _btnSimulateRotation;
+	[Export] private Button _btnShowKeys;
 
 	[ExportGroup("Containers")]
 	[Export] public Control DebugContainer;
@@ -32,7 +34,7 @@ public partial class UIController : Control
 	private int _allMax;
 	private int _culledMax;
 
-	public override void _Ready()
+    public override void _Ready()
 	{
 		ConnectButton(_btnCubeMode, EnableOrDisableCubeMode);
 		ConnectButton(_btnCulling, EnableOrDisableCulling);
@@ -43,13 +45,13 @@ public partial class UIController : Control
 		ConnectButton(_btnVirtualTexturing, EnableOrDisableVirtualTexturing);
 		ConnectButton(_btnWipeVirtualTexutre, WipeVirtualTexture);
 		ConnectButton(_btnDebug, EnableOrDisableDebug);
+		ConnectButton(_btnShowKeys, HideOrShowKeys);
 		ConnectButton(_btnQuit, Quit);
 
 		UpdateButtonLabels();
 	}
 
-
-	public override void _ExitTree()
+    public override void _ExitTree()
 	{
 		DisconnectButton(_btnCubeMode, EnableOrDisableCubeMode);
 		DisconnectButton(_btnCulling, EnableOrDisableCulling);
@@ -60,6 +62,7 @@ public partial class UIController : Control
 		DisconnectButton(_btnVirtualTexturing, EnableOrDisableVirtualTexturing);
 		DisconnectButton(_btnWipeVirtualTexutre, WipeVirtualTexture);
 		DisconnectButton(_btnDebug, EnableOrDisableDebug);
+		DisconnectButton(_btnShowKeys, HideOrShowKeys);
 		DisconnectButton(_btnQuit, Quit);
 	}
 
@@ -97,6 +100,25 @@ public partial class UIController : Control
 	{
 		_lblCameraMode.Text =
 			$"Camera Mode: {PlanetController.CameraController.GetViewport().DebugDraw}";
+	}
+
+	string s3 = "";
+	public void SetLodCounts(int[] lodCount)
+	{
+		string s = "";
+		string s2 = "";
+		for (int i = 0; i < lodCount.Length; i++)
+		{
+			s += $"Lod {i}: {lodCount[i]}\n";
+			s2 += $"({i}, {lodCount[i]}), ";
+		}
+
+		// if (s3 != s2)
+		// {
+		// 	GD.Print($"[{s2[..^2]}]");
+		// 	s3 = s2;
+		// }
+		_lblLods.Text = s.StripEdges();
 	}
 
 	public void EnableOrDisableTerrainTesselation()
@@ -172,6 +194,18 @@ public partial class UIController : Control
 		);
 	}
 
+	public void HideOrShowKeys()
+	{
+		bool newValue = !PlanetController.SurfaceShader.GetShaderParameter("show_keys").AsBool();
+		PlanetController.SurfaceShader.SetShaderParameter("show_keys", newValue);
+
+		UpdateToggleButton(
+			_btnShowKeys,
+			newValue,
+			"Show Keys"
+		);
+	}
+
 
 	public void EnableOrDisableRotationEffect()
 	{
@@ -235,6 +269,15 @@ public partial class UIController : Control
 				.GetShaderParameter("show_in_cache")
 				.AsBool(),
 			"Tiles in Cache"
+		);
+
+		if (PlanetController.SurfaceShader != null)
+		UpdateToggleButton(
+			_btnShowKeys,
+			PlanetController.SurfaceShader
+				.GetShaderParameter("show_keys")
+				.AsBool(),
+			"Show Keys"
 		);
 
 		UpdateToggleButton(
