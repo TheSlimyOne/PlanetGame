@@ -93,88 +93,88 @@ namespace PlanetGame.Rendering.VirtualTexturing
             boxContainer.AddChild(AlbedoTileCache.CreateVisualization("Albedo"));
             boxContainer.AddChild(HeightTileCache.CreateVisualization("Heightmap"));
 
-            // TextureRect rect = new()
-            // {
-            //     Texture = SvtFeedbackRenderPass.GetFrameBufferTexture(),
-            //     Material = new ShaderMaterial
-            //     {
-            //         Shader = new Shader
-            //         {
-            //             Code = """
-            //                 shader_type canvas_item;
-            //                 render_mode unshaded;
+            TextureRect rect = new()
+            {
+                Texture = SvtFeedbackRenderPass.GetFrameBufferTexture(),
+                Material = new ShaderMaterial
+                {
+                    Shader = new Shader
+                    {
+                        Code = """
+                            shader_type canvas_item;
+                            render_mode unshaded;
 
-            //                 uniform int low_resolution_mip_count;
-            //                 uniform int high_resolution_mip_count;
-            //                 uniform int grid_size;
+                            uniform int low_resolution_mip_count;
+                            uniform int high_resolution_mip_count;
+                            uniform int grid_size;
 
-            //                 uint hash_uint(uint value)
-            //                 {
-            //                     value ^= value >> 16u;
-            //                     value *= 0x7FEB352Du;
-            //                     value ^= value >> 15u;
-            //                     value *= 0x846CA68Bu;
-            //                     value ^= value >> 16u;
-            //                     return value;
-            //                 }
+                            uint hash_uint(uint value)
+                            {
+                                value ^= value >> 16u;
+                                value *= 0x7FEB352Du;
+                                value ^= value >> 15u;
+                                value *= 0x846CA68Bu;
+                                value ^= value >> 16u;
+                                return value;
+                            }
 
-            //                 vec3 hash_color(uvec3 value)
-            //                 {
-            //                     uint hashed =
-            //                         value.x * 0x9E3779B9u ^
-            //                         value.y * 0x85EBCA6Bu ^
-            //                         value.z * 0xC2B2AE35u;
+                            vec3 hash_color(uvec3 value)
+                            {
+                                uint hashed =
+                                    value.x * 0x9E3779B9u ^
+                                    value.y * 0x85EBCA6Bu ^
+                                    value.z * 0xC2B2AE35u;
 
-            //                     hashed = hash_uint(hashed);
+                                hashed = hash_uint(hashed);
 
-            //                     return vec3(
-            //                         float(hashed & 0xFFu),
-            //                         float((hashed >> 8u) & 0xFFu),
-            //                         float((hashed >> 16u) & 0xFFu)
-            //                     ) / 255.0;
-            //                 }
+                                return vec3(
+                                    float(hashed & 0xFFu),
+                                    float((hashed >> 8u) & 0xFFu),
+                                    float((hashed >> 16u) & 0xFFu)
+                                ) / 255.0;
+                            }
 
-            //                 void fragment()
-            //                 {
-            //                     ivec2 texture_size = textureSize(TEXTURE, 0);
-            //                     ivec2 pixel_coords = min(
-            //                         ivec2(UV * vec2(texture_size)),
-            //                         texture_size - ivec2(1)
-            //                     );
+                            void fragment()
+                            {
+                                ivec2 texture_size = textureSize(TEXTURE, 0);
+                                ivec2 pixel_coords = min(
+                                    ivec2(UV * vec2(texture_size)),
+                                    texture_size - ivec2(1)
+                                );
 
-            //                     uvec4 feedback = floatBitsToUint(
-            //                         texelFetch(TEXTURE, pixel_coords, 0)
-            //                     );
+                                uvec4 feedback = floatBitsToUint(
+                                    texelFetch(TEXTURE, pixel_coords, 0)
+                                );
 
-            //                     uvec3 indirection_index = feedback.xyz;
-            //                     bool is_requesting = feedback.w == 1u;
+                                uvec3 indirection_index = feedback.xyz;
+                                bool is_requesting = feedback.w == 1u;
 
-            //                     COLOR = is_requesting
-            //                         ? vec4(hash_color(indirection_index), 1.0)
-            //                         : vec4(0.0);
-            //                 }
-            //                 """
-            //         }
-            //     }
-            // };
+                                COLOR = is_requesting
+                                    ? vec4(hash_color(indirection_index), 1.0)
+                                    : vec4(0.0);
+                            }
+                            """
+                    }
+                }
+            };
 
-            // ShaderMaterial material = (ShaderMaterial)rect.Material;
-            // material.SetShaderParameter(
-            //     "low_resolution_mip_count",
-            //     VirtualTextureData.LowResolutionMipCount
-            // );
-            // material.SetShaderParameter(
-            //     "high_resolution_mip_count",
-            //     VirtualTextureData.HighResolutionMipCount
-            // );
-            // material.SetShaderParameter(
-            //     "grid_size",
-            //     (int)VirtualTextureData.GridSize
-            // );
-            // boxContainer.AddChild(rect);
+            ShaderMaterial material = (ShaderMaterial)rect.Material;
+            material.SetShaderParameter(
+                "low_resolution_mip_count",
+                VirtualTextureData.LowResolutionMipCount
+            );
+            material.SetShaderParameter(
+                "high_resolution_mip_count",
+                VirtualTextureData.HighResolutionMipCount
+            );
+            material.SetShaderParameter(
+                "grid_size",
+                (int)VirtualTextureData.GridSize
+            );
+            boxContainer.AddChild(rect);
 
-            // TextureRect rect1 = new() { Texture = SvtFeedbackRenderPass.GetPickingTexture() };
-            // boxContainer.AddChild(rect1);
+            TextureRect rect1 = new() { Texture = SvtFeedbackRenderPass.GetPickingTexture() };
+            boxContainer.AddChild(rect1);
 
 
             foreach (TextureRect texture in boxContainer.GetChildren().Cast<TextureRect>())
@@ -231,6 +231,8 @@ namespace PlanetGame.Rendering.VirtualTexturing
 
                 ValidateTileCache.Invoke();
             }
+
+
             Ready = true;
 
         }
@@ -239,7 +241,7 @@ namespace PlanetGame.Rendering.VirtualTexturing
         {
             IndirectionTable.ClearStorageTexture();
             IndirectionTable.SetFallbackSlots();
-
+            
             AlbedoTileCache.ClearStorageTexture();
             AlbedoTileCache.SetFallbackSlots();
 

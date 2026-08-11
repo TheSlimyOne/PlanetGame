@@ -9,17 +9,19 @@ namespace PlanetGame.Rendering.VirtualTexturing
     {
         public Texture2Drd Table
         {
-            get => (Texture2Drd)StorageTexture;
-            protected set => StorageTexture = value;
+            get => (Texture2Drd)_storageTexture;
+            protected set => _storageTexture = value;
         }
 
         public VTData VirtualTextureData { get; }
+
+        public uint Size { get; }
         
         public ResidencyTable(VTData virtualTextureData)
         {
             VirtualTextureData = virtualTextureData;
 
-            uint size = (uint)Mathf.Ceil(Mathf.Sqrt(TileCache.DEFAULT_TILE_SLOTS_COUNT));
+            Size = (uint)Mathf.Ceil(Mathf.Sqrt(TileCache.DEFAULT_TILE_SLOTS_COUNT));
 
             Format = RenderingDevice.DataFormat.R32G32B32A32Sfloat;
 
@@ -28,8 +30,8 @@ namespace PlanetGame.Rendering.VirtualTexturing
                 TextureRdRid = RenderingServer.GetRenderingDevice().TextureCreate(
                     new RDTextureFormat()
                     {
-                        Width = size,
-                        Height = size,
+                        Width = Size,
+                        Height = Size,
                         Format = Format,
                         TextureType = RenderingDevice.TextureType.Type2D,
                         UsageBits = RenderingDevice.TextureUsageBits.StorageBit | RenderingDevice.TextureUsageBits.CanCopyFromBit | RenderingDevice.TextureUsageBits.CanUpdateBit | RenderingDevice.TextureUsageBits.SamplingBit | RenderingDevice.TextureUsageBits.CanCopyToBit

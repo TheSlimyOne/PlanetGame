@@ -172,7 +172,7 @@ namespace PlanetGame.Shaders.RenderPasses
                 Samples = RenderingDevice.TextureSamples.Samples1,
                 UsageBits = RenderingDevice.TextureUsageBits.ColorAttachmentBit |
                             RenderingDevice.TextureUsageBits.CanCopyFromBit |
-                            RenderingDevice.TextureUsageBits.SamplingBit | 
+                            RenderingDevice.TextureUsageBits.SamplingBit |
                             RenderingDevice.TextureUsageBits.StorageBit
             };
 
@@ -274,15 +274,35 @@ namespace PlanetGame.Shaders.RenderPasses
             throw new NotImplementedException();
         }
 
-        // public Vector3 GetMousePosition(Vector2I mousePosition)
-        // {
-        //     // Image depthTexture = RenderingServer.Texture2DGet(_depthTexture);
+        public Vector3 GetLocalMousePosition(Vector2 mousePosition, Vector2 screenSize)
+        {
+            Image image = GetPickingImage();
+            Vector2 normalizedMousePosition = mousePosition / screenSize;
 
-        //     // Color color = depthTexture.GetPixelv(mousePosition);
+            Vector2I pixelPosition = new(
+                Mathf.Clamp(
+                    (int)(normalizedMousePosition.X * image.GetWidth()),
+                    0,
+                    image.GetWidth() - 1
+                ),
+                Mathf.Clamp(
+                    (int)(normalizedMousePosition.Y * image.GetHeight()),
+                    0,
+                    image.GetHeight() - 1
+                )
+            );
 
-        // }
+            Color pickingData = image.GetPixelv(pixelPosition);
 
+            // Return an invald value if not a valid pick
+            if (pickingData.A == -1)
+                return Vector3.Inf;
 
-
+            return new(
+                pickingData.R,
+                pickingData.G,
+                pickingData.B
+            );
+        }
     }
 }

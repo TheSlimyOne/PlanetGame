@@ -165,9 +165,9 @@ namespace PlanetGame.Shaders.Dispatchers
 				.. Utilities.ToBytesSingle(PlanetController.MorphRange.X),
 				.. Utilities.ToBytesSingle(PlanetController.MorphRange.Y),
 
-				.. Utilities.ToBytesSingle(Utilities.ToProjection(PlanetController.GetPlanetTransformMatrix())),
+				.. Utilities.ToBytesSingle(Utilities.ToProjection(PlanetController.GetPlanetLocalToWorldTransform())),
 				.. Utilities.ToBytesSingle(MainCamera.GetViewProjectionMatrix()),
-				.. Utilities.ToBytesSingle(VectorUtils.ToVector4( MainCamera.GlobalPosition, Mathf.Tan(MainCamera.GetCameraFov(true) / 2))),
+				.. Utilities.ToBytesSingle(VectorUtils.ToVector4(MainCamera.GlobalPosition, Mathf.Tan(MainCamera.GetCameraFov(true) / 2))),
 			];
 
 			return [.. data];
@@ -202,17 +202,26 @@ namespace PlanetGame.Shaders.Dispatchers
 
 		public int GetCurrentLod()
 		{
-			return (int)GetUniform<Texture2DUniform>(BufferNames.GLOBAL_KEYS_DATA).GetPixel(1, 0).R - 1;
+			return (int)GetUniform<Texture2DUniform>(BufferNames.GLOBAL_KEYS_DATA).GetPixel(1, 0).R;
 		}
+
+		public int GetLowestLod()
+		{
+			return (int)GetUniform<Texture2DUniform>(BufferNames.GLOBAL_KEYS_DATA).GetPixel(1, 1).R;
+		}
+
+		public int GetStableCount()
+        {
+            return (int)GetUniform<Texture2DUniform>(BufferNames.GLOBAL_KEYS_DATA).GetPixel(1, 2).R;
+        }
 
 		public int[] GetLodCount()
 		{
 			int[] lodCount = new int[PlanetController.MaximumLod + 1];
 			for (int i = PlanetController.MinimumLod; i < PlanetController.MaximumLod + 1; i++)
-			{
 				lodCount[i] = (int)GetUniform<Texture2DUniform>(BufferNames.GLOBAL_KEYS_DATA).GetPixel(0, i).R;
-			}
 			
+
 			return lodCount;
 		}
 
@@ -233,5 +242,7 @@ namespace PlanetGame.Shaders.Dispatchers
 				Key key = new(data[baseIndex + 16], data[baseIndex + 17], data[baseIndex + 18], data[baseIndex + 19]);
 			}
 		}
-	}
+
+        
+    }
 }

@@ -141,7 +141,7 @@ namespace PlanetGame.Util
             return meshInstance;
         }
 
-        public static float LimitRotation(float rotation)
+        public static float NormalizeAngleDegrees(float rotation)
         {
             rotation %= 360f;
             if (rotation < 0) rotation += 360f;

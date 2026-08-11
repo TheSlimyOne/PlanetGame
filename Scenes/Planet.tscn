@@ -27,31 +27,21 @@ outline_color = Color(0.0768358, 0.0768358, 0.0768358, 1)
 
 [sub_resource type="MultiMesh" id="MultiMesh_ldv5r"]
 
-[sub_resource type="BoxShape3D" id="BoxShape3D_f8uwt"]
-
-[sub_resource type="SphereShape3D" id="SphereShape3D_qtwtp"]
-
-[sub_resource type="SphereShape3D" id="SphereShape3D_usljo"]
-
-[node name="Planet" type="Node3D" unique_id=1057872115 node_paths=PackedStringArray("CameraController", "SurfaceAttachment", "UIController", "InnerCollision", "OuterCollision", "CubicalCollision", "MainLightSource", "WorldEnvironment")]
+[node name="Planet" type="Node3D" unique_id=1057872115 node_paths=PackedStringArray("CameraController", "SurfaceAttachment", "UIController", "MainLightSource", "WorldEnvironment")]
 script = ExtResource("1_qtwtp")
-Radius = 8000.0
-HeightScale = 0.025
+Radius = 500.0
 CameraController = NodePath("CameraController")
 SurfaceAttachment = NodePath("SurfaceAttachment")
 UIController = NodePath("UIController")
-PointRadius = 0.025
-TotalDebugInstances = 100
-InnerCollision = NodePath("SurfaceAttachment/InnerCollision")
-OuterCollision = NodePath("SurfaceAttachment/OuterCollision")
-CubicalCollision = NodePath("SurfaceAttachment/CubicalCollision")
+PointRadius = 80.0
+TotalDebugInstances = 25
 MainLightSource = NodePath("SurfaceAttachment/MainLightSource")
 WorldEnvironment = NodePath("WorldEnvironment")
 BaseZoomSpeed = 1.0
 BaseRotationSpeed = 1.0
 MovementEasing = 10.0
 Resolution = 17
-MorphRange = Vector2(0.4, 0.8)
+MorphRange = Vector2(0.49, 0.51)
 StartingLod = 0
 IsCulling = false
 Verbose = true
@@ -234,18 +224,3 @@ sky_mode = 1
 
 [node name="DebugMesh" type="MultiMeshInstance3D" parent="SurfaceAttachment" unique_id=948609030]
 multimesh = SubResource("MultiMesh_ldv5r")
-
-[node name="CubicalCollision" type="StaticBody3D" parent="SurfaceAttachment" unique_id=38269948]
-
-[node name="CubicalCollisionShape" type="CollisionShape3D" parent="SurfaceAttachment/CubicalCollision" unique_id=1048006096]
-shape = SubResource("BoxShape3D_f8uwt")
-
-[node name="InnerCollision" type="StaticBody3D" parent="SurfaceAttachment" unique_id=2135805904]
-
-[node name="InnerCollisionShape" type="CollisionShape3D" parent="SurfaceAttachment/InnerCollision" unique_id=1753532001]
-shape = SubResource("SphereShape3D_qtwtp")
-
-[node name="OuterCollision" type="StaticBody3D" parent="SurfaceAttachment" unique_id=1766312672]
-
-[node name="OuterCollisionShape3D" type="CollisionShape3D" parent="SurfaceAttachment/OuterCollision" unique_id=1195774683]
-shape = SubResource("SphereShape3D_usljo")

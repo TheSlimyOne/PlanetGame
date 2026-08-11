@@ -9,8 +9,8 @@ namespace PlanetGame.Rendering.VirtualTexturing
     {
         public Texture2DArrayRD Table
         {
-            get => (Texture2DArrayRD)StorageTexture;
-            protected set => StorageTexture = value;
+            get => (Texture2DArrayRD)_storageTexture;
+            protected set => _storageTexture = value;
         }
 
         public VTData VirtualTextureData { get; }

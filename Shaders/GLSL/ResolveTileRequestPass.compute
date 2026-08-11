@@ -45,7 +45,6 @@ void main() {
     const uint NOT_PROCESSING = 0x00000000;
 
     ivec2 size = imageSize(feedbackTexture);
-    // ivec3 indirection_index = ivec3(gl_GlobalInvocationID.xyz);
 
     ivec2 invocation_id = ivec2(gl_GlobalInvocationID.xy);
     
@@ -55,8 +54,11 @@ void main() {
     ivec3 indirection_index = feedback.xyz;
     bool is_requesting = feedback.w == 1;
 
-    // Ignore entries not being requested
-    if (!is_requesting)
+    int total_resolution_mip_count = low_resolution_mip_count + high_resolution_mip_count;
+    int mip_index = indirection_index.z % int(total_resolution_mip_count);
+
+    // Ignore entries not being requested or the request is out of bounds
+    if (!is_requesting || mip_index >= 6 || mip_index < 0)
         return;
 
     uint results = imageAtomicCompSwap(stateTable, indirection_index, NOT_PROCESSING, PROCESSING);
@@ -82,9 +84,6 @@ void main() {
         slot / sqrt_total_texture_slots
     );
 
-
-    int total_resolution_mip_count = low_resolution_mip_count + high_resolution_mip_count;
-    int mip_index = indirection_index.z % int(total_resolution_mip_count);
     int lod_size = 1 << mip_index;
     int mip_grid_size = int(grid_size) >> mip_index;
     int mip_step = int(grid_size) / mip_grid_size;

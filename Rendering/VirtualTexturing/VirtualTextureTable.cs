@@ -4,7 +4,7 @@ namespace PlanetGame.Rendering.VirtualTexturing
     public abstract class VirtualTextureTable
     {
         public RenderingDevice.DataFormat Format { get; protected set; }
-        protected Texture StorageTexture { get; set; }
+        protected Texture _storageTexture { get; set; }
         public abstract Rid GetRdRid();
         public TextureRect Visualization;
         public abstract TextureRect CreateVisualization(string name);

@@ -101,22 +101,22 @@ void fragment() {
 //
 	vec3 tile_uv = get_tile_uv(terrain_indirection_table, non_negative_mip_index, tile_size, vertex_uv, int(key.z), low_resolution_mip_count, high_resolution_mip_count);
 	//
-    //vec2 grid_position = floor(adjusted_uv * lod_grid_size) / lod_grid_size;
-	//ALBEDO = vec3(grid_position, 0.0);
+    //vec2 grid_uv = floor(adjusted_uv * lod_grid_size) / lod_grid_size;
+	//ALBEDO = vec3(grid_uv, 0.0);
 	int total_resolution_mip_count = low_resolution_mip_count + high_resolution_mip_count;
 
 	float grid_size = exp2(float(total_resolution_mip_count - 1));
 	float lod_grid_size = grid_size / exp2(float(non_negative_mip_index));
 
-	vec2 lod_grid_position = adjusted_uv * lod_grid_size;
+	vec2 tile_coordinate = adjusted_uv * lod_grid_size;
 
-	vec2 grid_uv = fract(lod_grid_position);
+	vec2 tile_local_uv = fract(tile_coordinate);
 
-	vec2 grid_position = floor(lod_grid_position) / lod_grid_size;
+	vec2 grid_uv = floor(tile_coordinate) / lod_grid_size;
 	int layer = total_resolution_mip_count * normal_id + non_negative_mip_index;
 
 	ivec3 indirection_index = ivec3(
-		ivec2(grid_position * grid_size), 
+		ivec2(grid_uv * grid_size), 
 		layer
 	);
 	
@@ -127,22 +127,22 @@ void fragment() {
 	    switch(key.z)
 	    {
 	        case 0u:
-	            output_color = vec3(grid_uv.x, grid_uv.y, depth);
+	            output_color = vec3(tile_local_uv.x, tile_local_uv.y, depth);
 	            break;
 	        case 1u:
-	            output_color = vec3(grid_uv.y, grid_uv.x, depth);
+	            output_color = vec3(tile_local_uv.y, tile_local_uv.x, depth);
 	            break;
 	        case 2u:
-	            output_color = vec3(depth, grid_uv.x, grid_uv.y);
+	            output_color = vec3(depth, tile_local_uv.x, tile_local_uv.y);
 	            break;
 	        case 3u:
-	            output_color = vec3(depth, grid_uv.y, grid_uv.x);
+	            output_color = vec3(depth, tile_local_uv.y, tile_local_uv.x);
 	            break;
 	        case 4u:
-	            output_color = vec3(grid_uv.x, depth, grid_uv.y);
+	            output_color = vec3(tile_local_uv.x, depth, tile_local_uv.y);
 	            break;
 	        case 5u:
-	            output_color = vec3(grid_uv.y, depth, grid_uv.x);
+	            output_color = vec3(tile_local_uv.y, depth, tile_local_uv.x);
 	            break;
 	        default:
 	            break;
@@ -176,8 +176,27 @@ void fragment() {
 	{
 		ALBEDO = pow(get_tile(albedo_tile_cache, tile_uv).xyz, vec3(2.2));
 	}
-
 	
-	
-	
+//
+	//if (flags == 0u)
+	//{
+		//ALBEDO = vec3(1, 0, 0);
+	//}
+	//else if (flags == 1u)
+	//{
+		//ALBEDO = vec3(0, 1, 0);
+	//}
+	//else if (flags == 2u)
+	//{
+		//ALBEDO = vec3(0, 0, 1);
+	//}
+	//else if (flags == 3u)
+	//{
+		//ALBEDO = vec3(1, 1, 0);
+	//}
+	//else if (flags == 4u)
+	//{
+		//ALBEDO = vec3(0);
+	//}
+		//ALBEDO = vec3(adjusted_uv, 0);
 }

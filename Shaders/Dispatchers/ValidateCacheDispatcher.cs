@@ -37,10 +37,10 @@ namespace PlanetGame.Shaders.Dispatchers
         #nullable enable
         public override void Invoke(byte[]? pushConstants = null)
         {
-            uint gridSize = SparseVirtualTexture.VirtualTextureData.GridSize;
+            uint size = SparseVirtualTexture.ResidencyTable.Size;
 
-            uint x = (gridSize + 31) / 32;
-            uint y = (gridSize + 31) / 32;
+            uint x = (size + 31) / 32;
+            uint y = (size + 31) / 32;
 
             long computeList = RenderingDevice.ComputeListBegin();
             RenderingDevice.ComputeListBindComputePipeline(computeList, _pipeline);

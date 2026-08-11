@@ -99,24 +99,22 @@ void main()
 		local_point = is_cube ? morphed_cube_local_position : morphed_sphere_local_position;
 		vertex_uv = get_cube_uv(int(key.z), morphed_cube_local_position);
 		
-		lod = int(polygon_space_point_to_lod(morphed_cube_local_position, lod_context));
+		// lod = int(polygon_space_point_to_lod(morphed_cube_local_position, lod_context));
 	}
 	else 
     {
 		vertex_uv = get_cube_uv(int(key.z), cube_local_position);
-		lod = int(polygon_space_point_to_lod(cube_local_position, lod_context));
+		// lod = int(polygon_space_point_to_lod(cube_local_position, lod_context));
 	}
 
-
+    lod = get_lod_of_key(key.xy);
 
     int non_negative_mip_index = lod_to_mip_map[lod] + high_resolution_mip_count;
     vec3 tile_cache_uv = get_tile_cache_uv(terrain_indirection_table, non_negative_mip_index, tile_size, vertex_uv, int(key.z), low_resolution_mip_count, high_resolution_mip_count);
     elevation = get_tile(height_map_tile_cache, tile_cache_uv).r;
     
+    normal = (vec4(local_point, 1) * get_rotation_from_matrix(planet_transform_matrix)).xyz; 
 
-   normal = (vec4(local_point, 1) * get_rotation_from_matrix(planet_transform_matrix)).xyz; 
-
-    
     world_position = vec3(
         get_world_space_point(local_point, planet_transform_matrix) +
         normal * height_scale * elevation

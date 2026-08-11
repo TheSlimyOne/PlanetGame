@@ -39,6 +39,23 @@ void vertex() {
 	key = floatBitsToUint(INSTANCE_CUSTOM);
 	flags = key.w >> 29u;
 	key.w &= 0xFu;
+	
+	float vertex_spacing = 1.0 / float(resolution - 1);
+	if (flags == 0u || flags == 2u)
+	{
+		if (VERTEX.x == 0.0) {
+			int vertex_index = int(VERTEX.y * float(resolution - 1));
+			if ((vertex_index & 1) == 1)
+				VERTEX.y -= vertex_spacing;
+		}
+	} else if (flags == 1u || flags == 3u)
+	{
+		if (VERTEX.y == 0.0) {
+			int vertex_index = int(VERTEX.x * float(resolution - 1));
+			if ((vertex_index & 1) == 1)
+				VERTEX.x -= vertex_spacing;
+		}
+	}
 
 	mat3 quadtree_space = leaf_space_to_quadtree_space(key.xy);
 	mat3 polygon_space = quadtree_space_to_polygon_space(key.z, key.w);
@@ -47,8 +64,10 @@ void vertex() {
 	vec3 cube_local_position = get_polygon_space_point(quad_position, polygon_space);
 	vec3 sphere_local_position = point_on_cube_to_point_on_sphere(cube_local_position);
 	vec3 local_point = is_cube ? cube_local_position : sphere_local_position;
+	
+	
 
-	if (is_morphing) {
+	if (is_morphing && false) {
 		morph = calculate_morph(local_point, key.xy, morph_range, camera_position, planet_transform_matrix, fovy, sub_factor, radius, maximum_lod, minimum_lod);
 		vec2 morphed_vertex = morph_vertex(VERTEX.xy, morph, resolution);
 		
@@ -59,22 +78,22 @@ void vertex() {
 		local_point = is_cube ? morphed_cube_local_position : morphed_sphere_local_position;
 		vertex_uv = get_cube_uv(int(key.z), morphed_cube_local_position);
 		
-		lod = int(calculate_lod_to_cam(morphed_sphere_local_position, camera_position, planet_transform_matrix, fovy, sub_factor, radius, maximum_lod, minimum_lod));
-
+		//lod = int(calculate_lod_to_cam(morphed_sphere_local_position, camera_position, planet_transform_matrix, fovy, sub_factor, radius, maximum_lod, minimum_lod));
 	}
 	else {
+		
 		vertex_uv = get_cube_uv(int(key.z), cube_local_position);
-		lod = int(calculate_lod_to_cam(sphere_local_position, camera_position, planet_transform_matrix, fovy, sub_factor, radius, maximum_lod, minimum_lod));
-
+		//lod = int(calculate_lod_to_cam(sphere_local_position, camera_position, planet_transform_matrix, fovy, sub_factor, radius, maximum_lod, minimum_lod));
 	}
 	
+	lod = get_lod_of_key(key.xy);
 	vec3 world_position = get_world_space_point(local_point, planet_transform_matrix);
 	
 	int non_negative_mip_index = lod_to_mip_map[lod] + high_resolution_mip_count;
 	int total_resolution_mip_count = low_resolution_mip_count + high_resolution_mip_count;
 	vec3 tile_uv = get_tile_uv(terrain_indirection_table, non_negative_mip_index, tile_size, vertex_uv, int(key.z), low_resolution_mip_count, high_resolution_mip_count);
 	elevation = get_tile(height_map_tile_cache, tile_uv).r;
-
+	
 
 	NORMAL = (vec4(local_point, 1) * get_rotation_from_matrix(planet_transform_matrix)).xyz;
 	VERTEX = world_position + NORMAL * height_scale * elevation;

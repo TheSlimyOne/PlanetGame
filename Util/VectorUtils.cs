@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Godot;
 
 public static class VectorUtils
@@ -23,6 +24,16 @@ public static class VectorUtils
         3,
         4,
         5,
+    };
+
+    public static readonly Dictionary<Vector3, int> NormalToNormalID = new()
+    {
+        {Vector3.Right, 0},
+        {Vector3.Left, 1},
+        {Vector3.Up, 2},
+        {Vector3.Down, 3},
+        {Vector3.Back, 4},
+        {Vector3.Forward, 5}
     };
 
     public static readonly Vector3[] Corners =
@@ -182,12 +193,16 @@ public static class VectorUtils
     public static Vector2 PointOnCubeToUV(int normalId, Vector3 point)
     {
         Vector2 uv = Vector2.Zero;
-        point = (point + Vector3.One * 1.0f) / 2.0f;
+
+        point = (point + Vector3.One) / 2.0f;
+
         uv.X = normalId == 0 || normalId == 1 ? point.Z : point.X;
         uv.X = normalId == 0 || normalId == 2 || normalId == 5 ? 1.0f - uv.X : uv.X;
         uv.Y = normalId == 2 || normalId == 3 ? 1.0f - point.Z : 1.0f - point.Y;
-       
-        return uv;
+
+        const float EPS = 0.000001f;
+
+        return uv.Clamp(Vector2.Zero, Vector2.One - new Vector2(EPS, EPS));
     }
 
     public static Vector2 PointOnSphereToUV(Vector3 point)
@@ -199,15 +214,22 @@ public static class VectorUtils
         return new Vector2(u, v);
     }
 
-    public static Vector3 IsolateNormal(Vector3 point)
+    public static Vector3 IsolateNormal(Vector3 cubePoint)
     {
-        if (point.X == 1 || point.X == -1) return new Vector3(point.X, 0, 0);
-        if (point.Y == 1 || point.Y == -1) return new Vector3(0, point.Y, 0);
-        if (point.Z == 1 || point.Z == -1) return new Vector3(0, 0, point.Z);
-        return Vector3.Zero;
+        float x = MathF.Abs(cubePoint.X);
+        float y = MathF.Abs(cubePoint.Y);
+        float z = MathF.Abs(cubePoint.Z);
+
+        if (x >= y && x >= z)
+            return new Vector3(MathF.Sign(cubePoint.X), 0, 0);
+        if (y >= z)
+            return new Vector3(0, MathF.Sign(cubePoint.Y), 0);
+
+        return new Vector3(0, 0, MathF.Sign(cubePoint.Z));
     }
 
     public static Color ToColor(Vector4 vector) => new(vector.X, vector.Y, vector.Z, vector.W);
+    public static Color ToColor(Vector3 vector) => new(vector.X, vector.Y, vector.Z);
 
     public static Vector2 Rotate45(Vector2 vector)
     {
@@ -265,29 +287,26 @@ public static class VectorUtils
         return point;
     }
 
-    public static Vector3 PointOnPlaneToPointOnCube(float x, float y, int size, int normalId)
+    public static Vector3 PointOnPlaneToPointOnCube(Vector2 uv, int normalId)
     {
-        float half = (size - 1) / 2.0f;
-        float fx = (x - half) / (size - 1);
-        float fy = (y - half) / (size - 1);
-
+        Vector2 point = uv * 2.0f - Vector2.One;
         return normalId switch
         {
-            0 => new Vector3(0.5f, -fy, -fx),  // +X
-            1 => new Vector3(-0.5f, -fy, fx),  // -X
-            2 => new Vector3(-fx, 0.5f, -fy),  // +Y
-            3 => new Vector3(fx, -0.5f, -fy),  // -Y
-            4 => new Vector3(fx, -fy, 0.5f),   // +Z
-            5 => new Vector3(-fx, -fy, -0.5f), // -Z
+            0 => new Vector3(1, -point.Y, -point.X),  // +X
+            1 => new Vector3(-1, -point.Y, point.X),  // -X
+            2 => new Vector3(-point.X, 1, -point.Y),  // +Y
+            3 => new Vector3(point.X, -1, -point.Y),  // -Y
+            4 => new Vector3(point.X, -point.Y, 1),   // +Z
+            5 => new Vector3(-point.X, -point.Y, -1), // -Z
             _ => Vector3.Zero,
         };
     }
-    
-    public static Vector3 PointOnPlaneToPointOnSphere(float x, float y, int size, int normalId)
-	{
-		Vector3 cubePoint = PointOnPlaneToPointOnCube(x, y, size, normalId);
-		return PointOnCubeToPointOnSphere(cubePoint) * size;
-	}
+
+    public static Vector3 PointOnPlaneToPointOnSphere(Vector2 point, int normalId)
+    {
+        Vector3 cubePoint = PointOnPlaneToPointOnCube(point, normalId);
+        return PointOnCubeToPointOnSphere(cubePoint);
+    }
 
 }
 

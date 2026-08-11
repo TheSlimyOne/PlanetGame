@@ -85,15 +85,13 @@ void main() {
 	float grid_size = exp2(float(total_resolution_mip_count - 1));
 	float lod_grid_size = grid_size / exp2(float(non_negative_mip_index));
 
-    vec2 lod_grid_position = adjusted_uv * lod_grid_size;
+    vec2 tile_coordinate = floor(adjusted_uv * lod_grid_size);
 
-    vec2 grid_uv = fract(lod_grid_position);
-
-    vec2 grid_position = floor(lod_grid_position) / lod_grid_size;
+    vec2 grid_uv = tile_coordinate / lod_grid_size;
     int layer = total_resolution_mip_count * normal_id + non_negative_mip_index;
 
     ivec3 indirection_index = ivec3(
-        grid_position * grid_size, 
+        grid_uv * grid_size, 
         layer
     );
 

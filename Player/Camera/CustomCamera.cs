@@ -16,6 +16,10 @@ public partial class CustomCamera : Camera3D
 	[Export] public Vector2 RotationRangeY { get; set; }
 	[Export] public Vector2 RotationRangeZ { get; set; }
 
+	[Export] public bool LockXRotation { get; set; }
+	[Export] public bool LockYRotation { get; set; }
+	[Export] public bool LockZRotation { get; set; }
+
 	[Export] public float RotationEasing { get; set; }
 	private Vector2 _keyRotation;
 
@@ -93,13 +97,19 @@ public partial class CustomCamera : Camera3D
 
 	public void ApplyRotation(float x = 0, float y = 0, float z = 0)
 	{
-		_lookRotation.X += x;
-		_lookRotation.Y += y;
-		_lookRotation.Z += z;
 
-		_lookRotation.X = RotationRangeX == Vector2.Zero ? Utilities.LimitRotation(_lookRotation.X) : Mathf.Clamp(_lookRotation.X, RotationRangeX[0], RotationRangeX[1]);
-		_lookRotation.Y = RotationRangeY == Vector2.Zero ? Utilities.LimitRotation(_lookRotation.Y) : Mathf.Clamp(_lookRotation.Y, RotationRangeY[0], RotationRangeY[1]);
-		_lookRotation.Z = RotationRangeZ == Vector2.Zero ? Utilities.LimitRotation(_lookRotation.Z) : Mathf.Clamp(_lookRotation.Z, RotationRangeZ[0], RotationRangeZ[1]);
+		if (!LockXRotation)
+			_lookRotation.X += x;
+
+		if (!LockYRotation)
+			_lookRotation.Y += y;
+
+		if (!LockZRotation)
+			_lookRotation.Z += z;
+
+		_lookRotation.X = RotationRangeX == Vector2.Zero ? Utilities.NormalizeAngleDegrees(_lookRotation.X) : Mathf.Clamp(_lookRotation.X, RotationRangeX[0], RotationRangeX[1]);
+		_lookRotation.Y = RotationRangeY == Vector2.Zero ? Utilities.NormalizeAngleDegrees(_lookRotation.Y) : Mathf.Clamp(_lookRotation.Y, RotationRangeY[0], RotationRangeY[1]);
+		_lookRotation.Z = RotationRangeZ == Vector2.Zero ? Utilities.NormalizeAngleDegrees(_lookRotation.Z) : Mathf.Clamp(_lookRotation.Z, RotationRangeZ[0], RotationRangeZ[1]);
 	}
 
 	public Vector3 GetLookRotation()

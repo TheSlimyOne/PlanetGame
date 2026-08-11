@@ -135,6 +135,7 @@ void cull_key(uvec4 key, Triangle triangle, float lod) {
 
     imageAtomicAdd(GlobalKeyData, ivec2(0, key_lod), 1);
     imageAtomicMax(GlobalKeyData, ivec2(1, 0), key_lod);
+    imageAtomicMin(GlobalKeyData, ivec2(1, 1), key_lod);
 }
 
 uint get_junction_flags(uvec4 key, Triangle parent_triangle, float lod) {
@@ -225,6 +226,7 @@ void main() {
     } 
     else { // Keep
         process_triangle(triangle, key, parent_triangle, current_LOD);
+        imageAtomicAdd(GlobalKeyData, ivec2(1, 2), 1);
     }
     
 }
