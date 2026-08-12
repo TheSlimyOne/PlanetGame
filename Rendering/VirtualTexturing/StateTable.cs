@@ -23,7 +23,7 @@ namespace PlanetGame.Rendering.VirtualTexturing
             uint gridSize = VirtualTextureData.GridSize;
 
             Format = RenderingDevice.DataFormat.R8G8B8A8Unorm;
-            
+
             Table = new()
             {
                 TextureRdRid = RenderingServer.GetRenderingDevice().TextureCreate(
@@ -72,62 +72,61 @@ namespace PlanetGame.Rendering.VirtualTexturing
                 int mip_grid_size = max(tile_size.x >> mip_index, 1);
                 int mip_step = max(tile_size.x / mip_grid_size, 1);
 
-                ivec2 mip_position = ivec2(
-                    clamp(grid_cell_uv, vec2(0.0), vec2(1.0 - 0.000001))
-                    * float(mip_grid_size)
-                );
-
+                ivec2 mip_position = ivec2(clamp(grid_cell_uv, vec2(0.0), vec2(1.0 - 0.000001)) * float(mip_grid_size));
                 ivec2 state_position = mip_position * mip_step;
 
-                vec4 color = texelFetch(
-                    state_table,
-                    ivec3(state_position, array_index),
-                    0
-                );
-                
-                // vec3 texture_coordinate = vec3(grid_cell_uv, float(array_index));
-                // vec4 color = textureLod(state_table, texture_coordinate, 0.0);
+                ivec2 current_position = ivec2(clamp(grid_cell_uv, vec2(0.0), vec2(1.0 - 0.000001)) * vec2(tile_size));
+
+                vec4 color = texelFetch(state_table, ivec3(state_position, array_index), 0);
+
+                bool is_source_pixel = all(equal(current_position, state_position));
+
                 if (color.w != 0.0)
-                    switch(tile_position.y)
+                {
+                    if (is_source_pixel)
                     {
-                    
-                        case 0:
-                            COLOR = vec4(1.0, 0.0, 0.0, 1.0);
-                            break;
-                        case 1:
-                            COLOR = vec4(0.0, 1.0, 0.0, 1.0);
-                            break;
-                        case 2:
-                            COLOR = vec4(0.0, 0.0, 1.0, 1.0);
-                            break;
-                        case 3:
-                            COLOR = vec4(1.0, 1.0, 0.0, 1.0);
-                            break;
-                        case 4:
-                            COLOR = vec4(0.0, 1.0, 1.0, 1.0);
-                            break;
-                        case 5:
-                            COLOR = vec4(1.0, 0.0, 1.0, 1.0);
-                            break;
-                        default:
-                            COLOR = vec4(1.0, 1.0, 1.0, 1.0);
-                            break;
+                        COLOR = vec4(1.0, 1.0, 1.0, 1.0);
                     }
+                    else
+                    {
+                        switch(tile_position.y)
+                        {
+                            case 0:
+                                COLOR = vec4(1.0, 0.0, 0.0, 1.0);
+                                break;
+                            case 1:
+                                COLOR = vec4(0.0, 1.0, 0.0, 1.0);
+                                break;
+                            case 2:
+                                COLOR = vec4(0.0, 0.0, 1.0, 1.0);
+                                break;
+                            case 3:
+                                COLOR = vec4(1.0, 1.0, 0.0, 1.0);
+                                break;
+                            case 4:
+                                COLOR = vec4(0.0, 1.0, 1.0, 1.0);
+                                break;
+                            case 5:
+                                COLOR = vec4(1.0, 0.0, 1.0, 1.0);
+                                break;
+                            default:
+                                COLOR = vec4(1.0, 1.0, 1.0, 1.0);
+                                break;
+                        }
+                    }
+                }
                 else
                 {
                     bool is_white = ((tile_position.x + tile_position.y) % 2) == 0;
-
 
                     COLOR = is_white
                         ? vec4(0.6, 0.6, 0.6, 0.5)
                         : vec4(0.4, 0.4, 0.4, 0.5);
                 }
-                
             }
             """;
-
             Vector2I tileCount = new((int)Mathf.Sqrt(VirtualTextureData.TotalMipLayers), 6);
-            
+
             Image image = Image.CreateEmpty(tileCount.X, tileCount.Y, false, Image.Format.Rgbaf);
 
             TextureRect texture = new()

@@ -163,7 +163,7 @@ public partial class MainMenu : MarginContainer
 		// Image test1 = Image.LoadFromFile("user://Albedo.png");
 		// Image test2 = Image.LoadFromFile("user://Heightmap.png");
 		// WriteNewSave(saveName, test1, test2, 5, [4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
-		WriteNewSave(saveName, NewSaveAlbedo, NewSaveHeightmap, 5, 0, [4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+		WriteNewSave(saveName, NewSaveAlbedo, NewSaveHeightmap, 5, 0, [4, 4, 3, 3, 2, 2, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
 		GD.Print("Creating Save:", saveName);
 		CurrentSave = saveName;
 	}
