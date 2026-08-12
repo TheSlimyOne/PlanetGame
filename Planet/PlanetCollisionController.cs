@@ -15,7 +15,7 @@ public class PlanetCollisionController(PlanetController planetController)
         Vector3 normal = VectorUtils.IsolateNormal(localCubePoint);
         int normalId = VectorUtils.NormalToNormalID[normal];
 
-        int lod = PlanetController.TerrainTessellator.CurrentLod;
+        int lod = PlanetController.TerrainTessellator.MaxLod;
         float radius = PlanetController.Radius;
 
         int gridSize = 1 << lod;

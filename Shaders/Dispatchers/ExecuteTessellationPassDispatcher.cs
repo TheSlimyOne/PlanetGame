@@ -91,20 +91,8 @@ namespace PlanetGame.Shaders.Dispatchers
 					PlanetMultiMesh.Buffer, perserve: true
 				),
 
-				[BufferNames.GLOBAL_KEYS_DATA] = new Texture2DUniform(this, RenderingDevice, (int)BufferNames.GLOBAL_KEYS_DATA,
-					new RDTextureFormat()
-					{
-						Width = 32u,
-						Height = 32u,
-						TextureType = RenderingDevice.TextureType.Type2D,
-						Format = RenderingDevice.DataFormat.R32Sfloat,
-						UsageBits = RenderingDevice.TextureUsageBits.SamplingBit |
-									RenderingDevice.TextureUsageBits.StorageBit |
-									RenderingDevice.TextureUsageBits.CanUpdateBit |
-									RenderingDevice.TextureUsageBits.CanCopyToBit |
-									RenderingDevice.TextureUsageBits.CanCopyFromBit |
-									RenderingDevice.TextureUsageBits.ColorAttachmentBit
-					}, RenderingDevice.UniformType.Image
+				[BufferNames.GLOBAL_KEYS_DATA] = new StorageBufferUniform(this, RenderingDevice, (int)BufferNames.GLOBAL_KEYS_DATA,
+					GetInitialGlobalKeyData()
 				),
 			};
 			CreateUniformSet();
@@ -173,6 +161,21 @@ namespace PlanetGame.Shaders.Dispatchers
 			return [.. data];
 		}
 
+		private byte[] GetInitialGlobalKeyData()
+		{
+			return [.. Utilities.ToBytes([
+				0u,
+				uint.MaxValue,
+				0u,
+				.. new uint[32]
+			])];
+		}
+
+		public void ResetGlobalKeyData()
+		{
+			GetUniform<StorageBufferUniform>(BufferNames.GLOBAL_KEYS_DATA).UpdateUniform(GetInitialGlobalKeyData());
+		}
+
 		public Key[] GetKeys()
 		{
 			(int all, _, _) = GetPrimitiveCounts();
@@ -200,34 +203,21 @@ namespace PlanetGame.Shaders.Dispatchers
 			return ((int)primCounts[indices[0]], (int)primCounts[indices[0] + 3], (int)primCounts[indices[0] + 6]);
 		}
 
-		public int GetCurrentLod()
+		public (int MaxLod, int MinLod, int StableCount, int[] LodCount) GetGlobalKeyData()
 		{
-			return (int)GetUniform<Texture2DUniform>(BufferNames.GLOBAL_KEYS_DATA).GetPixel(1, 0).R;
-		}
+			uint[] data = GetUniform<StorageBufferUniform>(BufferNames.GLOBAL_KEYS_DATA).GetData<uint>();
 
-		public int GetLowestLod()
-		{
-			return (int)GetUniform<Texture2DUniform>(BufferNames.GLOBAL_KEYS_DATA).GetPixel(1, 1).R;
-		}
-
-		public int GetStableCount()
-        {
-            return (int)GetUniform<Texture2DUniform>(BufferNames.GLOBAL_KEYS_DATA).GetPixel(1, 2).R;
-        }
-
-		public int[] GetLodCount()
-		{
 			int[] lodCount = new int[PlanetController.MaximumLod + 1];
-			for (int i = PlanetController.MinimumLod; i < PlanetController.MaximumLod + 1; i++)
-				lodCount[i] = (int)GetUniform<Texture2DUniform>(BufferNames.GLOBAL_KEYS_DATA).GetPixel(0, i).R;
-			
 
-			return lodCount;
-		}
+			for (int i = PlanetController.MinimumLod; i <= PlanetController.MaximumLod; i++)
+				lodCount[i] = (int)data[3 + i];
 
-		public void ClearGlobalKeyData()
-		{
-			GetUniform<Texture2DUniform>(BufferNames.GLOBAL_KEYS_DATA).ClearTexture(Colors.Black);
+			return (
+				(int)data[0],
+				(int)data[1],
+				(int)data[2],
+				lodCount
+			);
 		}
 
 		// TODO maybe finish this
@@ -243,6 +233,6 @@ namespace PlanetGame.Shaders.Dispatchers
 			}
 		}
 
-        
-    }
+
+	}
 }

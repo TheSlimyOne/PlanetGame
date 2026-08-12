@@ -7,7 +7,8 @@ namespace PlanetGame.Rendering.Surface
     {
         public ExecuteTessellationPassDispatcher ExecuteTessellationPass { get; private set; }
         public PrepareTessellationPassDispatcher PrepareTessellationPass { get; private set; }
-        public int CurrentLod { get; private set; } 
+        public int MaxLod { get; private set; } 
+        public int MinLod { get; private set; } 
         public int CulledCount { get; private set; }
         public int TotalCount { get; private set; }
         public int RenderedCount { get; private set; }
@@ -61,11 +62,9 @@ namespace PlanetGame.Rendering.Surface
             }
 
             Ready = false;
-            ExecuteTessellationPass.ClearGlobalKeyData();
+            ExecuteTessellationPass.ResetGlobalKeyData();
 
             ExecuteTessellationPass.Invoke();
-
-            CurrentLod = ExecuteTessellationPass.GetCurrentLod();
 
             PrepareTessellationPass.Invoke();
 
@@ -73,9 +72,7 @@ namespace PlanetGame.Rendering.Surface
 
             (TotalCount, CulledCount, RenderedCount) = ExecuteTessellationPass.GetPrimitiveCounts();
 
-            StableCount = ExecuteTessellationPass.GetStableCount();
-
-            LodCounts = ExecuteTessellationPass.GetLodCount();
+            (MaxLod, MinLod, StableCount, LodCounts) = ExecuteTessellationPass.GetGlobalKeyData();
 
             Ready = true;
         }

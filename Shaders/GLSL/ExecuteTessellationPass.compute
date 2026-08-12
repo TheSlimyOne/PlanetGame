@@ -58,7 +58,12 @@ layout(set = 0, binding = 6, std430) buffer restrict OutputBuffer {
     float data[];
 } output_buffer;
 
-layout(set = 0, binding = 7, r32f) restrict uniform image2D GlobalKeyData;
+layout(set = 0, binding = 7, std430) buffer restrict GlobalKeyData {
+    uint max_lod;
+    uint min_lod;
+    uint stable_key_count;
+    uint total_keys_per_lod[32];
+};
 
 #[include] res://Shaders/GLSL/ShaderIncludes/TesselationFunctions.inc
 
@@ -133,9 +138,9 @@ void cull_key(uvec4 key, Triangle triangle, float lod) {
 
     int key_lod = get_lod_of_key(key.xy);
 
-    imageAtomicAdd(GlobalKeyData, ivec2(0, key_lod), 1);
-    imageAtomicMax(GlobalKeyData, ivec2(1, 0), key_lod);
-    imageAtomicMin(GlobalKeyData, ivec2(1, 1), key_lod);
+    atomicAdd(total_keys_per_lod[key_lod], 1u);
+    atomicMax(max_lod, uint(key_lod));
+    atomicMin(min_lod, uint(key_lod));
 }
 
 uint get_junction_flags(uvec4 key, Triangle parent_triangle, float lod) {
@@ -226,7 +231,7 @@ void main() {
     } 
     else { // Keep
         process_triangle(triangle, key, parent_triangle, current_LOD);
-        imageAtomicAdd(GlobalKeyData, ivec2(1, 2), 1);
+        atomicAdd(stable_key_count, 1u);
     }
     
 }

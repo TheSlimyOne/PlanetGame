@@ -16,7 +16,6 @@ namespace PlanetGame.Shaders.Dispatchers
             INDICES,
             EXEC_DISPATCH_BUFFER,
             DRAW_DISPATCH_BUFFER,
-            GLOBAL_KEYS_DATA,
             MULTIMESH_COMMAND_BUFFER,
             MESH_DATA
         }
@@ -42,9 +41,6 @@ namespace PlanetGame.Shaders.Dispatchers
                 [BufferNames.DRAW_DISPATCH_BUFFER] = new StorageBufferUniform(this, RenderingDevice, (int)BufferNames.DRAW_DISPATCH_BUFFER,
                     [.. Utilities.ToBytes<uint>(new uint[5])], RenderingDevice.StorageBufferUsage.Indirect
                 ),
-
-                [BufferNames.GLOBAL_KEYS_DATA] = ExecuteTessellationPass[ExecuteTessellationPassDispatcher.BufferNames.GLOBAL_KEYS_DATA],
-
 
                 [BufferNames.MULTIMESH_COMMAND_BUFFER] = new StorageBufferUniform(this, RenderingDevice,
                     (int)BufferNames.MULTIMESH_COMMAND_BUFFER,

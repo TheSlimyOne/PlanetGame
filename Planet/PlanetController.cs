@@ -225,7 +225,7 @@ public partial class PlanetController : Node3D
         SparseVirtualTexture.Invoke();
 
 
-        UIController.SetCurrentLOD(TerrainTessellator.CurrentLod);
+        UIController.SetCurrentLOD(TerrainTessellator.MaxLod);
         UIController.SetLodCounts(TerrainTessellator.LodCounts);
         UIController.SetLabelKeyCount(TerrainTessellator.CulledCount, TerrainTessellator.TotalCount);
 

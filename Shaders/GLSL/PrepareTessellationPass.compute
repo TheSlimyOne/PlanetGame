@@ -29,11 +29,9 @@ layout (set = 0, binding = 3, std430) buffer writeonly restrict DrawDispatchOut 
     uint first_instance;
 };
 
-layout(set = 0, binding = 4, r32f) restrict uniform image2D GlobalKeyData;
+layout(set = 0, binding = 4, std430) buffer restrict CommandBuffer { int data[]; } command_buffer;
 
-layout(set = 0, binding = 5, std430) buffer restrict CommandBuffer { int data[]; } command_buffer;
-
-layout(set = 0, binding = 6, std430) buffer restrict MeshData { 
+layout(set = 0, binding = 5, std430) buffer restrict MeshData { 
     uint mesh_vertex_count;
     uint mesh_indices_count;
 };
