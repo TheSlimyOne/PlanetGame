@@ -1,16 +1,80 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using Godot;
 
 public class PlanetCollisionController(PlanetController planetController)
 {
     PlanetController PlanetController = planetController;
-    const int COLLISION_RESOLUTION = 9;
+    const uint COLLISION_RESOLUTION = 9;
+    const uint COLLISION_SQUARE = 5;
+
+    private Vector2[] _baseCollisionVertices;
+    private int[] _collisionTriangles;
+
+    public StaticBody3D CollisionBody = new();
+
+
+    public void GenerateBaseCollisionMesh()
+    {
+        _baseCollisionVertices = new Vector2[COLLISION_RESOLUTION * COLLISION_RESOLUTION];
+        _collisionTriangles = new int[(COLLISION_RESOLUTION - 1) * (COLLISION_RESOLUTION - 1) * 6];
+
+        int vertexIndex = 0;
+        int triangleIndex = 0;
+
+        for (int y = 0; y < COLLISION_RESOLUTION; y++)
+        {
+            for (int x = 0; x < COLLISION_RESOLUTION; x++)
+            {
+                int currentIndex = vertexIndex++;
+
+                Vector2 percentage = new Vector2(x, y) / (COLLISION_RESOLUTION - 1);
+                _baseCollisionVertices[currentIndex] = percentage;
+
+                if (x != COLLISION_RESOLUTION - 1 && y != COLLISION_RESOLUTION - 1)
+                {
+                    _collisionTriangles[triangleIndex++] = currentIndex;
+                    _collisionTriangles[triangleIndex++] = currentIndex + (int)COLLISION_RESOLUTION + 1;
+                    _collisionTriangles[triangleIndex++] = currentIndex + (int)COLLISION_RESOLUTION;
+
+                    _collisionTriangles[triangleIndex++] = currentIndex;
+                    _collisionTriangles[triangleIndex++] = currentIndex + 1;
+                    _collisionTriangles[triangleIndex++] = currentIndex + (int)COLLISION_RESOLUTION + 1;
+                }
+            }
+        }
+    }
+
+    private Vector3[] GenerateCollisionVertices(Vector2 tileUV, float gridStep, int normalId, float radius, Vector3 tileSphereOrigin)
+    {
+        Vector3[] vertices = new Vector3[_baseCollisionVertices.Length];
+
+        for (int i = 0; i < _baseCollisionVertices.Length; i++)
+        {
+            Vector2 percentage = _baseCollisionVertices[i];
+            Vector2 vertexUV = tileUV + percentage * gridStep;
+
+            Vector3 cubePoint = VectorUtils.PointOnPlaneToPointOnCube(vertexUV, normalId);
+            Vector3 spherePoint = cubePoint.Normalized() * (radius + 5);
+
+            vertices[i] = spherePoint - tileSphereOrigin;
+        }
+
+        return vertices;
+    }
+
     public void CreateCollisionPlane()
     {
         (Vector3 localSpherePoint, Vector3 localCubePoint) = PlanetController.GetLocalPointsOnPlanet(PlanetController.MainCamera.GlobalPosition, false);
 
         if (localSpherePoint == Vector3.Inf || localCubePoint == Vector3.Inf)
             return;
+
+        foreach (CollisionShape3D shape in CollisionBody.GetChildren().Cast<CollisionShape3D>())
+        {
+            CollisionBody.RemoveChild(shape);
+        }
 
         Vector3 normal = VectorUtils.IsolateNormal(localCubePoint);
         int normalId = VectorUtils.NormalToNormalID[normal];
@@ -25,75 +89,53 @@ public class PlanetCollisionController(PlanetController planetController)
         Vector2 gridCoordinate = (uv * gridSize).Floor();
         Vector2 tileMinUV = gridCoordinate / gridSize;
 
-        Vector3 tileCubeOrigin = VectorUtils.PointOnPlaneToPointOnCube(tileMinUV, normalId);
-        Vector3 tileSphereOrigin = tileCubeOrigin.Normalized() * radius;
-
-        Vector3[] vertices = new Vector3[COLLISION_RESOLUTION * COLLISION_RESOLUTION];
-        Vector2[] uvs = new Vector2[COLLISION_RESOLUTION * COLLISION_RESOLUTION];
-        int[] triangles = new int[(COLLISION_RESOLUTION - 1) * (COLLISION_RESOLUTION - 1) * 6];
-
-        int vertexIndex = 0;
-        int triIndex = 0;
-
-        for (int y = 0; y < COLLISION_RESOLUTION; y++)
+        Queue<Vector2> tileQueue = new();
+        for (int i = -(int)COLLISION_SQUARE; i <= COLLISION_SQUARE; i++)
         {
-            for (int x = 0; x < COLLISION_RESOLUTION; x++)
+            for (int j = -(int)COLLISION_SQUARE; j <= COLLISION_SQUARE; j++)
             {
-                int currentIndex = vertexIndex++;
+                Vector2 tileUV = tileMinUV + new Vector2(j, i) * gridStep;
 
-                Vector2 percentage = new Vector2(x, y) / (COLLISION_RESOLUTION - 1);
-                Vector2 vertexUV = tileMinUV + percentage * gridStep;
+                if (tileUV.X < 0 || tileUV.Y < 0 || tileUV.X >= 1 || tileUV.Y >= 1)
+                    continue;
 
-                Vector3 cubePoint = VectorUtils.PointOnPlaneToPointOnCube(vertexUV, normalId);
-                Vector3 spherePoint = cubePoint.Normalized() * radius;
-
-                vertices[currentIndex] = spherePoint - tileSphereOrigin;
-                uvs[currentIndex] = percentage;
-
-                if (x != COLLISION_RESOLUTION - 1 && y != COLLISION_RESOLUTION - 1)
-                {
-                    triangles[triIndex++] = currentIndex;
-                    triangles[triIndex++] = currentIndex + COLLISION_RESOLUTION + 1;
-                    triangles[triIndex++] = currentIndex + COLLISION_RESOLUTION;
-
-                    triangles[triIndex++] = currentIndex;
-                    triangles[triIndex++] = currentIndex + 1;
-                    triangles[triIndex++] = currentIndex + COLLISION_RESOLUTION + 1;
-                }
+                tileQueue.Enqueue(tileUV);
             }
         }
 
-        Godot.Collections.Array arrays = [];
-        arrays.Resize((int)Mesh.ArrayType.Max);
 
-        arrays[(int)Mesh.ArrayType.Vertex] = vertices;
-        arrays[(int)Mesh.ArrayType.Index] = triangles;
-        arrays[(int)Mesh.ArrayType.TexUV] = uvs;
-
-        ArrayMesh collisionMesh = new();
-        collisionMesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
-
-        MeshInstance3D gridMesh = new()
+        while (tileQueue.Count > 0)
         {
-            Mesh = collisionMesh,
-            Position = tileSphereOrigin,
-            MaterialOverride = new ShaderMaterial()
+            Vector2 tileUV = tileQueue.Dequeue();
+
+            Vector3 tileCubeOrigin = VectorUtils.PointOnPlaneToPointOnCube(tileUV, normalId);
+            Vector3 tileSphereOrigin = tileCubeOrigin.Normalized() * radius;
+
+            Vector3[] vertices = GenerateCollisionVertices(tileUV, gridStep, normalId, radius, tileSphereOrigin);
+            Vector3[] faces = new Vector3[_collisionTriangles.Length];
+
+            for (int i = 0; i < _collisionTriangles.Length; i++)
+                faces[i] = vertices[_collisionTriangles[i]];
+
+            ConcavePolygonShape3D shape = new();
+            shape.SetFaces(faces);
+
+            CollisionShape3D collisionShape = new()
             {
-                Shader = new Shader()
-                {
-                    Code = """
-                shader_type spatial;
-                render_mode unshaded;
+                Shape = shape,
+                Position = tileSphereOrigin
+            };
 
-                void fragment() {
-                    ALBEDO = vec3(UV, 0.0);
-                }
-                """
-                }
-            }
-        };
 
-        PlanetController.SurfaceAttachment.AddChild(gridMesh);
+            CollisionBody.AddChild(collisionShape);
+
+            // GD.Print("Hi");
+        }
+        
+
+
+
+
     }
 }
 

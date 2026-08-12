@@ -190,6 +190,8 @@ public partial class PlanetController : Node3D
         SparseVirtualTexture.CreateDebugWindow(UIController.DebugContainer);
 
         PlanetCollisionController = new(this);
+        PlanetCollisionController.GenerateBaseCollisionMesh();
+        SurfaceAttachment.AddChild(PlanetCollisionController.CollisionBody);
     }
 
     #region Process
@@ -339,6 +341,31 @@ public partial class PlanetController : Node3D
             if (mouseEvent.ButtonIndex == MouseButton.Right && mouseEvent.Pressed)
             {
                 MainLightSource.Transform = PlanetRotation.Inverse();
+
+                 Vector2 mousePosition = MainCamera.GetViewport().GetMousePosition();
+
+                Vector3 rayOrigin = MainCamera.ProjectRayOrigin(mousePosition);
+                Vector3 rayDirection = MainCamera.ProjectRayNormal(mousePosition);
+                Vector3 rayEnd = rayOrigin + rayDirection * 100000.0f;
+
+                PhysicsDirectSpaceState3D spaceState = PlanetCollisionController.CollisionBody.GetWorld3D().DirectSpaceState;
+
+                PhysicsRayQueryParameters3D query = PhysicsRayQueryParameters3D.Create(rayOrigin, rayEnd);
+
+                Godot.Collections.Dictionary result = spaceState.IntersectRay(query);
+
+                if (result.Count > 0)
+                {
+                    Vector3 hitPosition = (Vector3)result["position"];
+                    Vector3 hitNormal = (Vector3)result["normal"];
+
+                    GD.Print("Collision hit: ", hitPosition);
+                    GD.Print("Normal: ", hitNormal);
+                }
+                else
+                {
+                    GD.Print("No collision");
+                }
             }
             if (mouseEvent.ButtonIndex == MouseButton.Left && mouseEvent.Pressed)
             {
@@ -357,6 +384,8 @@ public partial class PlanetController : Node3D
 
 
                 PlanetCollisionController.CreateCollisionPlane();
+
+               
                 // if (!test)
                 // {
                 //     PlanetCollisionController.CreateCollisionPointReferences();
