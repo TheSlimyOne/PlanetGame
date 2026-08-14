@@ -2,12 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Godot;
+using PlanetGame.Rendering.VirtualTexturing;
 
 public class PlanetCollisionController(PlanetController planetController)
 {
     PlanetController PlanetController = planetController;
-    const uint COLLISION_RESOLUTION = 9;
-    const uint COLLISION_SQUARE = 5;
+    const uint COLLISION_RESOLUTION = 5;
+    const uint COLLISION_SQUARE = 3;
 
     private Vector2[] _baseCollisionVertices;
     private int[] _collisionTriangles;
@@ -46,7 +47,7 @@ public class PlanetCollisionController(PlanetController planetController)
         }
     }
 
-    private Vector3[] GenerateCollisionVertices(Vector2 tileUV, float gridStep, int normalId, float radius, Vector3 tileSphereOrigin)
+    private Vector3[] GenerateCollisionVertices(Vector2 tileUV, float gridStep, int normalId, float radius, Vector3 tileSphereOrigin, Image heightmap, float heightScale)
     {
         Vector3[] vertices = new Vector3[_baseCollisionVertices.Length];
 
@@ -55,8 +56,13 @@ public class PlanetCollisionController(PlanetController planetController)
             Vector2 percentage = _baseCollisionVertices[i];
             Vector2 vertexUV = tileUV + percentage * gridStep;
 
+            
+            Vector2I pixelCoords = new(i % (int)COLLISION_RESOLUTION, i / (int)COLLISION_RESOLUTION);
+            
             Vector3 cubePoint = VectorUtils.PointOnPlaneToPointOnCube(vertexUV, normalId);
-            Vector3 spherePoint = cubePoint.Normalized() * (radius + 5);
+            // float elevation = Sampler.SampleBilinear(heightmap, vertexUV).R;
+            float elevation = heightmap.GetPixelv(pixelCoords).R;
+            Vector3 spherePoint = cubePoint.Normalized() * radius +  cubePoint.Normalized() * elevation * radius * heightScale;
 
             vertices[i] = spherePoint - tileSphereOrigin;
         }
@@ -64,7 +70,7 @@ public class PlanetCollisionController(PlanetController planetController)
         return vertices;
     }
 
-    public void CreateCollisionPlane()
+    public void CreateCollisionPlane(VTData vtData)
     {
         (Vector3 localSpherePoint, Vector3 localCubePoint) = PlanetController.GetLocalPointsOnPlanet(PlanetController.MainCamera.GlobalPosition, false);
 
@@ -73,17 +79,20 @@ public class PlanetCollisionController(PlanetController planetController)
 
         foreach (CollisionShape3D shape in CollisionBody.GetChildren().Cast<CollisionShape3D>())
         {
-            CollisionBody.RemoveChild(shape);
+            // CollisionBody.RemoveChild(shape);
+            shape.QueueFree();
         }
 
         Vector3 normal = VectorUtils.IsolateNormal(localCubePoint);
         int normalId = VectorUtils.NormalToNormalID[normal];
+        float radius = PlanetController.Radius;
 
         int lod = PlanetController.TerrainTessellator.MaxLod;
-        float radius = PlanetController.Radius;
+        int mip = SaveManager.GetCurrentSave().LodToMipMap[lod];
 
         int gridSize = 1 << lod;
         float gridStep = 1.0f / gridSize;
+
 
         Vector2 uv = VectorUtils.PointOnCubeToUV(normalId, localCubePoint);
         Vector2 gridCoordinate = (uv * gridSize).Floor();
@@ -103,15 +112,22 @@ public class PlanetCollisionController(PlanetController planetController)
             }
         }
 
-
+        float lodGridSize = vtData.GetMipGridSize((uint)mip);
         while (tileQueue.Count > 0)
         {
             Vector2 tileUV = tileQueue.Dequeue();
+            Vector2I tileCoords = (Vector2I)(tileUV * lodGridSize).Floor();
+
+            GD.Print(tileCoords);
 
             Vector3 tileCubeOrigin = VectorUtils.PointOnPlaneToPointOnCube(tileUV, normalId);
             Vector3 tileSphereOrigin = tileCubeOrigin.Normalized() * radius;
+ 
+            string path = $"{mip}_{normalId}_{tileCoords.X}_{tileCoords.Y}";
+            Image heightmap = PlanetController.SparseVirtualTexture.HeightTileCache.GetTile(path);
+            float heightScale = PlanetController.HeightScale;
 
-            Vector3[] vertices = GenerateCollisionVertices(tileUV, gridStep, normalId, radius, tileSphereOrigin);
+            Vector3[] vertices = GenerateCollisionVertices(tileUV, gridStep, normalId, radius, tileSphereOrigin, heightmap, heightScale);
             Vector3[] faces = new Vector3[_collisionTriangles.Length];
 
             for (int i = 0; i < _collisionTriangles.Length; i++)
@@ -128,14 +144,7 @@ public class PlanetCollisionController(PlanetController planetController)
 
 
             CollisionBody.AddChild(collisionShape);
-
-            // GD.Print("Hi");
         }
-        
-
-
-
-
     }
 }
 

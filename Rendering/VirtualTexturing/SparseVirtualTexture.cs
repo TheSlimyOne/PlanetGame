@@ -209,7 +209,7 @@ namespace PlanetGame.Rendering.VirtualTexturing
 
 
                     string tileName = $"{realMipIndex}_{normalId}_{xCoord}_{yCoord}";
-
+                
                     if (!AlbedoTileCache.TileExist(tileName) && realMipIndex < 0)
                     {
                         Image tile = AlbedoTileCache.CreateTile(tileName);

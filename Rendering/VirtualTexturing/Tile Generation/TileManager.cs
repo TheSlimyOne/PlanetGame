@@ -258,14 +258,12 @@ namespace PlanetGame.Rendering.VirtualTexturing
             return triangleMesh;
         }
 
-
         private enum Direction
         {
             up, down, left, right,
             bottom_left, bottom_right, top_left, top_right,
             _
         }
-
         private static void CalculateNormals(Vector3[] vertices, int[] triangles, Vector3[] normals, int resolution)
         {
             (int faceA, int faceB, Direction directionA, Direction directionB, bool isReversedA, bool isReversedB)[] adjecencies = [
@@ -443,5 +441,29 @@ namespace PlanetGame.Rendering.VirtualTexturing
             stopwatch.Stop();
             GD.Print($"Done in: {stopwatch.Elapsed}");
         }
+
+        public static Image GetTile(string tileDirectory, string tileName, Image.Format format)
+        {
+            string tilePath = $"{tileDirectory}/{tileName}.png";
+            Image tile = FileAccess.FileExists(tilePath) ? Image.LoadFromFile(tilePath) : null;
+            
+            if (tile == null)
+            {
+                GD.PrintErr($"Path: {tilePath} is not a valid directory");
+                return null;
+            }
+
+            if (tile.GetFormat() != format)
+                tile.Convert(format);
+            
+            return tile;
+        }
+
+        public static bool TileExist(string tileDirectory, string tileName)
+        {
+            string tilePath = $"{tileDirectory}/{tileName}.png";
+            return FileAccess.FileExists(tilePath);
+        }
+
     }
 }

@@ -83,11 +83,11 @@ void main() {
     int total_resolution_mip_count = low_resolution_mip_count + high_resolution_mip_count;
 
 	float grid_size = exp2(float(total_resolution_mip_count - 1));
-	float lod_grid_size = grid_size / exp2(float(non_negative_mip_index));
+	float mip_grid_size = grid_size / exp2(float(non_negative_mip_index));
 
-    vec2 tile_coordinate = floor(adjusted_uv * lod_grid_size);
+    vec2 tile_coordinate = floor(adjusted_uv * mip_grid_size);
 
-    vec2 grid_uv = tile_coordinate / lod_grid_size;
+    vec2 grid_uv = tile_coordinate / mip_grid_size;
     int layer = total_resolution_mip_count * normal_id + non_negative_mip_index;
 
     ivec3 indirection_index = ivec3(
@@ -98,8 +98,8 @@ void main() {
     vec3 tile_uv = get_tile_cache_uv(terrain_indirection_table, non_negative_mip_index, tile_size, vertex_uv, int(key.z), low_resolution_mip_count, high_resolution_mip_count);
     vec3 color = get_tile(height_map_tile_cache, tile_uv).xyz;
 
-    vec2 cell_uv = get_cell_uv(adjusted_uv, lod_grid_size);
-	vec2 cell_position = vec2(floor(adjusted_uv * lod_grid_size) / lod_grid_size);
+    vec2 cell_uv = get_cell_uv(adjusted_uv, mip_grid_size);
+	vec2 cell_position = vec2(floor(adjusted_uv * mip_grid_size) / mip_grid_size);
 
     frag_color = intBitsToFloat(ivec4(indirection_index, 1));
 

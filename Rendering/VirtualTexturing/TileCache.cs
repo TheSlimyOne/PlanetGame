@@ -57,23 +57,19 @@ namespace PlanetGame.Rendering.VirtualTexturing
 
         public bool TileExist(string tileName)
         {
-            string tilePath = $"{TileDirectory}/{tileName}.png";
-            return FileAccess.FileExists(tilePath);
+            return TileManager.TileExist(TileDirectory, tileName);
+        }
+
+        public Image GetTile(string tileName)
+        {
+            return TileManager.GetTile(TileDirectory, tileName, CacheFormat) ?? Placeholder;
+
         }
 
         public void InsertTile(string tileName, uint slot)
         {
-            string tilePath = $"{TileDirectory}/{tileName}.png";
-            Image tile = FileAccess.FileExists(tilePath) ? Image.LoadFromFile(tilePath) : null;
+            Image tile = TileManager.GetTile(TileDirectory, tileName, CacheFormat) ?? Placeholder;
             
-            if (tile == null)
-                GD.Print(tileName);
-            
-            tile ??= Placeholder;
-
-            if (tile.GetFormat() != CacheFormat)
-                tile.Convert(CacheFormat);
-
             RenderingServer.CallOnRenderThread(Callable.From(() =>
             {
                 RenderingServer.GetRenderingDevice().TextureUpdate(GetRdRid(), slot, tile.GetData());

@@ -18,5 +18,10 @@ namespace PlanetGame.Rendering.VirtualTexturing
         public readonly uint HighResolutionMipCount = highResolutionMipCount;
         public readonly uint LowResolutionMipCount = LowResolutionMipCount;
         public readonly string[] FallBackTiles = fallBackTiles;
+
+        public float GetMipGridSize(uint nonNegativeMipIndex)
+        {
+            return GridSize / Mathf.Pow(2, nonNegativeMipIndex);
+        }
     }
 }

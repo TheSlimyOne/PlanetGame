@@ -382,8 +382,9 @@ public partial class PlanetController : Node3D
                 // if (localSpherePoint == Vector3.Inf || localCubePoint == Vector3.Inf)
                 //     return;
 
-
-                PlanetCollisionController.CreateCollisionPlane();
+                
+                VTData virtualTextureData = SaveManager.GetSVTData(SaveManager.GetCurrentSave());
+                PlanetCollisionController.CreateCollisionPlane(virtualTextureData);
 
                
                 // if (!test)
