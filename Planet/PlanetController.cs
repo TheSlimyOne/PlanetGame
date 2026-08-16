@@ -47,7 +47,6 @@ public partial class PlanetController : Node3D
     [ExportGroup("Debug Settings")]
     [Export] public float PointRadius { get; set; }
     [Export] public bool IsCube { get; set; } = false;
-    [Export] public bool IsCubeStep { get; set; } = false;
     [Export] public bool IsCulling { get; set; } = true;
     [Export] public bool IsMorphing { get; set; } = true;
     [Export] public bool DisableVirtualTexturing { get; set; } = false;
@@ -57,6 +56,9 @@ public partial class PlanetController : Node3D
 
     [Export] public bool Verbose { get => Dispatcher<Enum>.Verbose; set => Dispatcher<Enum>.Verbose = value; }
 
+    private int _resolution;
+
+    public float HeightOffset { get; private set; }
 
     public BindableShaderMaterial SurfaceShader { get; set; }
     public TerrainTessellator TerrainTessellator { get; private set; }
@@ -92,8 +94,6 @@ public partial class PlanetController : Node3D
         PlanetMultiMesh.SetExtraVisibilityMargin(20 * Radius);
     }
 
-
-
     public Transform3D GetPlanetTransform(bool translation = true, bool rotation = true, bool scale = true)
     {
         Transform3D transform = Transform3D.Identity;
@@ -119,19 +119,6 @@ public partial class PlanetController : Node3D
     {
         return GetPlanetTransform(translation, rotation, scale) * planetPoint;
     }
-
-    // public Transform3D GetPlanetTransformMatrix()
-    // {
-    //     return PlanetTranslation * PlanetRotation * PlanetScale;
-    // }
-    // public Transform3D GetPlanetTRMatrix()
-    // {
-    //     return PlanetTranslation * PlanetRotation;
-    // }
-    // public Vector3 TransformPoint(Vector3 point)
-    // {
-    //     return GetPlanetTRMatrix().Inverse() * point;
-    // }
 
     #endregion
 
@@ -173,7 +160,7 @@ public partial class PlanetController : Node3D
         }
         SaveManager.WorldSave save = SaveManager.GetSave(saveName);
 
-        SurfaceShader = new() { Shader = GD.Load<Shader>(ShaderPaths.SURFACE_SHADER_PATH) };
+        SurfaceShader = new() { Shader = GD.Load<Shader>(ShaderPaths.GD_PLANET_TESSELLATION_PATH) };
 
         SetupCameras();
         SetupMultimesh();
@@ -196,7 +183,6 @@ public partial class PlanetController : Node3D
     }
 
     #region Process
-    int _resolution;
     public override void _Process(double delta)
     {
         if (Quiting)
@@ -216,17 +202,24 @@ public partial class PlanetController : Node3D
             SparseVirtualTexture.ClearVirtualTexture();
         }
 
-
-
         if (TerrainTessellator == null || SparseVirtualTexture == null) return;
 
         TerrainTessellator.Paused = DisableTesselation;
         SparseVirtualTexture.Paused = DisableVirtualTexturing;
 
+        VTData virtualTextureData = SaveManager.GetSVTData(SaveManager.GetCurrentSave());
+
+        float heightOffset = GetHeightAtPoint(MainCamera.GlobalPosition, TerrainTessellator.MaxLod, virtualTextureData);
+        if (!float.IsNaN(heightOffset))
+        {
+            float pointHeight = heightOffset;
+            float cameraHeight = MainCamera.DistanceFromTarget;
+
+            HeightOffset = cameraHeight > pointHeight ? heightOffset : HeightOffset;
+        }
 
         TerrainTessellator.Invoke();
         SparseVirtualTexture.Invoke();
-
 
         UIController.SetCurrentLOD(TerrainTessellator.MaxLod);
         UIController.SetLodCounts(TerrainTessellator.LodCounts);
@@ -280,34 +273,10 @@ public partial class PlanetController : Node3D
         Vector3 forward = PlanetTranslation.Origin.DirectionTo(MainCamera.GlobalPosition);
         Vector3 right = MainCamera.Basis.X;
         Vector3 up = forward.Cross(right).Normalized();
-
-        if (IsCubeStep)
-        {
-
-            float x =
-                (Input.IsActionJustPressed("move_left") ? 1 : 0) -
-                (Input.IsActionJustPressed("move_right") ? 1 : 0);
-
-            // float y = 
-
-            float z =
-                (Input.IsActionJustPressed("move_forward") ? 1 : 0) -
-                (Input.IsActionJustPressed("move_backward") ? 1 : 0);
-
-            Vector3 cubeRight = PlanetRotation.Basis.X.Normalized();
-            Vector3 cubeUp = PlanetRotation.Basis.Y.Normalized();
-
-            RotatePlanet(Vector3.Right, Mathf.Pi / 2.0f * z);
-            RotatePlanet(Vector3.Up, Mathf.Pi / 2.0f * x);
-
-        }
-        else
-        {
-            RotatePlanet(right, rotationSpeed * by * _direction.Z);
-            RotatePlanet(up, rotationSpeed * by * _direction.X);
-        }
-
-
+        
+        RotatePlanet(right, rotationSpeed * by * _direction.Z);
+        RotatePlanet(up, rotationSpeed * by * _direction.X);
+    
         if (IsSimulateRotation)
         {
             // External Objects that need to rotate to simulate the rotation effect
@@ -367,9 +336,10 @@ public partial class PlanetController : Node3D
                         GD.Print("No collision");
                     }
 
-                    if (false)
-                        CollisionTestSpheres.AddChild(Utilities.SpawnTestSphere(WorldToPlanet(MainCamera.GlobalPosition, scale: false), 1));
                 }
+
+                if (false)
+                    CollisionTestSpheres.AddChild(Utilities.SpawnTestSphere(WorldToPlanet(MainCamera.GlobalPosition, scale: false), 1));
 
             }
 
@@ -460,6 +430,42 @@ public partial class PlanetController : Node3D
         return Mathf.Log(num / den) / Mathf.Log(2);
     }
 
+    public float GetHeightAtPoint(Vector3 point, int lod, VTData vtData)
+    {
+        (_, Vector3 localCubePoint) = GetLocalPointsOnPlanet(point, false);
+
+        if (!localCubePoint.IsFinite())
+            return float.NaN;
+
+        Vector3 normal = VectorUtils.IsolateNormal(localCubePoint);
+        int normalId = VectorUtils.NormalToNormalID[normal];
+
+        int mip = SaveManager.GetCurrentSave().LodToMipMap[lod];
+
+        Vector2 uv = VectorUtils.PointOnCubeToUV(normalId, localCubePoint);
+
+        float mipGridSize = vtData.GetMipGridSize((uint)mip);
+
+        Vector2I tileCoords = (Vector2I)(uv * mipGridSize).Floor();
+
+        string path = $"{mip}_{normalId}_{tileCoords.X}_{tileCoords.Y}";
+        Image heightmap = SparseVirtualTexture.HeightTileCache.GetTile(path);
+
+        if (heightmap == null)
+            return float.NaN;
+
+        Vector2 tileMinUV = new Vector2(tileCoords.X, tileCoords.Y) / mipGridSize;
+        Vector2 tileLocalUV = (uv - tileMinUV) * mipGridSize;
+
+        Vector2I pixelCoords = new(
+            (int)(tileLocalUV.X * (heightmap.GetWidth() - 1)),
+            (int)(tileLocalUV.Y * (heightmap.GetHeight() - 1))
+        );
+
+        float elevation = heightmap.GetPixelv(pixelCoords).R;
+
+        return elevation * Radius * HeightScale;
+    }
     public override void _PhysicsProcess(double delta)
     {
         if (Quiting)
@@ -507,10 +513,8 @@ public partial class PlanetController : Node3D
 
         bindableShaderMaterial.FrameDependentBind("lod_to_mip_map", () => vtData.LodToMipMap);
 
-        bindableShaderMaterial.Bind("tile_size", () => vtData.TileSize);
-
         bindableShaderMaterial.Bind("height_map_tile_cache", () => SparseVirtualTexture.HeightTileCache.Cache);
-        bindableShaderMaterial.Bind("terrain_indirection_table", () => SparseVirtualTexture.IndirectionTable.Table);
+        bindableShaderMaterial.Bind("terrain_indirection_table", () => SparseVirtualTexture.ConsolidatedIndirectionTable.Table);
 
         bindableShaderMaterial.Bind("low_resolution_mip_count", () => vtData.LowResolutionMipCount);
         bindableShaderMaterial.Bind("high_resolution_mip_count", () => vtData.HighResolutionMipCount);

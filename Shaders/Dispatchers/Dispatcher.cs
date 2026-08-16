@@ -37,7 +37,7 @@ public abstract class Dispatcher<TEnum> : IDispatchable where TEnum : Enum
     public T GetUniform<T>(Enum @enum) where T : ShaderUniform => (T)_computeShaderUniforms[@enum];
 
     // TODO maybe rename this to resetUniforms
-    public abstract void UpdateUniforms();
+    public virtual void UpdateUniforms() { }
     
     #nullable enable
     public abstract void Invoke(byte[]? pushConstants = null);

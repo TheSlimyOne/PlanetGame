@@ -1,6 +1,6 @@
 shader_type spatial;
 
-#include "res://Assets/Shaders/Includes/PlanetTerrainVertexShader.gdshaderinc"
+#include "res://Assets/Shaders/Includes/planet_vertex.gdshaderinc"
 
 uniform sampler2DArray albedo_tile_cache : repeat_disable, source_color, filter_linear;
 uniform bool render_tile_uvs;
@@ -92,24 +92,13 @@ void fragment() {
     vec2 adjusted_uv = clamp(vertex_uv, vec2(0.0), vec2(1.0 - EPS));
 	int non_negative_mip_index = lod_to_mip_map[lod] + high_resolution_mip_count;
 	int normal_id = int(key.z);
-	//int total_resolution_mip_count = low_resolution_mip_count + high_resolution_mip_count;
-//
-	//float grid_size = exp2(float(total_resolution_mip_count - 1));
-	//float lod_grid_size = grid_size / exp2(float(non_negative_mip_index));
-	//
-	//vec2 cell_uv = floor(adjusted_uv * lod_grid_size) / lod_grid_size;
-//
-	vec3 tile_uv = get_tile_uv(terrain_indirection_table, non_negative_mip_index, tile_size, vertex_uv, int(key.z), low_resolution_mip_count, high_resolution_mip_count);
-	//
-    //vec2 grid_uv = floor(adjusted_uv * lod_grid_size) / lod_grid_size;
-	//ALBEDO = vec3(grid_uv, 0.0);
+
+	vec3 tile_uv = get_tile_uv(terrain_indirection_table, vertex_uv, int(key.z), low_resolution_mip_count, high_resolution_mip_count);
 	int total_resolution_mip_count = low_resolution_mip_count + high_resolution_mip_count;
 
 	float grid_size = exp2(float(total_resolution_mip_count - 1));
 	float lod_grid_size = grid_size / exp2(float(non_negative_mip_index));
-
 	vec2 tile_coordinate = adjusted_uv * lod_grid_size;
-
 	vec2 tile_local_uv = fract(tile_coordinate);
 
 	vec2 grid_uv = floor(tile_coordinate) / lod_grid_size;
@@ -164,7 +153,7 @@ void fragment() {
 	else if (show_in_cache)
 	{
 
-		vec3 in_cache = is_tile_in_cache(terrain_indirection_table, non_negative_mip_index, tile_size, vertex_uv, int(key.z), low_resolution_mip_count, high_resolution_mip_count) ? vec3(0,1,0) : vec3(0);
+		vec3 in_cache = is_tile_in_cache(terrain_indirection_table, non_negative_mip_index, vertex_uv, int(key.z), low_resolution_mip_count, high_resolution_mip_count) ? vec3(0,1,0) : vec3(0);
 		vec3 real_color = pow(get_tile(albedo_tile_cache, tile_uv).xyz, vec3(2.2));
 		ALBEDO = mix(real_color, in_cache, 0.15);
 	}

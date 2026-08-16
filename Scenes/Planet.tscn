@@ -31,7 +31,6 @@ outline_color = Color(0.0768358, 0.0768358, 0.0768358, 1)
 
 [node name="Planet" type="Node3D" unique_id=1057872115 node_paths=PackedStringArray("CameraController", "SurfaceAttachment", "UIController", "MainLightSource", "WorldEnvironment")]
 script = ExtResource("1_qtwtp")
-Radius = 500.0
 CameraController = NodePath("CameraController")
 SurfaceAttachment = NodePath("SurfaceAttachment")
 UIController = NodePath("UIController")
@@ -40,7 +39,7 @@ WorldEnvironment = NodePath("WorldEnvironment")
 BaseZoomSpeed = 1.0
 BaseRotationSpeed = 1.0
 MovementEasing = 10.0
-Resolution = 17
+Resolution = 9
 MorphRange = Vector2(0.49, 0.51)
 StartingLod = 0
 PointRadius = 0.25
@@ -48,6 +47,7 @@ IsCulling = false
 Verbose = true
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=2059454453]
+visible = false
 mesh = SubResource("SphereMesh_f8uwt")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=113934984]

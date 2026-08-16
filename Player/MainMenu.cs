@@ -36,7 +36,7 @@ public partial class MainMenu : MarginContainer
 		LoadOptions.Selected = -1;
 
 		DemoPlanet.Planet.Mesh = new BoxMesh() { SubdivideWidth = 16, SubdivideHeight = 16, SubdivideDepth = 16 };
-		ShaderMaterial shader = new() { Shader = GD.Load<Shader>(ShaderPaths.DEMO_SHADER_PATH) };
+		ShaderMaterial shader = new() { Shader = GD.Load<Shader>(ShaderPaths.GD_DEMO_SHADER_PATH) };
 		DemoPlanet.Planet.Mesh.SurfaceSetMaterial(0, shader);
 	}
 

@@ -45,7 +45,6 @@ namespace PlanetGame.Shaders.Dispatchers
 					{
 						uint[] primCounts = new uint[3 * 3];
 						primCounts[0] = 6 * (uint)Mathf.Pow(4, PlanetController.StartingLod + 1);
-						// GD.PrintS(PlanetController.StartingLod + 1, PlanetController.MaximumLod, PlanetController.MinimumLod);
 						return Utilities.ToBytes<uint>(primCounts).ToArray();
 					}).Invoke()
 				),
@@ -68,7 +67,6 @@ namespace PlanetGame.Shaders.Dispatchers
 					for (int i = 0; i < 6; i++)
 					{
 						Key[] faceData = Key.GenerateFullFace(PlanetController.StartingLod, i);
-						// GD.PrintS(PlanetController.StartingLod, faceData.Length);
 						System.Array.Copy(faceData, 0, readList, i * faceData.Length, faceData.Length);
 					}
 					return Utilities.ToBytes<Key>(readList).ToArray();
@@ -156,6 +154,8 @@ namespace PlanetGame.Shaders.Dispatchers
 				.. Utilities.ToBytesSingle(Utilities.ToProjection(PlanetController.GetPlanetTransform())),
 				.. Utilities.ToBytesSingle(MainCamera.GetViewProjectionMatrix()),
 				.. Utilities.ToBytesSingle(VectorUtils.ToVector4(MainCamera.GlobalPosition, Mathf.Tan(MainCamera.GetCameraFov(true) / 2))),
+
+				.. Utilities.ToBytesSingle(PlanetController.HeightOffset),
 			];
 
 			return [.. data];

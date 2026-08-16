@@ -13,8 +13,10 @@ namespace PlanetGame.Rendering.VirtualTexturing
         public ResolveTileRequestDispatcher ResolveTileRequest { get; private set; }
         public ValidateCacheDispatcher ValidateTileCache { get; private set; }
         public SvtFeedbackRenderPass SvtFeedbackRenderPass { get; private set; }
+        public FlattenIndirectionTableDispatcher FlattenIndirectionTableDispatcher { get; private set; }
 
         public IndirectionTable IndirectionTable { get; private set; }
+        public ConsolidatedIndirectionTable ConsolidatedIndirectionTable { get; private set; }
         public TileCache AlbedoTileCache { get; private set; }
         public TileCache HeightTileCache { get; private set; }
         public ResidencyTable ResidencyTable { get; private set; }
@@ -33,6 +35,7 @@ namespace PlanetGame.Rendering.VirtualTexturing
             HeightTileCache = new(VirtualTextureData, worldSave.TilesHeightmap, Colors.Black, Image.Format.R8);
 
             IndirectionTable = new(VirtualTextureData);
+            ConsolidatedIndirectionTable = new(VirtualTextureData);
             ResidencyTable = new(VirtualTextureData);
             StateTable = new(VirtualTextureData);
 
@@ -43,11 +46,12 @@ namespace PlanetGame.Rendering.VirtualTexturing
 
             ValidateTileCache = new() { SparseVirtualTexture = this };
 
-
+            FlattenIndirectionTableDispatcher = new() { SparseVirtualTexture = this };
 
             SvtFeedbackRenderPass.CreateUniforms();
             ResolveTileRequest.CreateUniforms();
             ValidateTileCache.CreateUniforms();
+            FlattenIndirectionTableDispatcher.CreateUniforms();
         }
 
         public bool IsValidForProcessing()
@@ -88,6 +92,7 @@ namespace PlanetGame.Rendering.VirtualTexturing
             boxContainer.SetAnchorsPreset(Control.LayoutPreset.FullRect);
             boxContainer.AddChild(StateTable.CreateVisualization());
             boxContainer.AddChild(IndirectionTable.CreateVisualization());
+            boxContainer.AddChild(ConsolidatedIndirectionTable.CreateVisualization());
             boxContainer.AddChild(ResidencyTable.CreateVisualization());
 
             boxContainer.AddChild(AlbedoTileCache.CreateVisualization("Albedo"));
@@ -230,17 +235,19 @@ namespace PlanetGame.Rendering.VirtualTexturing
                 });
 
                 ValidateTileCache.Invoke();
+                FlattenIndirectionTableDispatcher.Invoke();
             }
 
-
             Ready = true;
-
         }
 
         public void ClearVirtualTexture()
         {
             IndirectionTable.ClearStorageTexture();
             IndirectionTable.SetFallbackSlots();
+
+            ConsolidatedIndirectionTable.ClearStorageTexture();
+            ConsolidatedIndirectionTable.SetFallbackSlots();
             
             AlbedoTileCache.ClearStorageTexture();
             AlbedoTileCache.SetFallbackSlots();
@@ -271,7 +278,7 @@ namespace PlanetGame.Rendering.VirtualTexturing
 
             ResolveTileRequest.GetTextureIds(Callable.From<byte[]>(RequestTileSlot));
 
-
+            
 
 
         }
@@ -288,6 +295,10 @@ namespace PlanetGame.Rendering.VirtualTexturing
             IndirectionTable.DeleteVisualization();
             // IndirectionTable.CleanupGPU();
             IndirectionTable = default;
+            
+            ConsolidatedIndirectionTable.DeleteVisualization();
+            // ConsolidatedIndirectionTable.CleanupGPU();
+            ConsolidatedIndirectionTable = default;
 
             AlbedoTileCache.DeleteVisualization();
             // AlbedoTileCache.CleanupGPU();

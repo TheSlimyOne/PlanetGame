@@ -1,11 +1,12 @@
+using System.Linq;
 using Godot;
 namespace PlanetGame.Rendering.VirtualTexturing
 {
     public readonly struct VTData
     (
-        uint tileSize, 
-        uint LowResolutionMipCount, 
-        uint highResolutionMipCount, 
+        uint tileSize,
+        uint LowResolutionMipCount,
+        uint highResolutionMipCount,
         int[] lodToMipMap,
         string[] fallBackTiles
     )
@@ -17,7 +18,14 @@ namespace PlanetGame.Rendering.VirtualTexturing
         public readonly int[] LodToMipMap = lodToMipMap;
         public readonly uint HighResolutionMipCount = highResolutionMipCount;
         public readonly uint LowResolutionMipCount = LowResolutionMipCount;
-        public readonly string[] FallBackTiles = fallBackTiles;
+        public readonly string[] FallBackTiles =
+        [
+            .. fallBackTiles
+                .OrderByDescending(x => int.Parse(x.Split('_')[0]))
+                .ThenByDescending(x => int.Parse(x.Split('_')[1]))
+                .ThenByDescending(x => int.Parse(x.Split('_')[2]))
+                .ThenByDescending(x => int.Parse(x.Split('_')[3]))
+        ];
 
         public float GetMipGridSize(uint nonNegativeMipIndex)
         {

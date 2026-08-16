@@ -15,19 +15,12 @@ namespace PlanetGame.Shaders
         public const string PLANET_TESSELLATION_VERTEX = "res://Shaders/GLSL/PlanetTessellation.vertex";
         public const string PLANET_TESSELLATION_REQUEST_FRAGMENT = "res://Shaders/GLSL/PlanetTessellationRequest.fragment";
         public const string VALIDATE_TILE_CACHE = "res://Shaders/GLSL/ValidateTileCache.compute";
-        
+        public const string FLATTEN_INDIRECTION_TABLE = "res://Shaders/GLSL/FlattenIndirectionTable.compute";
         public const string EMPTY_FRAGMENT = "res://Shaders/GLSL/empty.fragment";
         
         // Gdshaders
-        public const string ARRAY_TEXTURE_VISUALIZER = "res://Assets/Shaders/Planet/array_texture_visualizer.gdshader";
-        public const string TEXTURE_2D_ARRAY_SHADER = "res://Rendering/VirtualTexturing/Visualization Shaders/Texture2DArray.gdshader";
-        public const string RESIDENCY_TABLE_SHADER = "res://Rendering/VirtualTexturing/Visualization Shaders/ResidencyShader.gdshader";
-        public const string INDIRECTION_TABLE_SHADER = "res://Rendering/VirtualTexturing/Visualization Shaders/IndirectionShader.gdshader";
-
-        public const string SURFACE_SHADER_PATH = "res://Assets/Shaders/Planet/PlanetTerrainRenderSurfaceShader.gdshader";
-        public const string FRAME_BUFFER_SHADER = "res://Assets/Shaders/Planet/PlanetTerrainFramebufferShader.gdshader";
-
-        public const string DEMO_SHADER_PATH = "res://Assets/Shaders/Menu/demo_planet_shader.gdshader";
+        public const string GD_PLANET_TESSELLATION_PATH = "res://Assets/Shaders/Planet/planet_fragment.gdshader";
+        public const string GD_DEMO_SHADER_PATH = "res://Assets/Shaders/Menu/demo_planet_shader.gdshader";
 
 
     }

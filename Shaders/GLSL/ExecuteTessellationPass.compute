@@ -51,6 +51,8 @@ layout(set = 0, binding = 5, std430) buffer restrict readonly ExternalData {
 	mat4 planet_transform_matrix;
 	mat4 view_projection_matrix;
 	vec4 camera_position_fovy;
+
+    float height_offset;
 };
 
 
@@ -154,7 +156,8 @@ uint get_junction_flags(uvec4 key, Triangle parent_triangle, float lod) {
         radius,
         camera_position_fovy.w,
         minimum_lod,
-        maximum_lod
+        maximum_lod,
+        height_offset
     );
 
     if (key.xy == uvec2(0, 1)) {
@@ -212,7 +215,8 @@ void main() {
         radius,
         camera_position_fovy.w,
         minimum_lod,
-        maximum_lod
+        maximum_lod,
+        height_offset
     );
 
     float current_LOD = get_lod_of_key(key.xy);

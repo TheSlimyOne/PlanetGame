@@ -3,3 +3,4 @@
 .vscode/
 /Assets/Images/
 *.TMP
+*.uid

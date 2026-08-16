@@ -4,13 +4,13 @@
 
 layout(local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
 
-layout(set = 0, binding = 0, rgba32f) restrict uniform image2D feedbackTexture;
+layout(set = 0, binding = 0, rgba32f) restrict uniform image2D FeedbackTexture;
 
-layout(set = 0, binding = 1, rgba32f) restrict uniform image2DArray indirectionTable;
+layout(set = 0, binding = 1, rgba32f) restrict uniform image2DArray IndirectionTable;
 
-layout(set = 0, binding = 2, r32ui) restrict uniform uimage2DArray stateTable;
+layout(set = 0, binding = 2, r32ui) restrict uniform uimage2DArray StateTable;
 
-layout(set = 0, binding = 3, rgba32f) restrict uniform image2D residencyTable;
+layout(set = 0, binding = 3, rgba32f) restrict uniform image2D ResidencyTable;
 
 layout(std430, binding = 4) buffer restrict VirtualTextureData {
     int low_resolution_mip_count;
@@ -44,13 +44,13 @@ void main() {
     const uint PROCESSING = 0xFFFFFFFF;
     const uint NOT_PROCESSING = 0x00000000;
 
-    ivec2 size = imageSize(feedbackTexture);
+    ivec2 size = imageSize(FeedbackTexture);
 
     ivec2 invocation_id = ivec2(gl_GlobalInvocationID.xy);
     
     if (invocation_id.x >= size.x || invocation_id.y >= size.y) return;
     
-    ivec4 feedback = floatBitsToInt(imageLoad(feedbackTexture, invocation_id).rgba);
+    ivec4 feedback = floatBitsToInt(imageLoad(FeedbackTexture, invocation_id).rgba);
     ivec3 indirection_index = feedback.xyz;
     bool is_requesting = feedback.w == 1;
 
@@ -61,10 +61,10 @@ void main() {
     if (!is_requesting || mip_index >= 6 || mip_index < 0)
         return;
 
-    uint results = imageAtomicCompSwap(stateTable, indirection_index, NOT_PROCESSING, PROCESSING);
+    uint results = imageAtomicCompSwap(StateTable, indirection_index, NOT_PROCESSING, PROCESSING);
     if (results == PROCESSING) return;
 
-    uvec4 indirection_data = floatBitsToUint(imageLoad(indirectionTable, indirection_index));
+    uvec4 indirection_data = floatBitsToUint(imageLoad(IndirectionTable, indirection_index));
 
     // The tile is already loaded in the tile cache
     if (indirection_data.w != 0)
@@ -95,14 +95,14 @@ void main() {
     );
 
     // Only invalidate if we actually had a previous tile
-    uvec4 prev_tile_data = floatBitsToUint(imageLoad(residencyTable, residency_index));
+    uvec4 prev_tile_data = floatBitsToUint(imageLoad(ResidencyTable, residency_index));
     if (prev_tile_data.w != 0u) {
         int prev_mip_index = int(prev_tile_data.z % total_resolution_mip_count);
         int prev_lod_size = 1 << prev_mip_index;
-        set_indirection_entry(ivec3(prev_tile_data.xyz), prev_lod_size, uvec4(0u));
+        set_indirection_entry(IndirectionTable, ivec3(prev_tile_data.xyz), prev_lod_size, uvec4(0u));
     }
 
     requested_tile_ids[request_index] = uvec4(request_coords, slot);
-    set_indirection_entry(indirection_index, lod_size, uvec4(slot, 0u, 0u, 255u));
-    imageStore(residencyTable, residency_index, uintBitsToFloat(uvec4(indirection_index, 255u)));
+    set_indirection_entry(IndirectionTable, indirection_index, lod_size, uvec4(slot, 0u, 0u, 255u));
+    imageStore(ResidencyTable, residency_index, uintBitsToFloat(uvec4(indirection_index, 255u)));
 }

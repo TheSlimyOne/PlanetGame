@@ -15,8 +15,8 @@ layout(location = 0) out vec4 frag_color;
 layout(location = 1) out vec4 picking_texture;
 
 layout(set = 0, binding = 1, std430) buffer restrict readonly ExternalData {
-	int low_resolution_mip_count;
-	int high_resolution_mip_count;
+    int low_resolution_mip_count;
+    int high_resolution_mip_count;
     int tile_size;
 	int lod_to_mip_map[32];
 
@@ -34,7 +34,10 @@ layout(set = 0, binding = 1, std430) buffer restrict readonly ExternalData {
 	mat4 planet_transform_matrix;
 	mat4 view_projection_matrix;
 	vec4 camera_position_fovy;
+
+    float height_offset;
 };
+
 
 layout(set = 0, binding = 2, std430) buffer restrict GlobalKeyData {
     uint max_lod;

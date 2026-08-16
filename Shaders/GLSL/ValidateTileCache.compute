@@ -4,7 +4,7 @@
 
 layout (local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
 
-layout(set = 0, binding = 0, rgba32f) restrict uniform image2DArray indirectionTable;
+layout(set = 0, binding = 0, rgba32f) restrict uniform image2DArray IndirectionTable;
 
 layout(set = 0, binding = 1, rgba32f) restrict uniform image2D residencyTable;
 
@@ -34,11 +34,11 @@ void main() {
     int total_resolution_mip_count = low_resolution_mip_count + high_resolution_mip_count;
 
     ivec3 indirection_index = ivec3(tile_data.xyz);
-    uvec4 indirection_data = floatBitsToUint(imageLoad(indirectionTable, indirection_index));
+    uvec4 indirection_data = floatBitsToUint(imageLoad(IndirectionTable, indirection_index));
 
     int mip_index = indirection_index.z % int(total_resolution_mip_count);
     int lod_size = 1 << mip_index;
 
 
-    set_indirection_entry(indirection_index, lod_size, uvec4(indirection_data.xy, 255u, indirection_data.w));
+    set_indirection_entry(IndirectionTable, indirection_index, lod_size, uvec4(indirection_data.xy, 255u, indirection_data.w));
 }

@@ -67,10 +67,5 @@ namespace PlanetGame.Shaders.Dispatchers
             RenderingDevice.ComputeListDispatch(computeList, 1, 1, 1);
             RenderingDevice.ComputeListEnd();
         }
-
-        public override void UpdateUniforms()
-        {
-            throw new NotImplementedException();
-        }
     }
 }

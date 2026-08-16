@@ -113,8 +113,39 @@ namespace PlanetGame.Rendering.VirtualTexturing
 
         public override TextureRect CreateVisualization(string name)
         {
-            Shader shader = GD.Load<Shader>(ShaderPaths.TEXTURE_2D_ARRAY_SHADER);
-            Vector2I tileCount = new((int)Mathf.Sqrt(DEFAULT_TILE_SLOTS_COUNT), (int)Mathf.Sqrt(DEFAULT_TILE_SLOTS_COUNT));
+            string shaderCode = """
+            shader_type canvas_item;
+            render_mode unshaded;
+
+            uniform ivec2 grid_size;
+            uniform sampler2DArray image : repeat_disable, source_color, filter_linear;
+
+            void fragment() {
+                vec2 grid_position = UV * vec2(grid_size);
+
+                ivec2 cell_position = ivec2(floor(grid_position));
+                vec2 tile_uv = fract(grid_position);
+
+                int array_index = cell_position.y * grid_size.x + cell_position.x;
+
+                vec3 texture_coordinate = vec3(tile_uv, float(array_index));
+
+                vec4 color = textureLod(image, texture_coordinate, 0.0);
+
+                if (color.w != 0.0)
+                    COLOR = color;
+                else
+                    COLOR = vec4(0.0, 0.0, 0.0, 1.0);
+            }
+            """;
+
+            Shader shader = new()
+            {
+                Code = shaderCode
+            };
+
+            int cacheSize = (int)Mathf.Sqrt(DEFAULT_TILE_SLOTS_COUNT);
+            Vector2I tileCount = new(cacheSize, cacheSize);
 
             Image image = Image.CreateEmpty(tileCount.X, tileCount.Y, false, Image.Format.Rgbaf);
 
@@ -124,12 +155,15 @@ namespace PlanetGame.Rendering.VirtualTexturing
                 SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
                 SizeFlagsVertical = Control.SizeFlags.ExpandFill,
                 Texture = ImageTexture.CreateFromImage(image),
-                Material = new ShaderMaterial() { Shader = shader },
+                TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
+                Material = new ShaderMaterial()
+                {
+                    Shader = shader
+                }
             };
 
             ((ShaderMaterial)texture.Material).SetShaderParameter("grid_size", tileCount);
             ((ShaderMaterial)texture.Material).SetShaderParameter("image", Cache);
-
 
             Visualization = texture;
             return texture;

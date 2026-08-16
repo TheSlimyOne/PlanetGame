@@ -24,6 +24,7 @@ struct LodContext {
     float fovy;
     int minimum_lod;
     int maximum_lod;
+    float height_offset;
 };
 
 // --------------------
@@ -288,14 +289,12 @@ float polygon_space_point_to_lod(vec3 cube_position, LodContext lod_context)
 {
     vec3 sphere_position = point_on_cube_to_point_on_sphere(cube_position);
     vec3 world_position = polygon_space_to_world_space(sphere_position, lod_context.planet_transform);
-    float distance_to_camera = distance(world_position, lod_context.camera_position);
+    float distance_to_camera = max(distance(world_position, lod_context.camera_position) - lod_context.height_offset, 0);
     return calculate_lod(distance_to_camera, lod_context);
 }
 
 
 // --------------------
-
-
 int get_lod_of_key(uvec2 key) {
     return find_msb_64(key) / 2;
 }

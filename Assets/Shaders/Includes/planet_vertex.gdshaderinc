@@ -7,7 +7,6 @@ uniform float height_scale;
 uniform int resolution;
 uniform float maximum_lod;
 uniform float minimum_lod;
-uniform int tile_size;
 uniform mat4 planet_transform_matrix;
 
 uniform float current_lod;
@@ -94,7 +93,7 @@ void vertex() {
 	float lod_scale = pow(2.0, float(int(current_lod)));
 	
 	vec3 world_position = get_world_space_point(local_point, planet_transform_matrix);
-	vec3 tile_uv = get_tile_uv(terrain_indirection_table, non_negative_mip_index, tile_size, vertex_uv, int(key.z), low_resolution_mip_count, high_resolution_mip_count);
+	vec3 tile_uv = get_tile_uv(terrain_indirection_table, vertex_uv, int(key.z), low_resolution_mip_count, high_resolution_mip_count);
 	elevation = get_tile(height_map_tile_cache, tile_uv).r;
 	
 	NORMAL = (vec4(local_point, 1) * get_rotation_from_matrix(planet_transform_matrix)).xyz;

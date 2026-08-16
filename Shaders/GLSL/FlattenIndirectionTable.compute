@@ -1,0 +1,55 @@
+#[compute]
+#version 450
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+layout(set = 0, binding = 0, rgba32f) uniform readonly image2DArray IndirectionTable;
+
+layout(set = 0, binding = 1, rgba32f) uniform writeonly image2DArray ConsolidatedIndirectionTable;
+
+layout(std430, binding = 2) buffer restrict VirtualTextureData {
+    int low_resolution_mip_count;
+    int high_resolution_mip_count;
+
+    uint grid_size;
+    uint fallback_tile_offset;
+
+    uint total_texture_slots;
+    uint sqrt_total_texture_slots;
+
+    uint request_buffer_size;
+    int _padding0;
+};
+
+
+void main()
+{
+    ivec3 invocation_id = ivec3(gl_GlobalInvocationID);
+    ivec3 consolidated_size = imageSize(ConsolidatedIndirectionTable);
+
+    if (invocation_id.x >= consolidated_size.x || invocation_id.y >= consolidated_size.y || invocation_id.z >= 6)
+        return;
+
+    int total_resolution_mip_count = low_resolution_mip_count + high_resolution_mip_count;
+
+    ivec2 pixel = invocation_id.xy;
+    int normal_id = invocation_id.z;
+
+    uvec4 result = uvec4(0);
+
+    for (int mip_index = 0; mip_index < total_resolution_mip_count; mip_index++)
+    {
+        int layer = normal_id * total_resolution_mip_count + mip_index;
+
+        uvec4 indirection_data = floatBitsToUint(imageLoad(IndirectionTable, ivec3(pixel, layer)));
+
+        if (indirection_data.w != 0u)
+        {
+            indirection_data.y = uint(mip_index);
+            result = indirection_data;
+            break;
+        }
+    }
+
+    imageStore(ConsolidatedIndirectionTable, ivec3(pixel, normal_id), uintBitsToFloat(result));
+}
