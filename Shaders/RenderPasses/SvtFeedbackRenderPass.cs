@@ -49,7 +49,7 @@ namespace PlanetGame.Shaders.RenderPasses
             EXTERNAL_DATA,
             GLOBAL_KEYS_DATA,
             HEIGHT_MAP,
-            INDIRECTION_TABLE,
+            CONSOLIDATED_INDIRECTION_TABLE,
             STATE_TABLE
         }
 
@@ -66,7 +66,7 @@ namespace PlanetGame.Shaders.RenderPasses
 
                 [BufferNames.HEIGHT_MAP] = new Texture2DUniform(this, (int)BufferNames.HEIGHT_MAP, SparseVirtualTexture.HeightTileCache.GetRdRid(), RenderingDevice.UniformType.SamplerWithTexture, true),
 
-                [BufferNames.INDIRECTION_TABLE] = new Texture2DUniform(this, (int)BufferNames.INDIRECTION_TABLE, SparseVirtualTexture.IndirectionTable.GetRdRid(), RenderingDevice.UniformType.SamplerWithTexture, true),
+                [BufferNames.CONSOLIDATED_INDIRECTION_TABLE] = new Texture2DUniform(this, (int)BufferNames.CONSOLIDATED_INDIRECTION_TABLE, SparseVirtualTexture.ConsolidatedIndirectionTable.GetRdRid(), RenderingDevice.UniformType.SamplerWithTexture, true),
 
                 [BufferNames.STATE_TABLE] = new Texture2DUniform(this, (int)BufferNames.STATE_TABLE, SparseVirtualTexture.StateTable.GetRdRid(), RenderingDevice.UniformType.Image, true)
             };
@@ -80,7 +80,7 @@ namespace PlanetGame.Shaders.RenderPasses
                 drawFlags: RenderingDevice.DrawFlags.ClearColorAll | RenderingDevice.DrawFlags.ClearDepth,
                 clearColorValues: [
                     new Color(0, 0, 0, 0),
-                    new Color(-1, -1, -1, -1)
+                    new Color(0, 0, 0, 0)
                 ],
                 clearDepthValue: 1.0f,
                 clearStencilValue: 0
@@ -282,7 +282,7 @@ namespace PlanetGame.Shaders.RenderPasses
 
         public Vector3 GetLocalMousePosition(Vector2 mousePosition, Vector2 screenSize)
         {
-            
+
             Vector2 normalizedMousePosition = mousePosition / screenSize;
 
             Vector2I pixelPosition = new(

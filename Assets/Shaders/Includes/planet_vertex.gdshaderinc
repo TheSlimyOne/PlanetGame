@@ -41,22 +41,22 @@ void vertex() {
 	flags = key.w >> 29u;
 	key.w &= 0xFu;
 	
-	//float vertex_spacing = 1.0 / float(resolution - 1);
-	//if (flags == 0u || flags == 2u)
-	//{
-		//if (VERTEX.x == 0.0) {
-			//int vertex_index = int(VERTEX.y * float(resolution - 1));
-			//if ((vertex_index & 1) == 1)
-				//VERTEX.y -= vertex_spacing;
-		//}
-	//} else if (flags == 1u || flags == 3u)
-	//{
-		//if (VERTEX.y == 0.0) {
-			//int vertex_index = int(VERTEX.x * float(resolution - 1));
-			//if ((vertex_index & 1) == 1)
-				//VERTEX.x -= vertex_spacing;
-		//}
-	//}
+	float vertex_spacing = 1.0 / float(resolution - 1);
+	if (flags == 0u || flags == 2u)
+	{
+		if (VERTEX.x == 0.0) {
+			int vertex_index = int(VERTEX.y * float(resolution - 1));
+			if ((vertex_index & 1) == 1)
+				VERTEX.y -= vertex_spacing;
+		}
+	} else if (flags == 1u || flags == 3u)
+	{
+		if (VERTEX.y == 0.0) {
+			int vertex_index = int(VERTEX.x * float(resolution - 1));
+			if ((vertex_index & 1) == 1)
+				VERTEX.x -= vertex_spacing;
+		}
+	}
 
 	mat3 quadtree_space = leaf_space_to_quadtree_space(key.xy);
 	mat3 polygon_space = quadtree_space_to_polygon_space(key.z, key.w);
@@ -78,13 +78,9 @@ void vertex() {
 
 		local_point = is_cube ? morphed_cube_local_position : morphed_sphere_local_position;
 		vertex_uv = get_cube_uv(int(key.z), morphed_cube_local_position);
-		
-		//lod = int(calculate_lod_to_cam(morphed_sphere_local_position, camera_position, planet_transform_matrix, fovy, sub_factor, radius, maximum_lod, minimum_lod));
 	}
 	else {
-		
 		vertex_uv = get_cube_uv(int(key.z), cube_local_position);
-		//lod = int(calculate_lod_to_cam(sphere_local_position, camera_position, planet_transform_matrix, fovy, sub_factor, radius, maximum_lod, minimum_lod));
 	}
 	
 	lod = get_lod_of_key(key.xy);
@@ -98,7 +94,4 @@ void vertex() {
 	
 	NORMAL = (vec4(local_point, 1) * get_rotation_from_matrix(planet_transform_matrix)).xyz;
 	VERTEX = world_position + NORMAL * height_scale * elevation;
-	
-	//VERTEX *= lod_scale;
-	
 }

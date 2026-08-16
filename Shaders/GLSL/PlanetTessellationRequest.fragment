@@ -105,7 +105,14 @@ void main() {
         layer
     );
 
-    vec3 tile_uv = get_tile_cache_uv(terrain_indirection_table, non_negative_mip_index, tile_size, vertex_uv, int(key.z), low_resolution_mip_count, high_resolution_mip_count);
+    vec3 tile_uv = get_tile_cache_uv(
+        terrain_indirection_table,
+        vertex_uv,
+        int(key.z),
+        low_resolution_mip_count,
+        high_resolution_mip_count
+    );
+    
     vec3 color = get_tile(height_map_tile_cache, tile_uv).xyz;
 
     vec2 cell_uv = get_cell_uv(adjusted_uv, mip_grid_size);

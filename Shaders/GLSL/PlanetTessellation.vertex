@@ -1,8 +1,6 @@
 #[vertex] 
 #version 450 
 
-// invariant gl_Position;
-
 struct InstanceData
 {
     mat4 transform;
@@ -79,10 +77,30 @@ void main()
     flags = key.w >> 29u;
 	key.w &= 0xFu;
 
+    vec3 vertex = vertex_pos;
+	
+	float vertex_spacing = 1.0 / float(resolution - 1);
+
+	if (flags == 0u || flags == 2u)
+	{
+		if (vertex.x == 0.0) {
+			int vertex_index = int(vertex.y * float(resolution - 1));
+			if ((vertex_index & 1) == 1)
+				vertex.y -= vertex_spacing;
+		}
+	} else if (flags == 1u || flags == 3u)
+	{
+		if (vertex.y == 0.0) {
+			int vertex_index = int(vertex.x * float(resolution - 1));
+			if ((vertex_index & 1) == 1)
+				vertex.x -= vertex_spacing;
+		}
+	}
+
     mat3 quadtree_space = leaf_space_to_quadtree_space(key.xy);
 	mat3 polygon_space = quadtree_space_to_polygon_space(key.z, key.w);
 
-	vec2 quad_position = get_quadtree_space_point(vertex_pos.xy, quadtree_space);
+	vec2 quad_position = get_quadtree_space_point(vertex.xy, quadtree_space);
 	vec3 cube_local_position = get_polygon_space_point(quad_position, polygon_space);
 	vec3 sphere_local_position = point_on_cube_to_point_on_sphere(cube_local_position);
     vec3 local_point = is_cube ? cube_local_position : sphere_local_position;
@@ -98,9 +116,9 @@ void main()
         height_offset
     );
 
-    if (is_morphing) {
+    if (is_morphing && false) {
 		morph = calculate_morph(local_point, key.xy, morph_range, lod_context);
-        vec2 morphed_vertex = morph_vertex(vertex_pos.xy, morph, resolution);
+        vec2 morphed_vertex = morph_vertex(vertex.xy, morph, resolution);
 
 		vec2 morphed_quad_position = get_quadtree_space_point(morphed_vertex, quadtree_space);
 		vec3 morphed_cube_local_position = get_polygon_space_point(morphed_quad_position, polygon_space);
@@ -117,7 +135,13 @@ void main()
     lod = get_lod_of_key(key.xy);
 
     int non_negative_mip_index = lod_to_mip_map[lod] + high_resolution_mip_count;
-    vec3 tile_cache_uv = get_tile_cache_uv(terrain_indirection_table, non_negative_mip_index, tile_size, vertex_uv, int(key.z), low_resolution_mip_count, high_resolution_mip_count);
+        vec3 tile_cache_uv = get_tile_cache_uv(
+        terrain_indirection_table,
+        vertex_uv,
+        int(key.z),
+        low_resolution_mip_count,
+        high_resolution_mip_count
+    );
     elevation = get_tile(height_map_tile_cache, tile_cache_uv).r;
     
     normal = (vec4(local_point, 1) * get_rotation_from_matrix(planet_transform_matrix)).xyz; 

@@ -80,7 +80,7 @@ public static class SaveManager
 
     public static string CurrentSave { get; set; }
     const string SAVE_PATH = "user://Saves/saves.json";
-    private static readonly Dictionary<string, WorldSave> Saves = GetSaves();
+    private static Dictionary<string, WorldSave> Saves => GetSaves();
     static readonly JsonSerializerOptions Options = new() { PropertyNameCaseInsensitive = true, WriteIndented = true, AllowTrailingCommas = true };
 
     // TODO bug here if the jsons are corrupted could cause a crash
