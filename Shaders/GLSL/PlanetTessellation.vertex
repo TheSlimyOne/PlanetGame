@@ -36,10 +36,16 @@ layout(set = 0, binding = 1, std430) buffer restrict readonly ExternalData {
 	vec4 camera_position_fovy;
 };
 
+layout(set = 0, binding = 2, std430) buffer restrict GlobalKeyData {
+    uint max_lod;
+    uint min_lod;
+    uint stable_key_count;
+    uint total_keys_per_lod[32];
+};
 
-layout(set = 0, binding = 2) uniform sampler2DArray height_map_tile_cache;
-layout(set = 0, binding = 3) uniform sampler2DArray terrain_indirection_table;
-layout(set = 0, binding = 4, r32ui) restrict uniform uimage2DArray state_table;
+layout(set = 0, binding = 3) uniform sampler2DArray height_map_tile_cache;
+layout(set = 0, binding = 4) uniform sampler2DArray terrain_indirection_table;
+layout(set = 0, binding = 5, r32ui) restrict uniform uimage2DArray state_table;
 
 
 layout(location = 0) in vec3 vertex_pos; 
@@ -119,6 +125,8 @@ void main()
         get_world_space_point(local_point, planet_transform_matrix) +
         normal * height_scale * elevation
     );
+
+    float lod_scale = pow(2.0, float(max_lod));
 
     gl_Position = view_projection_matrix * vec4(world_position, 1.0);
     gl_Position.y = -gl_Position.y;    

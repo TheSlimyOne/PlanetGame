@@ -456,6 +456,9 @@ namespace PlanetGame.Rendering.VirtualTexturing
             if (tile.GetFormat() != format)
                 tile.Convert(format);
             
+            if (tile.IsCompressed())
+                tile.Decompress();
+
             return tile;
         }
 

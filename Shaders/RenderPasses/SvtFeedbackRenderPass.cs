@@ -22,6 +22,8 @@ namespace PlanetGame.Shaders.RenderPasses
         private Rid _depthTexture;
         private Rid _pickingTexture;
 
+        private Image _pickingImage;
+
         public SvtFeedbackRenderPass(
             TerrainTessellator terrainTessellator,
             SparseVirtualTexture sparseVirtualTexture,
@@ -45,6 +47,7 @@ namespace PlanetGame.Shaders.RenderPasses
         {
             MULTIMESH_BUFFER,
             EXTERNAL_DATA,
+            GLOBAL_KEYS_DATA,
             HEIGHT_MAP,
             INDIRECTION_TABLE,
             STATE_TABLE
@@ -58,6 +61,8 @@ namespace PlanetGame.Shaders.RenderPasses
                 [BufferNames.MULTIMESH_BUFFER] = TerrainTessellator.ExecuteTessellationPass[ExecuteTessellationPassDispatcher.BufferNames.MULTIMESH_BUFFER],
 
                 [BufferNames.EXTERNAL_DATA] = TerrainTessellator.ExecuteTessellationPass[ExecuteTessellationPassDispatcher.BufferNames.EXTERNAL_DATA],
+
+                [BufferNames.GLOBAL_KEYS_DATA] = TerrainTessellator.ExecuteTessellationPass[ExecuteTessellationPassDispatcher.BufferNames.GLOBAL_KEYS_DATA],
 
                 [BufferNames.HEIGHT_MAP] = new Texture2DUniform(this, (int)BufferNames.HEIGHT_MAP, SparseVirtualTexture.HeightTileCache.GetRdRid(), RenderingDevice.UniformType.SamplerWithTexture, true),
 
@@ -87,6 +92,8 @@ namespace PlanetGame.Shaders.RenderPasses
             RenderingDevice.DrawListBindUniformSet(drawList, _uniformSet, 0);
             RenderingDevice.DrawListDrawIndirect(drawList, true, TerrainTessellator.PrepareTessellationPass[PrepareTessellationPassDispatcher.BufferNames.DRAW_DISPATCH_BUFFER].Rid);
             RenderingDevice.DrawListEnd();
+
+            _pickingImage = GetPickingImage();
         }
 
 
@@ -99,7 +106,6 @@ namespace PlanetGame.Shaders.RenderPasses
             byte[] data = RenderingDevice.TextureGetData(_pickingTexture, 0);
 
             Image image = Image.CreateFromData(ViewSize.X, ViewSize.Y, false, Image.Format.Rgbaf, data);
-
 
             return image;
         }
@@ -276,23 +282,23 @@ namespace PlanetGame.Shaders.RenderPasses
 
         public Vector3 GetLocalMousePosition(Vector2 mousePosition, Vector2 screenSize)
         {
-            Image image = GetPickingImage();
+            
             Vector2 normalizedMousePosition = mousePosition / screenSize;
 
             Vector2I pixelPosition = new(
                 Mathf.Clamp(
-                    (int)(normalizedMousePosition.X * image.GetWidth()),
+                    (int)(normalizedMousePosition.X * _pickingImage.GetWidth()),
                     0,
-                    image.GetWidth() - 1
+                    _pickingImage.GetWidth() - 1
                 ),
                 Mathf.Clamp(
-                    (int)(normalizedMousePosition.Y * image.GetHeight()),
+                    (int)(normalizedMousePosition.Y * _pickingImage.GetHeight()),
                     0,
-                    image.GetHeight() - 1
+                    _pickingImage.GetHeight() - 1
                 )
             );
 
-            Color pickingData = image.GetPixelv(pixelPosition);
+            Color pickingData = _pickingImage.GetPixelv(pixelPosition);
 
             // Return an invald value if not a valid pick
             if (pickingData.A == -1)

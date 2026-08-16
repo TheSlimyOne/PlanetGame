@@ -171,5 +171,52 @@ namespace PlanetGame.Util
             // Ensure the first character is lowercase and starts with an underscore
             return "_" + char.ToLower(camelCase[0]) + camelCase[1..];
         }
+
+        public static Godot.Collections.Dictionary RaycastFromMouse(Camera3D camera, float rayLength)
+        {
+            Vector2 mousePosition = camera.GetViewport().GetMousePosition();
+
+            Vector3 rayOrigin = camera.ProjectRayOrigin(mousePosition);
+            Vector3 rayDirection = camera.ProjectRayNormal(mousePosition);
+            Vector3 rayEnd = rayOrigin + rayDirection * rayLength;
+
+            PhysicsDirectSpaceState3D spaceState = camera.GetWorld3D().DirectSpaceState;
+            PhysicsRayQueryParameters3D query = PhysicsRayQueryParameters3D.Create(rayOrigin, rayEnd);
+
+            return spaceState.IntersectRay(query);
+        }
+
+        public static RigidBody3D SpawnTestSphere(Vector3 position, float radius)
+        {
+            RigidBody3D body = new()
+            {
+                Position = position,
+                GravityScale = 0.0f,
+                Mass = 1.0f,
+                ContinuousCd = true,
+            };
+
+            SphereShape3D shape = new()
+            {
+                Radius = radius
+            };
+
+            body.AddChild(new CollisionShape3D
+            {
+                Shape = shape
+            });
+
+            body.AddChild(new MeshInstance3D
+            {
+                Mesh = new SphereMesh
+                {
+                    Radius = radius,
+                    Height = radius * 2
+                }
+            });
+
+            return body;
+        }
+
     }
 }

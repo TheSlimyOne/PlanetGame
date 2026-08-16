@@ -92,7 +92,7 @@ namespace PlanetGame.Shaders.Dispatchers
 				),
 
 				[BufferNames.GLOBAL_KEYS_DATA] = new StorageBufferUniform(this, RenderingDevice, (int)BufferNames.GLOBAL_KEYS_DATA,
-					GetInitialGlobalKeyData()
+                    GetInitialGlobalKeyData()
 				),
 			};
 			CreateUniformSet();
@@ -153,7 +153,7 @@ namespace PlanetGame.Shaders.Dispatchers
 				.. Utilities.ToBytesSingle(PlanetController.MorphRange.X),
 				.. Utilities.ToBytesSingle(PlanetController.MorphRange.Y),
 
-				.. Utilities.ToBytesSingle(Utilities.ToProjection(PlanetController.GetPlanetLocalToWorldTransform())),
+				.. Utilities.ToBytesSingle(Utilities.ToProjection(PlanetController.GetPlanetTransform())),
 				.. Utilities.ToBytesSingle(MainCamera.GetViewProjectionMatrix()),
 				.. Utilities.ToBytesSingle(VectorUtils.ToVector4(MainCamera.GlobalPosition, Mathf.Tan(MainCamera.GetCameraFov(true) / 2))),
 			];
@@ -161,10 +161,10 @@ namespace PlanetGame.Shaders.Dispatchers
 			return [.. data];
 		}
 
-		private byte[] GetInitialGlobalKeyData()
+		private static byte[] GetInitialGlobalKeyData()
 		{
 			return [.. Utilities.ToBytes([
-				0u,
+				3u,
 				uint.MaxValue,
 				0u,
 				.. new uint[32]

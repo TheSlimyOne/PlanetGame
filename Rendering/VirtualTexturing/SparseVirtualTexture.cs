@@ -276,12 +276,10 @@ namespace PlanetGame.Rendering.VirtualTexturing
 
         }
 
-        // public Vector3 GetMouseClickPosition(Vector2 mousePosition)
-        // {
-        //     // Vector3 mouse = SvtFeedbackRenderPass.GetMousePosition(mousePosition);
-
-        //     return mouse;
-        // }
+        public Vector3 GetLocalMousePosition(Vector2 mousePosition, Vector2 screenSize)
+        {
+            return SvtFeedbackRenderPass.GetLocalMousePosition(mousePosition, screenSize);
+        }
 
         public void CleanupGPUResources()
         {

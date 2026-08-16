@@ -1,11 +1,13 @@
 [gd_scene format=3 uid="uid://c1roirj1ei3ci"]
 
 [ext_resource type="Script" uid="uid://b4tv1heidhb4j" path="res://Planet/PlanetController.cs" id="1_qtwtp"]
-[ext_resource type="Texture2D" uid="uid://blsfgfpl1on6b" path="res://Assets/Images/panorama_image.png" id="3_ldv5r"]
+[ext_resource type="Texture2D" uid="uid://ejlq5akl3icw" path="res://Assets/Images/panorama_image.png" id="3_ldv5r"]
 [ext_resource type="Script" uid="uid://dmhjqmw6g7d2t" path="res://Player/UI/UIController.cs" id="3_qtwtp"]
 [ext_resource type="Script" uid="uid://b6ndo6pet2jv4" path="res://Player/Camera/CameraController.cs" id="5_usljo"]
 [ext_resource type="Script" uid="uid://bker53ypetnsk" path="res://Player/Camera/OrbitalCamera3D.cs" id="6_ldv5r"]
 [ext_resource type="PackedScene" uid="uid://dopn8o46guiih" path="res://Assets/Models/Camera.blend" id="6_qtwtp"]
+
+[sub_resource type="SphereMesh" id="SphereMesh_f8uwt"]
 
 [sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_eodwd"]
 panorama = ExtResource("3_ldv5r")
@@ -33,18 +35,20 @@ Radius = 500.0
 CameraController = NodePath("CameraController")
 SurfaceAttachment = NodePath("SurfaceAttachment")
 UIController = NodePath("UIController")
-PointRadius = 80.0
-TotalDebugInstances = 25
 MainLightSource = NodePath("SurfaceAttachment/MainLightSource")
 WorldEnvironment = NodePath("WorldEnvironment")
 BaseZoomSpeed = 1.0
 BaseRotationSpeed = 1.0
 MovementEasing = 10.0
-Resolution = 5
+Resolution = 17
 MorphRange = Vector2(0.49, 0.51)
 StartingLod = 0
+PointRadius = 0.25
 IsCulling = false
 Verbose = true
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=2059454453]
+mesh = SubResource("SphereMesh_f8uwt")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=113934984]
 environment = SubResource("Environment_qqt2a")
@@ -56,6 +60,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+mouse_filter = 1
 script = ExtResource("3_qtwtp")
 PlanetController = NodePath("..")
 _lblKeyCount = NodePath("DebugStats/KeyCount")
@@ -132,6 +137,7 @@ anchor_bottom = 1.0
 offset_left = -231.0
 grow_horizontal = 0
 grow_vertical = 2
+mouse_filter = 0
 
 [node name="btnCubeMode" type="Button" parent="UIController/Buttons" unique_id=1562243158]
 layout_mode = 2

@@ -10,6 +10,8 @@ uniform float minimum_lod;
 uniform int tile_size;
 uniform mat4 planet_transform_matrix;
 
+uniform float current_lod;
+
 uniform sampler2DArray height_map_tile_cache : repeat_disable, source_color, filter_linear;
 uniform sampler2DArray terrain_indirection_table : repeat_disable, source_color, filter_nearest;
 
@@ -40,22 +42,22 @@ void vertex() {
 	flags = key.w >> 29u;
 	key.w &= 0xFu;
 	
-	float vertex_spacing = 1.0 / float(resolution - 1);
-	if (flags == 0u || flags == 2u)
-	{
-		if (VERTEX.x == 0.0) {
-			int vertex_index = int(VERTEX.y * float(resolution - 1));
-			if ((vertex_index & 1) == 1)
-				VERTEX.y -= vertex_spacing;
-		}
-	} else if (flags == 1u || flags == 3u)
-	{
-		if (VERTEX.y == 0.0) {
-			int vertex_index = int(VERTEX.x * float(resolution - 1));
-			if ((vertex_index & 1) == 1)
-				VERTEX.x -= vertex_spacing;
-		}
-	}
+	//float vertex_spacing = 1.0 / float(resolution - 1);
+	//if (flags == 0u || flags == 2u)
+	//{
+		//if (VERTEX.x == 0.0) {
+			//int vertex_index = int(VERTEX.y * float(resolution - 1));
+			//if ((vertex_index & 1) == 1)
+				//VERTEX.y -= vertex_spacing;
+		//}
+	//} else if (flags == 1u || flags == 3u)
+	//{
+		//if (VERTEX.y == 0.0) {
+			//int vertex_index = int(VERTEX.x * float(resolution - 1));
+			//if ((vertex_index & 1) == 1)
+				//VERTEX.x -= vertex_spacing;
+		//}
+	//}
 
 	mat3 quadtree_space = leaf_space_to_quadtree_space(key.xy);
 	mat3 polygon_space = quadtree_space_to_polygon_space(key.z, key.w);
@@ -87,14 +89,17 @@ void vertex() {
 	}
 	
 	lod = get_lod_of_key(key.xy);
-	vec3 world_position = get_world_space_point(local_point, planet_transform_matrix);
-	
 	int non_negative_mip_index = lod_to_mip_map[lod] + high_resolution_mip_count;
 	int total_resolution_mip_count = low_resolution_mip_count + high_resolution_mip_count;
+	float lod_scale = pow(2.0, float(int(current_lod)));
+	
+	vec3 world_position = get_world_space_point(local_point, planet_transform_matrix);
 	vec3 tile_uv = get_tile_uv(terrain_indirection_table, non_negative_mip_index, tile_size, vertex_uv, int(key.z), low_resolution_mip_count, high_resolution_mip_count);
 	elevation = get_tile(height_map_tile_cache, tile_uv).r;
 	
-
 	NORMAL = (vec4(local_point, 1) * get_rotation_from_matrix(planet_transform_matrix)).xyz;
 	VERTEX = world_position + NORMAL * height_scale * elevation;
+	
+	//VERTEX *= lod_scale;
+	
 }
