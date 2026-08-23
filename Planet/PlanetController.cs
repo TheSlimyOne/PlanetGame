@@ -7,6 +7,7 @@ using PlanetGame.Util;
 using PlanetGame.Rendering.VirtualTexturing;
 using PlanetGame.Shaders.Dispatchers;
 using System.Linq;
+using PlanetGame.Util.DebugUIComponents;
 
 public partial class PlanetController : Node3D
 {
@@ -34,6 +35,8 @@ public partial class PlanetController : Node3D
     [Export] public float BaseZoomSpeed { get; set; }
     [Export] public float BaseRotationSpeed { get; set; }
     [Export] public float MovementEasing { get; set; }
+    [Export] public float MinDistanceFromSurface { get; set; } = 0.05f;
+
 
     [ExportGroup("Rendering Settings")]
     [Export] public int MaximumKeys { get; set; } = 40000;
@@ -49,12 +52,6 @@ public partial class PlanetController : Node3D
     [Export] public bool IsCube { get; set; } = false;
     [Export] public bool IsCulling { get; set; } = true;
     [Export] public bool IsMorphing { get; set; } = true;
-    [Export] public bool DisableVirtualTexturing { get; set; } = false;
-    [Export] public bool DisableTesselation { get; set; } = false;
-    [Export] public bool DisableInputMouseInput { get; set; } = false;
-    [Export] public bool IsSimulateRotation { get; set; } = true;
-
-    [Export] public bool Verbose { get => Dispatcher<Enum>.Verbose; set => Dispatcher<Enum>.Verbose = value; }
 
     private int _resolution;
 
@@ -148,9 +145,47 @@ public partial class PlanetController : Node3D
         }
     }
 
+    private void BindDebugSettings()
+    {        
+        
+
+        DebugMenuController.Instance.AddSection("Planet", 0);
+        DebugMenuController.Instance.AddSlider("Radius", "Planet", () => Radius, value => Radius = value, 1.0f, 8000.0f, 1.0f);
+        DebugMenuController.Instance.AddSlider("Height Scale", "Planet", () => HeightScale, value => HeightScale = value, 0.0f, 0.25f, 0.005f);
+        DebugMenuController.Instance.AddActionButton("Quit", "Planet", () => GetTree().ChangeSceneToFile("res://main.tscn"));
+
+        DebugMenuController.Instance.AddSection("Rendering", 0);
+        DebugMenuController.Instance.AddSlider("Resolution", "Rendering", () => Resolution, value => Resolution = value, 2, 17, 1);
+        DebugMenuController.Instance.AddButton("Render Cube Mode", "Rendering", () => IsCube, () => IsCube = !IsCube);
+        DebugMenuController.Instance.AddButton("Render Culling", "Rendering", () => IsCulling, () => IsCulling = !IsCulling);
+        DebugMenuController.Instance.AddButton("Render Morphing", "Rendering", () => IsMorphing, () => IsMorphing = !IsMorphing);
+        DebugMenuController.Instance.AddButton("Render Tile UVs", "Rendering", () => SurfaceShader.GetParameter<bool>("render_tile_uvs"), () => SurfaceShader.SetParameter("render_tile_uvs", !SurfaceShader.GetParameter<bool>("render_tile_uvs")));
+        DebugMenuController.Instance.AddButton("Render Keys", "Rendering", () => SurfaceShader.GetParameter<bool>("show_keys"), () => SurfaceShader.SetParameter("show_keys", !SurfaceShader.GetParameter<bool>("show_keys")));
+        DebugMenuController.Instance.AddButton("Render Indirection Age", "Rendering", () => SurfaceShader.GetParameter<bool>("show_indirection_age"), () => SurfaceShader.SetParameter("show_indirection_age", !SurfaceShader.GetParameter<bool>("show_indirection_age")));
+        DebugMenuController.Instance.AddButton("Render Cached Tiles", "Rendering", () => SurfaceShader.GetParameter<bool>("show_in_cache"), () => SurfaceShader.SetParameter("show_in_cache", !SurfaceShader.GetParameter<bool>("show_in_cache")));
+
+        DebugMenuController.Instance.AddSection("Tessellation", 0);
+        DebugMenuController.Instance.AddButton("Enable Tessellation", "Tessellation", () => !TerrainTessellator.Paused, () => TerrainTessellator.Paused = !TerrainTessellator.Paused);
+
+        DebugMenuController.Instance.AddSection("Virtual Texturing", 0);
+        DebugMenuController.Instance.AddActionButton("Wipe Virtual Texture", "Virtual Texturing", SparseVirtualTexture.ClearVirtualTexture);
+        DebugMenuController.Instance.AddButton("Enable Virtual Texturing", "Virtual Texturing", () => !SparseVirtualTexture.Paused, () => SparseVirtualTexture.Paused = !SparseVirtualTexture.Paused);
+
+        DebugMenuController.Instance.AddTexture("State Table", "Virtual Texturing", SparseVirtualTexture.StateTable.CreateVisualization());
+        DebugMenuController.Instance.AddTexture("Indirection Table", "Virtual Texturing", SparseVirtualTexture.IndirectionTable.CreateVisualization());
+        DebugMenuController.Instance.AddTexture("Residency Table", "Virtual Texturing", SparseVirtualTexture.ResidencyTable.CreateVisualization());
+        DebugMenuController.Instance.AddTexture("Albedo Tile Cache", "Virtual Texturing", SparseVirtualTexture.AlbedoTileCache.CreateVisualization("Albedo"));
+        DebugMenuController.Instance.AddTexture("Height Tile Cache", "Virtual Texturing", SparseVirtualTexture.HeightTileCache.CreateVisualization("Height"));
+
+        DebugMenuController.Instance.AddTexture("Flatten Indirection Table", "Virtual Texturing", SparseVirtualTexture.ConsolidatedIndirectionTable.CreateVisualization());
+    
+
+    }
+
     private Rid _terrainInstance;
     public override void _Ready()
     {
+        //TODO move this somewhere else
         string saveName = SaveManager.CurrentSave;
         if (string.IsNullOrWhiteSpace(saveName))
         {
@@ -158,7 +193,7 @@ public partial class PlanetController : Node3D
             SaveManager.CurrentSave = saveName;
 
         }
-        SaveManager.WorldSave save = SaveManager.GetSave(saveName);
+
 
         SurfaceShader = new() { Shader = GD.Load<Shader>(ShaderPaths.GD_PLANET_TESSELLATION_PATH) };
 
@@ -168,21 +203,34 @@ public partial class PlanetController : Node3D
 
         _resolution = Resolution;
 
-        TerrainTessellator = new(this, save, PlanetMultiMesh, MainCamera);
+        TerrainTessellator = new(this);
+        TerrainTessellator.CreateUniforms();
 
-        SparseVirtualTexture = new(TerrainTessellator, save, PlanetMultiMesh.Mesh);
+        Vector2I viewSize = new(1024, 512);
+        SparseVirtualTexture = new(this, viewSize);
+        SparseVirtualTexture.CreateUniforms();
 
         BindShaderParameters(SurfaceShader, CameraController.GetCamera("Main"));
-
-        SparseVirtualTexture.CreateDebugWindow(UIController.DebugContainer);
 
         PlanetCollisionController = new(this);
         PlanetCollisionController.GenerateBaseCollisionMesh();
         SurfaceAttachment.AddChild(PlanetCollisionController.CollisionBody);
         SurfaceAttachment.AddChild(CollisionTestSpheres);
+        // SparseVirtualTexture.CreateDebugWindow();
+        BindDebugSettings();
+
     }
 
     #region Process
+
+    private double _heightUpdateTimer;
+    private float _targetHeightOffset;
+    private bool _hasTargetHeightOffset;
+    private bool _hasTargetUnderground;
+
+    private const double HEIGHT_UPDATE_INTERVAL = 0.5;
+    private const float HEIGHT_INTERPOLATION_SPEED = 2;
+
     public override void _Process(double delta)
     {
         if (Quiting)
@@ -202,21 +250,48 @@ public partial class PlanetController : Node3D
             SparseVirtualTexture.ClearVirtualTexture();
         }
 
-        if (TerrainTessellator == null || SparseVirtualTexture == null) return;
+        if (TerrainTessellator == null || SparseVirtualTexture == null)
+            return;
 
-        TerrainTessellator.Paused = DisableTesselation;
-        SparseVirtualTexture.Paused = DisableVirtualTexturing;
+        VTData virtualTextureData = SaveManager.GetCurrentSave().GetSVTData();
 
-        VTData virtualTextureData = SaveManager.GetSVTData(SaveManager.GetCurrentSave());
+        _heightUpdateTimer += delta;
 
-        float heightOffset = GetHeightAtPoint(MainCamera.GlobalPosition, TerrainTessellator.MaxLod, virtualTextureData);
-        if (!float.IsNaN(heightOffset))
+        if (_heightUpdateTimer >= HEIGHT_UPDATE_INTERVAL)
         {
-            float pointHeight = heightOffset;
-            float cameraHeight = MainCamera.DistanceFromTarget;
+            _heightUpdateTimer = 0;
 
-            HeightOffset = cameraHeight > pointHeight ? heightOffset : HeightOffset;
+            float heightOffset = GetHeightAtPoint(MainCamera.GlobalPosition, TerrainTessellator.MaxLod, virtualTextureData);
+
+            if (!float.IsNaN(heightOffset))
+            {
+                _targetHeightOffset = heightOffset;
+
+                if (MainCamera.DistanceFromTarget > heightOffset)
+                {
+                    _hasTargetHeightOffset = true;
+                    _hasTargetUnderground = false;
+                }
+                else
+                {
+                    _hasTargetHeightOffset = false;
+                    _hasTargetUnderground = true;
+                }
+            }
         }
+        if (_hasTargetHeightOffset)
+        {
+            HeightOffset = Mathf.Lerp(
+                HeightOffset,
+                _targetHeightOffset,
+                1.0f - Mathf.Exp(-HEIGHT_INTERPOLATION_SPEED * (float)delta)
+            );
+        }
+        else if (_hasTargetUnderground)
+        {
+            HeightOffset = _targetHeightOffset;
+        }
+
 
         TerrainTessellator.Invoke();
         SparseVirtualTexture.Invoke();
@@ -255,11 +330,11 @@ public partial class PlanetController : Node3D
     }
 
     private Vector3 _direction = Vector3.Zero;
+
     public bool HasMoved { get; private set; }
 
     void ProcessMovement(double delta)
     {
-
         float by = (float)delta;
 
         _direction.X += Input.GetActionStrength("move_left") - Input.GetActionStrength("move_right");
@@ -267,30 +342,41 @@ public partial class PlanetController : Node3D
         _direction.Z += Input.GetActionStrength("move_forward") - Input.GetActionStrength("move_backward");
         _direction = _direction.Clamp(-1, 1);
 
-        float zoomSpeed = BaseZoomSpeed * (MainCamera.DistanceFromTarget / Radius);
-        float rotationSpeed = BaseRotationSpeed * (MainCamera.DistanceFromTarget / Radius);
+
+
+        float minimumDistance = HeightOffset + MinDistanceFromSurface;
+
+        // GD.PrintS(MainCamera.DistanceFromTarget, minimumDistance);
+
+        if (MainCamera.DistanceFromTarget < minimumDistance)
+            MainCamera.DistanceFromTarget = minimumDistance;
+
+        float altitude = Mathf.Max(MainCamera.DistanceFromTarget - HeightOffset, 1.0f);
+        float altitudeRatio = Mathf.Max(altitude / Radius, 0.0001f);
+        float speedScale = Mathf.Pow(altitudeRatio, 1.1f);
+
+        float zoomSpeed = BaseZoomSpeed * speedScale;
+        float rotationSpeed = BaseRotationSpeed * speedScale;
 
         Vector3 forward = PlanetTranslation.Origin.DirectionTo(MainCamera.GlobalPosition);
         Vector3 right = MainCamera.Basis.X;
         Vector3 up = forward.Cross(right).Normalized();
-        
+
         RotatePlanet(right, rotationSpeed * by * _direction.Z);
         RotatePlanet(up, rotationSpeed * by * _direction.X);
+
     
-        if (IsSimulateRotation)
-        {
-            // External Objects that need to rotate to simulate the rotation effect
-            WorldEnvironment.Environment.SkyRotation = PlanetRotation.Basis.GetEuler();
-            SurfaceAttachment.Transform = GetPlanetTransform(scale: false);
-        }
+        WorldEnvironment.Environment.SkyRotation = PlanetRotation.Basis.GetEuler();
+        SurfaceAttachment.Transform = GetPlanetTransform(scale: false);
+        
 
         MainCamera.DistanceFromTarget += zoomSpeed * Radius * _direction.Y * by;
 
-        MainCamera.DistanceFromTarget = Mathf.Clamp(MainCamera.DistanceFromTarget, 0.05f, MainCamera.MaxDistance);
+        MainCamera.DistanceFromTarget = Mathf.Clamp(MainCamera.DistanceFromTarget, HeightOffset + MinDistanceFromSurface, MainCamera.MaxDistance);
+
         UIController.SetDistance(MainCamera.DistanceFromTarget);
 
         HasMoved = !_direction.IsZeroApprox() || MainCamera.HasMoved;
-
 
         _direction = _direction.Lerp(Vector3.Zero, (float)(MovementEasing * delta));
     }
@@ -312,9 +398,6 @@ public partial class PlanetController : Node3D
     {
         if (@event is InputEventMouseButton mouseEvent)
         {
-            if (DisableInputMouseInput)
-                return;
-
             if (mouseEvent.ButtonIndex == MouseButton.Right && mouseEvent.Pressed)
             {
                 MainLightSource.Transform = PlanetRotation.Inverse();
@@ -369,7 +452,7 @@ public partial class PlanetController : Node3D
 
                 if (false)
                 {
-                    VTData virtualTextureData = SaveManager.GetSVTData(SaveManager.GetCurrentSave());
+                    VTData virtualTextureData = SaveManager.GetCurrentSave().GetSVTData();
                     PlanetCollisionController.CreateCollisionPlane(virtualTextureData);
 
                 }
@@ -492,7 +575,7 @@ public partial class PlanetController : Node3D
 
     public void BindShaderParameters(BindableShaderMaterial bindableShaderMaterial, CustomCamera main)
     {
-        VTData vtData = SaveManager.GetSVTData(SaveManager.GetCurrentSave());
+        VTData vtData = SaveManager.GetCurrentSave().GetSVTData();
 
         bindableShaderMaterial.FrameDependentBind("radius", () => Radius);
         bindableShaderMaterial.FrameDependentBind("height_scale", () => Radius * HeightScale);
@@ -518,6 +601,7 @@ public partial class PlanetController : Node3D
 
         bindableShaderMaterial.Bind("low_resolution_mip_count", () => vtData.LowResolutionMipCount);
         bindableShaderMaterial.Bind("high_resolution_mip_count", () => vtData.HighResolutionMipCount);
+        bindableShaderMaterial.Bind("total_tile_slots", () => TileCache.DEFAULT_TILE_SLOTS_COUNT);
 
         bindableShaderMaterial.Bind("albedo_tile_cache", () => SparseVirtualTexture.AlbedoTileCache.Cache);
         bindableShaderMaterial.UpdateAllParameters();

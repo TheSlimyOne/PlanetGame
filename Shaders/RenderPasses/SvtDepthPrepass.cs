@@ -88,7 +88,8 @@ public partial class SvtDepthPrepass : RenderPass<SvtDepthPrepass.BufferNames>
         CreateUniformSet();
     }
 
-    public override void Invoke()
+    #nullable enable
+    public override void Invoke(byte[]? pushConstants = null)
     {
         long drawList = RenderingDevice.DrawListBegin(
             _framebuffer,

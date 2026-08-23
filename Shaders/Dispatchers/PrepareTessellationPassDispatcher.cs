@@ -7,8 +7,8 @@ namespace PlanetGame.Shaders.Dispatchers
 {
     public partial class PrepareTessellationPassDispatcher : Dispatcher<PrepareTessellationPassDispatcher.BufferNames>
     {
+        public PlanetController PlanetController { get; set; }
         public ExecuteTessellationPassDispatcher ExecuteTessellationPass { get; set; }
-        public MultiMeshRD PlanetMultimesh { get; set; }
 
         public enum BufferNames
         {
@@ -27,7 +27,7 @@ namespace PlanetGame.Shaders.Dispatchers
 
         public override void CreateUniforms()
         {
-            (Vector3[] vertices, int[] indices, Vector3[] _, Vector2[] __) meshData = PlanetMultimesh.GetMeshData();
+            (Vector3[] vertices, int[] indices, Vector3[] _, Vector2[] __) meshData = PlanetController.PlanetMultiMesh.GetMeshData();
             _computeShaderUniforms = new System.Collections.Generic.Dictionary<Enum, ShaderUniform>()
             {
                 [BufferNames.ATOMIC_COUNTER] = ExecuteTessellationPass[ExecuteTessellationPassDispatcher.BufferNames.ATOMIC_COUNTER],
@@ -44,7 +44,7 @@ namespace PlanetGame.Shaders.Dispatchers
 
                 [BufferNames.MULTIMESH_COMMAND_BUFFER] = new StorageBufferUniform(this, RenderingDevice,
                     (int)BufferNames.MULTIMESH_COMMAND_BUFFER,
-                    PlanetMultimesh.CommandBuffer,
+                    PlanetController.PlanetMultiMesh.CommandBuffer,
                     perserve: true
                 ),
 

@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://dopn8o46guiih"
-path="res://.godot/imported/Camera.blend-e5567c713c4cd13c1abd8caa54f80216.scn"
+uid="uid://kbukuqjptjbq"
+path="res://.godot/imported/arrow.blend-9ff7d1dde7b3ed11736f4bf39421fa2a.scn"
 
 [deps]
 
-source_file="res://Assets/Models/Camera.blend"
-dest_files=["res://.godot/imported/Camera.blend-e5567c713c4cd13c1abd8caa54f80216.scn"]
+source_file="res://Assets/Models/Scenes/arrow.blend"
+dest_files=["res://.godot/imported/arrow.blend-9ff7d1dde7b3ed11736f4bf39421fa2a.scn"]
 
 [params]
 

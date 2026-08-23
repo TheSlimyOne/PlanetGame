@@ -1,0 +1,30 @@
+[gd_scene format=3 uid="uid://b357dwcf50ngv"]
+
+[ext_resource type="Script" path="res://Util/Debug Menu Utils/ButtonComponent.cs" id="1_2ktfe"]
+
+[node name="ButtonComponent" type="PanelContainer" unique_id=596398719]
+script = ExtResource("1_2ktfe")
+
+[node name="ButtonMargin" type="MarginContainer" parent="." unique_id=743970355]
+layout_mode = 2
+
+[node name="ButtonContent" type="HBoxContainer" parent="ButtonMargin" unique_id=1980605306]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Label" type="Label" parent="ButtonMargin/ButtonContent" unique_id=798631381]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Button"
+
+[node name="Spacer" type="Control" parent="ButtonMargin/ButtonContent" unique_id=1174833691]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Button" type="Button" parent="ButtonMargin/ButtonContent" unique_id=962630138]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(50, 0)
+layout_mode = 2
+focus_mode = 0
+toggle_mode = true
+text = "OFF"

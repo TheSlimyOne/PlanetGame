@@ -18,6 +18,10 @@ config/name="Main Planet Game"
 run/main_scene="uid://b51tva3mp4mna"
 config/features=PackedStringArray("4.7", "C#", "Forward Plus")
 
+[autoload]
+
+DebugMenu="*uid://pgt60iuoseua"
+
 [display]
 
 window/subwindows/embed_subwindows=false

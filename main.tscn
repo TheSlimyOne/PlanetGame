@@ -1,8 +1,8 @@
 [gd_scene format=3 uid="uid://b51tva3mp4mna"]
 
-[ext_resource type="Script" uid="uid://bg23ka1dyr38v" path="res://Player/MainMenu.cs" id="1_idj7w"]
-[ext_resource type="Script" uid="uid://o8r7ootm7ppm" path="res://Menu/DemoPlanet.cs" id="2_idj7w"]
-[ext_resource type="Script" uid="uid://cv0ny5p7gmgpf" path="res://Menu/ResponsiveFileDialog.cs" id="3_kln2b"]
+[ext_resource type="Script" uid="uid://cfum363upbfue" path="res://Player/MainMenu.cs" id="1_idj7w"]
+[ext_resource type="Script" uid="uid://g10tcfqg7xgu" path="res://Menu/DemoPlanet.cs" id="2_idj7w"]
+[ext_resource type="Script" uid="uid://dnbxdkwelq3hg" path="res://Menu/ResponsiveFileDialog.cs" id="3_kln2b"]
 
 [sub_resource type="SphereMesh" id="SphereMesh_kln2b"]
 
@@ -220,8 +220,6 @@ script = ExtResource("3_kln2b")
 [connection signal="pressed" from="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/Load Section/btnRegenerate" to="." method="OnLoad"]
 [connection signal="pressed" from="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/Load Section/btnLoad" to="." method="OnLoad"]
 [connection signal="pressed" from="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/Load Section/btnOpenSaves" to="." method="OpenSavesFolder"]
-[connection signal="pressed" from="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/New Game Section/btnUploadAlbedo" to="." method="OpenFileDialog" binds= ["ALBEDO"]]
-[connection signal="pressed" from="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/New Game Section/btnUploadHeight" to="." method="OpenFileDialog" binds= ["HEIGHT"]]
 [connection signal="pressed" from="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/New Game Section/btnStartNewGame" to="." method="OnStartNewGame"]
 [connection signal="pressed" from="CenterContainer/VBoxContainer/btnQuit" to="." method="OnQuit"]
 [connection signal="file_selected" from="FileDialog" to="FileDialog" method="OnFileSelected"]

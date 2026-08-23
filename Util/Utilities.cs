@@ -120,6 +120,17 @@ namespace PlanetGame.Util
             );
         }
 
+        public static byte[] ToViewPushConstants(Projection viewProjectionMatrix, Vector3 cameraPosition, float fovy)
+        {
+            byte[] data =
+            [
+                .. ToBytesSingle(viewProjectionMatrix),
+                .. ToBytesSingle(VectorUtils.ToVector4(cameraPosition, fovy)),
+            ];
+
+            return data;
+        }
+
         public static MeshInstance3D DrawLineDebug(Node node, Vector3 from, Vector3 to, Color color)
         {
             ImmediateMesh lineMesh = new();

@@ -13,15 +13,25 @@ namespace Shaders
         private Dictionary<string, Callable> _parameters { get; set; } = [];
         private Dictionary<string, Callable> _frameDependentParameters { get; set; } = [];
 
-        public void Bind<T>(string parameterName, Func<T> callable)
+        public void Bind<[MustBeVariant] T>(string parameterName, Func<T> callable)
         {
             _parameters[parameterName] = Callable.From(callable);
         }
 
-        public void FrameDependentBind<T>(string parameterName, Func<T> callable)
+        public void FrameDependentBind<[MustBeVariant] T>(string parameterName, Func<T> callable)
         {
             Bind(parameterName, callable);
             _frameDependentParameters[parameterName] = Callable.From(callable);
+        }
+
+        
+        public T GetParameter<[MustBeVariant] T>(string parameterName)
+        {
+            return GetShaderParameter(parameterName).As<T>();
+        }
+        public void SetParameter(string parameterName, Variant value)
+        {
+            SetShaderParameter(parameterName, value);
         }
     
         public void UpdateAllParameters()

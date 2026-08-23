@@ -84,4 +84,6 @@ public partial class CameraController : Node
 		return GetTree().Root.GetViewport().GetCamera3D();
 	}
 
+	
+
 }

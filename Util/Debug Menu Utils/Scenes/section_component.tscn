@@ -1,0 +1,42 @@
+[gd_scene format=3 uid="uid://dllfps5m0365e"]
+
+[ext_resource type="Script" path="res://Util/Debug Menu Utils/SectionComponent.cs" id="1_p1s7a"]
+
+[node name="SectionComponent" type="PanelContainer" unique_id=2005580041]
+script = ExtResource("1_p1s7a")
+
+[node name="SectionMargin" type="MarginContainer" parent="." unique_id=446770893]
+layout_mode = 2
+
+[node name="SectionContent" type="VBoxContainer" parent="SectionMargin" unique_id=1443561837]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="LabelMargin" type="MarginContainer" parent="SectionMargin/SectionContent" unique_id=756879086]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="LabelContainer" type="HBoxContainer" parent="SectionMargin/SectionContent/LabelMargin" unique_id=1894738382]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 0
+
+[node name="Label" type="Label" parent="SectionMargin/SectionContent/LabelMargin/LabelContainer" unique_id=466642310]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Section"
+
+[node name="ContentRow" type="HBoxContainer" parent="SectionMargin/SectionContent" unique_id=161285750]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ContentIndent" type="Control" parent="SectionMargin/SectionContent/ContentRow" unique_id=1410941779]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(20, 0)
+layout_mode = 2
+
+[node name="Content" type="VBoxContainer" parent="SectionMargin/SectionContent/ContentRow" unique_id=1410941780]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3

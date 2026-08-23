@@ -58,7 +58,9 @@ public abstract class RenderPass<TEnum> : IRenderable where TEnum : Enum
 
     // TODO maybe rename this to resetUniforms
     public abstract void UpdateUniforms();
-    public abstract void Invoke();
+    
+    #nullable enable
+    public abstract void Invoke(byte[]? pushConstants = null);
     public abstract void CreateUniforms();
 
     public virtual void SetupShader(Mesh mesh)
@@ -243,7 +245,7 @@ public abstract class RenderPass<TEnum> : IRenderable where TEnum : Enum
         RenderingDevice.Sync();
     }
 
-    static public bool Verbose = false;
+    public bool Verbose = false;
     public virtual void CleanupGPU()
     {
         

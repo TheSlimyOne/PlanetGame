@@ -146,7 +146,7 @@ public partial class MainMenu : MarginContainer
 	public void OnLoad()
 	{
 		CurrentSave = SelectedSave;
-		GetTree().ChangeSceneToFile("res://Scenes/Planet.tscn");
+		GetTree().ChangeSceneToFile("res://Planet/Scenes/planet.tscn");
 	}
 	public void OnRenerateTiles()
 	{

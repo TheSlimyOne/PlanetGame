@@ -32,29 +32,28 @@ layout(set = 0, binding = 4, std430) buffer restrict writeonly WriteCullList {
 };
 
 layout(set = 0, binding = 5, std430) buffer restrict readonly ExternalData {
-    int low_resolution_mip_count;
-    int high_resolution_mip_count;
-    int tile_size;
-	int lod_to_mip_map[32];
+	int low_resolution_mip_count;
+	int high_resolution_mip_count;
+	int tile_size;
+	int resolution;
 
 	float radius;
-	int resolution;
 	float height_scale;
 	float sub_factor;
 	uint debug_flags;
 
 	int maximum_lod;
 	int minimum_lod;
-
-	vec2 morph_range;
+	float height_offset;
+	float _padding0;
 
 	mat4 planet_transform_matrix;
-	mat4 view_projection_matrix;
-	vec4 camera_position_fovy;
 
-    float height_offset;
+	vec2 morph_range;
+	vec2 _padding1;
+
+	int lod_to_mip_map[32];
 };
-
 
 layout(set = 0, binding = 6, std430) buffer restrict OutputBuffer {
     float data[];
@@ -66,6 +65,11 @@ layout(set = 0, binding = 7, std430) buffer restrict GlobalKeyData {
     uint stable_key_count;
     uint total_keys_per_lod[32];
 };
+
+layout(push_constant, std430) uniform PushConstants {
+	mat4 view_projection_matrix;
+	vec4 camera_position_fovy;
+} push_constants;
 
 #[include] res://Shaders/GLSL/ShaderIncludes/TesselationFunctions.inc
 
@@ -98,7 +102,7 @@ void set_multimesh_data(uint index, uvec4 key) {
     output_buffer.data[20 * index + 19] = uintBitsToFloat(key.w);
 }
 float distance_from_cam(vec3 from, mat4 planet_transform_matrix) {
-    return distance(polygon_space_to_world_space(from, planet_transform_matrix), camera_position_fovy.xyz); 
+    return distance(polygon_space_to_world_space(from, planet_transform_matrix), push_constants.camera_position_fovy.xyz); 
 }
 
 bool triangle_in_horizon(vec3 point) {
@@ -107,15 +111,15 @@ bool triangle_in_horizon(vec3 point) {
     
     float distance_from_planet = distance_from_cam(planet_transform_matrix[3].xyz, planet_transform_matrix);
     float distance_from_horizon = sqrt(pow(distance_from_planet, 2) - pow(radius, 2));
-    vec3 to_planet_from_cam = planet_transform_matrix[3].xyz - camera_position_fovy.xyz;
+    vec3 to_planet_from_cam = planet_transform_matrix[3].xyz - push_constants.camera_position_fovy.xyz;
     vec3 object_point_ignore_height = polygon_space_to_world_space(spherical_point, planet_transform_matrix);
 
-    vec3 to_point_on_sphere_from_cam = object_point_ignore_height - camera_position_fovy.xyz;
+    vec3 to_point_on_sphere_from_cam = object_point_ignore_height - push_constants.camera_position_fovy.xyz;
     float angle_of_horizon = acos(distance_from_horizon / distance_from_planet);
     float angle_from_point_to_cam_to_planet = acos(dot(normalize(to_point_on_sphere_from_cam), normalize(to_planet_from_cam)));
 
     float bias1 = 0.5;
-    bool b0 = point_in_frustum(object_point_ignore_height, view_projection_matrix, bias1); // if within view TODO look at bias
+    bool b0 = point_in_frustum(object_point_ignore_height, push_constants.view_projection_matrix, bias1); // if within view TODO look at bias
     bool b1 = (distance_from_horizon + (radius / 2.0)) >= length(to_point_on_sphere_from_cam); // if within horizon's circle
     bool b2 = angle_from_point_to_cam_to_planet <= angle_of_horizon;  // if within horizon
     if ((b0 && b1 && b2) || (b0 && b1) || (b0 && !b2))
@@ -151,10 +155,10 @@ uint get_junction_flags(uvec4 key, Triangle parent_triangle, float lod) {
 
     LodContext lod_context = LodContext(
         planet_transform_matrix,
-        camera_position_fovy.xyz,
+        push_constants.camera_position_fovy.xyz,
         sub_factor,
         radius,
-        camera_position_fovy.w,
+        push_constants.camera_position_fovy.w,
         minimum_lod,
         maximum_lod,
         height_offset
@@ -210,10 +214,10 @@ void main() {
 
     LodContext lod_context = LodContext(
         planet_transform_matrix,
-        camera_position_fovy.xyz,
+        push_constants.camera_position_fovy.xyz,
         sub_factor,
         radius,
-        camera_position_fovy.w,
+        push_constants.camera_position_fovy.w,
         minimum_lod,
         maximum_lod,
         height_offset

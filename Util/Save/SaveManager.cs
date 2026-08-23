@@ -13,6 +13,9 @@ public static class SaveManager
 {
     public struct WorldSave
     {
+        public WorldSave() { }
+
+
         public string BaseDirectory { get; set; }
 
         public string BaseAlbedo { get; set; }
@@ -29,6 +32,10 @@ public static class SaveManager
         public uint HighResolutionMipCount { get; set; }
         public int[] LodToMipMap { get; set; }
         public string[] FallBackTiles { get; set; }
+
+        public Transform3D[] Transforms { get; set; } = [ Transform3D.Identity, Transform3D.Identity, Transform3D.Identity ];
+
+        public readonly VTData GetSVTData() => new(TileSize, LowResolutionMipCount, HighResolutionMipCount, LodToMipMap, FallBackTiles);
     }
 
     public struct SavePaths
@@ -137,7 +144,11 @@ public static class SaveManager
         };
     }
 
-    public static VTData GetSVTData(WorldSave save) => new(save.TileSize, save.LowResolutionMipCount, save.HighResolutionMipCount, save.LodToMipMap, save.FallBackTiles);
+    public static void StoreCurrentTransform(string saveName, Transform3D translation, Transform3D rotation, Transform3D scale)
+    {
+        WorldSave save = GetSave(saveName);
+        save.Transforms = [ translation, rotation, scale ];
+    }
     
     public static async Task WriteNewSave(string saveName, Image albedo, Image heightmap, int lowResolutionMipCount, int highResolutionMipCount, int[] lodToMipMap)
     {

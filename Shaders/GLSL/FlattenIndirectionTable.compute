@@ -4,7 +4,6 @@
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
 layout(set = 0, binding = 0, rgba32f) uniform readonly image2DArray IndirectionTable;
-
 layout(set = 0, binding = 1, rgba32f) uniform writeonly image2DArray ConsolidatedIndirectionTable;
 
 layout(std430, binding = 2) buffer restrict VirtualTextureData {
@@ -20,7 +19,6 @@ layout(std430, binding = 2) buffer restrict VirtualTextureData {
     uint request_buffer_size;
     int _padding0;
 };
-
 
 void main()
 {
@@ -43,7 +41,7 @@ void main()
 
         uvec4 indirection_data = floatBitsToUint(imageLoad(IndirectionTable, ivec3(pixel, layer)));
 
-        if (indirection_data.w != 0u)
+        if (indirection_data.z != 0u)
         {
             indirection_data.y = uint(mip_index);
             result = indirection_data;

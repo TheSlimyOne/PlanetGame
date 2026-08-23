@@ -121,7 +121,7 @@ public abstract class Dispatcher<TEnum> : IDispatchable where TEnum : Enum
         RenderingDevice.Sync();
     }
 
-    static public bool Verbose = false;
+    public bool Verbose = false;
     public virtual void CleanupGPU()
     {
         if (RenderingDevice == null)

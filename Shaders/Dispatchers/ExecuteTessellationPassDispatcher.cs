@@ -11,11 +11,6 @@ namespace PlanetGame.Shaders.Dispatchers
 	{
 		public PlanetController PlanetController { get; set; }
 		public PrepareTessellationPassDispatcher PrepareTessellationPass { get; set; }
-		public CustomCamera MainCamera { get; set; }
-		public MultiMeshRD PlanetMultiMesh { get; set; }
-
-		public SaveManager.WorldSave worldSave;
-
 		public enum BufferNames
 		{
 			ATOMIC_COUNTER,
@@ -86,7 +81,7 @@ namespace PlanetGame.Shaders.Dispatchers
 				),
 
 				[BufferNames.MULTIMESH_BUFFER] = new StorageBufferUniform(this, RenderingDevice, (int)BufferNames.MULTIMESH_BUFFER,
-					PlanetMultiMesh.Buffer, perserve: true
+					PlanetController.PlanetMultiMesh.Buffer, perserve: true
 				),
 
 				[BufferNames.GLOBAL_KEYS_DATA] = new StorageBufferUniform(this, RenderingDevice, (int)BufferNames.GLOBAL_KEYS_DATA,
@@ -102,6 +97,10 @@ namespace PlanetGame.Shaders.Dispatchers
 			long computeList = RenderingDevice.ComputeListBegin();
 			RenderingDevice.ComputeListBindComputePipeline(computeList, _pipeline);
 			RenderingDevice.ComputeListBindUniformSet(computeList, _uniformSet, 0);
+			
+			if (pushConstants != null)
+				RenderingDevice.ComputeListSetPushConstant(computeList, pushConstants, (uint)pushConstants.Length);
+
 			RenderingDevice.ComputeListAddBarrier(computeList);
 			RenderingDevice.ComputeListDispatchIndirect(computeList, PrepareTessellationPass[PrepareTessellationPassDispatcher.BufferNames.EXEC_DISPATCH_BUFFER].Rid, 0);
 			RenderingDevice.ComputeListEnd();
@@ -117,11 +116,8 @@ namespace PlanetGame.Shaders.Dispatchers
 				GetExternalData()
 			);
 		}
-
-
-
-		//TODO make this push-constants
-		private byte[] GetExternalData()
+		
+		public byte[] GetExternalData()
 		{
 			uint debugFlags = Utilities.ToBitFlags([
 				PlanetController.IsCulling,
@@ -129,33 +125,31 @@ namespace PlanetGame.Shaders.Dispatchers
 				PlanetController.IsCube,
 			]);
 
-			VTData vTData = SaveManager.GetSVTData(worldSave);
+			VTData vTData = SaveManager.GetCurrentSave().GetSVTData();
 
 			Array<byte> data =
 			[
 				.. Utilities.ToBytesSingle(vTData.LowResolutionMipCount),
 				.. Utilities.ToBytesSingle(vTData.HighResolutionMipCount),
 				.. Utilities.ToBytesSingle(vTData.TileSize),
-				.. Utilities.ToBytes<int>(vTData.LodToMipMap),
+				.. Utilities.ToBytesSingle(PlanetController.Resolution),
 
 				.. Utilities.ToBytesSingle(PlanetController.Radius),
-				.. Utilities.ToBytesSingle(PlanetController.Resolution),
 				.. Utilities.ToBytesSingle(PlanetController.Radius * PlanetController.HeightScale),
 				.. Utilities.ToBytesSingle(PlanetController.SubFactor),
 				.. Utilities.ToBytesSingle(debugFlags),
 
 				.. Utilities.ToBytesSingle(PlanetController.MaximumLod),
 				.. Utilities.ToBytesSingle(PlanetController.MinimumLod),
+				.. Utilities.ToBytesSingle(PlanetController.HeightOffset),
+				.. Utilities.ToBytesSingle(0.0f),
 
+				.. Utilities.ToBytesSingle(Utilities.ToProjection(PlanetController.GetPlanetTransform())),
 
 				.. Utilities.ToBytesSingle(PlanetController.MorphRange.X),
 				.. Utilities.ToBytesSingle(PlanetController.MorphRange.Y),
 
-				.. Utilities.ToBytesSingle(Utilities.ToProjection(PlanetController.GetPlanetTransform())),
-				.. Utilities.ToBytesSingle(MainCamera.GetViewProjectionMatrix()),
-				.. Utilities.ToBytesSingle(VectorUtils.ToVector4(MainCamera.GlobalPosition, Mathf.Tan(MainCamera.GetCameraFov(true) / 2))),
-
-				.. Utilities.ToBytesSingle(PlanetController.HeightOffset),
+				.. Utilities.ToBytes<int>(vTData.LodToMipMap),
 			];
 
 			return [.. data];
