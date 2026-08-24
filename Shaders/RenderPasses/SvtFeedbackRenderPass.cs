@@ -276,7 +276,6 @@ namespace PlanetGame.Shaders.RenderPasses
 
         public Vector3 GetLocalMousePosition(Vector2 mousePosition, Vector2 screenSize)
         {
-
             Vector2 normalizedMousePosition = mousePosition / screenSize;
 
             Vector2I pixelPosition = new(

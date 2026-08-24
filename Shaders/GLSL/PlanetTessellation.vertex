@@ -15,23 +15,20 @@ layout(set = 0, binding = 0, std430) readonly buffer InstanceBuffer
 layout(set = 0, binding = 1, std430) buffer restrict readonly ExternalData {
 	int low_resolution_mip_count;
 	int high_resolution_mip_count;
-	int tile_size;
 	int resolution;
 
 	float radius;
+
 	float height_scale;
 	float sub_factor;
 	uint debug_flags;
-
 	int maximum_lod;
+
 	int minimum_lod;
 	float height_offset;
-	float _padding0;
+	vec2 morph_range;
 
 	mat4 planet_transform_matrix;
-
-	vec2 morph_range;
-	vec2 _padding1;
 
 	int lod_to_mip_map[32];
 };
@@ -128,7 +125,7 @@ void main()
 	lod = get_lod_of_key(key.xy);
 
 	int non_negative_mip_index = lod_to_mip_map[lod] + high_resolution_mip_count;
-		vec3 tile_cache_uv = get_tile_cache_uv(
+	vec3 tile_cache_uv = get_tile_cache_uv(
 		terrain_indirection_table,
 		vertex_uv,
 		int(key.z),

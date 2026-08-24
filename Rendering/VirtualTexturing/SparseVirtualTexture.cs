@@ -65,140 +65,6 @@ namespace PlanetGame.Rendering.VirtualTexturing
             return ResolveTileRequest?.IsValid() == true && ValidateTileCache?.IsValid() == true && SvtFeedbackRenderPass?.IsValid() == true;
         }
 
-        Control _container;
-        public async void CreateDebugWindow(Control container)
-        {
-            if (!container.IsNodeReady())
-                await container.ToSignal(container, Node.SignalName.Ready);
-
-            await container.ToSignal(container, Control.SignalName.Resized);
-
-            ScrollContainer scrollContainer = new()
-            {
-                Name = "SVTDebugTextures",
-                AnchorsPreset = (int)Control.LayoutPreset.FullRect,
-                AnchorRight = 1.0f,
-                AnchorBottom = 1.0f,
-                OffsetRight = 0.0f,
-                OffsetBottom = 0.0f,
-                LayoutDirection = Control.LayoutDirectionEnum.Rtl
-            };
-
-            BoxContainer boxContainer = container.Size.X <= container.Size.Y ? new VBoxContainer() : new HBoxContainer();
-
-            boxContainer.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-            boxContainer.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
-            boxContainer.LayoutDirection = Control.LayoutDirectionEnum.Ltr;
-
-
-            container.AddChild(scrollContainer);
-            scrollContainer.AddChild(boxContainer);
-
-
-            boxContainer.SetAnchorsPreset(Control.LayoutPreset.FullRect);
-            boxContainer.AddChild(StateTable.CreateVisualization());
-            boxContainer.AddChild(IndirectionTable.CreateVisualization());
-            boxContainer.AddChild(ConsolidatedIndirectionTable.CreateVisualization());
-            boxContainer.AddChild(ResidencyTable.CreateVisualization());
-
-            boxContainer.AddChild(AlbedoTileCache.CreateVisualization("Albedo"));
-            boxContainer.AddChild(HeightTileCache.CreateVisualization("Heightmap"));
-
-            TextureRect rect = new()
-            {
-                Texture = SvtFeedbackRenderPass.GetFrameBufferTexture(),
-                Material = new ShaderMaterial
-                {
-                    Shader = new Shader
-                    {
-                        Code = """
-                            shader_type canvas_item;
-                            render_mode unshaded;
-
-                            uniform int low_resolution_mip_count;
-                            uniform int high_resolution_mip_count;
-                            uniform int grid_size;
-
-                            uint hash_uint(uint value)
-                            {
-                                value ^= value >> 16u;
-                                value *= 0x7FEB352Du;
-                                value ^= value >> 15u;
-                                value *= 0x846CA68Bu;
-                                value ^= value >> 16u;
-                                return value;
-                            }
-
-                            vec3 hash_color(uvec3 value)
-                            {
-                                uint hashed =
-                                    value.x * 0x9E3779B9u ^
-                                    value.y * 0x85EBCA6Bu ^
-                                    value.z * 0xC2B2AE35u;
-
-                                hashed = hash_uint(hashed);
-
-                                return vec3(
-                                    float(hashed & 0xFFu),
-                                    float((hashed >> 8u) & 0xFFu),
-                                    float((hashed >> 16u) & 0xFFu)
-                                ) / 255.0;
-                            }
-
-                            void fragment()
-                            {
-                                ivec2 texture_size = textureSize(TEXTURE, 0);
-                                ivec2 pixel_coords = min(
-                                    ivec2(UV * vec2(texture_size)),
-                                    texture_size - ivec2(1)
-                                );
-
-                                uvec4 feedback = floatBitsToUint(
-                                    texelFetch(TEXTURE, pixel_coords, 0)
-                                );
-
-                                uvec3 indirection_index = feedback.xyz;
-                                bool is_requesting = feedback.w == 1u;
-
-                                COLOR = is_requesting
-                                    ? vec4(hash_color(indirection_index), 1.0)
-                                    : vec4(0.0);
-                            }
-                            """
-                    }
-                }
-            };
-
-            ShaderMaterial material = (ShaderMaterial)rect.Material;
-            material.SetShaderParameter(
-                "low_resolution_mip_count",
-                VirtualTextureData.LowResolutionMipCount
-            );
-            material.SetShaderParameter(
-                "high_resolution_mip_count",
-                VirtualTextureData.HighResolutionMipCount
-            );
-            material.SetShaderParameter(
-                "grid_size",
-                (int)VirtualTextureData.GridSize
-            );
-            boxContainer.AddChild(rect);
-
-            TextureRect rect1 = new() { Texture = SvtFeedbackRenderPass.GetPickingTexture() };
-            boxContainer.AddChild(rect1);
-
-
-            foreach (TextureRect texture in boxContainer.GetChildren().Cast<TextureRect>())
-            {
-                if (boxContainer is VBoxContainer)
-                    texture.ExpandMode = TextureRect.ExpandModeEnum.FitHeightProportional;
-                else
-                    texture.ExpandMode = TextureRect.ExpandModeEnum.FitWidthProportional;
-            }
-
-            _container = boxContainer;
-        }
-
         private const int SIMULATED_DISK_LATENCY_MS = 20;
 
         public async void RequestTileSlot(byte[] bytes)
@@ -285,13 +151,7 @@ namespace PlanetGame.Rendering.VirtualTexturing
 
             ResolveTileRequest.UpdateUniforms();
             ResolveTileRequest.Invoke();
-
-
             ResolveTileRequest.GetTextureIds(Callable.From<byte[]>(RequestTileSlot));
-            
-            
-
-
         }
 
         public Vector3 GetLocalMousePosition(Vector2 mousePosition, Vector2 screenSize)
@@ -301,30 +161,22 @@ namespace PlanetGame.Rendering.VirtualTexturing
 
         public void CleanupGPUResources()
         {
-            _container?.Dispose();
-
             IndirectionTable.DeleteVisualization();
-            // IndirectionTable.CleanupGPU();
             IndirectionTable = default;
             
             ConsolidatedIndirectionTable.DeleteVisualization();
-            // ConsolidatedIndirectionTable.CleanupGPU();
             ConsolidatedIndirectionTable = default;
 
             AlbedoTileCache.DeleteVisualization();
-            // AlbedoTileCache.CleanupGPU();
             AlbedoTileCache = default;
 
             HeightTileCache.DeleteVisualization();
-            // HeightTileCache.CleanupGPU();
             HeightTileCache = default;
 
             ResidencyTable.DeleteVisualization();
-            // ResidencyTable.CleanupGPU();
             ResidencyTable = default;
 
             StateTable.DeleteVisualization();
-            // StateTable.CleanupGPU();
             StateTable = default;
 
             ResolveTileRequest.CleanupGPU();

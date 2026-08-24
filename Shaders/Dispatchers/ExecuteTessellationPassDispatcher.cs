@@ -131,23 +131,21 @@ namespace PlanetGame.Shaders.Dispatchers
 			[
 				.. Utilities.ToBytesSingle(vTData.LowResolutionMipCount),
 				.. Utilities.ToBytesSingle(vTData.HighResolutionMipCount),
-				.. Utilities.ToBytesSingle(vTData.TileSize),
 				.. Utilities.ToBytesSingle(PlanetController.Resolution),
 
 				.. Utilities.ToBytesSingle(PlanetController.Radius),
+
 				.. Utilities.ToBytesSingle(PlanetController.Radius * PlanetController.HeightScale),
 				.. Utilities.ToBytesSingle(PlanetController.SubFactor),
 				.. Utilities.ToBytesSingle(debugFlags),
-
 				.. Utilities.ToBytesSingle(PlanetController.MaximumLod),
+
 				.. Utilities.ToBytesSingle(PlanetController.MinimumLod),
 				.. Utilities.ToBytesSingle(PlanetController.HeightOffset),
-				.. Utilities.ToBytesSingle(0.0f),
-
-				.. Utilities.ToBytesSingle(Utilities.ToProjection(PlanetController.GetPlanetTransform())),
-
 				.. Utilities.ToBytesSingle(PlanetController.MorphRange.X),
 				.. Utilities.ToBytesSingle(PlanetController.MorphRange.Y),
+
+				.. Utilities.ToBytesSingle(Utilities.ToProjection(PlanetController.GetPlanetTransform())),
 
 				.. Utilities.ToBytes<int>(vTData.LodToMipMap),
 			];

@@ -44,7 +44,7 @@ vec3 get_tile_cache_uv(
 	return vec3(uv, float(normal_id));
 }
 
-	vec4 get_tile(sampler2DArray tile_cache, vec3 tile_uv) {
-	//return texture2D_linear(tile_cache, tile_uv);
+vec4 get_tile(sampler2DArray tile_cache, vec3 tile_uv) {
+//return texture2D_linear(tile_cache, tile_uv);
 	return textureLod(tile_cache, tile_uv, 0.0);
-	}
+}

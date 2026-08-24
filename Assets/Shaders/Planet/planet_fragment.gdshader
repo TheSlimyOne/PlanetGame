@@ -50,11 +50,24 @@ vec3 displayBranches() {
 	return hsl_to_rgb(vec3(float(key_lod) / 16.0, 1.0, float(branching_index + 1) / 4.0));
 }
 
-void calculate_normal(vec3 base_normal, float height) {
-	vec3 tangent = normalize(cross(base_normal, vec3(0, 1, 0)));
-	vec3 bitangent = cross(base_normal, tangent);
+vec3 calculate_normal(vec3 base_normal, vec3 tile_uv) {
+	vec2 texel_size = 1.0 / vec2(textureSize(height_map_tile_cache, 0).xy);
 
+	float up = get_tile(height_map_tile_cache, tile_uv + vec3(0.0, texel_size.y, 0.0)).r;
+	float down = get_tile(height_map_tile_cache, tile_uv - vec3(0.0, texel_size.y, 0.0)).r;
+	float left = get_tile(height_map_tile_cache, tile_uv - vec3(texel_size.x, 0.0, 0.0)).r;
+	float right = get_tile(height_map_tile_cache, tile_uv + vec3(texel_size.x, 0.0, 0.0)).r;
+
+	float height_x = right - left;
+	float height_y = up - down;
+
+	vec3 tangent = normalize(cross(vec3(0.0, 1.0, 0.0), base_normal));
+	vec3 bitangent = normalize(cross(base_normal, tangent));
+
+	return normalize(base_normal - tangent * height_x - bitangent * height_y);
 }
+
+
 
 vec3 color_base_normal_and_adjecenies(vec2 uv, float coverage, int normal_id) {
 	vec3 color = vec3(0);
@@ -81,6 +94,28 @@ vec3 color_base_normal_and_adjecenies(vec2 uv, float coverage, int normal_id) {
 	}
 	return color;
 }
+
+vec2 project_to_screen(vec3 world_position, mat4 view_projection_matrix, vec2 viewport_size)
+{
+	vec4 clip_position = view_projection_matrix * vec4(world_position, 1.0);
+	vec2 ndc = clip_position.xy / clip_position.w;
+
+	return (ndc * 0.5 + 0.5) * viewport_size;
+}
+
+float get_projected_size(vec3 world_0, vec3 world_1, vec3 world_2, mat4 view_projection_matrix, vec2 viewport_size)
+{
+	vec2 screen_0 = project_to_screen(world_0, view_projection_matrix, viewport_size);
+	vec2 screen_1 = project_to_screen(world_1, view_projection_matrix, viewport_size);
+	vec2 screen_2 = project_to_screen(world_2, view_projection_matrix, viewport_size);
+
+	float edge_0 = distance(screen_0, screen_1);
+	float edge_1 = distance(screen_1, screen_2);
+	float edge_2 = distance(screen_2, screen_0);
+
+	return max(edge_0, max(edge_1, edge_2));
+}
+
 void fragment() {
 	int normal_id = int(key.z);
 	int total_resolution_mip_count = low_resolution_mip_count + high_resolution_mip_count;
@@ -97,18 +132,8 @@ void fragment() {
 
 	int layer = total_resolution_mip_count * normal_id + non_negative_mip_index;
 	
-	ivec3 indirection_index = get_indirection_index(
-		adjusted_uv,
-		normal_id,
-		low_resolution_mip_count,
-		high_resolution_mip_count
-	);
-
-	uvec4 indirection_data = floatBitsToUint(texelFetch(
-		terrain_indirection_table,
-		indirection_index,
-		0
-	));
+	ivec3 indirection_index = get_indirection_index(adjusted_uv, normal_id, low_resolution_mip_count, high_resolution_mip_count);
+	uvec4 indirection_data = floatBitsToUint(texelFetch(terrain_indirection_table, indirection_index, 0));
 
 	vec3 tile_uv = get_tile_uv(
 		terrain_indirection_table,
@@ -117,6 +142,9 @@ void fragment() {
 		low_resolution_mip_count,
 		high_resolution_mip_count
 	);
+	
+	ALBEDO = pow(get_tile(albedo_tile_cache, tile_uv).xyz, vec3(2.2));
+	NORMAL = calculate_normal(NORMAL, tile_uv);
 
 	if (render_tile_uvs) {
 		float depth = 1.0 - float(non_negative_mip_index) / float(total_resolution_mip_count - 1);
@@ -145,38 +173,20 @@ void fragment() {
 		ALBEDO = vec3(age, 0.0, 0.0);
 	}
 	else if (show_in_cache) {
-		vec3 in_cache = is_tile_in_cache(
-			terrain_indirection_table,
-			non_negative_mip_index,
-			plane_vertex_uv,
-			normal_id,
-			low_resolution_mip_count,
-			high_resolution_mip_count
-		) ? vec3(0.0, 1.0, 0.0) : vec3(0.0);
+	
+		
+	int mip = get_tile_mip(
+		terrain_indirection_table,
+		plane_vertex_uv,
+		normal_id,
+		low_resolution_mip_count,
+		high_resolution_mip_count
+	);
 
 		vec3 real_color = pow(get_tile(albedo_tile_cache, tile_uv).xyz, vec3(2.2));
-		ALBEDO = mix(real_color, in_cache, 0.15);
+		ALBEDO = mix(real_color, mip_to_colors[mip], 0.15);
 	}
 	else if (show_keys) {
 		ALBEDO = displayBranches();
 	}
-	else {
-		ALBEDO = pow(get_tile(albedo_tile_cache, tile_uv).xyz, vec3(2.2));
-	}
-
-	vec2 texel_size = 1.0 / vec2(textureSize(height_map_tile_cache, 0).xy);
-
-	float up = get_tile(height_map_tile_cache, tile_uv + vec3(0.0, texel_size.y, 0.0)).r;
-	float down = get_tile(height_map_tile_cache, tile_uv - vec3(0.0, texel_size.y, 0.0)).r;
-	float left = get_tile(height_map_tile_cache, tile_uv - vec3(texel_size.x, 0.0, 0.0)).r;
-	float right = get_tile(height_map_tile_cache, tile_uv + vec3(texel_size.x, 0.0, 0.0)).r;
-
-	float height_x = right - left;
-	float height_y = up - down;
-
-	vec3 base_normal = normalize(NORMAL);
-	vec3 tangent = normalize(cross(vec3(0.0, 1.0, 0.0), base_normal));
-	vec3 bitangent = normalize(cross(base_normal, tangent));
-
-	NORMAL = normalize(base_normal - tangent * height_x - bitangent * height_y);
 }
