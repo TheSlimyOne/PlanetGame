@@ -67,8 +67,6 @@ vec3 calculate_normal(vec3 base_normal, vec3 tile_uv) {
 	return normalize(base_normal - tangent * height_x - bitangent * height_y);
 }
 
-
-
 vec3 color_base_normal_and_adjecenies(vec2 uv, float coverage, int normal_id) {
 	vec3 color = vec3(0);
 
@@ -95,26 +93,6 @@ vec3 color_base_normal_and_adjecenies(vec2 uv, float coverage, int normal_id) {
 	return color;
 }
 
-vec2 project_to_screen(vec3 world_position, mat4 view_projection_matrix, vec2 viewport_size)
-{
-	vec4 clip_position = view_projection_matrix * vec4(world_position, 1.0);
-	vec2 ndc = clip_position.xy / clip_position.w;
-
-	return (ndc * 0.5 + 0.5) * viewport_size;
-}
-
-float get_projected_size(vec3 world_0, vec3 world_1, vec3 world_2, mat4 view_projection_matrix, vec2 viewport_size)
-{
-	vec2 screen_0 = project_to_screen(world_0, view_projection_matrix, viewport_size);
-	vec2 screen_1 = project_to_screen(world_1, view_projection_matrix, viewport_size);
-	vec2 screen_2 = project_to_screen(world_2, view_projection_matrix, viewport_size);
-
-	float edge_0 = distance(screen_0, screen_1);
-	float edge_1 = distance(screen_1, screen_2);
-	float edge_2 = distance(screen_2, screen_0);
-
-	return max(edge_0, max(edge_1, edge_2));
-}
 
 void fragment() {
 	int normal_id = int(key.z);

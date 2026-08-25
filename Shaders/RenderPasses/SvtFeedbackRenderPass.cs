@@ -1,26 +1,19 @@
 using System;
-using System.Threading;
-using System.Threading.Tasks;
 using PlanetGame.Shaders.Dispatchers;
 using Godot;
 using System.Collections.Generic;
-using System.Collections.Concurrent;
-using System.Linq;
 using Uniform;
 using PlanetGame.Util;
-using PlanetGame.Rendering.VirtualTexturing;
-using PlanetGame.Rendering.Surface;
 
 namespace PlanetGame.Shaders.RenderPasses
 {
     public partial class SvtFeedbackRenderPass : RenderPass<SvtFeedbackRenderPass.BufferNames>
     {
 
-        public PlanetController PlanetController { get; set;}
+        public PlanetController PlanetController { get; set; }
 
         private Rid _depthTexture;
         private Rid _pickingTexture;
-
         private Image _pickingImage;
 
         public SvtFeedbackRenderPass(
@@ -61,7 +54,7 @@ namespace PlanetGame.Shaders.RenderPasses
             CreateUniformSet();
         }
 
-        #nullable enable
+#nullable enable
         public override void Invoke(byte[]? pushConstants = null)
         {
             long drawList = RenderingDevice.DrawListBegin(
@@ -90,8 +83,6 @@ namespace PlanetGame.Shaders.RenderPasses
             _pickingImage = GetPickingImage();
         }
 
-
-        public Texture2Drd GetFrameBufferTexture() => new() { TextureRdRid = _framebufferTexture };
         public Rid GetFeedbackTextureRid() => _framebufferTexture;
         public Rid GetDepthTextureRid() => _depthTexture;
         public Texture2Drd GetPickingTexture() => new() { TextureRdRid = _pickingTexture };

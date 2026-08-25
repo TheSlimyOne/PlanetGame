@@ -1,0 +1,53 @@
+#[fragment] 
+#version 450 
+
+layout(location = 0) flat in uvec4 key;
+layout(location = 1) flat in uint flags;
+layout(location = 2) in float morph;
+layout(location = 3) in float elevation;
+layout(location = 4) in vec2 vertex_uv;
+layout(location = 5) flat in int lod;
+layout(location = 6) in vec3 normal;
+layout(location = 7) in vec3 world_position;
+layout(location = 8) flat in uint instance_id;
+
+layout(set = 0, binding = 1, std430) buffer restrict readonly ExternalData {
+	int low_resolution_mip_count;
+	int high_resolution_mip_count;
+	int resolution;
+
+	float radius;
+
+	float height_scale;
+	float sub_factor;
+	uint debug_flags;
+	int maximum_lod;
+
+	int minimum_lod;
+	float height_offset;
+	vec2 morph_range;
+
+	mat4 planet_transform_matrix;
+
+	int lod_to_mip_map[32];
+};
+
+layout(set = 1, binding = 2, std430) buffer restrict readonly SunData {
+	mat4 view_projection_matrix;
+	vec4 sun_position;
+} sun_data;
+
+layout(set = 0, binding = 2) uniform sampler2DArray height_map_tile_cache;
+layout(set = 0, binding = 3) uniform sampler2DArray terrain_indirection_table;
+
+layout(push_constant, std430) uniform PushConstants {
+	mat4 view_projection_matrix;
+	vec4 camera_position_fovy;
+} push_constants;
+
+#[include] res://Shaders/GLSL/ShaderIncludes/TesselationFunctions.inc
+#[include] res://Shaders/GLSL/ShaderIncludes/Functions.inc
+
+void main() {
+    
+}

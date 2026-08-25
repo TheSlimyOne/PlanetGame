@@ -5,7 +5,6 @@ using Shaders;
 using PlanetGame.Shaders;
 using PlanetGame.Util;
 using PlanetGame.Rendering.VirtualTexturing;
-using PlanetGame.Shaders.Dispatchers;
 using System.Linq;
 using PlanetGame.Util.DebugUIComponents;
 
@@ -155,7 +154,6 @@ public partial class PlanetController : Node3D
         DebugMenuController.Instance.AddActionButton("Quit", "Planet", () => GetTree().ChangeSceneToFile("res://main.tscn"));
 
         DebugMenuController.Instance.AddSection("Rendering", 0);
-        DebugMenuController.Instance.AddSlider("Resolution", "Rendering", () => Resolution, value => Resolution = value, 2, 17, 1);
         DebugMenuController.Instance.AddButton("Render Cube Mode", "Rendering", () => IsCube, () => IsCube = !IsCube);
         DebugMenuController.Instance.AddButton("Render Culling", "Rendering", () => IsCulling, () => IsCulling = !IsCulling);
         DebugMenuController.Instance.AddButton("Render Morphing", "Rendering", () => IsMorphing, () => IsMorphing = !IsMorphing);
@@ -165,6 +163,7 @@ public partial class PlanetController : Node3D
         DebugMenuController.Instance.AddButton("Render Cached Tiles", "Rendering", () => SurfaceShader.GetParameter<bool>("show_in_cache"), () => SurfaceShader.SetParameter("show_in_cache", !SurfaceShader.GetParameter<bool>("show_in_cache")));
 
         DebugMenuController.Instance.AddSection("Tessellation", 0);
+        DebugMenuController.Instance.AddSlider("Resolution", "Tessellation", () => Resolution, value => Resolution = value, 2, 17, 1);
         DebugMenuController.Instance.AddButton("Enable Tessellation", "Tessellation", () => !TerrainTessellator.Paused, () => TerrainTessellator.Paused = !TerrainTessellator.Paused);
 
         DebugMenuController.Instance.AddSection("Virtual Texturing", 0);
@@ -178,8 +177,8 @@ public partial class PlanetController : Node3D
         DebugMenuController.Instance.AddTexture("Height Tile Cache", "Virtual Texturing", SparseVirtualTexture.HeightTileCache.CreateVisualization("Height"));
 
         DebugMenuController.Instance.AddTexture("Flatten Indirection Table", "Virtual Texturing", SparseVirtualTexture.ConsolidatedIndirectionTable.CreateVisualization());
-    
 
+        DebugMenuController.Instance.AddTexture("Picking Texture", "Virtual Texturing",  new TextureRect() { Texture = SparseVirtualTexture.SvtFeedbackRenderPass.GetPickingTexture() });
     }
 
     private Rid _terrainInstance;
@@ -193,7 +192,6 @@ public partial class PlanetController : Node3D
             SaveManager.CurrentSave = saveName;
 
         }
-
 
         SurfaceShader = new() { Shader = GD.Load<Shader>(ShaderPaths.GD_PLANET_TESSELLATION_PATH) };
 
@@ -216,9 +214,8 @@ public partial class PlanetController : Node3D
         PlanetCollisionController.GenerateBaseCollisionMesh();
         SurfaceAttachment.AddChild(PlanetCollisionController.CollisionBody);
         SurfaceAttachment.AddChild(CollisionTestSpheres);
-        // SparseVirtualTexture.CreateDebugWindow();
-        BindDebugSettings();
 
+        BindDebugSettings();
     }
 
     #region Process
@@ -256,7 +253,6 @@ public partial class PlanetController : Node3D
         VTData virtualTextureData = SaveManager.GetCurrentSave().GetSVTData();
 
         _heightUpdateTimer += delta;
-
         if (_heightUpdateTimer >= HEIGHT_UPDATE_INTERVAL)
         {
             _heightUpdateTimer = 0;

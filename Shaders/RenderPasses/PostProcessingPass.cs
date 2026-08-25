@@ -10,8 +10,7 @@ namespace PlanetGame.Shaders.RenderPasses;
 
 public partial class PostProcessingPass : RenderPass<PostProcessingPass.BufferNames>
 {
-    public TerrainTessellator TerrainTessellator { get; }
-    public SparseVirtualTexture SparseVirtualTexture { get; }
+    public PlanetController PlanetController;
 
     private Rid _shadowTexture;
 
@@ -28,26 +27,20 @@ public partial class PostProcessingPass : RenderPass<PostProcessingPass.BufferNa
     }
 
     public PostProcessingPass(
-        TerrainTessellator terrainTessellator,
-        SparseVirtualTexture sparseVirtualTexture,
-        DirectionalLight3D sun,
-        Vector2I viewSize,
-        Mesh mesh
+        PlanetController planetController,
+        Vector2I viewSize
     ) : base(
         new()
         {
             Vertex = ShaderPaths.PLANET_TESSELLATION_VERTEX,
-            Fragment = ShaderPaths.EMPTY_FRAGMENT
+            Fragment = ShaderPaths.PLANET_POST_PROCESS_FRAGMENT
         },
         viewSize
     )
     {
-        TerrainTessellator = terrainTessellator;
-        SparseVirtualTexture = sparseVirtualTexture;
-
-        Sun = sun;
-
-        SetupShader(mesh);
+        PlanetController = planetController;
+        Sun = PlanetController.MainLightSource;
+        SetupShader(PlanetController.PlanetMultiMesh.Mesh);
     }
 
     public override void CreateUniforms()
@@ -55,19 +48,19 @@ public partial class PostProcessingPass : RenderPass<PostProcessingPass.BufferNa
         _renderShaderUniforms = new Dictionary<Enum, ShaderUniform>
         {
             [BufferNames.MULTIMESH_BUFFER] =
-                TerrainTessellator.ExecuteTessellationPass[
+                PlanetController.TerrainTessellator.ExecuteTessellationPass[
                     ExecuteTessellationPassDispatcher.BufferNames.MULTIMESH_BUFFER
                 ],
 
             [BufferNames.EXTERNAL_DATA] =
-                TerrainTessellator.ExecuteTessellationPass[
+                PlanetController.TerrainTessellator.ExecuteTessellationPass[
                     ExecuteTessellationPassDispatcher.BufferNames.EXTERNAL_DATA
                 ],
 
             [BufferNames.HEIGHT_MAP] = new Texture2DUniform(
                 this,
                 (int)BufferNames.HEIGHT_MAP,
-                SparseVirtualTexture.HeightTileCache.GetRdRid(),
+                PlanetController.SparseVirtualTexture.HeightTileCache.GetRdRid(),
                 RenderingDevice.UniformType.SamplerWithTexture,
                 true
             ),
@@ -75,7 +68,7 @@ public partial class PostProcessingPass : RenderPass<PostProcessingPass.BufferNa
             [BufferNames.INDIRECTION_TABLE] = new Texture2DUniform(
                 this,
                 (int)BufferNames.INDIRECTION_TABLE,
-                SparseVirtualTexture.IndirectionTable.GetRdRid(),
+                PlanetController.SparseVirtualTexture.IndirectionTable.GetRdRid(),
                 RenderingDevice.UniformType.SamplerWithTexture,
                 true
             )
@@ -98,8 +91,12 @@ public partial class PostProcessingPass : RenderPass<PostProcessingPass.BufferNa
         RenderingDevice.DrawListBindRenderPipeline(drawList, _pipeline);
         RenderingDevice.DrawListBindVertexArray(drawList, _geometry.VertexArray);
         RenderingDevice.DrawListBindIndexArray(drawList, _geometry.IndexArray);
+
+         if (pushConstants != null)
+				RenderingDevice.DrawListSetPushConstant(drawList, pushConstants, (uint)pushConstants.Length);
+
         RenderingDevice.DrawListBindUniformSet(drawList, _uniformSet, 0);
-        RenderingDevice.DrawListDrawIndirect(drawList, true, TerrainTessellator.PrepareTessellationPass[PrepareTessellationPassDispatcher.BufferNames.DRAW_DISPATCH_BUFFER].Rid);
+        RenderingDevice.DrawListDrawIndirect(drawList, true, PlanetController.TerrainTessellator.PrepareTessellationPass[PrepareTessellationPassDispatcher.BufferNames.DRAW_DISPATCH_BUFFER].Rid);
         RenderingDevice.DrawListEnd();
     }
 
@@ -167,7 +164,10 @@ public partial class PostProcessingPass : RenderPass<PostProcessingPass.BufferNa
 
     public override void UpdateUniforms()
     {
+        throw new NotImplementedException();   
     }
+
+    public Texture2Drd GetShadowTexture() => new() { TextureRdRid = _shadowTexture };
 
     public override void CleanupGPU()
     {

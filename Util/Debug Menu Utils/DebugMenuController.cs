@@ -13,6 +13,11 @@ public partial class DebugMenuController : PanelContainer
 	private static readonly PackedScene SliderScene = GD.Load<PackedScene>("res://Util/Debug Menu Utils/Scenes/slider_component.tscn");
 	private static readonly PackedScene TextureScene = GD.Load<PackedScene>("res://Util/Debug Menu Utils/Scenes/texture_component.tscn");
 
+	private static readonly Texture2D VisibleIcon = GD.Load<Texture2D>("res://Assets/Icons/GuiVisibilityVisible.svg");
+	private static readonly Texture2D HiddenIcon = GD.Load<Texture2D>("res://Assets/Icons/GuiVisibilityHidden.svg");
+
+	private const float DebugMenuButtonSize = 32.0f;
+
 	private readonly Dictionary<string, SectionComponent> sectionComponents = [];
 	private readonly List<string> sectionNames = [];
 
@@ -46,6 +51,12 @@ public partial class DebugMenuController : PanelContainer
 		Instance = this;
 
 		GetNodes();
+
+		_debugMenuButton.Text = "";
+		_debugMenuButton.CustomMinimumSize = new Vector2(DebugMenuButtonSize, DebugMenuButtonSize);
+		_debugMenuButton.ExpandIcon = true;
+		_debugMenuButton.SizeFlagsHorizontal = SizeFlags.ShrinkEnd;
+		_debugMenuButton.SizeFlagsVertical = SizeFlags.ShrinkCenter;
 		_debugMenuButton.Pressed += ToggleDebugMenu;
 	}
 
@@ -62,6 +73,8 @@ public partial class DebugMenuController : PanelContainer
 		_expandedOffsetBottom = OffsetBottom;
 
 		_expandedMinimumSize = CustomMinimumSize;
+
+		ToggleDebugMenu();
 	}
 
 	public override void _ExitTree()
@@ -85,7 +98,7 @@ public partial class DebugMenuController : PanelContainer
 		bool isOpen = !_contentScroll.Visible;
 
 		_contentScroll.Visible = isOpen;
-		_debugMenuButton.Text = isOpen ? "HIDE" : "SHOW";
+		_debugMenuButton.Icon = isOpen ? VisibleIcon : HiddenIcon;
 
 		if (isOpen)
 		{

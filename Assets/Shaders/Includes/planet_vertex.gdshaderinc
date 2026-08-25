@@ -40,11 +40,6 @@ uniform int low_resolution_mip_count;
 uniform int high_resolution_mip_count;
 uniform int[32] lod_to_mip_map;
 
-varying flat vec3 point_a;
-varying flat vec3 point_b;
-varying flat vec3 point_c;
-
-
 void vertex() {
 	key = floatBitsToUint(INSTANCE_CUSTOM);
 	flags = key.w >> 29u;
@@ -73,10 +68,6 @@ void vertex() {
 	vec3 cube_point_a = get_polygon_space_point(quad_point_a, polygon_space);
 	vec3 cube_point_b = get_polygon_space_point(quad_point_b, polygon_space);
 	vec3 cube_point_c = get_polygon_space_point(quad_point_c, polygon_space);
-
-	point_a = is_cube ? cube_point_a : point_on_cube_to_point_on_sphere(cube_point_a);
-	point_b = is_cube ? cube_point_b : point_on_cube_to_point_on_sphere(cube_point_b);
-	point_c = is_cube ? cube_point_c : point_on_cube_to_point_on_sphere(cube_point_c);
 
 	vec2 quad_position = get_quadtree_space_point(VERTEX.xy, quadtree_space);
 	vec3 cube_local_position = get_polygon_space_point(quad_position, polygon_space);
@@ -109,5 +100,5 @@ void vertex() {
 	
 	NORMAL = (vec4(local_point, 1) * get_rotation_from_matrix(planet_transform_matrix)).xyz;
 	VERTEX = world_position + NORMAL * height_scale * elevation;
-	//VERTEX *= lod_scale;
+
 }
