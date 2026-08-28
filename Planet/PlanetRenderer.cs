@@ -297,4 +297,10 @@ public class PlanetRenderer
     {
         DebugMenuController.Instance.AddButton(name, "Rendering", () => SurfaceShader.GetParameter<bool>(parameter), () => SurfaceShader.SetParameter(parameter, !SurfaceShader.GetParameter<bool>(parameter)));
     }
+
+    public void CleanupGPU()
+    {
+        TerrainTessellator.CleanupGPUResources();
+        SparseVirtualTexture.CleanupGPUResources();
+    }
 }

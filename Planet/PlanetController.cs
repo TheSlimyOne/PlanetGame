@@ -191,6 +191,7 @@ public partial class PlanetController : Node3D
 
         DebugMenuController.Instance.AddActionButton("Quit", null, () => {
             DebugMenuController.Instance.Clear();
+            PlanetRenderer.CleanupGPU();
             GetTree().ChangeSceneToFile("res://main.tscn");
         }, 1000);
     }

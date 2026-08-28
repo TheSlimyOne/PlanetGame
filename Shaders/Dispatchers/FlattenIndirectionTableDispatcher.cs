@@ -55,5 +55,10 @@ namespace PlanetGame.Shaders.Dispatchers
 			RenderingDevice.ComputeListDispatch(computeList, groupCount, groupCount, 6);
 			RenderingDevice.ComputeListEnd();
 		}
+
+		public override void CleanupGPU()
+		{
+			base.CleanupGPU();
+		}
     }
 }

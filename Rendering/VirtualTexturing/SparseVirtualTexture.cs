@@ -214,10 +214,12 @@ namespace PlanetGame.Rendering.VirtualTexturing
             ResolveTileRequest.CleanupGPU();
             ValidateTileCache.CleanupGPU();
             SvtFeedbackRenderPass.CleanupGPU();
+            FlattenIndirectionTableDispatcher.CleanupGPU();
 
             ResolveTileRequest = default;
             ValidateTileCache = default;
             SvtFeedbackRenderPass = default;
+            FlattenIndirectionTableDispatcher = default;
         }
 
         private void BindDebugSettings()

@@ -67,6 +67,7 @@ namespace PlanetGame.Shaders.Dispatchers
         public override void CleanupGPU()
         {
             _triangleMultiMesh.BuffersChanged -= CreateUniformSet;
+            base.CleanupGPU();
         }
 
     }

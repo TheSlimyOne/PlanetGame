@@ -44,7 +44,7 @@ namespace PlanetGame.Rendering.Surface
         }
 
         public void CreateUniforms()
-        {
+    {
             ExecuteTessellationPass.CreateUniforms();
             PrepareTessellationPass.CreateUniforms();
         }
@@ -53,9 +53,13 @@ namespace PlanetGame.Rendering.Surface
         {
             PrepareTessellationPass.CleanupGPU();
             ExecuteTessellationPass.CleanupGPU();
+            TriangleMultiMesh.CleanupGPU();
 
-            PrepareTessellationPass = null;
-            ExecuteTessellationPass = null;
+
+            PrepareTessellationPass = default;
+            ExecuteTessellationPass = default;
+            _planetInstance = default;
+            TriangleMultiMesh = default;
         }
 
         public bool IsValidForProcessing()

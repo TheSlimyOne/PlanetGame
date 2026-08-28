@@ -130,5 +130,10 @@ namespace PlanetGame.Shaders.Dispatchers
                 [.. Utilities.ToBytesSingle(0)]
             );
         }
+
+        public override void CleanupGPU()
+        {
+            base.CleanupGPU();
+        }
     }
 }
