@@ -10,6 +10,7 @@ namespace PlanetGame.Shaders.RenderPasses;
 
 public partial class SvtDepthPrepass : RenderPass<SvtDepthPrepass.BufferNames>
 {
+    private static ShaderProgramPaths _shaderPath = new() { Vertex = ShaderPaths.PLANET_TESSELLATION_VERTEX, Fragment = ShaderPaths.EMPTY_FRAGMENT };
     public TerrainTessellator TerrainTessellator { get; }
     public SparseVirtualTexture SparseVirtualTexture { get; }
 
@@ -24,20 +25,7 @@ public partial class SvtDepthPrepass : RenderPass<SvtDepthPrepass.BufferNames>
         STATE_TABLE
     }
 
-    public SvtDepthPrepass(
-        TerrainTessellator terrainTessellator,
-        SparseVirtualTexture sparseVirtualTexture,
-        Rid depthBuffer,
-        Vector2I viewSize,
-        Mesh mesh
-    ) : base(
-        new()
-        {
-            Vertex = ShaderPaths.PLANET_TESSELLATION_VERTEX,
-            Fragment = ShaderPaths.EMPTY_FRAGMENT
-        },
-        viewSize
-    )
+    public SvtDepthPrepass(TerrainTessellator terrainTessellator, SparseVirtualTexture sparseVirtualTexture, Rid depthBuffer, Vector2I viewSize, Mesh mesh) : base(_shaderPath, viewSize)
     {
         TerrainTessellator = terrainTessellator;
         SparseVirtualTexture = sparseVirtualTexture;
@@ -48,7 +36,7 @@ public partial class SvtDepthPrepass : RenderPass<SvtDepthPrepass.BufferNames>
 
     public override void CreateUniforms()
     {
-        _renderShaderUniforms = new Dictionary<Enum, ShaderUniform>
+        _shaderUniforms = new Dictionary<Enum, ShaderUniform>
         {
             [BufferNames.MULTIMESH_BUFFER] =
                 TerrainTessellator.ExecuteTessellationPass[
@@ -88,7 +76,7 @@ public partial class SvtDepthPrepass : RenderPass<SvtDepthPrepass.BufferNames>
         CreateUniformSet();
     }
 
-    #nullable enable
+#nullable enable
     public override void Invoke(byte[]? pushConstants = null)
     {
         long drawList = RenderingDevice.DrawListBegin(

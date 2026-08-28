@@ -7,18 +7,17 @@ namespace PlanetGame.Rendering.VirtualTexturing
 {
     public class StateTable : VirtualTextureTable
     {
+        private static VirtualTextureData VirtualTextureData => SaveManager.CurrentWorldSave.VirtualTextureData;
         public Texture2DArrayRD Table
         {
             get => (Texture2DArrayRD)_storageTexture;
             protected set => _storageTexture = value;
         }
 
-        public VTData VirtualTextureData { get; }
 
         // TODO need to recognize if there is border pixels 
-        public StateTable(VTData virtualTextureData)
+        public StateTable()
         {
-            VirtualTextureData = virtualTextureData;
 
             uint gridSize = VirtualTextureData.GridSize;
 

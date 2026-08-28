@@ -41,10 +41,7 @@ BaseZoomSpeed = 1.0
 BaseRotationSpeed = 1.0
 MovementEasing = 10.0
 Resolution = 17
-MorphRange = Vector2(0.49, 0.51)
-StartingLod = 0
 PointRadius = 0.25
-IsCulling = false
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=2059454453]
 visible = false
@@ -94,7 +91,7 @@ _lblFPS = NodePath("DebugStats/FPS")
 _lblDistance = NodePath("DebugStats/Distance")
 _lblLOD = NodePath("DebugStats/LOD")
 _lblCameraMode = NodePath("DebugStats/CameraMode")
-_lblLods = NodePath("DebugStats/Lods")
+_lblLods = NodePath("")
 
 [node name="DebugStats" type="VBoxContainer" parent="UIController" unique_id=1244037009]
 layout_mode = 0
@@ -124,20 +121,4 @@ label_settings = SubResource("LabelSettings_usljo")
 [node name="CameraMode" type="Label" parent="UIController/DebugStats" unique_id=451109012]
 layout_mode = 2
 text = "Camera Mode: X"
-label_settings = SubResource("LabelSettings_usljo")
-
-[node name="Lods" type="Label" parent="UIController/DebugStats" unique_id=853479412]
-layout_mode = 2
-text = "Lod X: XXX
-Lod X: XXX
-Lod X: XXX
-Lod X: XXX
-Lod X: XXX
-Lod X: XXX
-Lod X: XXX
-Lod X: XXX
-Lod X: XXX
-Lod X: XXX
-Lod X: XXX
-Lod X: XXX"
 label_settings = SubResource("LabelSettings_usljo")

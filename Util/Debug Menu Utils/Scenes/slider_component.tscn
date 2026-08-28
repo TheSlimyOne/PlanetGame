@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://bf24vg2bsvf0w"]
 
-[ext_resource type="Script" path="res://Util/Debug Menu Utils/SliderComponent.cs" id="1"]
+[ext_resource type="Script" uid="uid://bcn3i4dy4ty7d" path="res://Util/Debug Menu Utils/SliderComponent.cs" id="1"]
 
 [node name="SliderComponent" type="PanelContainer" unique_id=344758243]
 script = ExtResource("1")
@@ -21,16 +21,33 @@ text = "Slider"
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="Slider" type="HSlider" parent="SliderMargin/SliderContent" unique_id=1679386056]
+[node name="SliderRows" type="VBoxContainer" parent="SliderMargin/SliderContent" unique_id=387227897]
 unique_name_in_owner = true
+layout_mode = 2
+
+[node name="SliderRowTemplate" type="HBoxContainer" parent="SliderMargin/SliderContent/SliderRows" unique_id=1427916088]
+layout_mode = 2
+
+[node name="SubtractButton" type="Button" parent="SliderMargin/SliderContent/SliderRows/SliderRowTemplate" unique_id=123386760]
+custom_minimum_size = Vector2(32, 32)
+layout_mode = 2
+focus_mode = 0
+text = "-"
+
+[node name="Slider" type="HSlider" parent="SliderMargin/SliderContent/SliderRows/SliderRowTemplate" unique_id=1679386056]
 custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
+size_flags_vertical = 4
 focus_mode = 0
 max_value = 10.0
 
-[node name="ValueLabel" type="Label" parent="SliderMargin/SliderContent" unique_id=1131443458]
-unique_name_in_owner = true
+[node name="AddButton" type="Button" parent="SliderMargin/SliderContent/SliderRows/SliderRowTemplate" unique_id=1602575815]
+custom_minimum_size = Vector2(32, 32)
+layout_mode = 2
+focus_mode = 0
+text = "+"
+
+[node name="ValueLabel" type="LineEdit" parent="SliderMargin/SliderContent/SliderRows/SliderRowTemplate" unique_id=2119200141]
 custom_minimum_size = Vector2(45, 0)
 layout_mode = 2
 text = "0"
-horizontal_alignment = 2

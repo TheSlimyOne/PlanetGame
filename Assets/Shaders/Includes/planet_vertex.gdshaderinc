@@ -1,4 +1,4 @@
-#include "tesselation_functions.gdshaderinc"
+#include "tessellation_functions.gdshaderinc"
 #include "functions.gdshaderinc"
 
 uniform float radius;

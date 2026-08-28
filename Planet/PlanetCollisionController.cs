@@ -2,11 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Godot;
+using PlanetGame.Rendering.Surface;
 using PlanetGame.Rendering.VirtualTexturing;
 
 public class PlanetCollisionController(PlanetController planetController)
 {
-    PlanetController PlanetController = planetController;
+    private readonly PlanetController _planetController = planetController;
+    private static TessellationData TessellationData => SaveManager.CurrentWorldSave.TessellationData;
+    private static VirtualTextureData VirtualTextureData => SaveManager.CurrentWorldSave.VirtualTextureData;
 
     const uint COLLISION_RESOLUTION = 10;
     const uint COLLISION_SQUARE = 12;
@@ -98,9 +101,9 @@ public class PlanetCollisionController(PlanetController planetController)
         return vertices;
     }
 
-    public void CreateCollisionPlane(VTData vtData)
+    public void CreateCollisionPlane(Vector3 from)
     {
-        (Vector3 localSpherePoint, Vector3 localCubePoint) = PlanetController.GetLocalPointsOnPlanet(PlanetController.MainCamera.GlobalPosition, false);
+        (Vector3 localSpherePoint, Vector3 localCubePoint) = _planetController.GetLocalPointsOnPlanet(from, false);
 
         if (localSpherePoint == Vector3.Inf || localCubePoint == Vector3.Inf)
             return;
@@ -110,16 +113,16 @@ public class PlanetCollisionController(PlanetController planetController)
 
         Vector3 normal = VectorUtils.IsolateNormal(localCubePoint);
         int normalId = VectorUtils.NormalToNormalID[normal];
-        float radius = PlanetController.Radius;
-        float heightScale = PlanetController.HeightScale;
+        float radius = TessellationData.Radius;
+        float heightScale = TessellationData.HeightScale;
 
-        int lod = PlanetController.TerrainTessellator.MaxLod;
-        int mip = SaveManager.GetCurrentSave().LodToMipMap[lod];
+        int lod = (int)VirtualTextureData.TotalSubdivisions;
+        int mip = VirtualTextureData.LodToMipMap[lod];
 
         int gridSize = 1 << lod;
         float gridStep = 1.0f / gridSize;
 
-        Vector2 uv = VectorUtils.PointOnCubeToUV(normalId, localCubePoint);
+        Vector2 uv = VectorUtils.PointOnCubeToPlaneUV(normalId, localCubePoint);
         Vector2 gridCoordinate = (uv * gridSize).Floor();
         Vector2 tileMinUV = gridCoordinate / gridSize;
 
@@ -138,7 +141,7 @@ public class PlanetCollisionController(PlanetController planetController)
             }
         }
 
-        float mipGridSize = vtData.GetMipGridSize((uint)mip);
+        float mipGridSize = VirtualTextureData.GetMipGridSize((uint)mip);
 
         float collisionMinX = Mathf.Max(0.0f, tileMinUV.X - COLLISION_SQUARE * gridStep);
         float collisionMaxX = Mathf.Min(1.0f - gridStep, tileMinUV.X + COLLISION_SQUARE * gridStep);
@@ -151,7 +154,7 @@ public class PlanetCollisionController(PlanetController planetController)
             Vector2I tileCoords = (Vector2I)(tileUV * mipGridSize).Floor();
 
             string path = $"{mip}_{normalId}_{tileCoords.X}_{tileCoords.Y}";
-            Image heightmap = PlanetController.SparseVirtualTexture.HeightTileCache.GetTile(path);
+            Image heightmap = SaveManager.GetTile(SaveManager.CurrentSave, SaveManager.SaveDataIdentifier.TILE_HEIGHT_MAP, path);
 
             if (heightmap == null)
                 continue;

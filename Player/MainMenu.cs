@@ -79,6 +79,8 @@ public partial class MainMenu : MarginContainer
 	{
 		int previousSelection = LoadOptions.Selected;
 		LoadOptions.Clear();
+		
+		// RefreshSaves();
 		string[] saveNames = GetSaveNames();
 		PopupMenu popupMenu = LoadOptions.GetPopup();
 		for (int i = 0; i < saveNames.Length; i++)

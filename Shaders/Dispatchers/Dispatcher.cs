@@ -8,33 +8,27 @@ namespace PlanetGame.Shaders.Dispatchers;
 
 public interface IDispatchable : IGPUResource { }
 
-public abstract class Dispatcher<TEnum> : IDispatchable where TEnum : Enum
+public abstract class Dispatcher<TEnum>(RenderingDevice renderingDevice, ShaderProgramPaths shaderPath) : IDispatchable where TEnum : Enum
 {
-    public RenderingDevice RenderingDevice { get; private set; }
-    protected ShaderProgramPaths _shaderProgramPaths;
+    public RenderingDevice RenderingDevice { get; private set; } = renderingDevice;
+    protected ShaderProgramPaths _shaderProgramPaths = shaderPath;
     protected Rid _uniformSet;
     protected Rid _shader;
     protected Rid _pipeline;
 
     public string Error { get; private set; } = "";
 
-    protected System.Collections.Generic.Dictionary<Enum, ShaderUniform> _computeShaderUniforms;
+    protected System.Collections.Generic.Dictionary<Enum, ShaderUniform> _shaderUniforms;
 
     protected Dispatcher(ShaderProgramPaths shaderPath) : this(RenderingServer.GetRenderingDevice(), shaderPath) { }
-
-    protected Dispatcher(RenderingDevice renderingDevice, ShaderProgramPaths shaderPath)
-    {
-        RenderingDevice = renderingDevice;
-        _shaderProgramPaths = shaderPath;
-    }
 
     public ShaderUniform this[Enum @enum]
     {
         get => GetUniform(@enum);
     }
 
-    public ShaderUniform GetUniform(Enum @enum) => _computeShaderUniforms[@enum];
-    public T GetUniform<T>(Enum @enum) where T : ShaderUniform => (T)_computeShaderUniforms[@enum];
+    public ShaderUniform GetUniform(Enum @enum) => _shaderUniforms[@enum];
+    public T GetUniform<T>(Enum @enum) where T : ShaderUniform => (T)_shaderUniforms[@enum];
 
     // TODO maybe rename this to resetUniforms
     public virtual void UpdateUniforms() { }
@@ -49,7 +43,6 @@ public abstract class Dispatcher<TEnum> : IDispatchable where TEnum : Enum
         _shader = CreateShader();
         _pipeline = CreatePipeline();
     }
-
     private Rid CreateShader()
     {
         if (_shaderProgramPaths.Compute != "")
@@ -80,17 +73,15 @@ public abstract class Dispatcher<TEnum> : IDispatchable where TEnum : Enum
     protected void CreateUniformSet()
     {
         Array<RDUniform> bindings = [];
-        for (int i = 0; i < _computeShaderUniforms.Count; i++)
+        for (int i = 0; i < _shaderUniforms.Count; i++)
         {
             TEnum @enum = (TEnum)Enum.ToObject(typeof(TEnum), i);
-            ShaderUniform computeShaderUniform = _computeShaderUniforms[@enum];
+            ShaderUniform shaderUniform = _shaderUniforms[@enum];
 
-            // GD.PrintS(GetType(), computeShaderUniform.Rid, computeShaderUniform.Owner == this);
+            // GD.PrintS(GetType(), shaderUniform.Rid, shaderUniform.Owner == this);
+            ShaderUniform boundUniform = shaderUniform.Owner == this ? shaderUniform : shaderUniform.RebindUniform(this, RenderingDevice, i);
 
-            if (computeShaderUniform.Owner != this)
-                _computeShaderUniforms[@enum] = computeShaderUniform.RebindUniform(this, RenderingDevice, i);
-
-            bindings.Add(_computeShaderUniforms[@enum].Uniform);
+            bindings.Add(boundUniform.Uniform);
         }
 
         _uniformSet = RenderingDevice.UniformSetCreate(bindings, _shader, 0);
@@ -134,26 +125,26 @@ public abstract class Dispatcher<TEnum> : IDispatchable where TEnum : Enum
         if (_shader.IsValid)
             RenderingDevice.FreeRid(_shader);
 
-        if (_computeShaderUniforms != null)
+        if (_shaderUniforms != null)
         {
-            foreach (KeyValuePair<Enum, ShaderUniform> kvp in _computeShaderUniforms)
+            foreach (KeyValuePair<Enum, ShaderUniform> kvp in _shaderUniforms)
             {
                 Enum uniformName = kvp.Key;
-                ShaderUniform computeShaderUniform = kvp.Value;
+                ShaderUniform shaderUniform = kvp.Value;
 
                 if (Verbose) GD.Print("========================");
-                if (Verbose) GD.Print($"Clearing {uniformName} in {GetType().Name} ID: {GetID()} Owner: {computeShaderUniform.Owner}");
-                if (computeShaderUniform.Owner == this)
+                if (Verbose) GD.Print($"Clearing {uniformName} in {GetType().Name} ID: {GetID()} Owner: {shaderUniform.Owner}");
+                if (shaderUniform.Owner == this)
                 {
-                    if (Verbose) GD.Print(computeShaderUniform.Rid);
-                    computeShaderUniform.FreeRids();
+                    if (Verbose) GD.Print(shaderUniform.Rid);
+                    shaderUniform.FreeRids();
                 }
                 else if (Verbose) GD.Print($"{GetType().Name} does not own this uniform. Not free rid");
                 if (Verbose) GD.Print("========================");
             }
         }
 
-        _computeShaderUniforms = null;
+        _shaderUniforms = null;
         RenderingDevice = null;
     }
 

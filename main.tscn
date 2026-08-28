@@ -220,6 +220,8 @@ script = ExtResource("3_kln2b")
 [connection signal="pressed" from="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/Load Section/btnRegenerate" to="." method="OnLoad"]
 [connection signal="pressed" from="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/Load Section/btnLoad" to="." method="OnLoad"]
 [connection signal="pressed" from="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/Load Section/btnOpenSaves" to="." method="OpenSavesFolder"]
+[connection signal="pressed" from="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/New Game Section/btnUploadAlbedo" to="." method="OpenFileDialog" binds= ["ALBEDO"]]
+[connection signal="pressed" from="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/New Game Section/btnUploadHeight" to="." method="OpenFileDialog" binds= ["HEIGHT"]]
 [connection signal="pressed" from="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/New Game Section/btnStartNewGame" to="." method="OnStartNewGame"]
 [connection signal="pressed" from="CenterContainer/VBoxContainer/btnQuit" to="." method="OnQuit"]
 [connection signal="file_selected" from="FileDialog" to="FileDialog" method="OnFileSelected"]

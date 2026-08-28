@@ -1,6 +1,6 @@
 shader_type spatial;
 #include "res://Assets/Shaders/Includes/functions.gdshaderinc"
-#include "res://Assets/Shaders/Includes/tesselation_functions.gdshaderinc"
+#include "res://Assets/Shaders/Includes/tessellation_functions.gdshaderinc"
 
 uniform sampler2D albedo : repeat_disable, source_color;
 uniform sampler2D height_map : repeat_disable, source_color;

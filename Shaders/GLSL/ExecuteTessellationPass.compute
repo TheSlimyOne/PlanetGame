@@ -64,11 +64,12 @@ layout(set = 0, binding = 7, std430) buffer restrict GlobalKeyData {
 };
 
 layout(push_constant, std430) uniform PushConstants {
-	mat4 view_projection_matrix;
-	vec4 camera_position_fovy;
+    mat4 view_projection_matrix;
+    vec4 camera_position_fovy;
+    vec4 culling_data;
 } push_constants;
 
-#[include] res://Shaders/GLSL/ShaderIncludes/TesselationFunctions.inc
+#[include] res://Shaders/GLSL/ShaderIncludes/TessellationFunctions.inc
 
 void set_multimesh_data(uint index, uvec4 key) {
     output_buffer.data[20 * index + 0] = 1.0;

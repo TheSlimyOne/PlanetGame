@@ -7,20 +7,18 @@ namespace PlanetGame.Rendering.VirtualTexturing
 {
     public class ResidencyTable : VirtualTextureTable
     {
+        private static VirtualTextureData VirtualTextureData => SaveManager.CurrentWorldSave.VirtualTextureData;
+
         public Texture2Drd Table
         {
             get => (Texture2Drd)_storageTexture;
             protected set => _storageTexture = value;
         }
 
-        public VTData VirtualTextureData { get; }
-
         public uint Size { get; }
         
-        public ResidencyTable(VTData virtualTextureData)
+        public ResidencyTable()
         {
-            VirtualTextureData = virtualTextureData;
-
             Size = (uint)Mathf.Ceil(Mathf.Sqrt(TileCache.DEFAULT_TILE_SLOTS_COUNT));
 
             Format = RenderingDevice.DataFormat.R32G32B32A32Sfloat;

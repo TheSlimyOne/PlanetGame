@@ -3,26 +3,30 @@ using System.Collections.Generic;
 using System.Linq;
 using Godot;
 using PlanetGame.Util;
+using Uniform;
 
 public class MultiMeshRD
 {
 
     public Rid Rid { get; private set; }
     public Mesh Mesh { get; private set; }
+    public StorageBufferUniform CommandBufferUniform;
+    public StorageBufferUniform BufferUniform;
+    public StorageBufferUniform MeshDataUniform;
+
+    public event Action BuffersChanged;
+    
     public Rid CommandBuffer => RenderingServer.MultimeshGetCommandBufferRdRid(Rid);
     public Rid Buffer => RenderingServer.MultimeshGetBufferRdRid(Rid);
-
-    // public event Action MeshChanged;
 
     public readonly List<Rid> Instances = [];
 
     public MultiMeshRD(int instanceCount, Mesh mesh, int visibleInstances)
     {
         Rid = RenderingServer.MultimeshCreate();
-        Mesh = mesh;
         RenderingServer.MultimeshAllocateData(Rid, instanceCount, RenderingServer.MultimeshTransformFormat.Transform3D, colorFormat: true, customDataFormat: true, useIndirect: true);
-        RenderingServer.MultimeshSetMesh(Rid, Mesh.GetRid());
         RenderingServer.MultimeshSetVisibleInstances(Rid, visibleInstances);
+        SetMesh(mesh);
     }
 
     public Rid CreateMultimeshInstance(Transform3D transform, Rid materialOverride, Rid scenario, float extraVisibilityMargin, uint layerMask)
@@ -50,12 +54,30 @@ public class MultiMeshRD
 
     public void SetMesh(Mesh mesh)
     {
-        // ArgumentNullException.ThrowIfNull(mesh);
-
         Mesh = mesh;
-        RenderingServer.MultimeshSetMesh(Rid, mesh.GetRid());
+        RenderingServer.MultimeshSetMesh(Rid, Mesh.GetRid());
 
-        // MeshChanged.Invoke();
+        RenderingDevice renderingDevice = RenderingServer.GetRenderingDevice();
+
+        if (CommandBufferUniform == null)
+            CommandBufferUniform = new(null, renderingDevice, -1, CommandBuffer, perserve: true);
+        else
+            CommandBufferUniform.SetRid(CommandBuffer);
+
+        if (BufferUniform == null)
+            BufferUniform = new(null, renderingDevice, -1, Buffer, perserve: true);
+        else
+            BufferUniform.SetRid(Buffer);
+
+        (Vector3[] vertices, int[] indices, Vector3[] _, Vector2[] __) = GetMeshData();
+        byte[] meshData = [.. Utilities.ToBytes([(uint)vertices.Length, (uint)indices.Length])];
+
+        if (MeshDataUniform == null)
+            MeshDataUniform = new(null, renderingDevice, -1, meshData, perserve: true);
+        else
+            MeshDataUniform.UpdateUniform(meshData);
+
+        BuffersChanged?.Invoke();
     }
 
     public (Vector3[] vertices, int[] indices, Vector3[] normals, Vector2[] uvs) GetMeshData()

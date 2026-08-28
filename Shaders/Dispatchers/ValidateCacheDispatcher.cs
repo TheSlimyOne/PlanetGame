@@ -6,7 +6,8 @@ namespace PlanetGame.Shaders.Dispatchers
 {
     public class ValidateCacheDispatcher : Dispatcher<ValidateCacheDispatcher.BufferNames>
     {
-        public SparseVirtualTexture SparseVirtualTexture { private get; set; }
+        private static ShaderProgramPaths _shaderPath = new() { Compute = ShaderPaths.VALIDATE_TILE_CACHE };
+        private readonly SparseVirtualTexture _sparseVirtualTexture;
 
         public enum BufferNames
         {
@@ -15,20 +16,21 @@ namespace PlanetGame.Shaders.Dispatchers
             VIRTUAL_TEXTURE_DATA
         }
 
-        public ValidateCacheDispatcher() : base(new() { Compute = ShaderPaths.VALIDATE_TILE_CACHE })
+        public ValidateCacheDispatcher(SparseVirtualTexture sparseVirtualTexture) : base(_shaderPath)
         {
+            _sparseVirtualTexture = sparseVirtualTexture;
             SetupShader();
         }
 
         public override void CreateUniforms()
         {
-            _computeShaderUniforms = new System.Collections.Generic.Dictionary<Enum, ShaderUniform>()
+            _shaderUniforms = new System.Collections.Generic.Dictionary<Enum, ShaderUniform>()
             {
-                [BufferNames.INDIRECTION_TABLE] = SparseVirtualTexture.ResolveTileRequest[ResolveTileRequestDispatcher.BufferNames.INDIRECTION_TABLE],
+                [BufferNames.INDIRECTION_TABLE] = _sparseVirtualTexture.ResolveTileRequest[ResolveTileRequestDispatcher.BufferNames.INDIRECTION_TABLE],
 
-                [BufferNames.RESIDENCY_TABLE] = SparseVirtualTexture.ResolveTileRequest[ResolveTileRequestDispatcher.BufferNames.RESIDENCY_TABLE],
+                [BufferNames.RESIDENCY_TABLE] = _sparseVirtualTexture.ResolveTileRequest[ResolveTileRequestDispatcher.BufferNames.RESIDENCY_TABLE],
 
-                [BufferNames.VIRTUAL_TEXTURE_DATA] = SparseVirtualTexture.ResolveTileRequest[ResolveTileRequestDispatcher.BufferNames.VIRTUAL_TEXTURE_DATA]
+                [BufferNames.VIRTUAL_TEXTURE_DATA] = _sparseVirtualTexture.ResolveTileRequest[ResolveTileRequestDispatcher.BufferNames.VIRTUAL_TEXTURE_DATA]
             };
 
             CreateUniformSet();
@@ -37,7 +39,7 @@ namespace PlanetGame.Shaders.Dispatchers
         #nullable enable
         public override void Invoke(byte[]? pushConstants = null)
         {
-            uint size = SparseVirtualTexture.ResidencyTable.Size;
+            uint size = _sparseVirtualTexture.ResidencyTable.Size;
 
             uint x = (size + 31) / 32;
             uint y = (size + 31) / 32;

@@ -140,6 +140,10 @@ public partial class CustomCamera : Camera3D
 
 	public Projection GetViewProjectionMatrix()
 	{
+		return GetViewProjectionMatrix(Vector3.Zero);
+	}
+	public Projection GetViewProjectionMatrix(Vector3 offset)
+	{
 		Transform3D viewMatrix = GlobalTransform.AffineInverse();
 		Projection projectionMatrix = GetCameraProjection();
 

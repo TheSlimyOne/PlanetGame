@@ -1,13 +1,13 @@
 [gd_scene format=3 uid="uid://dw6xke4ovskkx"]
 
-[ext_resource type="Script" uid="uid://dmhjqmw6g7d2t" path="res://Player/UI/UIController.cs" id="1_jxero"]
+[ext_resource type="Script" uid="uid://cnrrl2by8b466" path="res://Player/UI/UIController.cs" id="1_jxero"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_nf4gj"]
 font_size = 28
 outline_size = 5
 outline_color = Color(0.0768358, 0.0768358, 0.0768358, 1)
 
-[node name="UI" type="Control" unique_id=1911682816 node_paths=PackedStringArray("_lblKeyCount", "_lblFPS", "_lblDistance", "_lblLOD", "_lblCameraMode", "_btnProcessLod", "_btnCubeMode", "_btnCulling", "_btnMorphing", "_btnRenderSurface", "_btnVirtualTexturing")]
+[node name="UI" type="Control" unique_id=1911682816 node_paths=PackedStringArray("_lblKeyCount", "_lblFPS", "_lblDistance", "_lblLOD", "_lblCameraMode")]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -18,14 +18,8 @@ script = ExtResource("1_jxero")
 _lblKeyCount = NodePath("DebugStats/KeyCount")
 _lblFPS = NodePath("DebugStats/FPS")
 _lblDistance = NodePath("DebugStats/Distance")
-_lblLOD = NodePath("DebugStats/LOD")
+_lblLOD = NodePath("")
 _lblCameraMode = NodePath("DebugStats/CameraMode")
-_btnProcessLod = NodePath("Buttons/btnProcessLod")
-_btnCubeMode = NodePath("Buttons/btnCubeMode")
-_btnCulling = NodePath("Buttons/btnCulling")
-_btnMorphing = NodePath("Buttons/btnMorphing")
-_btnRenderSurface = NodePath("Buttons/btnRenderSurface")
-_btnVirtualTexturing = NodePath("Buttons/btnVirtualTexturing")
 
 [node name="DebugStats" type="VBoxContainer" parent="." unique_id=1817362206]
 layout_mode = 0
@@ -45,11 +39,6 @@ label_settings = SubResource("LabelSettings_nf4gj")
 [node name="Distance" type="Label" parent="DebugStats" unique_id=94208793]
 layout_mode = 2
 text = "Distance: X"
-label_settings = SubResource("LabelSettings_nf4gj")
-
-[node name="LOD" type="Label" parent="DebugStats" unique_id=1166626918]
-layout_mode = 2
-text = "Current LOD: X"
 label_settings = SubResource("LabelSettings_nf4gj")
 
 [node name="CameraMode" type="Label" parent="DebugStats" unique_id=307604866]

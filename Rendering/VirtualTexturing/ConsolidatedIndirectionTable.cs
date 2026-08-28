@@ -1,22 +1,19 @@
 using System;
-using System.Linq;
 using Godot;
-using PlanetGame.Shaders;
 namespace PlanetGame.Rendering.VirtualTexturing
 {
     public class ConsolidatedIndirectionTable : VirtualTextureTable
     {
+        private static VirtualTextureData VirtualTextureData => SaveManager.CurrentWorldSave.VirtualTextureData;
+
         public Texture2DArrayRD Table
         {
             get => (Texture2DArrayRD)_storageTexture;
             protected set => _storageTexture = value;
         }
 
-        public VTData VirtualTextureData { get; }
-        public ConsolidatedIndirectionTable(VTData virtualTextureData)
+        public ConsolidatedIndirectionTable()
         {
-            VirtualTextureData = virtualTextureData;
-            
             uint gridSize = VirtualTextureData.GridSize;
 
             Format = RenderingDevice.DataFormat.R32G32B32A32Sfloat;

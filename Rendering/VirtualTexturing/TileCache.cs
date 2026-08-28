@@ -6,21 +6,21 @@ namespace PlanetGame.Rendering.VirtualTexturing
 {
     public class TileCache : VirtualTextureTable
     {
+        private static VirtualTextureData VirtualTextureData => SaveManager.CurrentWorldSave.VirtualTextureData;
+
         public Texture2DArrayRD Cache
         {
             get => (Texture2DArrayRD)_storageTexture;
             protected set => _storageTexture = value;
         }
-        public VTData VirtualTextureData { get; }
         public string TileDirectory { get; private set; }
         public Image.Format CacheFormat { get; private set; }
         public Image Placeholder { get; private set; }
 
         public const uint DEFAULT_TILE_SLOTS_COUNT = 256;
 
-        public TileCache(VTData virtualTextureData, string tileDirectory, Color placeholderColor, Image.Format format)
+        public TileCache(string tileDirectory, Color placeholderColor, Image.Format format)
         {
-            VirtualTextureData = virtualTextureData;
             TileDirectory = tileDirectory;
             CacheFormat = format;
             Format = FormatConverter.MatchDataFormat(CacheFormat);

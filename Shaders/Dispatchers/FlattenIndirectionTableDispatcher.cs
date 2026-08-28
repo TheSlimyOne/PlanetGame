@@ -1,15 +1,15 @@
 using System;
 using Uniform;
 using Godot;
-using Godot.Collections;
-using PlanetGame.Util;
 using PlanetGame.Rendering.VirtualTexturing;
 
 namespace PlanetGame.Shaders.Dispatchers
 {
 	public class FlattenIndirectionTableDispatcher : Dispatcher<FlattenIndirectionTableDispatcher.BufferNames>
 	{
-		public SparseVirtualTexture SparseVirtualTexture { get; set; }
+		private static ShaderProgramPaths _shaderPath = new() { Compute = ShaderPaths.FLATTEN_INDIRECTION_TABLE };
+    	private static VirtualTextureData VirtualTextureData => SaveManager.CurrentWorldSave.VirtualTextureData;
+		
 		public enum BufferNames
 		{
 			INDIRECTION_TABLE,
@@ -17,24 +17,27 @@ namespace PlanetGame.Shaders.Dispatchers
 			VIRTUAL_TEXTURE_DATA
 		}
 
-		public FlattenIndirectionTableDispatcher() : base(new() { Compute = ShaderPaths.FLATTEN_INDIRECTION_TABLE })
+		private readonly SparseVirtualTexture _sparseVirtualTexture;
+
+		public FlattenIndirectionTableDispatcher(SparseVirtualTexture sparseVirtualTexture) : base(_shaderPath)
 		{
+			_sparseVirtualTexture = sparseVirtualTexture;
 			SetupShader();
 		}
 
 		public override void CreateUniforms()
 		{
-			_computeShaderUniforms = new System.Collections.Generic.Dictionary<Enum, ShaderUniform>()
+			_shaderUniforms = new System.Collections.Generic.Dictionary<Enum, ShaderUniform>()
 			{
 				[BufferNames.INDIRECTION_TABLE] = new Texture2DUniform(this, (int)BufferNames.INDIRECTION_TABLE,
-					SparseVirtualTexture.IndirectionTable.GetRdRid(), RenderingDevice.UniformType.Image, perserved: true
+					_sparseVirtualTexture.IndirectionTable.GetRdRid(), RenderingDevice.UniformType.Image, perserved: true
 				),
 
 				[BufferNames.CONSOLIDATED_INDIRECTION_TABLE] = new Texture2DUniform(this, (int)BufferNames.CONSOLIDATED_INDIRECTION_TABLE,
-					SparseVirtualTexture.ConsolidatedIndirectionTable.GetRdRid(), RenderingDevice.UniformType.Image, perserved: true
+					_sparseVirtualTexture.ConsolidatedIndirectionTable.GetRdRid(), RenderingDevice.UniformType.Image, perserved: true
 				),
 
-                [BufferNames.VIRTUAL_TEXTURE_DATA] = SparseVirtualTexture.ResolveTileRequest[ResolveTileRequestDispatcher.BufferNames.VIRTUAL_TEXTURE_DATA]
+                [BufferNames.VIRTUAL_TEXTURE_DATA] = _sparseVirtualTexture.ResolveTileRequest[ResolveTileRequestDispatcher.BufferNames.VIRTUAL_TEXTURE_DATA]
 			};
 			CreateUniformSet();
 		}
@@ -42,7 +45,7 @@ namespace PlanetGame.Shaders.Dispatchers
 #nullable enable
 		public override void Invoke(byte[]? pushConstants = null)
 		{
-			uint gridSize = SparseVirtualTexture.VirtualTextureData.GridSize;
+			uint gridSize = VirtualTextureData.GridSize;
 			uint groupCount = (gridSize + 7) / 8;
 			
 			long computeList = RenderingDevice.ComputeListBegin();
@@ -52,5 +55,5 @@ namespace PlanetGame.Shaders.Dispatchers
 			RenderingDevice.ComputeListDispatch(computeList, groupCount, groupCount, 6);
 			RenderingDevice.ComputeListEnd();
 		}
-	}
+    }
 }

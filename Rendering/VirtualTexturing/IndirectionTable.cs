@@ -6,17 +6,16 @@ namespace PlanetGame.Rendering.VirtualTexturing
 {
     public class IndirectionTable : VirtualTextureTable
     {
+        private static VirtualTextureData VirtualTextureData => SaveManager.CurrentWorldSave.VirtualTextureData;
+
         public Texture2DArrayRD Table
         {
             get => (Texture2DArrayRD)_storageTexture;
             protected set => _storageTexture = value;
         }
 
-        public VTData VirtualTextureData { get; }
-        public IndirectionTable(VTData virtualTextureData)
+        public IndirectionTable()
         {
-            VirtualTextureData = virtualTextureData;
-            
             uint gridSize = VirtualTextureData.GridSize;
 
             Format = RenderingDevice.DataFormat.R32G32B32A32Sfloat;

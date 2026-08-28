@@ -208,7 +208,7 @@ namespace Uniform
 		public override Texture2DUniform RebindUniform(IGPUResource owner, RenderingDevice rd, int binding)
 		{
 			if (rd == RenderingDevice)
-				return new Texture2DUniform(Owner, this, binding);
+				return new Texture2DUniform(owner, this, binding);
 			else if (!UsingMainRenderingDevice)
 				return new Texture2DUniform(owner, rd, binding, TextureFormat, Uniform.UniformType, GetByteData());
 			else

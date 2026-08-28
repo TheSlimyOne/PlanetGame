@@ -1,8 +1,9 @@
 using Godot;
+using System.Collections.Generic;
 
 namespace PlanetGame.Util.DebugUIComponents;
 
-public partial class SectionComponent : PanelContainer, IDebugComponent
+public partial class SectionComponent : PanelContainer, IDebugComponent, IDebugContainer
 {
 	private const int DepthPadding = 20;
 	private const int ContentIndent = 60;
@@ -67,9 +68,43 @@ public partial class SectionComponent : PanelContainer, IDebugComponent
 			_sectionLabelMargin.GuiInput -= OnSectionGuiInput;
 	}
 
-	public void AddContent(Control control)
+	public void AddContent(Control control, int order = 0)
 	{
+		control.SetMeta("DebugOrder", order);
+
 		_contentContainer.AddChild(control);
+
+		SortContent();
+	}
+
+	private void SortContent()
+	{
+		List<Control> controls = [];
+
+		foreach (Node child in _contentContainer.GetChildren())
+		{
+			if (child is Control control)
+				controls.Add(control);
+		}
+
+		controls.Sort((left, right) =>
+		{
+			int leftOrder = GetControlOrder(left);
+			int rightOrder = GetControlOrder(right);
+
+			return leftOrder.CompareTo(rightOrder);
+		});
+
+		for (int index = 0; index < controls.Count; index++)
+			_contentContainer.MoveChild(controls[index], index);
+	}
+
+	private static int GetControlOrder(Control control)
+	{
+		if (!control.HasMeta("DebugOrder"))
+			return 0;
+
+		return control.GetMeta("DebugOrder").AsInt32();
 	}
 
 	private void OnSectionGuiInput(InputEvent inputEvent)

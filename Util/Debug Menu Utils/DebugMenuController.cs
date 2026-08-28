@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 namespace PlanetGame.Util.DebugUIComponents;
 
-public partial class DebugMenuController : PanelContainer
+public partial class DebugMenuController : PanelContainer, IDebugContainer
 {
 	public static DebugMenuController Instance { get; private set; }
 
@@ -12,6 +12,9 @@ public partial class DebugMenuController : PanelContainer
 	private static readonly PackedScene ButtonScene = GD.Load<PackedScene>("res://Util/Debug Menu Utils/Scenes/button_component.tscn");
 	private static readonly PackedScene SliderScene = GD.Load<PackedScene>("res://Util/Debug Menu Utils/Scenes/slider_component.tscn");
 	private static readonly PackedScene TextureScene = GD.Load<PackedScene>("res://Util/Debug Menu Utils/Scenes/texture_component.tscn");
+	private static readonly PackedScene DistributionScene = GD.Load<PackedScene>("res://Util/Debug Menu Utils/Scenes/distribution_component.tscn");
+
+
 
 	private static readonly Texture2D VisibleIcon = GD.Load<Texture2D>("res://Assets/Icons/GuiVisibilityVisible.svg");
 	private static readonly Texture2D HiddenIcon = GD.Load<Texture2D>("res://Assets/Icons/GuiVisibilityHidden.svg");
@@ -82,6 +85,8 @@ public partial class DebugMenuController : PanelContainer
 		if (_debugMenuButton != null)
 			_debugMenuButton.Pressed -= ToggleDebugMenu;
 
+		Clear();
+
 		if (Instance == this)
 			Instance = null;
 	}
@@ -95,8 +100,11 @@ public partial class DebugMenuController : PanelContainer
 
 	private void ToggleDebugMenu()
 	{
-		bool isOpen = !_contentScroll.Visible;
+		SetDebugMenuOpen(!_contentScroll.Visible);
+	}
 
+	private void SetDebugMenuOpen(bool isOpen)
+	{
 		_contentScroll.Visible = isOpen;
 		_debugMenuButton.Icon = isOpen ? VisibleIcon : HiddenIcon;
 
@@ -132,38 +140,97 @@ public partial class DebugMenuController : PanelContainer
 		OffsetTop = 0.0f;
 		OffsetBottom = minimumSize.Y;
 	}
-
 	public void Clear()
 	{
 		foreach (SectionComponent sectionComponent in sectionComponents.Values)
 		{
-			if (IsInstanceValid(sectionComponent)) sectionComponent.QueueFree();
+			if (IsInstanceValid(sectionComponent))
+				sectionComponent.QueueFree();
 		}
 
 		sectionComponents.Clear();
 		sectionNames.Clear();
+
+		foreach (Node child in _sectionContent.GetChildren())
+		{
+			if (child is SectionComponent) continue;
+
+			child.QueueFree();
+		}
+
+		SetDebugMenuOpen(false);
+	}
+
+	public void AddContent(Control control, int order = 0)
+	{
+		control.SetMeta("DebugOrder", order);
+
+		_sectionContent.AddChild(control);
+		SortContent(_sectionContent);
+	}
+
+	private static void SortContent(Container container)
+	{
+		List<Control> controls = [];
+
+		foreach (Node child in container.GetChildren())
+		{
+			if (child is Control control)
+				controls.Add(control);
+		}
+
+		controls.Sort((left, right) =>
+		{
+			int leftOrder = GetControlOrder(left);
+			int rightOrder = GetControlOrder(right);
+
+			return leftOrder.CompareTo(rightOrder);
+		});
+
+		for (int index = 0; index < controls.Count; index++)
+			container.MoveChild(controls[index], index);
+	}
+
+	private static int GetControlOrder(Control control)
+	{
+		if (!control.HasMeta("DebugOrder"))
+			return 0;
+
+		return control.GetMeta("DebugOrder").AsInt32();
+	}
+
+	private IDebugContainer GetContainer(string section)
+	{
+		if (section == null)
+			return this;
+
+		if (!sectionComponents.TryGetValue(section, out SectionComponent sectionComponent))
+			throw new InvalidOperationException($"Debug section '{section}' does not exist.");
+
+		return sectionComponent;
 	}
 
 	#region Sections
 
-	public void AddSection(string name, int depth, bool isOpen = false)
+	public void AddSection(string name, int depth, bool isOpen, string parentSection, int order = 0)
 	{
-		AddSection(name, depth, isOpen, false);
+		AddSection(name, depth, isOpen, parentSection, order, false);
 	}
 
-	public void AddSectionTemplate(string name, int depth, bool isOpen = false)
+	public void AddSectionTemplate(string name, int depth, bool isOpen, string parentSection, int order = 0)
 	{
-		AddSection(name, depth, isOpen, true);
+		AddSection(name, depth, isOpen, parentSection, order, true);
 	}
 
-	private void AddSection(string name, int depth, bool isOpen, bool isTemplate)
+	private void AddSection(string name, int depth, bool isOpen, string parentSection, int order, bool isTemplate)
 	{
-		if (sectionNames.Contains(name)) throw new InvalidOperationException($"Debug menu already contains section '{name}'.");
+		if (sectionNames.Contains(name))
+			throw new InvalidOperationException($"Debug menu already contains section '{name}'.");
 
 		SectionComponent sectionComponent = SectionScene.Instantiate<SectionComponent>();
 
 		sectionComponent.Initialize(name, depth, isOpen, isTemplate);
-		_sectionContent.AddChild(sectionComponent);
+		GetContainer(parentSection).AddContent(sectionComponent, order);
 
 		sectionNames.Add(name);
 		sectionComponents[name] = sectionComponent;
@@ -173,116 +240,185 @@ public partial class DebugMenuController : PanelContainer
 
 	#region Buttons
 
-	public void AddButton(string name, string section, Func<bool> getState, Action action)
+	public void AddButton(string name, string section, Func<bool> getState, Action action, int order = 0)
 	{
 		ButtonComponent buttonComponent = ButtonScene.Instantiate<ButtonComponent>();
 
 		buttonComponent.Initialize(name, getState, action, ButtonComponent.ButtonType.Toggle);
-		GetSection(section).AddContent(buttonComponent);
+		GetContainer(section).AddContent(buttonComponent, order);
 	}
 
-	public void AddActionButton(string name, string section, Action action)
+	public void AddActionButton(string name, string section, Action action, int order = 0)
 	{
 		ButtonComponent buttonComponent = ButtonScene.Instantiate<ButtonComponent>();
 
 		buttonComponent.Initialize(name, null, action, ButtonComponent.ButtonType.Action);
-		GetSection(section).AddContent(buttonComponent);
+		GetContainer(section).AddContent(buttonComponent, order);
 	}
 
-	public void AddButtonTemplate(string name, string section)
+	public void AddButtonTemplate(string name, string section, int order = 0)
 	{
 		ButtonComponent buttonComponent = ButtonScene.Instantiate<ButtonComponent>();
 
 		buttonComponent.Initialize(name, null, null, ButtonComponent.ButtonType.Toggle, true);
-		GetSection(section).AddContent(buttonComponent);
+		GetContainer(section).AddContent(buttonComponent, order);
 	}
 
-	public void AddActionButtonTemplate(string name, string section)
+	public void AddActionButtonTemplate(string name, string section, int order = 0)
 	{
 		ButtonComponent buttonComponent = ButtonScene.Instantiate<ButtonComponent>();
 
 		buttonComponent.Initialize(name, null, null, ButtonComponent.ButtonType.Action, true);
-		GetSection(section).AddContent(buttonComponent);
+		GetContainer(section).AddContent(buttonComponent, order);
 	}
 
 	#endregion
 
 	#region Sliders
 
-	public void AddSlider(string name, string section, Func<int> getState, Action<int> action, int min, int max, int step)
+	public void AddSlider(string name, string section, Func<int> getState, Action<int> action, int min, int max, int step, Func<int, int> subtractFunction = null, Func<int, int> addFunction = null, int order = 0)
 	{
 		SliderComponent sliderComponent = SliderScene.Instantiate<SliderComponent>();
 
-		sliderComponent.Initialize(name, getState, action, min, max, step);
-		GetSection(section).AddContent(sliderComponent);
+		sliderComponent.Initialize(name, getState, action, min, max, step, subtractFunction, addFunction);
+		GetContainer(section).AddContent(sliderComponent, order);
 	}
 
-	public void AddSlider(string name, string section, Func<uint> getState, Action<uint> action, uint min, uint max, uint step)
+	public void AddSlider(string name, string section, SliderComponent.SliderBinding<int>[] bindings, int order = 0)
 	{
 		SliderComponent sliderComponent = SliderScene.Instantiate<SliderComponent>();
 
-		sliderComponent.Initialize(name, getState, action, min, max, step);
-		GetSection(section).AddContent(sliderComponent);
+		sliderComponent.Initialize(name, bindings);
+		GetContainer(section).AddContent(sliderComponent, order);
 	}
 
-	public void AddSlider(string name, string section, Func<float> getState, Action<float> action, float min, float max, float step)
+	public void AddSlider(string name, string section, Func<uint> getState, Action<uint> action, uint min, uint max, uint step, Func<uint, uint> subtractFunction = null, Func<uint, uint> addFunction = null, int order = 0)
 	{
 		SliderComponent sliderComponent = SliderScene.Instantiate<SliderComponent>();
 
-		sliderComponent.Initialize(name, getState, action, min, max, step);
-		GetSection(section).AddContent(sliderComponent);
+		sliderComponent.Initialize(name, getState, action, min, max, step, subtractFunction, addFunction);
+		GetContainer(section).AddContent(sliderComponent, order);
 	}
 
-	public void AddSliderTemplate(string name, string section, int min, int max, int step)
+	public void AddSlider(string name, string section, SliderComponent.SliderBinding<uint>[] bindings, int order = 0)
 	{
 		SliderComponent sliderComponent = SliderScene.Instantiate<SliderComponent>();
 
-		sliderComponent.Initialize(name, null, null, min, max, step, true);
-		GetSection(section).AddContent(sliderComponent);
+		sliderComponent.Initialize(name, bindings);
+		GetContainer(section).AddContent(sliderComponent, order);
 	}
 
-	public void AddSliderTemplate(string name, string section, uint min, uint max, uint step)
+	public void AddSlider(string name, string section, Func<float> getState, Action<float> action, float min, float max, float step, Func<float, float> subtractFunction = null, Func<float, float> addFunction = null, int order = 0)
 	{
 		SliderComponent sliderComponent = SliderScene.Instantiate<SliderComponent>();
 
-		sliderComponent.Initialize(name, null, null, min, max, step, true);
-		GetSection(section).AddContent(sliderComponent);
+		sliderComponent.Initialize(name, getState, action, min, max, step, subtractFunction, addFunction);
+		GetContainer(section).AddContent(sliderComponent, order);
 	}
 
-	public void AddSliderTemplate(string name, string section, float min, float max, float step)
+	public void AddSlider(string name, string section, SliderComponent.SliderBinding<float>[] bindings, int order = 0)
 	{
 		SliderComponent sliderComponent = SliderScene.Instantiate<SliderComponent>();
 
-		sliderComponent.Initialize(name, null, null, min, max, step, true);
-		GetSection(section).AddContent(sliderComponent);
+		sliderComponent.Initialize(name, bindings);
+		GetContainer(section).AddContent(sliderComponent, order);
+	}
+
+	public void AddSliderTemplate(string name, string section, int min, int max, int step, int order = 0)
+	{
+		SliderComponent sliderComponent = SliderScene.Instantiate<SliderComponent>();
+
+		sliderComponent.InitializeTemplate(name, min, max, step);
+		GetContainer(section).AddContent(sliderComponent, order);
+	}
+
+	public void AddSliderTemplate(string name, string section, uint min, uint max, uint step, int order = 0)
+	{
+		SliderComponent sliderComponent = SliderScene.Instantiate<SliderComponent>();
+
+		sliderComponent.InitializeTemplate(name, min, max, step);
+		GetContainer(section).AddContent(sliderComponent, order);
+	}
+
+	public void AddSliderTemplate(string name, string section, float min, float max, float step, int order = 0)
+	{
+		SliderComponent sliderComponent = SliderScene.Instantiate<SliderComponent>();
+
+		sliderComponent.InitializeTemplate(name, min, max, step);
+		GetContainer(section).AddContent(sliderComponent, order);
 	}
 
 	#endregion
 
 	#region Textures
 
-	public void AddTexture(string name, string section, TextureRect textureRect)
+	public void AddTexture(string name, string section, TextureRect textureRect, int order = 0)
 	{
 		TextureComponent textureComponent = TextureScene.Instantiate<TextureComponent>();
 
 		textureComponent.Initialize(name, textureRect);
-		GetSection(section).AddContent(textureComponent);
+		GetContainer(section).AddContent(textureComponent, order);
 	}
 
-	public void AddTextureTemplate(string name, string section)
+	public void AddTextureTemplate(string name, string section, int order = 0)
 	{
 		TextureComponent textureComponent = TextureScene.Instantiate<TextureComponent>();
 
 		textureComponent.Initialize(name, null, true);
-		GetSection(section).AddContent(textureComponent);
+		GetContainer(section).AddContent(textureComponent, order);
 	}
 
 	#endregion
 
-	private SectionComponent GetSection(string section)
-	{
-		if (!sectionComponents.TryGetValue(section, out SectionComponent sectionComponent)) throw new InvalidOperationException($"Debug section '{section}' does not exist.");
+	#region Distributions
 
-		return sectionComponent;
+	public void AddDistribution(string name, string section, DistributionComponent.DistributionBinding<int>[] bindings)
+	{
+		DistributionComponent distributionComponent = DistributionScene.Instantiate<DistributionComponent>();
+
+		distributionComponent.Initialize(name, bindings);
+		GetContainer(section).AddContent(distributionComponent);
 	}
+
+	public void AddDistribution(string name, string section, DistributionComponent.DistributionBinding<uint>[] bindings)
+	{
+		DistributionComponent distributionComponent = DistributionScene.Instantiate<DistributionComponent>();
+
+		distributionComponent.Initialize(name, bindings);
+		GetContainer(section).AddContent(distributionComponent);
+	}
+
+	public void AddDistribution(string name, string section, DistributionComponent.DistributionBinding<float>[] bindings)
+	{
+		DistributionComponent distributionComponent = DistributionScene.Instantiate<DistributionComponent>();
+
+		distributionComponent.Initialize(name, bindings);
+		GetContainer(section).AddContent(distributionComponent);
+	}
+
+	public void AddDistribution(string name, string section, string valueName, Func<int> getState)
+	{
+		DistributionComponent distributionComponent = DistributionScene.Instantiate<DistributionComponent>();
+
+		distributionComponent.Initialize(name, valueName, getState);
+		GetContainer(section).AddContent(distributionComponent);
+	}
+
+	public void AddDistribution(string name, string section, string valueName, Func<uint> getState)
+	{
+		DistributionComponent distributionComponent = DistributionScene.Instantiate<DistributionComponent>();
+
+		distributionComponent.Initialize(name, valueName, getState);
+		GetContainer(section).AddContent(distributionComponent);
+	}
+
+	public void AddDistribution(string name, string section, string valueName, Func<float> getState)
+	{
+		DistributionComponent distributionComponent = DistributionScene.Instantiate<DistributionComponent>();
+
+		distributionComponent.Initialize(name, valueName, getState);
+		GetContainer(section).AddContent(distributionComponent);
+	}
+
+	#endregion
 }

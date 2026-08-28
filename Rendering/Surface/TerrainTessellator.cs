@@ -1,16 +1,25 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using Godot;
+using PlanetGame.Planet;
+using PlanetGame.Rendering.VirtualTexturing;
 using PlanetGame.Shaders.Dispatchers;
 using PlanetGame.Util;
+using PlanetGame.Util.DebugUIComponents;
+using Uniform;
+using static PlanetGame.Planet.PlanetRenderer;
 
 namespace PlanetGame.Rendering.Surface
 {
     public class TerrainTessellator
     {
-        public PlanetController PlanetController { get; private set; }
+        private static TessellationData TessellationData => SaveManager.CurrentWorldSave.TessellationData;
         public ExecuteTessellationPassDispatcher ExecuteTessellationPass { get; private set; }
         public PrepareTessellationPassDispatcher PrepareTessellationPass { get; private set; }
-        public int MaxLod { get; private set; } 
-        public int MinLod { get; private set; } 
+
+        public int MaxLod { get; private set; }
+        public int MinLod { get; private set; }
         public int CulledCount { get; private set; }
         public int TotalCount { get; private set; }
         public int RenderedCount { get; private set; }
@@ -20,17 +29,18 @@ namespace PlanetGame.Rendering.Surface
         public bool Paused = false;
         public bool IsStable { get; private set; } = false;
 
-        public TerrainTessellator(PlanetController planetController)
+        public MultiMeshRD TriangleMultiMesh { get; private set; }
+        private Rid _planetInstance;
+
+        public TerrainTessellator(Rid shader, Rid scenario, Dictionary<BufferNames, ShaderUniform> sharedUniforms)
         {
-            PlanetController = planetController;
-            ExecuteTessellationPass = new();
-            PrepareTessellationPass = new();
+            SetupMultimesh(shader, scenario);
+            ExecuteTessellationPass = new(TriangleMultiMesh, sharedUniforms);
+            PrepareTessellationPass = new(TriangleMultiMesh, sharedUniforms);
 
-            ExecuteTessellationPass.PrepareTessellationPass = PrepareTessellationPass;
-            ExecuteTessellationPass.PlanetController = planetController;
+            LodCounts = new int[TessellationData.MaximumLod + 1];
 
-            PrepareTessellationPass.ExecuteTessellationPass = ExecuteTessellationPass;
-            PrepareTessellationPass.PlanetController = planetController;
+            BindTessellationDebugSettings();
         }
 
         public void CreateUniforms()
@@ -53,7 +63,7 @@ namespace PlanetGame.Rendering.Surface
             return ExecuteTessellationPass?.IsValid() == true && PrepareTessellationPass?.IsValid() == true;
         }
 
-        public void Invoke()
+        public void Invoke(CustomCamera camera)
         {
             if (!Ready || !IsValidForProcessing())
                 return;
@@ -69,9 +79,10 @@ namespace PlanetGame.Rendering.Surface
 
             ExecuteTessellationPass.Invoke(
                 Utilities.ToViewPushConstants(
-                    PlanetController.MainCamera.GetViewProjectionMatrix(),
-                    PlanetController.MainCamera.GlobalPosition,
-                    Mathf.Tan(PlanetController.MainCamera.GetCameraFov(true) / 2)
+                    camera.GetViewProjectionMatrix(),
+                    camera.GlobalPosition,
+                    Mathf.Tan(camera.GetCameraFov(true) / 2),
+                    TessellationData.CullingMargin
                 )
             );
 
@@ -84,6 +95,96 @@ namespace PlanetGame.Rendering.Surface
             (MaxLod, MinLod, StableCount, LodCounts) = ExecuteTessellationPass.GetGlobalKeyData();
 
             Ready = true;
+        }
+
+        public void SetupMultimesh(Rid shader, Rid scenario)
+        {
+            TriangleMultiMesh = new(
+                (int)TessellationData.MaximumKeys,
+                Key.GetTriangleMesh((int)TessellationData.Resolution),
+                -1
+            );
+
+            _planetInstance = TriangleMultiMesh.CreateMultimeshInstance(
+                Transform3D.Identity,
+                shader,
+                scenario,
+                float.MaxValue,
+                0b1u
+            );
+        }
+        private void BindTessellationDebugSettings()
+        {
+            DebugMenuController.Instance.AddSection("Tessellation", 0, false, null, 200);
+
+            DebugMenuController.Instance.AddButton("Enable Tessellation", "Tessellation", () => !Paused, () => Paused = !Paused);
+
+            DebugMenuController.Instance.AddSlider("Resolution", "Tessellation", () => TessellationData.Resolution, value =>
+            {
+                TessellationData.Resolution = value;
+                TriangleMultiMesh.SetMesh(Key.GetTriangleMesh((int)TessellationData.Resolution));
+            }, 2u, 17u, 1u);
+
+            DebugMenuController.Instance.AddSlider("Culling Margin",
+                "Tessellation",
+                [
+                    new SliderComponent.SliderBinding<float>(
+                    () => TessellationData.CullingMargin.X,
+                    value =>
+                    {
+                        Vector4 margin = TessellationData.CullingMargin;
+                        margin.X = value;
+                        TessellationData.CullingMargin = margin;
+                    },
+                    -10.0f,
+                    10.0f,
+                    0.1f
+                ),
+                new SliderComponent.SliderBinding<float>(
+                    () => TessellationData.CullingMargin.Y,
+                    value =>
+                    {
+                        Vector4 margin = TessellationData.CullingMargin;
+                        margin.Y = value;
+                        TessellationData.CullingMargin = margin;
+                    },
+                    -10.0f,
+                    10.0f,
+                    0.1f
+                ),
+                new SliderComponent.SliderBinding<float>(
+                    () => TessellationData.CullingMargin.Z,
+                    value =>
+                    {
+                        Vector4 margin = TessellationData.CullingMargin;
+                        margin.Z = value;
+                        TessellationData.CullingMargin = margin;
+                    },
+                    -10.0f,
+                    10.0f,
+                    0.1f
+                ),
+                new SliderComponent.SliderBinding<float>(
+                    () => TessellationData.CullingMargin.W,
+                    value =>
+                    {
+                        Vector4 margin = TessellationData.CullingMargin;
+                        margin.W = value;
+                        TessellationData.CullingMargin = margin;
+                    },
+                    -10.0f,
+                    10.0f,
+                    0.1f
+                )
+                ]
+            );
+
+            DebugMenuController.Instance.AddDistribution("Lods", "Tessellation",
+                LodCounts.Select((_, lod) => new DistributionComponent.DistributionBinding<int>(
+                    $"LOD {lod}",
+                    () => LodCounts[lod]
+                )).ToArray()
+            );
         }
     }
 }

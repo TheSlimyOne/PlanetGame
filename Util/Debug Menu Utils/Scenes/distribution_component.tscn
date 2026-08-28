@@ -1,0 +1,69 @@
+[gd_scene format=3 uid="uid://dt8xj3far72pr"]
+
+[ext_resource type="Script" uid="uid://dleofftabmv4s" path="res://Util/Debug Menu Utils/DistributionComponent.cs" id="1"]
+
+[node name="DistributionComponent" type="PanelContainer" unique_id=344758243]
+script = ExtResource("1")
+
+[node name="DistributionMargin" type="MarginContainer" parent="." unique_id=1408995033]
+layout_mode = 2
+
+[node name="DistributionContent" type="HBoxContainer" parent="DistributionMargin" unique_id=1306243851]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Label" type="Label" parent="DistributionMargin/DistributionContent" unique_id=1076489786]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Distribution"
+
+[node name="Spacer" type="Control" parent="DistributionMargin/DistributionContent" unique_id=873927965]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="DistributionRows" type="VBoxContainer" parent="DistributionMargin/DistributionContent" unique_id=387227897]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="DistributionRowTemplate" type="HBoxContainer" parent="DistributionMargin/DistributionContent/DistributionRows" unique_id=1427916088]
+layout_mode = 2
+
+[node name="ValueName" type="Label" parent="DistributionMargin/DistributionContent/DistributionRows/DistributionRowTemplate" unique_id=1601465976]
+custom_minimum_size = Vector2(70, 0)
+layout_mode = 2
+text = "Name"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="Spacer" type="Control" parent="DistributionMargin/DistributionContent/DistributionRows/DistributionRowTemplate" unique_id=1318816668]
+custom_minimum_size = Vector2(8, 0)
+layout_mode = 2
+
+[node name="Slider" type="ProgressBar" parent="DistributionMargin/DistributionContent/DistributionRows/DistributionRowTemplate" unique_id=1832691001]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+size_flags_vertical = 1
+max_value = 10.0
+show_percentage = false
+
+[node name="Spacer2" type="Control" parent="DistributionMargin/DistributionContent/DistributionRows/DistributionRowTemplate" unique_id=1797185603]
+custom_minimum_size = Vector2(10, 0)
+layout_mode = 2
+
+[node name="ValueLabel" type="Label" parent="DistributionMargin/DistributionContent/DistributionRows/DistributionRowTemplate" unique_id=1812787738]
+custom_minimum_size = Vector2(60, 0)
+layout_mode = 2
+text = "0"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="Spacer3" type="Control" parent="DistributionMargin/DistributionContent/DistributionRows/DistributionRowTemplate" unique_id=914752206]
+custom_minimum_size = Vector2(10, 0)
+layout_mode = 2
+
+[node name="ValueLabelPercentage" type="Label" parent="DistributionMargin/DistributionContent/DistributionRows/DistributionRowTemplate" unique_id=893968627]
+custom_minimum_size = Vector2(55, 0)
+layout_mode = 2
+text = "0%"
+horizontal_alignment = 2
+vertical_alignment = 1

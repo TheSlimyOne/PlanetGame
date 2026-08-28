@@ -10,7 +10,7 @@ namespace PlanetGame.Shaders.RenderPasses;
 
 public partial class PostProcessingPass : RenderPass<PostProcessingPass.BufferNames>
 {
-    public PlanetController PlanetController;
+    private static ShaderProgramPaths _shaderPath = new() { Vertex = ShaderPaths.PLANET_TESSELLATION_VERTEX, Fragment = ShaderPaths.PLANET_POST_PROCESS_FRAGMENT };
 
     private Rid _shadowTexture;
 
@@ -26,52 +26,42 @@ public partial class PostProcessingPass : RenderPass<PostProcessingPass.BufferNa
 
     }
 
-    public PostProcessingPass(
-        PlanetController planetController,
-        Vector2I viewSize
-    ) : base(
-        new()
-        {
-            Vertex = ShaderPaths.PLANET_TESSELLATION_VERTEX,
-            Fragment = ShaderPaths.PLANET_POST_PROCESS_FRAGMENT
-        },
-        viewSize
-    )
+    public PostProcessingPass(PlanetController planetController, Vector2I viewSize) : base(_shaderPath, viewSize)
     {
-        PlanetController = planetController;
-        Sun = PlanetController.MainLightSource;
-        SetupShader(PlanetController.PlanetMultiMesh.Mesh);
+        // PlanetController = planetController;
+        // Sun = PlanetController.MainLightSource;
+        // SetupShader(PlanetController.PlanetMultiMesh.Mesh);
     }
 
     public override void CreateUniforms()
     {
-        _renderShaderUniforms = new Dictionary<Enum, ShaderUniform>
+        _shaderUniforms = new Dictionary<Enum, ShaderUniform>
         {
-            [BufferNames.MULTIMESH_BUFFER] =
-                PlanetController.TerrainTessellator.ExecuteTessellationPass[
-                    ExecuteTessellationPassDispatcher.BufferNames.MULTIMESH_BUFFER
-                ],
+            // [BufferNames.MULTIMESH_BUFFER] =
+            //     PlanetController.TerrainTessellator.ExecuteTessellationPass[
+            //         ExecuteTessellationPassDispatcher.BufferNames.MULTIMESH_BUFFER
+            //     ],
 
-            [BufferNames.EXTERNAL_DATA] =
-                PlanetController.TerrainTessellator.ExecuteTessellationPass[
-                    ExecuteTessellationPassDispatcher.BufferNames.EXTERNAL_DATA
-                ],
+            // [BufferNames.EXTERNAL_DATA] =
+            //     PlanetController.TerrainTessellator.ExecuteTessellationPass[
+            //         ExecuteTessellationPassDispatcher.BufferNames.EXTERNAL_DATA
+            //     ],
 
-            [BufferNames.HEIGHT_MAP] = new Texture2DUniform(
-                this,
-                (int)BufferNames.HEIGHT_MAP,
-                PlanetController.SparseVirtualTexture.HeightTileCache.GetRdRid(),
-                RenderingDevice.UniformType.SamplerWithTexture,
-                true
-            ),
+            // [BufferNames.HEIGHT_MAP] = new Texture2DUniform(
+            //     this,
+            //     (int)BufferNames.HEIGHT_MAP,
+            //     PlanetController.SparseVirtualTexture.HeightTileCache.GetRdRid(),
+            //     RenderingDevice.UniformType.SamplerWithTexture,
+            //     true
+            // ),
 
-            [BufferNames.INDIRECTION_TABLE] = new Texture2DUniform(
-                this,
-                (int)BufferNames.INDIRECTION_TABLE,
-                PlanetController.SparseVirtualTexture.IndirectionTable.GetRdRid(),
-                RenderingDevice.UniformType.SamplerWithTexture,
-                true
-            )
+            // [BufferNames.INDIRECTION_TABLE] = new Texture2DUniform(
+            //     this,
+            //     (int)BufferNames.INDIRECTION_TABLE,
+            //     PlanetController.SparseVirtualTexture.IndirectionTable.GetRdRid(),
+            //     RenderingDevice.UniformType.SamplerWithTexture,
+            //     true
+            // )
         };
 
         CreateUniformSet();
@@ -80,24 +70,24 @@ public partial class PostProcessingPass : RenderPass<PostProcessingPass.BufferNa
 #nullable enable
     public override void Invoke(byte[]? pushConstants = null)
     {
-        long drawList = RenderingDevice.DrawListBegin(
-            _framebuffer,
-            RenderingDevice.DrawFlags.ClearDepth,
-            [],
-            1.0f,
-            0
-        );
+        // long drawList = RenderingDevice.DrawListBegin(
+        //     _framebuffer,
+        //     RenderingDevice.DrawFlags.ClearDepth,
+        //     [],
+        //     1.0f,
+        //     0
+        // );
 
-        RenderingDevice.DrawListBindRenderPipeline(drawList, _pipeline);
-        RenderingDevice.DrawListBindVertexArray(drawList, _geometry.VertexArray);
-        RenderingDevice.DrawListBindIndexArray(drawList, _geometry.IndexArray);
+        // RenderingDevice.DrawListBindRenderPipeline(drawList, _pipeline);
+        // RenderingDevice.DrawListBindVertexArray(drawList, _geometry.VertexArray);
+        // RenderingDevice.DrawListBindIndexArray(drawList, _geometry.IndexArray);
 
-         if (pushConstants != null)
-				RenderingDevice.DrawListSetPushConstant(drawList, pushConstants, (uint)pushConstants.Length);
+        //  if (pushConstants != null)
+        // 		RenderingDevice.DrawListSetPushConstant(drawList, pushConstants, (uint)pushConstants.Length);
 
-        RenderingDevice.DrawListBindUniformSet(drawList, _uniformSet, 0);
-        RenderingDevice.DrawListDrawIndirect(drawList, true, PlanetController.TerrainTessellator.PrepareTessellationPass[PrepareTessellationPassDispatcher.BufferNames.DRAW_DISPATCH_BUFFER].Rid);
-        RenderingDevice.DrawListEnd();
+        // RenderingDevice.DrawListBindUniformSet(drawList, _uniformSet, 0);
+        // RenderingDevice.DrawListDrawIndirect(drawList, true, PlanetController.TerrainTessellator.PrepareTessellationPass[PrepareTessellationPassDispatcher.BufferNames.DRAW_DISPATCH_BUFFER].Rid);
+        // RenderingDevice.DrawListEnd();
     }
 
     protected override Rid CreatePipeline()
@@ -164,7 +154,7 @@ public partial class PostProcessingPass : RenderPass<PostProcessingPass.BufferNa
 
     public override void UpdateUniforms()
     {
-        throw new NotImplementedException();   
+        throw new NotImplementedException();
     }
 
     public Texture2Drd GetShadowTexture() => new() { TextureRdRid = _shadowTexture };

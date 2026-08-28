@@ -11,6 +11,11 @@ namespace PlanetGame.Util
     public static class Utilities
     {
         // Based discord user created these functions: idrmzit
+        public static Span<byte> ToBytes<T>(uint amount) where T : unmanaged
+        {
+            return new byte[SizeOf<T>() * amount];
+        }
+        
         public static Span<byte> ToBytes<T>(Span<T> data) where T : unmanaged
         {
             return MemoryMarshal.Cast<T, byte>(data);
@@ -91,7 +96,7 @@ namespace PlanetGame.Util
 
         public static Span<T> FromBytes<T>(Span<byte> data) where T : unmanaged
         {
-            int length = data.Length - (data.Length % Unsafe.SizeOf<T>());
+            int length = data.Length - (data.Length % (int)SizeOf<T>());
             return MemoryMarshal.Cast<byte, T>(data[..length]);
         }
 
@@ -120,12 +125,13 @@ namespace PlanetGame.Util
             );
         }
 
-        public static byte[] ToViewPushConstants(Projection viewProjectionMatrix, Vector3 cameraPosition, float fovy)
+        public static byte[] ToViewPushConstants(Projection viewProjectionMatrix, Vector3 cameraPosition, float fovy, Vector4 cullingMargin)
         {
             byte[] data =
             [
                 .. ToBytesSingle(viewProjectionMatrix),
                 .. ToBytesSingle(VectorUtils.ToVector4(cameraPosition, fovy)),
+                .. ToBytesSingle(cullingMargin),
             ];
 
             return data;

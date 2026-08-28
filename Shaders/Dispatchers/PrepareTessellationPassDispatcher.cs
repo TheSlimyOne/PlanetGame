@@ -2,13 +2,15 @@ using System;
 using Godot;
 using Uniform;
 using PlanetGame.Util;
+using PlanetGame.Rendering.VirtualTexturing;
+using System.Collections.Generic;
+using PlanetGame.Planet;
 
 namespace PlanetGame.Shaders.Dispatchers
 {
     public partial class PrepareTessellationPassDispatcher : Dispatcher<PrepareTessellationPassDispatcher.BufferNames>
     {
-        public PlanetController PlanetController { get; set; }
-        public ExecuteTessellationPassDispatcher ExecuteTessellationPass { get; set; }
+        private static ShaderProgramPaths _shaderPath = new() { Compute = ShaderPaths.PREPARE_TESSELLATION_PASS };
 
         public enum BufferNames
         {
@@ -20,44 +22,38 @@ namespace PlanetGame.Shaders.Dispatchers
             MESH_DATA
         }
 
-        public PrepareTessellationPassDispatcher() : base(new() { Compute = ShaderPaths.PREPARE_TESSELLATION_PASS })
+        private MultiMeshRD _triangleMultiMesh;
+        private readonly Dictionary<PlanetRenderer.BufferNames, ShaderUniform> _sharedBufferRids;
+
+        public PrepareTessellationPassDispatcher(MultiMeshRD triangleMultiMesh, Dictionary<PlanetRenderer.BufferNames, ShaderUniform> sharedBufferRids) : base(_shaderPath)
         {
+            _triangleMultiMesh = triangleMultiMesh;
+            _sharedBufferRids = sharedBufferRids;
             SetupShader();
+
+            _triangleMultiMesh.BuffersChanged += CreateUniformSet;
         }
 
         public override void CreateUniforms()
         {
-            (Vector3[] vertices, int[] indices, Vector3[] _, Vector2[] __) meshData = PlanetController.PlanetMultiMesh.GetMeshData();
-            _computeShaderUniforms = new System.Collections.Generic.Dictionary<Enum, ShaderUniform>()
-            {
-                [BufferNames.ATOMIC_COUNTER] = ExecuteTessellationPass[ExecuteTessellationPassDispatcher.BufferNames.ATOMIC_COUNTER],
+            _shaderUniforms = new Dictionary<Enum, ShaderUniform>();
 
-                [BufferNames.INDICES] = ExecuteTessellationPass[ExecuteTessellationPassDispatcher.BufferNames.KEY_INDICES],
+            _shaderUniforms[BufferNames.ATOMIC_COUNTER] = _sharedBufferRids[PlanetRenderer.BufferNames.EXEC_ATOMIC_COUNTER];
 
-                [BufferNames.EXEC_DISPATCH_BUFFER] = new StorageBufferUniform(this, RenderingDevice, (int)BufferNames.EXEC_DISPATCH_BUFFER,
-                    [.. Utilities.ToBytes<uint>([(uint)ExecuteTessellationPass.GetPrimitiveCounts().fullPrimCount / 64 + 1, 1, 1])], RenderingDevice.StorageBufferUsage.Indirect
-                ),
+            _shaderUniforms[BufferNames.INDICES] = _sharedBufferRids[PlanetRenderer.BufferNames.EXEC_KEY_INDICES];
 
-                [BufferNames.DRAW_DISPATCH_BUFFER] = new StorageBufferUniform(this, RenderingDevice, (int)BufferNames.DRAW_DISPATCH_BUFFER,
-                    [.. Utilities.ToBytes<uint>(new uint[5])], RenderingDevice.StorageBufferUsage.Indirect
-                ),
+            _shaderUniforms[BufferNames.EXEC_DISPATCH_BUFFER] = _sharedBufferRids[PlanetRenderer.BufferNames.EXEC_DISPATCH_BUFFER];
 
-                [BufferNames.MULTIMESH_COMMAND_BUFFER] = new StorageBufferUniform(this, RenderingDevice,
-                    (int)BufferNames.MULTIMESH_COMMAND_BUFFER,
-                    PlanetController.PlanetMultiMesh.CommandBuffer,
-                    perserve: true
-                ),
+            _shaderUniforms[BufferNames.DRAW_DISPATCH_BUFFER] = _sharedBufferRids[PlanetRenderer.BufferNames.DRAW_DISPATCH_BUFFER];
 
-                [BufferNames.MESH_DATA] = new StorageBufferUniform(this, RenderingDevice, (int)BufferNames.MESH_DATA,
-                    [.. Utilities.ToBytes([(uint)meshData.vertices.Length, (uint)meshData.indices.Length])],
-                    perserve: true
-                )
-            };
+            _shaderUniforms[BufferNames.MULTIMESH_COMMAND_BUFFER] = _triangleMultiMesh.CommandBufferUniform;
+
+            _shaderUniforms[BufferNames.MESH_DATA] = _triangleMultiMesh.MeshDataUniform;
 
             CreateUniformSet();
         }
 
-        #nullable enable
+#nullable enable
         public override void Invoke(byte[]? pushConstants = null)
         {
             long computeList = RenderingDevice.ComputeListBegin();
@@ -67,5 +63,11 @@ namespace PlanetGame.Shaders.Dispatchers
             RenderingDevice.ComputeListDispatch(computeList, 1, 1, 1);
             RenderingDevice.ComputeListEnd();
         }
+
+        public override void CleanupGPU()
+        {
+            _triangleMultiMesh.BuffersChanged -= CreateUniformSet;
+        }
+
     }
 }

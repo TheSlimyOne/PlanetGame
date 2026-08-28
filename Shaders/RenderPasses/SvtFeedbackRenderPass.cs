@@ -4,31 +4,30 @@ using Godot;
 using System.Collections.Generic;
 using Uniform;
 using PlanetGame.Util;
+using PlanetGame.Rendering.VirtualTexturing;
+using PlanetGame.Planet;
 
 namespace PlanetGame.Shaders.RenderPasses
 {
     public partial class SvtFeedbackRenderPass : RenderPass<SvtFeedbackRenderPass.BufferNames>
     {
-
-        public PlanetController PlanetController { get; set; }
-
+        private static ShaderProgramPaths _shaderPath = new() { Vertex = ShaderPaths.PLANET_TESSELLATION_VERTEX, Fragment = ShaderPaths.PLANET_TESSELLATION_REQUEST_FRAGMENT };
         private Rid _depthTexture;
         private Rid _pickingTexture;
         private Image _pickingImage;
 
-        public SvtFeedbackRenderPass(
-            PlanetController planetController,
-            Vector2I viewSize
-        ) : base(new()
+        private readonly Dictionary<PlanetRenderer.BufferNames, ShaderUniform> _shaderedShaderUniforms;
+        private readonly SparseVirtualTexture _sparseVirtualTexture;
+        private MultiMeshRD _triangleMultiMesh;
+
+        public SvtFeedbackRenderPass(SparseVirtualTexture sparseVirtualTexture, Dictionary<PlanetRenderer.BufferNames, ShaderUniform> shaderedShaderUniforms, MultiMeshRD triangleMultiMesh, Vector2I viewSize) : base(_shaderPath, viewSize)
         {
-            Vertex = ShaderPaths.PLANET_TESSELLATION_VERTEX,
-            Fragment = ShaderPaths.PLANET_TESSELLATION_REQUEST_FRAGMENT
-        },
-            viewSize
-        )
-        {
-            PlanetController = planetController;
-            SetupShader(PlanetController.PlanetMultiMesh.Mesh);
+            _shaderedShaderUniforms = shaderedShaderUniforms;
+            _sparseVirtualTexture = sparseVirtualTexture;
+            _triangleMultiMesh = triangleMultiMesh;
+
+            SetupShader(_triangleMultiMesh.Mesh);
+            _triangleMultiMesh.BuffersChanged += CreateUniformSet;
         }
 
         public enum BufferNames
@@ -41,15 +40,15 @@ namespace PlanetGame.Shaders.RenderPasses
 
         public override void CreateUniforms()
         {
-            _renderShaderUniforms = new Dictionary<Enum, ShaderUniform>()
+            _shaderUniforms = new Dictionary<Enum, ShaderUniform>()
             {
-                [BufferNames.MULTIMESH_BUFFER] = PlanetController.TerrainTessellator.ExecuteTessellationPass[ExecuteTessellationPassDispatcher.BufferNames.MULTIMESH_BUFFER],
+                [BufferNames.MULTIMESH_BUFFER] = _triangleMultiMesh.BufferUniform,
 
-                [BufferNames.EXTERNAL_DATA] = PlanetController.TerrainTessellator.ExecuteTessellationPass[ExecuteTessellationPassDispatcher.BufferNames.EXTERNAL_DATA],
+                [BufferNames.EXTERNAL_DATA] = _shaderedShaderUniforms[PlanetRenderer.BufferNames.EXTERNAL_DATA],
 
-                [BufferNames.HEIGHT_MAP] = new Texture2DUniform(this, (int)BufferNames.HEIGHT_MAP, PlanetController.SparseVirtualTexture.HeightTileCache.GetRdRid(), RenderingDevice.UniformType.SamplerWithTexture, true),
+                [BufferNames.HEIGHT_MAP] = new Texture2DUniform(this, (int)BufferNames.HEIGHT_MAP, _sparseVirtualTexture.HeightTileCache.GetRdRid(), RenderingDevice.UniformType.SamplerWithTexture, true),
 
-                [BufferNames.CONSOLIDATED_INDIRECTION_TABLE] = new Texture2DUniform(this, (int)BufferNames.CONSOLIDATED_INDIRECTION_TABLE, PlanetController.SparseVirtualTexture.ConsolidatedIndirectionTable.GetRdRid(), RenderingDevice.UniformType.SamplerWithTexture, true),
+                [BufferNames.CONSOLIDATED_INDIRECTION_TABLE] = new Texture2DUniform(this, (int)BufferNames.CONSOLIDATED_INDIRECTION_TABLE, _sparseVirtualTexture.ConsolidatedIndirectionTable.GetRdRid(), RenderingDevice.UniformType.SamplerWithTexture, true),
             };
             CreateUniformSet();
         }
@@ -74,10 +73,10 @@ namespace PlanetGame.Shaders.RenderPasses
             RenderingDevice.DrawListBindIndexArray(drawList, _geometry.IndexArray);
 
             if (pushConstants != null)
-				RenderingDevice.DrawListSetPushConstant(drawList, pushConstants, (uint)pushConstants.Length);
-            
+                RenderingDevice.DrawListSetPushConstant(drawList, pushConstants, (uint)pushConstants.Length);
+
             RenderingDevice.DrawListBindUniformSet(drawList, _uniformSet, 0);
-            RenderingDevice.DrawListDrawIndirect(drawList, true, PlanetController.TerrainTessellator.PrepareTessellationPass[PrepareTessellationPassDispatcher.BufferNames.DRAW_DISPATCH_BUFFER].Rid);
+            RenderingDevice.DrawListDrawIndirect(drawList, true, _shaderedShaderUniforms[PlanetRenderer.BufferNames.DRAW_DISPATCH_BUFFER].Rid);
             RenderingDevice.DrawListEnd();
 
             _pickingImage = GetPickingImage();
@@ -97,6 +96,8 @@ namespace PlanetGame.Shaders.RenderPasses
 
         public override void CleanupGPU()
         {
+            _triangleMultiMesh.BuffersChanged -= CreateUniformSet;
+
             if (RenderingDevice == null)
                 return;
 

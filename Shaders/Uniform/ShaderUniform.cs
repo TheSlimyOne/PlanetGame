@@ -76,7 +76,5 @@ namespace Uniform
         {
             return $"Rid: {Rid}, Type: {GetType()} Binding: {Binding}, UsingMainRenderingDevice: {UsingMainRenderingDevice}, Owner: ({Owner.GetType()}, {Owner.GetID()}), Perserved: {Perserved}";
         }
-
     }
-
 }

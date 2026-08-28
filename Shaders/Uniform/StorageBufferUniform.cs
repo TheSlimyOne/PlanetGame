@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Godot;
 using Godot.Collections;
@@ -37,7 +38,7 @@ namespace Uniform
 			Uniform.AddId(Rid);
 		}
 
-		private StorageBufferUniform(IGPUResource owner, StorageBufferUniform storageBufferUniform, int binding) : base(storageBufferUniform.RenderingDevice, binding, owner)
+		private StorageBufferUniform(IGPUResource owner, StorageBufferUniform storageBufferUniform, int binding) : base(storageBufferUniform.RenderingDevice, binding, owner, storageBufferUniform.Perserved)
 		{
 			Rid = storageBufferUniform.Rid;
 			StorageBufferUsage = storageBufferUniform.StorageBufferUsage;
@@ -49,29 +50,25 @@ namespace Uniform
 			};
 
 			foreach (Rid rid in storageBufferUniform.Uniform.GetIds())
-			{
 				Uniform.AddId(rid);
-			}
 		}
 
 		public void ResizeBuffer(uint size)
 		{
-			Uniform.ClearIds();
 			RenderingDevice.FreeRid(Rid);
-			Rid = RenderingDevice.StorageBufferCreate(size, new byte[size], usage: StorageBufferUsage);
-			Uniform.AddId(Rid);
+			SetRid(RenderingDevice.StorageBufferCreate(size, new byte[size], usage: StorageBufferUsage));
 		}
 
 		public override StorageBufferUniform RebindUniform(IGPUResource owner, RenderingDevice rd, int binding)
 		{
 			if (rd == RenderingDevice)
-				return new StorageBufferUniform(Owner, this, binding);
+				return new StorageBufferUniform(owner, this, binding);
 			else
 				return new StorageBufferUniform(owner, rd, binding, GetByteData()[0], storageBufferUsage: StorageBufferUsage);
 		}
 
 		public T[] GetData<T>(uint offsetBytes = 0, uint sizeBytes = 0) where T : unmanaged => Utilities.FromBytes<T>(RenderingDevice.BufferGetData(Rid, offsetBytes, sizeBytes)).ToArray();
-		
+
 		public Error GetDataAsync(Callable callback, uint offsetBytes = 0, uint sizeBytes = 0) => RenderingDevice.BufferGetDataAsync(Rid, callback, offsetBytes, sizeBytes);
 
 		public override void UpdateUniform(byte[] data)
@@ -86,6 +83,12 @@ namespace Uniform
 
 		public override List<byte[]> GetByteData() => [RenderingDevice.BufferGetData(Rid)];
 
-	}
+		public void SetRid(Rid rid)
+        {
+            Rid = rid;
 
+            Uniform.ClearIds();
+            Uniform.AddId(Rid);
+        }
+	}
 }

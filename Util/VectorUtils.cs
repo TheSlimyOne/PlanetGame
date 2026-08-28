@@ -190,7 +190,7 @@ public static class VectorUtils
         return cubePoint;
     }
 
-    public static Vector2 PointOnCubeToUV(int normalId, Vector3 point)
+    public static Vector2 PointOnCubeToPlaneUV(int normalId, Vector3 point)
     {
         Vector2 uv = Vector2.Zero;
 
