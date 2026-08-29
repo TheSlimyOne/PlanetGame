@@ -43,7 +43,6 @@ layout(set = 0, binding = 3) uniform sampler2DArray terrain_indirection_table;
 layout(push_constant, std430) uniform PushConstants {
     mat4 view_projection_matrix;
     vec4 camera_position_fovy;
-    vec4 culling_data;
 } push_constants;
 
 #[include] res://Shaders/GLSL/ShaderIncludes/TessellationFunctions.inc

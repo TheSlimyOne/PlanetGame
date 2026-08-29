@@ -1,8 +1,14 @@
 using Godot;
+using PlanetGame.Rendering.Surface;
+using PlanetGame.Rendering.VirtualTexturing;
 using PlanetGame.Util;
+using PlanetGame.Util.DebugUIComponents;
 
 public partial class CustomCamera : Camera3D
 {
+	private static TessellationData TessellationData => SaveManager.CurrentWorldSave.TessellationData;
+	private static VirtualTextureData VirtualTextureData => SaveManager.CurrentWorldSave.VirtualTextureData;
+
 	[Export] public float BaseZoomSpeed { get; set; }
 	[Export] public float MaxDistance { get; set; }
 	[Export] public float MinDistance { get; set; }
@@ -29,6 +35,80 @@ public partial class CustomCamera : Camera3D
 	RemoteTransform3D FollowRemote;
 	public bool HasMoved { get; private set; }
 
+	public override void _Ready()
+	{
+		DebugMenuController.Instance.AddSection("Camera", 0, false, null, 250);
+		DebugMenuController.Instance.AddSlider("Culling Margin", "Camera",
+		[
+			new SliderComponent.SliderBinding<float>(
+				() => TessellationData.CullingMargin.X,
+				value =>
+				{
+					Vector4 margin = TessellationData.CullingMargin;
+					margin.X = value;
+					TessellationData.CullingMargin = margin;
+					SetFrustumMeshInstance(TessellationData.CullingMargin, TessellationData.CullingDepth);
+				},
+				0,
+				1,
+				0.01f
+			),
+			new SliderComponent.SliderBinding<float>(
+				() => TessellationData.CullingMargin.Y,
+				value =>
+				{
+					Vector4 margin = TessellationData.CullingMargin;
+					margin.Y = value;
+					TessellationData.CullingMargin = margin;
+					SetFrustumMeshInstance(TessellationData.CullingMargin, TessellationData.CullingDepth);
+				},
+				0,
+				1,
+				0.01f
+			),
+			new SliderComponent.SliderBinding<float>(
+				() => TessellationData.CullingMargin.Z,
+				value =>
+				{
+					Vector4 margin = TessellationData.CullingMargin;
+					margin.Z = value;
+					TessellationData.CullingMargin = margin;
+					SetFrustumMeshInstance(TessellationData.CullingMargin, TessellationData.CullingDepth);
+				},
+				0,
+				2,
+				0.01f
+			),
+			new SliderComponent.SliderBinding<float>(
+				() => TessellationData.CullingMargin.W,
+				value =>
+				{
+					Vector4 margin = TessellationData.CullingMargin;
+					margin.W = value;
+					TessellationData.CullingMargin = margin;
+					SetFrustumMeshInstance(TessellationData.CullingMargin, TessellationData.CullingDepth);
+				},
+				0.0f,
+				100.0f,
+				1.0f
+			),
+			new SliderComponent.SliderBinding<float>(
+				() => TessellationData.CullingDepth,
+				value =>
+				{
+					float cullingDepth = TessellationData.CullingDepth;
+					cullingDepth = value;
+					TessellationData.CullingDepth = cullingDepth;
+					SetFrustumMeshInstance(TessellationData.CullingMargin, TessellationData.CullingDepth);
+				},
+				-10.0f,
+				10.0f,
+				0.1f
+			),
+		]);
+
+
+	}
 
 	public override void _PhysicsProcess(double delta)
 	{
@@ -175,71 +255,189 @@ public partial class CustomCamera : Camera3D
 		return projectedPoints;
 	}
 
-	public ArrayMesh CreateFrustumMesh()
+	public Projection GetCullingViewProjectionMatrix(Vector4 cullingMargin, float cullingDepth)
 	{
-		Vector3 origin = GlobalTransform.Origin;
-		Vector3 forward = -GlobalTransform.Basis.Z;
-		Vector3 right = GlobalTransform.Basis.X;
-		Vector3 up = GlobalTransform.Basis.Y;
+		float aspect = GetViewport().GetVisibleRect().Size.X / GetViewport().GetVisibleRect().Size.Y;
+
+		float near = Near + cullingMargin.Z;
+		float far = Far + cullingMargin.W;
+
+		Projection projectionMatrix = Godot.Projection.CreatePerspective(
+			Fov,
+			aspect,
+			near,
+			far,
+			false
+		);
+
+		projectionMatrix.X.X /= 1.0f + cullingMargin.X;
+		projectionMatrix.Y.Y /= 1.0f + cullingMargin.Y;
+
+		Transform3D cameraTransform = GlobalTransform;
+		cameraTransform.Origin += cameraTransform.Basis.Z * cullingDepth;
+
+		Transform3D viewMatrix = cameraTransform.AffineInverse();
+
+		Projection viewMatrix4 = new(
+			new Vector4(viewMatrix[0].X, viewMatrix[0].Y, viewMatrix[0].Z, 0.0f),
+			new Vector4(viewMatrix[1].X, viewMatrix[1].Y, viewMatrix[1].Z, 0.0f),
+			new Vector4(viewMatrix[2].X, viewMatrix[2].Y, viewMatrix[2].Z, 0.0f),
+			new Vector4(viewMatrix[3].X, viewMatrix[3].Y, viewMatrix[3].Z, 1.0f)
+		);
+
+		return projectionMatrix * viewMatrix4;
+	}
+
+	private MeshInstance3D _cullingMarginFrustumInstance;
+	private MeshInstance3D _frustumInstance;
+
+	public void SetFrustumMeshInstance(Vector4 cullingMargin, float cullingDepth)
+	{
+		ArrayMesh cullingMarginFrustum = CreateFrustumMesh(cullingMargin, cullingDepth, Colors.Red);
+
+		if (_cullingMarginFrustumInstance == null)
+		{
+			_cullingMarginFrustumInstance = new()
+			{
+				Name = "Frustum Culling Margin",
+				Layers = 4,
+				Position = Vector3.Zero
+			};
+
+			AddChild(_cullingMarginFrustumInstance);
+		}
+
+		_cullingMarginFrustumInstance.Mesh = cullingMarginFrustum;
+
+		ArrayMesh frustum = CreateFrustumMesh(Vector4.Zero, 0, Colors.Blue);
+
+		if (_frustumInstance == null)
+		{
+			_frustumInstance = new()
+			{
+				Name = "Frustum",
+				Layers = 4,
+				Position = Vector3.Zero
+			};
+
+			AddChild(_frustumInstance);
+		}
+
+		_frustumInstance.Mesh = frustum;
+	}
+
+	public ArrayMesh CreateFrustumMesh(Vector4 cullingMargin, float cullingDepth, Color color)
+	{
+		static void AddTriangle(SurfaceTool surfaceTool, Vector3 a, Vector3 b, Vector3 c)
+		{
+			surfaceTool.AddVertex(a);
+			surfaceTool.AddVertex(b);
+			surfaceTool.AddVertex(c);
+		}
+
+		Vector3 forward = Vector3.Forward;
+		Vector3 right = Vector3.Right;
+		Vector3 up = Vector3.Up;
 
 		float fov = GetCameraFov(true);
 		float aspect = GetViewport().GetVisibleRect().Size.X / GetViewport().GetVisibleRect().Size.Y;
 
-		float near = Near;
-		float far = Far;
+		float near = Near + cullingMargin.Z;
+		float far = Far + cullingMargin.W;
 
-		float hNear = 2.0f * Mathf.Tan(fov / 2.0f) * near;
-		float wNear = hNear * aspect;
-		float hFar = 2.0f * Mathf.Tan(fov / 2.0f) * far;
-		float wFar = hFar * aspect;
+		Vector3 origin = -forward * cullingDepth;
+
+		float baseHalfNearHeight = Mathf.Tan(fov / 2.0f) * near;
+		float baseHalfNearWidth = baseHalfNearHeight * aspect;
+
+		float baseHalfFarHeight = Mathf.Tan(fov / 2.0f) * far;
+		float baseHalfFarWidth = baseHalfFarHeight * aspect;
+
+		float halfNearHeight = baseHalfNearHeight * (1.0f + cullingMargin.Y);
+		float halfNearWidth = baseHalfNearWidth * (1.0f + cullingMargin.X);
+
+		float halfFarHeight = baseHalfFarHeight * (1.0f + cullingMargin.Y);
+		float halfFarWidth = baseHalfFarWidth * (1.0f + cullingMargin.X);
 
 		Vector3 centerNear = origin + forward * near;
 		Vector3 centerFar = origin + forward * far;
 
-		Vector3 ntl = centerNear + (up * hNear / 2) - (right * wNear / 2);
-		Vector3 ntr = centerNear + (up * hNear / 2) + (right * wNear / 2);
-		Vector3 nbl = centerNear - (up * hNear / 2) - (right * wNear / 2);
-		Vector3 nbr = centerNear - (up * hNear / 2) + (right * wNear / 2);
+		Vector3 ntl = centerNear + up * halfNearHeight - right * halfNearWidth;
+		Vector3 ntr = centerNear + up * halfNearHeight + right * halfNearWidth;
+		Vector3 nbl = centerNear - up * halfNearHeight - right * halfNearWidth;
+		Vector3 nbr = centerNear - up * halfNearHeight + right * halfNearWidth;
 
-		Vector3 ftl = centerFar + (up * hFar / 2) - (right * wFar / 2);
-		Vector3 ftr = centerFar + (up * hFar / 2) + (right * wFar / 2);
-		Vector3 fbl = centerFar - (up * hFar / 2) - (right * wFar / 2);
-		Vector3 fbr = centerFar - (up * hFar / 2) + (right * wFar / 2);
+		Vector3 ftl = centerFar + up * halfFarHeight - right * halfFarWidth;
+		Vector3 ftr = centerFar + up * halfFarHeight + right * halfFarWidth;
+		Vector3 fbl = centerFar - up * halfFarHeight - right * halfFarWidth;
+		Vector3 fbr = centerFar - up * halfFarHeight + right * halfFarWidth;
 
-		Vector3 centerLineEnd = centerFar;
+		SurfaceTool solidSurface = new();
+		solidSurface.Begin(Mesh.PrimitiveType.Triangles);
 
-		Vector3[] vertices = [
-			ntl, ntr, ntr, nbr, nbr, nbl, nbl, ntl,
+		AddTriangle(solidSurface, ntl, ntr, nbr);
+		AddTriangle(solidSurface, ntl, nbr, nbl);
 
-			ftl, ftr, ftr, fbr, fbr, fbl, fbl, ftl,
+		AddTriangle(solidSurface, ftl, fbl, fbr);
+		AddTriangle(solidSurface, ftl, fbr, ftr);
+
+		AddTriangle(solidSurface, ntl, ftl, ftr);
+		AddTriangle(solidSurface, ntl, ftr, ntr);
+
+		AddTriangle(solidSurface, nbl, nbr, fbr);
+		AddTriangle(solidSurface, nbl, fbr, fbl);
+
+		AddTriangle(solidSurface, ntl, nbl, fbl);
+		AddTriangle(solidSurface, ntl, fbl, ftl);
+
+		AddTriangle(solidSurface, ntr, ftr, fbr);
+		AddTriangle(solidSurface, ntr, fbr, nbr);
+
+		solidSurface.GenerateNormals();
+
+		ArrayMesh frustumMesh = solidSurface.Commit();
+
+		Vector3[] wireVertices =
+		[
+			ntl, ntr,
+			ntr, nbr,
+			nbr, nbl,
+			nbl, ntl,
+
+			ftl, ftr,
+			ftr, fbr,
+			fbr, fbl,
+			fbl, ftl,
 
 			ntl, ftl,
 			ntr, ftr,
 			nbl, fbl,
-			nbr, fbr,
-
-			// origin, centerLineEnd
+			nbr, fbr
 		];
 
-		ArrayMesh frustumMesh = new();
-		var arrays = new Godot.Collections.Array();
-		arrays.Resize((int)Mesh.ArrayType.Max);
-		arrays[(int)Mesh.ArrayType.Vertex] = vertices;
-		frustumMesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Lines, arrays);
-		frustumMesh.SurfaceSetMaterial(0, new StandardMaterial3D { ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded });
+		Godot.Collections.Array wireArrays = [];
+		wireArrays.Resize((int)Mesh.ArrayType.Max);
+		wireArrays[(int)Mesh.ArrayType.Vertex] = wireVertices;
+
+		frustumMesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Lines, wireArrays);
+
+		Color solidColor = color;
+		solidColor.A = 0.2f;
+
+		frustumMesh.SurfaceSetMaterial(0, new StandardMaterial3D
+		{
+			Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
+			ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
+			AlbedoColor = solidColor,
+			Roughness = 1.0f
+		});
+
+		frustumMesh.SurfaceSetMaterial(1, new StandardMaterial3D
+		{
+			ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
+			AlbedoColor = Colors.White
+		});
 
 		return frustumMesh;
-	}
-
-	public MeshInstance3D GetFrustumMeshInstance()
-	{
-		ArrayMesh mesh = CreateFrustumMesh();
-		MeshInstance3D meshInstance = new()
-		{
-			Mesh = mesh,
-			Name = "Frustum",
-			Layers = 4
-		};
-		return meshInstance;
 	}
 }

@@ -38,7 +38,6 @@ layout(set = 0, binding = 1, std430) buffer restrict readonly ExternalData {
 layout(push_constant, std430) uniform PushConstants {
     mat4 view_projection_matrix;
     vec4 camera_position_fovy;
-    vec4 culling_data;
 } push_constants;
 
 

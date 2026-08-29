@@ -164,8 +164,7 @@ namespace PlanetGame.Rendering.VirtualTexturing
                 Utilities.ToViewPushConstants(
                     camera.GetViewProjectionMatrix(),
                     camera.GlobalPosition,
-                    Mathf.Tan(camera.GetCameraFov(true) / 2),
-                    TessellationData.CullingMargin
+                    Mathf.Tan(camera.GetCameraFov(true) / 2)
                 )
             );
 

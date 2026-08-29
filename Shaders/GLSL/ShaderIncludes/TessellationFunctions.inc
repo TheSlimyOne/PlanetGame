@@ -336,15 +336,13 @@ float calculate_morph(vec3 point, uvec2 key, vec2 morph_range, LodContext lod_co
     return normalized;
 }
 
-bool point_in_frustum(vec3 point, mat4 view_projection_matrix, float bias) {
-    float margin = bias;
-
+bool point_in_frustum(vec3 point, mat4 view_projection_matrix) {
     vec4 clip = view_projection_matrix * vec4(point, 1.0);
     float w = clip.w;
 
     return
-        clip.x >= -w - margin && clip.x <= w + margin &&
-        clip.y >= -w - margin && clip.y <= w + margin &&
+        clip.x >= -w && clip.x <= w &&
+        clip.y >= -w && clip.y <= w &&
         clip.z >= -w && clip.z <= w;
 }
 

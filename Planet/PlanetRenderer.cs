@@ -19,14 +19,12 @@ public class PlanetRenderer
     public SparseVirtualTexture SparseVirtualTexture { get; private set; }
     public BindableShaderMaterial SurfaceShader { get; set; }
   
-    private readonly PlanetController _planetController;
-
     private readonly RenderingDevice _renderingDevice = RenderingServer.GetRenderingDevice();
 
     private static TessellationData TessellationData => SaveManager.CurrentWorldSave.TessellationData;
     private static VirtualTextureData VirtualTextureData => SaveManager.CurrentWorldSave.VirtualTextureData;
 
-    public bool IsCulling = false;
+    public bool IsCulling = true;
     public bool IsMorphing = false;
     public bool IsCube = false;
 
@@ -51,7 +49,6 @@ public class PlanetRenderer
             Shader = GD.Load<Shader>(ShaderPaths.GD_PLANET_TESSELLATION_PATH)
         };
 
-        _planetController = planetController;
         _shaderedShaderUniforms = [];
 
         Vector2I viewSize = new(1024, 512);
@@ -85,12 +82,6 @@ public class PlanetRenderer
 
 
         SurfaceShader?.UpdateFrameDependentParameters();
-    }
-
-    public void ResetRenderer()
-    {
-        // TerrainTessellator.UpdateResolution();
-        SparseVirtualTexture.ClearVirtualTexture();
     }
 
     private void UpdateSharedUniforms(float heightOffset, Transform3D planetTransform)

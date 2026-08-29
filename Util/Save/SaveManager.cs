@@ -314,6 +314,7 @@ public static class SaveManager
                 minimumLod: 0,
                 maximumKeys: 40000,
                 startingLod: 0,
+                cullingDepth: 0,
                 cullingMargin: Vector4.Zero
             )
         };

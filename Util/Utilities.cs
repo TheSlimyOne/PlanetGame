@@ -125,13 +125,12 @@ namespace PlanetGame.Util
             );
         }
 
-        public static byte[] ToViewPushConstants(Projection viewProjectionMatrix, Vector3 cameraPosition, float fovy, Vector4 cullingMargin)
+        public static byte[] ToViewPushConstants(Projection viewProjectionMatrix, Vector3 cameraPosition, float fovy)
         {
             byte[] data =
             [
                 .. ToBytesSingle(viewProjectionMatrix),
-                .. ToBytesSingle(VectorUtils.ToVector4(cameraPosition, fovy)),
-                .. ToBytesSingle(cullingMargin),
+                .. ToBytesSingle(VectorUtils.ToVector4(cameraPosition, fovy))
             ];
 
             return data;

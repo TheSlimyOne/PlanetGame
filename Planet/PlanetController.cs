@@ -13,7 +13,7 @@ public partial class PlanetController : Node3D
 {
     private static TessellationData TessellationData => SaveManager.CurrentWorldSave.TessellationData;
     private static VirtualTextureData VirtualTextureData => SaveManager.CurrentWorldSave.VirtualTextureData;
-    
+
     [Export(PropertyHint.Range, "1,100000")]
     public float Radius
     {
@@ -51,7 +51,7 @@ public partial class PlanetController : Node3D
     [Export] public float MinDistanceFromSurface { get; set; } = 0.05f;
 
 
-   [ExportGroup("Rendering Settings")]
+    [ExportGroup("Rendering Settings")]
 
     [Export]
     public uint MaximumKeys
@@ -183,13 +183,13 @@ public partial class PlanetController : Node3D
 
     private void BindDebugSettings()
     {
-        DebugMenuController.Instance.AddSection("Save Settings", 0, false, null, 900);
-        DebugMenuController.Instance.AddActionButton("Save Current Settings", "Save Settings", () =>
+        DebugMenuController.Instance.AddActionButton("Save Current Settings",  null, () =>
         {
             SaveManager.OverrideSave(SaveManager.CurrentSave, SaveManager.CurrentWorldSave);
-        }, 1);
+        }, 999);
 
-        DebugMenuController.Instance.AddActionButton("Quit", null, () => {
+        DebugMenuController.Instance.AddActionButton("Quit", null, () =>
+        {
             DebugMenuController.Instance.Clear();
             PlanetRenderer.CleanupGPU();
             GetTree().ChangeSceneToFile("res://main.tscn");
@@ -255,14 +255,11 @@ public partial class PlanetController : Node3D
         );
         }
 
-        // HeightOffset = 0;
-
         if (PlanetRenderer != null)
         {
             PlanetRenderer.Invoke(MainCamera, HeightOffset, GetPlanetTransform());
 
             UIController.SetCurrentLOD(PlanetRenderer.TerrainTessellator.MaxLod);
-            // UIController.SetLodCounts(PlanetRenderer.TerrainTessellator.LodCounts);
             UIController.SetLabelKeyCount(PlanetRenderer.TerrainTessellator.CulledCount, PlanetRenderer.TerrainTessellator.TotalCount);
         }
     }
@@ -272,7 +269,7 @@ public partial class PlanetController : Node3D
     public void SetupCameras()
     {
         MainCamera = (OrbitalCamera3D)CameraController.GetCamera("Main");
-        MainCamera.Far = 32768; // Max far value for cameras
+        MainCamera.Far = 4 * Radius; // Max far value for cameras
 
         MainCamera.MinDistance = Radius + 0.999f;
         MainCamera.MaxDistance = MainCamera.Far - Radius;
@@ -282,9 +279,7 @@ public partial class PlanetController : Node3D
         MainCamera.GlobalPosition = Vector3.Back * MainCamera.DistanceFromTarget;
         CameraController.SetCurrent("Main");
 
-        MeshInstance3D frustum = MainCamera.GetFrustumMeshInstance();
-        MainCamera.AddChild(frustum);
-        frustum.GlobalPosition = new Vector3(0.0f, 0.0f, -MainCamera.Near);
+        MainCamera.SetFrustumMeshInstance(TessellationData.CullingMargin, TessellationData.CullingDepth);
     }
 
     private Vector3 _direction = Vector3.Zero;
@@ -320,10 +315,10 @@ public partial class PlanetController : Node3D
         RotatePlanet(right, rotationSpeed * by * _direction.Z);
         RotatePlanet(up, rotationSpeed * by * _direction.X);
 
-    
+
         WorldEnvironment.Environment.SkyRotation = PlanetRotation.Basis.GetEuler();
         SurfaceAttachment.Transform = GetPlanetTransform(scale: false);
-        
+
 
         MainCamera.DistanceFromTarget += zoomSpeed * Radius * _direction.Y * by;
 
@@ -532,6 +527,6 @@ public partial class PlanetController : Node3D
 
     #region Material Settings
 
-    
+
     #endregion
 }

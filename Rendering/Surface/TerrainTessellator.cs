@@ -83,10 +83,9 @@ namespace PlanetGame.Rendering.Surface
 
             ExecuteTessellationPass.Invoke(
                 Utilities.ToViewPushConstants(
-                    camera.GetViewProjectionMatrix(),
+                    camera.GetCullingViewProjectionMatrix(TessellationData.CullingMargin, TessellationData.CullingDepth),
                     camera.GlobalPosition,
-                    Mathf.Tan(camera.GetCameraFov(true) / 2),
-                    TessellationData.CullingMargin
+                    Mathf.Tan(camera.GetCameraFov(true) / 2)
                 )
             );
 
@@ -128,60 +127,6 @@ namespace PlanetGame.Rendering.Surface
                 TessellationData.Resolution = value;
                 TriangleMultiMesh.SetMesh(Key.GetTriangleMesh((int)TessellationData.Resolution));
             }, 2u, 17u, 1u);
-
-            DebugMenuController.Instance.AddSlider("Culling Margin",
-                "Tessellation",
-                [
-                    new SliderComponent.SliderBinding<float>(
-                    () => TessellationData.CullingMargin.X,
-                    value =>
-                    {
-                        Vector4 margin = TessellationData.CullingMargin;
-                        margin.X = value;
-                        TessellationData.CullingMargin = margin;
-                    },
-                    -10.0f,
-                    10.0f,
-                    0.1f
-                ),
-                new SliderComponent.SliderBinding<float>(
-                    () => TessellationData.CullingMargin.Y,
-                    value =>
-                    {
-                        Vector4 margin = TessellationData.CullingMargin;
-                        margin.Y = value;
-                        TessellationData.CullingMargin = margin;
-                    },
-                    -10.0f,
-                    10.0f,
-                    0.1f
-                ),
-                new SliderComponent.SliderBinding<float>(
-                    () => TessellationData.CullingMargin.Z,
-                    value =>
-                    {
-                        Vector4 margin = TessellationData.CullingMargin;
-                        margin.Z = value;
-                        TessellationData.CullingMargin = margin;
-                    },
-                    -10.0f,
-                    10.0f,
-                    0.1f
-                ),
-                new SliderComponent.SliderBinding<float>(
-                    () => TessellationData.CullingMargin.W,
-                    value =>
-                    {
-                        Vector4 margin = TessellationData.CullingMargin;
-                        margin.W = value;
-                        TessellationData.CullingMargin = margin;
-                    },
-                    -10.0f,
-                    10.0f,
-                    0.1f
-                )
-                ]
-            );
 
             DebugMenuController.Instance.AddDistribution("Lods", "Tessellation",
                 LodCounts.Select((_, lod) => new DistributionComponent.DistributionBinding<int>(
