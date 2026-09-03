@@ -7,6 +7,7 @@ using PlanetGame.Util;
 using System.Threading;
 using System.Linq;
 using System.Diagnostics;
+using PlanetGame.Rendering.Surface;
 
 
 namespace PlanetGame.Rendering.VirtualTexturing
@@ -23,6 +24,9 @@ namespace PlanetGame.Rendering.VirtualTexturing
         //     SIZE_512 = 512,
         //     SIZE_1024 = 1024,
         // }
+        private static TessellationData TessellationData => SaveManager.CurrentWorldSave.TessellationData;
+        private static VirtualTextureData VirtualTextureData => SaveManager.CurrentWorldSave.VirtualTextureData;
+
 
         private static Image[] GetMipmapSections(Image image, int maxMipIndex)
         {
@@ -156,7 +160,7 @@ namespace PlanetGame.Rendering.VirtualTexturing
 
                     Color pixel = Sampler.SampleBilinear(parameters.Source, sphereUV.X, sphereUV.Y);
                     tile.SetPixel(x + parameters.Padding, y + parameters.Padding, pixel);
-            }
+                }
             }
 
             tile.SavePng($"{parameters.Destination}//{parameters.MipIndex}_{parameters.NormalId}_{parameters.TileIndexX}_{parameters.TileIndexY}.png");
@@ -442,11 +446,11 @@ namespace PlanetGame.Rendering.VirtualTexturing
             GD.Print($"Done in: {stopwatch.Elapsed}");
         }
 
-        public static Image GetTile(string tileDirectory, string tileName, Image.Format format)
+        public static Image GetTileImage(string tileDirectory, string tileName, Image.Format format)
         {
-            string tilePath = $"{tileDirectory}/{tileName}.png";
+            string tilePath = GenerateTileImagePath(tileDirectory, tileName);
             Image tile = FileAccess.FileExists(tilePath) ? Image.LoadFromFile(tilePath) : null;
-            
+
             if (tile == null)
             {
                 GD.PrintErr($"Path: {tilePath} is not a valid directory");
@@ -455,18 +459,70 @@ namespace PlanetGame.Rendering.VirtualTexturing
 
             if (tile.GetFormat() != format)
                 tile.Convert(format);
-            
+
             if (tile.IsCompressed())
                 tile.Decompress();
 
             return tile;
         }
 
-        public static bool TileExist(string tileDirectory, string tileName)
+        public static bool TileImageExist(string tileDirectory, string tileName)
         {
-            string tilePath = $"{tileDirectory}/{tileName}.png";
+            string tilePath = GenerateTileImagePath(tileDirectory, tileName);
             return FileAccess.FileExists(tilePath);
         }
 
+        public static string GenerateTileImagePath(string tileDirectory, string tileName)
+        {
+            return $"{tileDirectory}/{tileName}.png";
+        }
+
+        public static string GetTileNameFromSurfacePoint(PlanetController.PlanetSurfacePoint surfacePoint)
+        {
+            uint mip = surfacePoint.MipIndex;
+            float mipGridSize = VirtualTextureData.GetMipSize(mip);
+            Vector2I tileCoords = (Vector2I)(surfacePoint.UV * mipGridSize).Floor();
+            int realMip = VirtualTextureData.GetRealMipIndex(mip);
+
+            return $"{realMip}_{surfacePoint.NormalId}_{tileCoords.X}_{tileCoords.Y}";
+        }
+
+        public static Image GetTileImageFromSurfacePoint(PlanetController.PlanetSurfacePoint surfacePoint, string tileDirectory, Image.Format format, out string tileName)
+        {
+            tileName = GetTileNameFromSurfacePoint(surfacePoint);
+            return GetTileImage(tileDirectory, tileName, format);
+        }
+
+        public static string[] GetAncestorTileNames(string tileName, bool includeSelf = true)
+        {
+            if (!VirtualTextureData.IsValidTileName(tileName))
+                return [];
+
+            string[] tileData = tileName.Split('_');
+
+            int realMipIndex = int.Parse(tileData[0]);
+            int normalId = int.Parse(tileData[1]);
+            int tileX = int.Parse(tileData[2]);
+            int tileY = int.Parse(tileData[3]);
+
+            uint mipIndex = VirtualTextureData.GetMipIndex(realMipIndex);
+            int mipSize = VirtualTextureData.GetMipSize(mipIndex);
+
+            List<string> ancestorTileNames = [];
+
+            if (includeSelf)
+                ancestorTileNames.Add(tileName);
+
+            for (int i = realMipIndex + 1; i < VirtualTextureData.TotalMipLayersPerFace - 1; i++)
+            {
+                int gridSize = VirtualTextureData.GetMipSize(VirtualTextureData.GetMipIndex(i));
+                int scale = mipSize / gridSize;
+
+                ancestorTileNames.Add($"{i}_{normalId}_{tileX / scale}_{tileY / scale}");
+
+            }
+
+            return [.. ancestorTileNames.Distinct()];
+        }
     }
 }

@@ -269,11 +269,11 @@ Triangle create_triangle(uvec4 key) {
 
 // ---------- Calculate Lod Functions ----------
 float calculate_lod(float distance_to_camera, LodContext lod_context) {
-    float numerator = SQRT2 * lod_context.subdivision_factor * lod_context.radius;
-    float denominator = distance_to_camera * lod_context.fovy;
+    float numerator = (distance_to_camera - lod_context.height_offset) * lod_context.fovy;
+    float denominator = SQRT2 * lod_context.subdivision_factor * lod_context.radius;
 
     return clamp(
-        log2(numerator / denominator),
+        -log2(numerator / denominator),
         float(lod_context.minimum_lod),
         float(lod_context.maximum_lod)
     );
@@ -289,7 +289,7 @@ float polygon_space_point_to_lod(vec3 cube_position, LodContext lod_context)
 {
     vec3 sphere_position = point_on_cube_to_point_on_sphere(cube_position);
     vec3 world_position = polygon_space_to_world_space(sphere_position, lod_context.planet_transform);
-    float distance_to_camera = max(distance(world_position, lod_context.camera_position) - lod_context.height_offset, 0);
+    float distance_to_camera = distance(world_position, lod_context.camera_position);
     return calculate_lod(distance_to_camera, lod_context);
 }
 

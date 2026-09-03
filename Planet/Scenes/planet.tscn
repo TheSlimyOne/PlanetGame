@@ -2,10 +2,10 @@
 
 [ext_resource type="Script" uid="uid://dwsnsgxikjqsw" path="res://Planet/PlanetController.cs" id="1_qtwtp"]
 [ext_resource type="Texture2D" uid="uid://blsfgfpl1on6b" path="res://Assets/Images/panorama_image.png" id="3_ldv5r"]
-[ext_resource type="Script" uid="uid://cnrrl2by8b466" path="res://Player/UI/UIController.cs" id="3_qtwtp"]
 [ext_resource type="Script" uid="uid://unvbtm76ncqo" path="res://Player/Camera/CameraController.cs" id="5_usljo"]
 [ext_resource type="Script" uid="uid://b6v56lt0ryyap" path="res://Player/Camera/OrbitalCamera3D.cs" id="6_ldv5r"]
 [ext_resource type="PackedScene" uid="uid://bfuimmw6gqopu" path="res://Assets/Models/Scenes/camera.blend" id="6_qtwtp"]
+[ext_resource type="Script" uid="uid://cjp2s5cfd7yu4" path="res://Rendering/VirtualTexturing/Drawing/DrawingController.cs" id="7_8fcaf"]
 
 [sub_resource type="SphereMesh" id="SphereMesh_f8uwt"]
 
@@ -24,23 +24,16 @@ glow_enabled = true
 
 [sub_resource type="MultiMesh" id="MultiMesh_ldv5r"]
 
-[sub_resource type="LabelSettings" id="LabelSettings_usljo"]
-font_size = 28
-outline_size = 5
-outline_color = Color(0.0768358, 0.0768358, 0.0768358, 1)
-
-[node name="Planet" type="Node3D" unique_id=1057872115 node_paths=PackedStringArray("CameraController", "SurfaceAttachment", "UIController", "MainLightSource", "WorldEnvironment")]
+[node name="Planet" type="Node3D" unique_id=1057872115 node_paths=PackedStringArray("CameraController", "SurfaceAttachment", "DrawingController", "MainLightSource", "WorldEnvironment")]
 script = ExtResource("1_qtwtp")
-Radius = 100.0
 CameraController = NodePath("CameraController")
 SurfaceAttachment = NodePath("SurfaceAttachment")
-UIController = NodePath("UIController")
+DrawingController = NodePath("DrawingController")
 MainLightSource = NodePath("SurfaceAttachment/MainLightSource")
 WorldEnvironment = NodePath("WorldEnvironment")
 BaseZoomSpeed = 1.0
 BaseRotationSpeed = 1.0
 MovementEasing = 10.0
-Resolution = 17
 PointRadius = 0.25
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=2059454453]
@@ -78,47 +71,5 @@ DistanceFromTarget = 800.0
 [node name="Camera" parent="CameraController/Main" unique_id=464412187 instance=ExtResource("6_qtwtp")]
 transform = Transform3D(-0.025, 0, 3.774895e-09, 0, 0.025, 0, -3.774895e-09, 0, -0.025, 0, -0.038, 0.101288)
 
-[node name="UIController" type="Control" parent="." unique_id=1610127994 node_paths=PackedStringArray("PlanetController", "_lblKeyCount", "_lblFPS", "_lblDistance", "_lblLOD", "_lblCameraMode", "_lblLods")]
-layout_mode = 3
-anchors_preset = 0
-size_flags_horizontal = 3
-size_flags_vertical = 3
-mouse_filter = 1
-script = ExtResource("3_qtwtp")
-PlanetController = NodePath("..")
-_lblKeyCount = NodePath("DebugStats/KeyCount")
-_lblFPS = NodePath("DebugStats/FPS")
-_lblDistance = NodePath("DebugStats/Distance")
-_lblLOD = NodePath("DebugStats/LOD")
-_lblCameraMode = NodePath("DebugStats/CameraMode")
-_lblLods = NodePath("")
-
-[node name="DebugStats" type="VBoxContainer" parent="UIController" unique_id=1244037009]
-layout_mode = 0
-offset_right = 221.0
-offset_bottom = 716.0
-
-[node name="KeyCount" type="Label" parent="UIController/DebugStats" unique_id=1004083098]
-layout_mode = 2
-text = "Triangles: X"
-label_settings = SubResource("LabelSettings_usljo")
-
-[node name="FPS" type="Label" parent="UIController/DebugStats" unique_id=1715380148]
-layout_mode = 2
-text = "FPS: X"
-label_settings = SubResource("LabelSettings_usljo")
-
-[node name="Distance" type="Label" parent="UIController/DebugStats" unique_id=418668063]
-layout_mode = 2
-text = "Distance: X"
-label_settings = SubResource("LabelSettings_usljo")
-
-[node name="LOD" type="Label" parent="UIController/DebugStats" unique_id=1238472856]
-layout_mode = 2
-text = "Current LOD: X"
-label_settings = SubResource("LabelSettings_usljo")
-
-[node name="CameraMode" type="Label" parent="UIController/DebugStats" unique_id=451109012]
-layout_mode = 2
-text = "Camera Mode: X"
-label_settings = SubResource("LabelSettings_usljo")
+[node name="DrawingController" type="Node" parent="." unique_id=252037683]
+script = ExtResource("7_8fcaf")

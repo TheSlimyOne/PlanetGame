@@ -37,8 +37,8 @@ void main() {
     uvec4 indirection_data = floatBitsToUint(imageLoad(IndirectionTable, indirection_index));
 
     int mip_index = indirection_index.z % int(total_resolution_mip_count);
-    int lod_size = 1 << mip_index;
+    int mip_size = 1 << mip_index;
 
 
-    set_indirection_entry(IndirectionTable, indirection_index, lod_size, uvec4(indirection_data.xy, 255u, indirection_data.w));
+    set_indirection_entry(IndirectionTable, indirection_index, mip_size, uvec4(indirection_data.xy, 255u, indirection_data.w));
 }

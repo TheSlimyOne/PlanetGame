@@ -13,6 +13,7 @@ public partial class DebugMenuController : PanelContainer, IDebugContainer
 	private static readonly PackedScene SliderScene = GD.Load<PackedScene>("res://Util/Debug Menu Utils/Scenes/slider_component.tscn");
 	private static readonly PackedScene TextureScene = GD.Load<PackedScene>("res://Util/Debug Menu Utils/Scenes/texture_component.tscn");
 	private static readonly PackedScene DistributionScene = GD.Load<PackedScene>("res://Util/Debug Menu Utils/Scenes/distribution_component.tscn");
+	private static readonly PackedScene LabelScene = GD.Load<PackedScene>("res://Util/Debug Menu Utils/Scenes/label_component.tscn");
 
 
 
@@ -61,6 +62,8 @@ public partial class DebugMenuController : PanelContainer, IDebugContainer
 		_debugMenuButton.SizeFlagsHorizontal = SizeFlags.ShrinkEnd;
 		_debugMenuButton.SizeFlagsVertical = SizeFlags.ShrinkCenter;
 		_debugMenuButton.Pressed += ToggleDebugMenu;
+
+		AddLabel("FPS", null, () => $"{(int)Engine.GetFramesPerSecond()}");
 	}
 
 	public override void _Ready()
@@ -420,5 +423,15 @@ public partial class DebugMenuController : PanelContainer, IDebugContainer
 		GetContainer(section).AddContent(distributionComponent);
 	}
 
+	#endregion
+
+	#region Label
+	public void AddLabel(string name, string section, Func<string> getValue)
+	{
+		LabelComponent labelComponent = LabelScene.Instantiate<LabelComponent>();
+
+		labelComponent.Initialize(name, getValue);
+		GetContainer(section).AddContent(labelComponent);
+	}
 	#endregion
 }

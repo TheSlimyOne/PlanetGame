@@ -1,29 +1,33 @@
 using System;
-using System.Linq;
 using Godot;
-using PlanetGame.Shaders;
+
 namespace PlanetGame.Rendering.VirtualTexturing
 {
     public class TileCache : VirtualTextureTable
     {
         private static VirtualTextureData VirtualTextureData => SaveManager.CurrentWorldSave.VirtualTextureData;
 
+        public const uint DEFAULT_TILE_SLOTS_COUNT = 256;
+
+        private readonly Tile[] _tiles = new Tile[DEFAULT_TILE_SLOTS_COUNT];
+
         public Texture2DArrayRD Cache
         {
             get => (Texture2DArrayRD)_storageTexture;
             protected set => _storageTexture = value;
         }
-        public string TileDirectory { get; private set; }
-        public Image.Format CacheFormat { get; private set; }
-        public Image Placeholder { get; private set; }
+        public readonly string TileDirectory;
+        public readonly string BaseDirectory;
+        public readonly Image.Format CacheFormat;
+        public readonly Image Placeholder;
 
-        public const uint DEFAULT_TILE_SLOTS_COUNT = 256;
 
-        public TileCache(string tileDirectory, Color placeholderColor, Image.Format format)
+        public TileCache(string tileDirectory, string baseDirectory, Color placeholderColor, Image.Format format)
         {
             TileDirectory = tileDirectory;
             CacheFormat = format;
             Format = FormatConverter.MatchDataFormat(CacheFormat);
+            BaseDirectory = baseDirectory;
 
             int tileSize = (int)VirtualTextureData.TileSize;
             Placeholder = Image.CreateEmpty(tileSize, tileSize, false, CacheFormat);
@@ -55,41 +59,63 @@ namespace PlanetGame.Rendering.VirtualTexturing
             RenderingServer.GetRenderingDevice().TextureClear(GetRdRid(), new Color("00000000"), 0, 1, 0, DEFAULT_TILE_SLOTS_COUNT);
         }
 
-        public bool TileExist(string tileName)
+        public bool TileImageExist(string tileName)
         {
-            return TileManager.TileExist(TileDirectory, tileName);
+            return TileManager.TileImageExist(TileDirectory, tileName);
         }
 
-        public Image GetTile(string tileName)
+        public Image GetTileImage(string tileName)
         {
-            return TileManager.GetTile(TileDirectory, tileName, CacheFormat) ?? Placeholder;
-
+            return TileManager.GetTileImage(TileDirectory, tileName, CacheFormat) ?? Placeholder;
         }
 
-        public void InsertTile(string tileName, uint slot)
+        public Tile GetTile(string tileName)
         {
-            Image tile = TileManager.GetTile(TileDirectory, tileName, CacheFormat) ?? Placeholder;
+            if (!VirtualTextureData.IsValidTileName(tileName))
+            {
+                GD.PrintErr("Tile is not valid to insert");
+                return null;
+            }
+
+            string[] tileData = tileName.Split('_');
+            int realMipIndex = int.Parse(tileData[0]);
+            Tile.TileMipType tileType = realMipIndex >= 0 ? Tile.TileMipType.Base : Tile.TileMipType.Detail;
             
-            RenderingServer.CallOnRenderThread(Callable.From(() =>
+            Tile tile;
+            if (!TileImageExist(tileName))
             {
-                RenderingServer.GetRenderingDevice().TextureUpdate(GetRdRid(), slot, tile.GetData());
-            }));
+                tile = new(tileName, RequestTile(tileName, tileType), null, this, tileType);
+                tile.Image.Convert(CacheFormat);
+            }
+            else
+            {
+                tile = new(tileName, null, this, tileType);
+                tile.Image.Convert(CacheFormat);
+            }
+
+            return tile;
         }
 
-        public void InsertTile(Image tile, uint slot)
+
+        public bool InsertTile(string tileName, uint slot)
         {
-            if (tile.GetFormat() != CacheFormat)
-                tile.Convert(CacheFormat);
+            Tile tile = GetTile(tileName);
+
+            tile.Slot = slot;
+
+            _tiles[slot] = tile;
 
             RenderingServer.CallOnRenderThread(Callable.From(() =>
             {
-                RenderingServer.GetRenderingDevice().TextureUpdate(GetRdRid(), slot, tile.GetData());
+                RenderingServer.GetRenderingDevice().TextureUpdate(GetRdRid(), slot, tile.Image.GetData());
             }));
+
+            return true;
         }
 
-        public Image CreateTile(string tileName)
+        public Image RequestTile(string tileName, Tile.TileMipType tileType)
         {
-            GD.Print($"Creating: {tileName}");
+            GD.Print($"Requesting: {tileName}");
             string[] tileData = tileName.Split('_');
             int mipIndex = int.Parse(tileData[0]);
             int normalId = int.Parse(tileData[1]);
@@ -103,13 +129,49 @@ namespace PlanetGame.Rendering.VirtualTexturing
                 NormalId = normalId,
                 MipIndex = mipIndex,
                 SourceFormat = FormatConverter.MatchDataFormat(Format),
-                TilesPerSide = 0,
                 TileSize = (int)VirtualTextureData.TileSize,
-                Padding = 0,
-                Destination = TileDirectory
+                Source = Image.LoadFromFile(BaseDirectory),
+                Destination = TileDirectory,
+                Padding = 0, // going to need a variable for this in the future
             };
-            return TileManager.GenerateBlankTile(parameters);
+
+            switch (tileType)
+            {
+                case Tile.TileMipType.Base:
+                    parameters.TilesPerSide = (int)Mathf.Pow(2, VirtualTextureData.LowResolutionMipCount - 1 - mipIndex);
+
+                    return TileManager.GenerateTile(parameters);
+                case Tile.TileMipType.Detail:
+                    return TileManager.GenerateBlankTile(parameters);
+                default:
+                    return Placeholder;
+            }
         }
+
+        // public Image InsertTile(string tileName, uint slot)
+        // {
+        //     Image imageTile = TileManager.GetTile(TileDirectory, tileName, CacheFormat) ?? Placeholder;
+
+        //     // _tiles[slot] = Tiel;
+
+        //     RenderingServer.CallOnRenderThread(Callable.From(() =>
+        //     {
+        //         RenderingServer.GetRenderingDevice().TextureUpdate(GetRdRid(), slot, imageTile.GetData());
+        //     }));
+
+        //     return imageTile;
+        // }
+
+        // public void InsertTile(Image tile, uint slot)
+        // {
+        //     if (tile.GetFormat() != CacheFormat)
+        //         tile.Convert(CacheFormat);
+
+        //     RenderingServer.CallOnRenderThread(Callable.From(() =>
+        //     {
+        //         RenderingServer.GetRenderingDevice().TextureUpdate(GetRdRid(), slot, tile.GetData());
+        //     }));
+        // }
 
         public override TextureRect CreateVisualization(string name)
         {

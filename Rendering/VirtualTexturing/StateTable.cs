@@ -19,7 +19,7 @@ namespace PlanetGame.Rendering.VirtualTexturing
         public StateTable()
         {
 
-            uint gridSize = VirtualTextureData.GridSize;
+            uint gridSize = VirtualTextureData.BaseGridSize;
 
             Format = RenderingDevice.DataFormat.R8G8B8A8Unorm;
 

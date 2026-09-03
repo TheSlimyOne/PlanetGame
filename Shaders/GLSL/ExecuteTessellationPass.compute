@@ -111,7 +111,7 @@ bool triangle_in_horizon(vec3 point) {
 
     float distance_from_planet = distance_from_cam(planet_transform_matrix[3].xyz, planet_transform_matrix);
 
-    if (distance_from_planet <= radius)
+    if (distance_from_planet <= (radius + height_offset))
         return true;
 
     float distance_from_horizon = sqrt(

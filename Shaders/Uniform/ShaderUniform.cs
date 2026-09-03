@@ -5,7 +5,7 @@ using PlanetGame.Shaders.Dispatchers;
 
 namespace Uniform
 {
-    public abstract partial class ShaderUniform : GodotObject
+    public abstract class ShaderUniform : IGPUResource
     {
         public Rid Rid { get; protected set; }
         public int Binding { get; protected set; }
@@ -28,7 +28,6 @@ namespace Uniform
             Owner = owner;
             Perserved = perserved;
 
-            // GD.PrintS(binding, GetType(), Owner.GetType(), Owner.GetID());
             Uniforms.Add(this);
         }
 
@@ -50,17 +49,19 @@ namespace Uniform
             {
                 if (Rid == rid && Perserved)
                 {
-                    // GD.Print($"Perserved {rid} of {GetType()} its owner is {Owner.GetID()} {Owner.GetType()}");
+                    if (IGPUResource.Verbose) GD.Print($"Perserved {rid} of {GetType()} its owner is {Owner.GetID()} {Owner.GetType()}");
                     continue;
                 }
 
                 if (rid.IsValid)
                 {
-                    // GD.Print($"Freed {rid} for a {GetType()}");
+                    if (IGPUResource.Verbose) GD.Print($"Freed {rid} for a {GetType()}");
                     RenderingDevice.FreeRid(rid);
                 }
                 else
-                    GD.PrintErr($"Rid: {rid} is not valid for RenderingDevice: {RenderingDevice}.");
+                {
+                    if (IGPUResource.Verbose) GD.PrintErr($"Rid: {rid} is not valid for RenderingDevice: {RenderingDevice}.");
+                }
             }
             Uniform.ClearIds();
             Uniform = null;
@@ -76,5 +77,9 @@ namespace Uniform
         {
             return $"Rid: {Rid}, Type: {GetType()} Binding: {Binding}, UsingMainRenderingDevice: {UsingMainRenderingDevice}, Owner: ({Owner.GetType()}, {Owner.GetID()}), Perserved: {Perserved}";
         }
+
+        public int GetID() => Rid.GetHashCode() + Owner.GetHashCode();
+        
+
     }
 }

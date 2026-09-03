@@ -112,7 +112,6 @@ public abstract class Dispatcher<TEnum>(RenderingDevice renderingDevice, ShaderP
         RenderingDevice.Sync();
     }
 
-    public bool Verbose = false;
     public virtual void CleanupGPU()
     {
         if (RenderingDevice == null)
@@ -132,15 +131,15 @@ public abstract class Dispatcher<TEnum>(RenderingDevice renderingDevice, ShaderP
                 Enum uniformName = kvp.Key;
                 ShaderUniform shaderUniform = kvp.Value;
 
-                if (Verbose) GD.Print("========================");
-                if (Verbose) GD.Print($"Clearing {uniformName} in {GetType().Name} ID: {GetID()} Owner: {shaderUniform.Owner}");
+                if (IGPUResource.Verbose) GD.Print("========================");
+                if (IGPUResource.Verbose) GD.Print($"Clearing {uniformName} in {GetType().Name} ID: {GetID()} Owner: {shaderUniform.Owner}");
                 if (shaderUniform.Owner == this)
                 {
-                    if (Verbose) GD.Print(shaderUniform.Rid);
+                    if (IGPUResource.Verbose) GD.Print(shaderUniform.Rid);
                     shaderUniform.FreeRids();
                 }
-                else if (Verbose) GD.Print($"{GetType().Name} does not own this uniform. Not free rid");
-                if (Verbose) GD.Print("========================");
+                else if (IGPUResource.Verbose) GD.Print($"{GetType().Name} does not own this uniform. Not free rid");
+                if (IGPUResource.Verbose) GD.Print("========================");
             }
         }
 

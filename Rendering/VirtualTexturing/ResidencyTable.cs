@@ -68,10 +68,10 @@ namespace PlanetGame.Rendering.VirtualTexturing
 
 
                     uint mip_index = uint(indirection_index.z) % total_resolution_mip_count;
-                    float lod_size = float(1u << mip_index);
+                    float mip_size = float(1u << mip_index);
 
-                    float x = float(indirection_index.x) / lod_size;
-                    float y = float(indirection_index.y) / lod_size;
+                    float x = float(indirection_index.x) / mip_size;
+                    float y = float(indirection_index.y) / mip_size;
                     // float z = float(mip_index / total_resolution_mip_count); 
                     float z = float(total_resolution_mip_count) - float(mip_index) + 1.0;
 
@@ -94,7 +94,7 @@ namespace PlanetGame.Rendering.VirtualTexturing
                 TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
                 Material = new ShaderMaterial() { Shader = new() { Code = shaderCode } }
             };
-            ((ShaderMaterial)texture.Material).SetShaderParameter("total_resolution_mip_count", VirtualTextureData.TotalSubdivisions);
+            ((ShaderMaterial)texture.Material).SetShaderParameter("total_resolution_mip_count", VirtualTextureData.TotalMipLayersPerFace);
             texture.SetAnchorsPreset(Control.LayoutPreset.FullRect);
 
             Visualization = texture;
@@ -109,7 +109,7 @@ namespace PlanetGame.Rendering.VirtualTexturing
 
         public override void SetFallbackSlots()
         {
-            uint totalMipLayers = VirtualTextureData.TotalSubdivisions;
+            uint totalMipLayers = VirtualTextureData.TotalMipLayersPerFace;
             string[] fallBackTiles = VirtualTextureData.FallBackTiles;
             int size = (int)Mathf.Ceil(Mathf.Sqrt(TileCache.DEFAULT_TILE_SLOTS_COUNT));
 
@@ -120,12 +120,12 @@ namespace PlanetGame.Rendering.VirtualTexturing
                 string[] tileData = fallBackTiles[i].Split('_');
                 int realMipIndex = int.Parse(tileData[0]);
 
-                int nonNegativeMipIndex = realMipIndex + (int)VirtualTextureData.HighResolutionMipCount;
+                uint mipIndex = VirtualTextureData.GetMipIndex(realMipIndex);
                 int normalId = int.Parse(tileData[1]);
                 int tileX = int.Parse(tileData[2]);
                 int tileY = int.Parse(tileData[3]);
 
-                int tileLayer = (int)totalMipLayers * normalId + nonNegativeMipIndex;
+                int tileLayer = (int)totalMipLayers * normalId + (int)mipIndex;
            
                 Vector2I slotIndex = new(i % size, i / size);
                 Vector3I indirectionIndex = new(

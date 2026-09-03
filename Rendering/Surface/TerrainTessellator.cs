@@ -29,6 +29,9 @@ namespace PlanetGame.Rendering.Surface
         public bool Paused = false;
         public bool IsStable { get; private set; } = false;
 
+        private int _totalMax;
+        private int _culledMax;
+
         public MultiMeshRD TriangleMultiMesh { get; private set; }
         private Rid _planetInstance;
 
@@ -44,7 +47,7 @@ namespace PlanetGame.Rendering.Surface
         }
 
         public void CreateUniforms()
-    {
+        {
             ExecuteTessellationPass.CreateUniforms();
             PrepareTessellationPass.CreateUniforms();
         }
@@ -119,6 +122,22 @@ namespace PlanetGame.Rendering.Surface
         private void BindTessellationDebugSettings()
         {
             DebugMenuController.Instance.AddSection("Tessellation", 0, false, null, 200);
+            DebugMenuController.Instance.AddLabel("Current Keys", "Tessellation", () => {
+                return $"{CulledCount}/{TotalCount}";
+            });
+            DebugMenuController.Instance.AddLabel("Max Keys", "Tessellation", () => {
+                _culledMax = Math.Max(_culledMax, CulledCount);
+		        _totalMax = Math.Max(_totalMax, TotalCount);
+                return $"{_culledMax}/{_totalMax}";
+            });
+            DebugMenuController.Instance.AddLabel("Current Lod", "Tessellation", () => $"{MaxLod}");
+            DebugMenuController.Instance.AddLabel("Culling Percentage", "Tessellation", () =>
+            {
+                if (TotalCount == 0)
+                    return $"Undefined";
+
+                return $"{1 - (float)CulledCount / TotalCount:P1}";
+            });
 
             DebugMenuController.Instance.AddButton("Enable Tessellation", "Tessellation", () => !Paused, () => Paused = !Paused);
 
@@ -128,12 +147,21 @@ namespace PlanetGame.Rendering.Surface
                 TriangleMultiMesh.SetMesh(Key.GetTriangleMesh((int)TessellationData.Resolution));
             }, 2u, 17u, 1u);
 
+
             DebugMenuController.Instance.AddDistribution("Lods", "Tessellation",
                 LodCounts.Select((_, lod) => new DistributionComponent.DistributionBinding<int>(
                     $"LOD {lod}",
                     () => LodCounts[lod]
                 )).ToArray()
             );
+
+            // DebugMenuController.Instance.AddDistribution("Lods", "Tessellation",
+            
+            //     new(
+            //         
+            //     )
+            // )
+
         }
     }
 }

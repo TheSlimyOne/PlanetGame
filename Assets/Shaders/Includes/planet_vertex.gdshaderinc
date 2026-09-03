@@ -90,7 +90,7 @@ void vertex() {
 	}
 	
 	lod = get_lod_of_key(key.xy);
-	int non_negative_mip_index = lod_to_mip_map[lod] + high_resolution_mip_count;
+	int mip_index = lod_to_mip_map[lod] + high_resolution_mip_count;
 	int total_resolution_mip_count = low_resolution_mip_count + high_resolution_mip_count;
 	float lod_scale = pow(2.0, float(int(current_lod)));
 	

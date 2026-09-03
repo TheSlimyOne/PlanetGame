@@ -16,7 +16,7 @@ namespace PlanetGame.Rendering.VirtualTexturing
 
         public IndirectionTable()
         {
-            uint gridSize = VirtualTextureData.GridSize;
+            uint gridSize = VirtualTextureData.BaseGridSize;
 
             Format = RenderingDevice.DataFormat.R32G32B32A32Sfloat;
 
@@ -110,9 +110,9 @@ namespace PlanetGame.Rendering.VirtualTexturing
 
         public override void SetFallbackSlots()
         {
-            uint totalMipLayers = VirtualTextureData.TotalSubdivisions;
+            uint totalMipLayers = VirtualTextureData.TotalMipLayersPerFace;
             string[] fallBackTiles = VirtualTextureData.FallBackTiles;
-            uint gridSize = VirtualTextureData.GridSize;
+            uint gridSize = VirtualTextureData.BaseGridSize;
             int size = (int)Mathf.Sqrt(TileCache.DEFAULT_TILE_SLOTS_COUNT);
             
             Image[] images = new Image[VirtualTextureData.TotalMipLayers];
@@ -128,7 +128,7 @@ namespace PlanetGame.Rendering.VirtualTexturing
                 int tileY = int.Parse(tileData[3]);
 
                 int tileLayer = (int)totalMipLayers * normalId + mipIndex;
-                int lodSize = 1 << mipIndex;
+                int mipSize = 1 << mipIndex;
 
                 if(images[tileLayer] == null)
                     images[tileLayer] = Image.CreateEmpty((int)gridSize, (int)gridSize, false, FormatConverter.MatchDataFormat(Format));
@@ -144,8 +144,8 @@ namespace PlanetGame.Rendering.VirtualTexturing
                 Vector3I indirectionIndex = new(tileX, tileY, tileLayer);
 
 
-                for (int j = 0; j < lodSize; j++)                   
-                    for (int k = 0; k < lodSize; k++)
+                for (int j = 0; j < mipSize; j++)                   
+                    for (int k = 0; k < mipSize; k++)
                         images[tileLayer].SetPixel(tileX + j, tileY + k, data);
             }
                     

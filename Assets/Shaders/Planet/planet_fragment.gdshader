@@ -97,18 +97,18 @@ vec3 color_base_normal_and_adjecenies(vec2 uv, float coverage, int normal_id) {
 void fragment() {
 	int normal_id = int(key.z);
 	int total_resolution_mip_count = low_resolution_mip_count + high_resolution_mip_count;
-	int non_negative_mip_index = lod_to_mip_map[lod] + high_resolution_mip_count;
+	int mip_index = lod_to_mip_map[lod] + high_resolution_mip_count;
 
 	vec2 adjusted_uv = clamp(plane_vertex_uv, vec2(0.0), vec2(1.0 - EPS));
 
 	float grid_size = exp2(float(total_resolution_mip_count - 1));
-	float lod_grid_size = grid_size / exp2(float(non_negative_mip_index));
+	float lod_grid_size = grid_size / exp2(float(mip_index));
 
 	vec2 tile_coordinate = adjusted_uv * lod_grid_size;
 	vec2 tile_local_uv = fract(tile_coordinate);
 	vec2 grid_uv = floor(tile_coordinate) / lod_grid_size;
 
-	int layer = total_resolution_mip_count * normal_id + non_negative_mip_index;
+	int layer = total_resolution_mip_count * normal_id + mip_index;
 	
 	ivec3 indirection_index = get_indirection_index(adjusted_uv, normal_id, low_resolution_mip_count, high_resolution_mip_count);
 	uvec4 indirection_data = floatBitsToUint(texelFetch(terrain_indirection_table, indirection_index, 0));
@@ -125,7 +125,7 @@ void fragment() {
 	NORMAL = calculate_normal(NORMAL, tile_uv);
 
 	if (render_tile_uvs) {
-		float depth = 1.0 - float(non_negative_mip_index) / float(total_resolution_mip_count - 1);
+		float depth = 1.0 - float(mip_index) / float(total_resolution_mip_count - 1);
 		vec3 output_color = vec3(1.0);
 
 		switch (key.z) {

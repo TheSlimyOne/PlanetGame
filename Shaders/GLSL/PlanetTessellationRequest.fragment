@@ -82,17 +82,17 @@ void main() {
     
     vec2 adjusted_uv = clamp(vertex_uv, vec2(0.0), vec2(1.0 - EPS));
 
-    int non_negative_mip_index = lod_to_mip_map[lod] + high_resolution_mip_count;
+    int mip_index = lod_to_mip_map[lod] + high_resolution_mip_count;
     int normal_id = int(key.z);
     int total_resolution_mip_count = low_resolution_mip_count + high_resolution_mip_count;
 
 	float grid_size = exp2(float(total_resolution_mip_count - 1));
-	float mip_grid_size = grid_size / exp2(float(non_negative_mip_index));
+	float mip_grid_size = grid_size / exp2(float(mip_index));
 
     vec2 tile_coordinate = floor(adjusted_uv * mip_grid_size);
 
     vec2 grid_uv = tile_coordinate / mip_grid_size;
-    int layer = total_resolution_mip_count * normal_id + non_negative_mip_index;
+    int layer = total_resolution_mip_count * normal_id + mip_index;
 
     ivec3 indirection_index = ivec3(
         grid_uv * grid_size, 

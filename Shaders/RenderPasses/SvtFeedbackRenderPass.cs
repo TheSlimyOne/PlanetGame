@@ -286,7 +286,7 @@ namespace PlanetGame.Shaders.RenderPasses
             Color pickingData = _pickingImage.GetPixelv(pixelPosition);
 
             // Return an invald value if not a valid pick
-            if (pickingData.A == -1)
+            if (pickingData.A <= 0)
                 return Vector3.Inf;
 
             return new(

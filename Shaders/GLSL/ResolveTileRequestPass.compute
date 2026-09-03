@@ -84,7 +84,7 @@ void main() {
         slot / sqrt_total_texture_slots
     );
 
-    int lod_size = 1 << mip_index;
+    int mip_size = 1 << mip_index;
     int mip_grid_size = int(grid_size) >> mip_index;
     int mip_step = int(grid_size) / mip_grid_size;
 
@@ -103,6 +103,6 @@ void main() {
     }
 
     requested_tile_ids[request_index] = uvec4(request_coords, slot);
-    set_indirection_entry(IndirectionTable, indirection_index, lod_size, uvec4(slot, 0u, 0u, 255u));
+    set_indirection_entry(IndirectionTable, indirection_index, mip_size, uvec4(slot, 0u, 0u, 255u));
     imageStore(ResidencyTable, residency_index, uintBitsToFloat(uvec4(indirection_index, 255u)));
 }

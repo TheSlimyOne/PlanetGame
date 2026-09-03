@@ -1,12 +1,9 @@
 using System.Threading.Tasks;
 using PlanetGame.Shaders.Dispatchers;
 using Godot;
-using System.Linq;
 using PlanetGame.Shaders.RenderPasses;
 using PlanetGame.Rendering.Surface;
-using Shaders;
 using PlanetGame.Util;
-using PlanetGame.Planet;
 using System.Collections.Generic;
 using static PlanetGame.Planet.PlanetRenderer;
 using Uniform;
@@ -41,8 +38,8 @@ namespace PlanetGame.Rendering.VirtualTexturing
         {
             SaveManager.WorldSave worldSave = SaveManager.CurrentWorldSave;
 
-            AlbedoTileCache = new(worldSave.TilesAlbedo, Colors.Magenta, Image.Format.Rgba8);
-            HeightTileCache = new(worldSave.TilesHeightmap, Colors.Black, Image.Format.R8);
+            AlbedoTileCache = new(worldSave.TilesAlbedo, worldSave.BaseAlbedo, Colors.Magenta, Image.Format.Rgba8);
+            HeightTileCache = new(worldSave.TilesHeightmap, worldSave.BaseHeightmap, Colors.Black, Image.Format.R8);
 
             IndirectionTable = new();
             ConsolidatedIndirectionTable = new();
@@ -85,35 +82,22 @@ namespace PlanetGame.Rendering.VirtualTexturing
 
                     uint xCoord = tileData.tileX;
                     uint yCoord = tileData.tileY;
-                    uint mipIndex = tileData.tileZ % VirtualTextureData.TotalSubdivisions;
-                    uint normalId = (tileData.tileZ - mipIndex) / VirtualTextureData.TotalSubdivisions;
+                    uint mipIndex = tileData.tileZ % VirtualTextureData.TotalMipLayersPerFace;
+                    uint normalId = (tileData.tileZ - mipIndex) / VirtualTextureData.TotalMipLayersPerFace;
                     uint slot = tileData.slot;
 
                     int realMipIndex = (int)(mipIndex - VirtualTextureData.HighResolutionMipCount);
 
                     string tileName = $"{realMipIndex}_{normalId}_{xCoord}_{yCoord}";
 
-                    if (!AlbedoTileCache.TileExist(tileName) && realMipIndex < 0)
-                    {
-                        Image tile = AlbedoTileCache.CreateTile(tileName);
-                        AlbedoTileCache.InsertTile(tile, slot);
-                    }
-                    else
-                        AlbedoTileCache.InsertTile(tileName, slot);
-
-                    if (!HeightTileCache.TileExist(tileName) && realMipIndex < 0)
-                    {
-                        Image tile = HeightTileCache.CreateTile(tileName);
-                        HeightTileCache.InsertTile(tile, slot);
-                    }
-                    else
-                        HeightTileCache.InsertTile(tileName, slot);
+                    AlbedoTileCache.InsertTile(tileName, slot);
+                    HeightTileCache.InsertTile(tileName, slot);
                 });
 
                 ValidateTileCache.Invoke();
                 FlattenIndirectionTableDispatcher.Invoke();
 
-                int gridSize = (int)VirtualTextureData.GridSize;
+                int gridSize = (int)VirtualTextureData.BaseGridSize;
                 RenderingDevice renderingDevice = RenderingServer.GetRenderingDevice();
 
                 for (uint layer = 0; layer < 6; layer++)

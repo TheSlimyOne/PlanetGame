@@ -93,7 +93,7 @@ namespace PlanetGame.Shaders.Dispatchers
 		private static byte[] GetInitialGlobalKeyData()
 		{
 			return [.. Utilities.ToBytes([
-				3u,
+				0u,
 				uint.MaxValue,
 				0u,
 				.. new uint[32]

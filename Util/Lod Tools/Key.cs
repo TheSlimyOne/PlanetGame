@@ -268,7 +268,6 @@ public readonly struct Key(uint msb, uint lsb, uint meshPolygonID, uint meshData
         // base_Triangle_a = isCube ? base_Triangle_a : VectorUtils.PointOnCubeToPointOnSphere(base_Triangle_a);
         // base_Triangle_b = isCube ? base_Triangle_b : VectorUtils.PointOnCubeToPointOnSphere(base_Triangle_b);
         // base_Triangle_c = isCube ? base_Triangle_c : VectorUtils.PointOnCubeToPointOnSphere(base_Triangle_c);
-        // GD.Print()
 
         Vector3 normal = VectorUtils.GetTriangularNormal([base_Triangle_a, base_Triangle_b, base_Triangle_c]);
 
@@ -359,10 +358,6 @@ public readonly struct Key(uint msb, uint lsb, uint meshPolygonID, uint meshData
                 }
             }
         }
-
-
-        // GD.Print(FormatForDesmos(vertices, triangles));
-        // GD.PrintS(vertices.Length, triangles.Length / 3);
     
         Godot.Collections.Array arrays = [];
         arrays.Resize((int)Mesh.ArrayType.Max);

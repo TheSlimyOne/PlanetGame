@@ -38,6 +38,8 @@ public partial class CustomCamera : Camera3D
 	public override void _Ready()
 	{
 		DebugMenuController.Instance.AddSection("Camera", 0, false, null, 250);
+		DebugMenuController.Instance.AddLabel("Distance", "Camera", () => $"{DistanceFromTarget}");
+		DebugMenuController.Instance.AddLabel("Camera Mode", "Camera", () => $"{GetViewport().DebugDraw}");
 		DebugMenuController.Instance.AddSlider("Culling Margin", "Camera",
 		[
 			new SliderComponent.SliderBinding<float>(

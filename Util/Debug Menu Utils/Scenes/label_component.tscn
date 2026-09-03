@@ -1,0 +1,29 @@
+[gd_scene format=3 uid="uid://uysw6bg3r1u8"]
+
+[ext_resource type="Script" uid="uid://bblsblqux3qui" path="res://Util/Debug Menu Utils/LabelComponent.cs" id="1_7ce10"]
+
+[node name="LabelComponent" type="PanelContainer" unique_id=596398719]
+script = ExtResource("1_7ce10")
+
+[node name="LabelMargin" type="MarginContainer" parent="." unique_id=743970355]
+layout_mode = 2
+
+[node name="LabelContent" type="HBoxContainer" parent="LabelMargin" unique_id=1980605306]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Label" type="Label" parent="LabelMargin/LabelContent" unique_id=610550947]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 0
+text = "Label"
+
+[node name="Spacer" type="Control" parent="LabelMargin/LabelContent" unique_id=1174833691]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Value" type="Label" parent="LabelMargin/LabelContent" unique_id=26505221]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 10
+text = "Value"

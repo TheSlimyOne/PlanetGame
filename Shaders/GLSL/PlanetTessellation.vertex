@@ -123,7 +123,7 @@ void main()
 
 	lod = get_lod_of_key(key.xy);
 
-	int non_negative_mip_index = lod_to_mip_map[lod] + high_resolution_mip_count;
+	int mip_index = lod_to_mip_map[lod] + high_resolution_mip_count;
 	vec3 tile_cache_uv = get_tile_cache_uv(
 		terrain_indirection_table,
 		vertex_uv,

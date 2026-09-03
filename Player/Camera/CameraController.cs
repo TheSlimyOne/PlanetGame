@@ -77,7 +77,6 @@ public partial class CameraController : Node
 	public void SetCurrent(string cameraName)
 	{
 		Cameras[cameraName].MakeCurrent();
-		// GD.Print($"Switched to camera: {cameraName} at {Cameras[cameraName].GlobalPosition}");
 	}
 
 	public Camera3D GetCurrent(){

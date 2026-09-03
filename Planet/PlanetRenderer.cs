@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using Godot;
-using PlanetGame.Rendering;
 using PlanetGame.Rendering.Surface;
 using PlanetGame.Rendering.VirtualTexturing;
 using PlanetGame.Shaders;
@@ -18,7 +17,7 @@ public class PlanetRenderer
     public TerrainTessellator TerrainTessellator { get; private set; }
     public SparseVirtualTexture SparseVirtualTexture { get; private set; }
     public BindableShaderMaterial SurfaceShader { get; set; }
-  
+
     private readonly RenderingDevice _renderingDevice = RenderingServer.GetRenderingDevice();
 
     private static TessellationData TessellationData => SaveManager.CurrentWorldSave.TessellationData;
@@ -54,14 +53,14 @@ public class PlanetRenderer
         Vector2I viewSize = new(1024, 512);
 
         TerrainTessellator = new(SurfaceShader.GetRid(), planetController.GetWorld3D().Scenario, _shaderedShaderUniforms);
-        
+
         SparseVirtualTexture = new(TerrainTessellator.TriangleMultiMesh, viewSize, _shaderedShaderUniforms);
 
         CreateSharedBuffers();
 
         TerrainTessellator.CreateUniforms();
         SparseVirtualTexture.CreateUniforms();
-        
+
 
         BindShaderParameters(SurfaceShader);
         BindDebugSettings();
@@ -166,7 +165,7 @@ public class PlanetRenderer
             VirtualTextureData.LowResolutionMipCount,
             VirtualTextureData.HighResolutionMipCount,
 
-            VirtualTextureData.GridSize,
+            VirtualTextureData.BaseGridSize,
             (uint)VirtualTextureData.FallBackTiles.Length,
 
             TileCache.DEFAULT_TILE_SLOTS_COUNT,
@@ -200,10 +199,12 @@ public class PlanetRenderer
 
             .. Utilities.ToBytesSingle(TessellationData.Radius * TessellationData.HeightScale),
             .. Utilities.ToBytesSingle(TessellationData.SubFactor),
-            .. GetBitFlags(),
-            .. Utilities.ToBytesSingle(TessellationData.MaximumLod),
 
+            .. GetBitFlags(),
+
+            .. Utilities.ToBytesSingle(TessellationData.MaximumLod),
             .. Utilities.ToBytesSingle(TessellationData.MinimumLod),
+
             .. Utilities.ToBytesSingle(heightOffset),
             .. Utilities.ToBytesSingle(0),
             .. Utilities.ToBytesSingle(0),

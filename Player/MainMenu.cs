@@ -135,14 +135,14 @@ public partial class MainMenu : MarginContainer
 
 	public void GenerateTiles()
 	{
-		string testDir = "user://Tests//Tile Border Test";
+		// string testDir = "user://Tests//Tile Border Test";
 
-		using DirAccess dir = DirAccess.Open(testDir);
-		dir.GetFiles().Where(f => f.EndsWith(".png")).ToList().ForEach(f => dir.Remove(f));
-		Image image = Image.LoadFromFile("res://Assets/Images/test-image small.png");
+		// using DirAccess dir = DirAccess.Open(testDir);
+		// dir.GetFiles().Where(f => f.EndsWith(".png")).ToList().ForEach(f => dir.Remove(f));
+		// Image image = Image.LoadFromFile("res://Assets/Images/test-image small.png");
 
 
-		TileManager.GenerateTilesAsync(image, 3, testDir, 0);
+		// TileManager.GenerateTilesAsync(image, 3, testDir, 0);
 	}
 
 	public void OnLoad()

@@ -45,7 +45,7 @@ namespace PlanetGame.Shaders.Dispatchers
 #nullable enable
 		public override void Invoke(byte[]? pushConstants = null)
 		{
-			uint gridSize = VirtualTextureData.GridSize;
+			uint gridSize = VirtualTextureData.BaseGridSize;
 			uint groupCount = (gridSize + 7) / 8;
 			
 			long computeList = RenderingDevice.ComputeListBegin();

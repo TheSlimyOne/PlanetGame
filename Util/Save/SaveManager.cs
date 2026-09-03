@@ -313,9 +313,9 @@ public static class SaveManager
                 maximumLod: 12,
                 minimumLod: 0,
                 maximumKeys: 40000,
-                startingLod: 0,
-                cullingDepth: 0,
-                cullingMargin: Vector4.Zero
+                startingLod: 2,
+                cullingDepth: 1,
+                cullingMargin: new Vector4(0.09f, 0.09f, 0.3f, 15)
             )
         };
 
@@ -478,7 +478,7 @@ public static class SaveManager
     public static Image GetTile(string saveName, SaveDataIdentifier tileIdentifier, string fileName)
     {
         string directory = GetDirectoryPath(saveName, tileIdentifier);
-        string path = $"{directory}/{fileName}";
+        string path = $"{directory}/{fileName}.png";
 
         return Image.LoadFromFile(path);
     }
