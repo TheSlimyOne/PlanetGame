@@ -16,7 +16,6 @@ uniform sampler2DArray terrain_indirection_table : repeat_disable, source_color,
 
 uniform bool is_cube;
 uniform bool is_morphing;
-uniform bool render_tile_uvs;
 uniform bool show_in_cache;
 uniform bool show_keys;
 uniform bool show_indirection_age;

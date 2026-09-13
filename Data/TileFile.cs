@@ -115,6 +115,12 @@ public class TileFile : IDisposable
         return GetTileImage(tile.GetTileIndex(TileCount));
     }
 
+    public Image GetTileImage(uint mipIndex, uint normalId, uint xIndex, uint yIndex)
+    {
+        uint tileIndex = Tile.GetTileIndex(mipIndex, normalId, xIndex, yIndex, TileCount);
+        return GetTileImage(tileIndex);
+    }
+
     public Image GetTileImage(uint tileIndex)
     {
         byte[] data = GetTileData(tileIndex);

@@ -2,6 +2,7 @@ using System;
 using Godot;
 using PlanetGame.Data;
 using PlanetGame.Planet.Rendering;
+using PlanetGame.Planet.Rendering.VirtualTexturing;
 
 public class PlanetQuery
 {
@@ -19,11 +20,11 @@ public class PlanetQuery
         _planetRenderer = planetRenderer;
     }
 
-    public struct PlanetSurfacePoint(Vector3 localSpherePoint, Vector3 localCubePoint, int normalId, Vector2 uv, uint mipIndex)
+    public struct PlanetSurfacePoint(Vector3 localSpherePoint, Vector3 localCubePoint, uint normalId, Vector2 uv, uint mipIndex)
     {
         public Vector3 LocalSpherePoint = localSpherePoint;
         public Vector3 LocalCubePoint = localCubePoint;
-        public int NormalId = normalId;
+        public uint NormalId = normalId;
         public Vector2 UV = uv;
         public uint MipIndex = mipIndex;
 
@@ -62,7 +63,7 @@ public class PlanetQuery
         }
 
         Vector3 normal = VectorUtils.IsolateNormal(localCubePoint);
-        int normalId = VectorUtils.NormalToNormalID[normal];
+        uint normalId = VectorUtils.NormalToNormalID[normal];
         Vector2 uv = VectorUtils.PointOnCubeToPlaneUV(normalId, localCubePoint);
 
         uint mip;
@@ -146,15 +147,13 @@ public class PlanetQuery
         if (!TryGetSurfacePoint(point, out PlanetSurfacePoint surfacePoint))
             return float.NaN;
 
-        uint mip = _planetRenderer.SparseVirtualTexture.SampleConsolidatedIndirectionTexture(surfacePoint.NormalId, surfacePoint.UV);
 
+        uint normalId = surfacePoint.NormalId;
+        uint mip = _planetRenderer.SparseVirtualTexture.SampleConsolidatedIndirectionTexture(normalId, surfacePoint.UV);
         float mipGridSize = VirtualTextureData.GetMipSize(mip);
-
         Vector2I tileCoords = (Vector2I)(surfacePoint.UV * mipGridSize).Floor();
 
-        string path = $"{VirtualTextureData.GetRealMipIndex(mip)}_{surfacePoint.NormalId}_{tileCoords.X}_{tileCoords.Y}";
-
-        Image heightmap = null; //_planetRenderer.SparseVirtualTexture.GetTileCache(TileCache.TileCacheType.HEIGHTMAP).GetTileImage(path);
+        Image heightmap = _planetRenderer.SparseVirtualTexture.GetTileCache(TileCache.TileCacheType.HEIGHTMAP).GetTileImage(mip, normalId, (uint)tileCoords.X, (uint)tileCoords.Y);
 
         if (heightmap == null)
             return float.NaN;

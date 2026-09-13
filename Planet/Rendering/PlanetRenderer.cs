@@ -304,7 +304,6 @@ namespace PlanetGame.Planet.Rendering
             DebugMenuController.Instance.AddButton("Render Culling", "Rendering", () => IsCulling, () => IsCulling = !IsCulling);
             DebugMenuController.Instance.AddButton("Render Morphing", "Rendering", () => IsMorphing, () => IsMorphing = !IsMorphing);
 
-            AddShaderToggle("Render Tile UVs", "render_tile_uvs");
             AddShaderToggle("Render Keys", "show_keys");
             AddShaderToggle("Render Indirection Age", "show_indirection_age");
             AddShaderToggle("Render Cached Tiles", "show_in_cache");

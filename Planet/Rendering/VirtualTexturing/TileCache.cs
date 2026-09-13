@@ -30,9 +30,9 @@ namespace PlanetGame.Planet.Rendering.VirtualTexturing
 
         private static VirtualTextureData VirtualTextureData => SaveManager.VirtualTextureData;
 
-        public const uint DEFAULT_TILE_SLOTS_COUNT = 1024;
+        public const uint DEFAULT_TILE_SLOTS_COUNT = 512;
 
-        private readonly Tile[] _tiles = new Tile[DEFAULT_TILE_SLOTS_COUNT];
+        // private readonly Tile[] _tiles = new Tile[DEFAULT_TILE_SLOTS_COUNT];
 
         public Texture2DArrayRD Cache
         {
@@ -83,7 +83,7 @@ namespace PlanetGame.Planet.Rendering.VirtualTexturing
 
         public bool InsertTile(Tile tile, uint slot)
         {
-            _tiles[slot] = tile;
+            // _tiles[slot] = tile;
             byte[] imageData = DataSource.GetTileData(tile);
 
             RenderingServer.CallOnRenderThread(Callable.From(() =>
@@ -92,6 +92,11 @@ namespace PlanetGame.Planet.Rendering.VirtualTexturing
             }));
 
             return true;
+        }
+
+        public Image GetTileImage(uint mipIndex, uint normalId, uint xIndex, uint yIndex)
+        {
+            return DataSource.GetTileImage(mipIndex, normalId, xIndex, yIndex); 
         }
 
         public override TextureRect CreateVisualization(string name)

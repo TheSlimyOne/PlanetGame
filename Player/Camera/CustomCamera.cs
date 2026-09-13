@@ -118,6 +118,9 @@ public partial class CustomCamera : Camera3D
     {
         _cullingMarginFrustumInstance.Visible = FrustumVisable;
 		_frustumInstance.Visible = FrustumVisable;
+
+		if (FrustumVisable)
+			SetFrustumMeshInstance(TessellationData.CullingMargin, TessellationData.CullingDepth);
     }
 
 

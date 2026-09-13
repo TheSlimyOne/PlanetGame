@@ -101,12 +101,12 @@ void fragment() {
 	
 	vec2 adjusted_uv = clamp(plane_vertex_uv, vec2(0.0), vec2(1.0 - EPS));
 
-	float grid_size = exp2(float(total_resolution_mip_count - 1));
-	float lod_grid_size = grid_size / exp2(float(mip_index));
+	int grid_size = 1 << (total_resolution_mip_count - 1);
+    int mip_grid_size = 1 << mip_index;
 
-	vec2 tile_coordinate = adjusted_uv * lod_grid_size;
+	vec2 tile_coordinate = adjusted_uv * float(mip_grid_size);
 	vec2 tile_local_uv = fract(tile_coordinate);
-	vec2 grid_uv = floor(tile_coordinate) / lod_grid_size;
+	vec2 grid_uv = floor(tile_coordinate) / float(mip_grid_size);
 
 	int layer = total_resolution_mip_count * normal_id + mip_index;
 	
@@ -124,25 +124,7 @@ void fragment() {
 	ALBEDO = pow(get_tile(albedo_tile_cache, tile_uv).xyz, vec3(2.2));
 	NORMAL = calculate_normal(NORMAL, tile_uv);
 
-	if (render_tile_uvs) {
-		float depth = 1.0 - float(mip_index) / float(total_resolution_mip_count - 1);
-		vec3 output_color = vec3(1.0);
-
-		switch (key.z) {
-			case 0u: output_color = vec3(tile_local_uv.x, tile_local_uv.y, depth); break;
-			case 1u: output_color = vec3(tile_local_uv.y, tile_local_uv.x, depth); break;
-			case 2u: output_color = vec3(depth, tile_local_uv.x, tile_local_uv.y); break;
-			case 3u: output_color = vec3(depth, tile_local_uv.y, tile_local_uv.x); break;
-			case 4u: output_color = vec3(tile_local_uv.x, depth, tile_local_uv.y); break;
-			case 5u: output_color = vec3(tile_local_uv.y, depth, tile_local_uv.x); break;
-		}
-
-		float edge_threshold = 1.0 / 64.0;
-		bool is_tile_edge = tile_uv.x < edge_threshold || tile_uv.x > 1.0 - edge_threshold || tile_uv.y < edge_threshold || tile_uv.y > 1.0 - edge_threshold;
-
-		ALBEDO = is_tile_edge ? vec3(0.5) : output_color;
-	}
-	else if (show_indirection_age) {
+	if (show_indirection_age) {
 		const float TOTAL_INDIRECTION_SLOTS = 512.0;
 
 		float slot = float(indirection_data.r);
@@ -160,7 +142,11 @@ void fragment() {
 		);
 
 		vec3 real_color = pow(get_tile(albedo_tile_cache, tile_uv).xyz, vec3(2.2));
-		ALBEDO = mix(real_color, mip_to_colors[mip], 0.15);
+		real_color = mix(real_color, mip_to_colors[mip], 0.15);
+		
+		float edge_threshold = 1.0 / 64.0;
+		bool is_tile_edge = tile_uv.x < edge_threshold || tile_uv.x > 1.0 - edge_threshold || tile_uv.y < edge_threshold || tile_uv.y > 1.0 - edge_threshold;
+		ALBEDO = is_tile_edge ? vec3(0.5) : real_color;
 	}
 	else if (show_keys) {
 		ALBEDO = displayBranches();

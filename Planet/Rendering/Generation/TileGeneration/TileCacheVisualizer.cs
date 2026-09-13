@@ -123,7 +123,7 @@ namespace PlanetGame.Planet.Rendering.Generation.TileGeneration
 				return;
 
 			Tile lastTile = Tile.GetTileByIndex(_file.TileCount - 1, _file.TileCount);
-			int mipCount = lastTile.Mip + 1;
+			int mipCount = lastTile.MipIndex + 1;
 
 			for (int mipIndex = 0; mipIndex < mipCount; mipIndex++)
 				MipOption.AddItem(mipIndex.ToString());
@@ -192,7 +192,7 @@ namespace PlanetGame.Planet.Rendering.Generation.TileGeneration
 						SizeFlagsVertical = SizeFlags.ExpandFill,
 						TooltipText =
 							$"Normal Id: {tile.NormalId}\n" +
-							$"Mip: {tile.Mip}\n" +
+							$"Mip: {tile.MipIndex}\n" +
 							$"Encoding: {tile.Encoding}\n" +
 							$"Coordinate: {tile.GetTileCoordinate()}"
 					};

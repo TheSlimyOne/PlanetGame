@@ -181,7 +181,7 @@ namespace PlanetGame.Planet.Rendering.VirtualTexturing
             return SvtFeedbackRenderPass.GetLocalMousePosition(mousePosition, screenSize);
         }
 
-        public uint SampleConsolidatedIndirectionTexture(int normalId, Vector2 uv)
+        public uint SampleConsolidatedIndirectionTexture(uint normalId, Vector2 uv)
         {
             Image image = _consolidatedIndirectionTexture[normalId];
 

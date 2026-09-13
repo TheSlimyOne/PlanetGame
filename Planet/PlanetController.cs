@@ -133,9 +133,35 @@ public partial class PlanetController : Node
 
         PlanetSpatial.ReorientatePlanet();
 
-        // UpdateHeightOffset(delta);
+        UpdateHeightOffset(delta);
 
         PlanetRenderer?.Invoke();
+    }
+
+    public override void _PhysicsProcess(double delta)
+    {
+        if (Quiting)
+            return;
+
+        ProcessMovement(delta);
+        UpdateCamera();
+
+        Vector3 planetCenter = PlanetSpatial.PlanetToWorld(Vector3.Zero);
+
+        foreach (RigidBody3D body in CollisionTestSpheres.GetChildren().Cast<RigidBody3D>())
+        {
+            Vector3 toPlanet = planetCenter - body.GlobalPosition;
+            float distance = toPlanet.Length();
+
+            if (distance <= 0.0001f)
+                continue;
+
+            Vector3 direction = toPlanet / distance;
+
+            body.ApplyCentralForce(
+                direction * 50.0f
+            );
+        }
     }
 
     #endregion
@@ -143,21 +169,25 @@ public partial class PlanetController : Node
     public void SetupCameras()
     {
         MainCamera = (OrbitalCamera3D)CameraController.GetCamera("Main");
-        MainCamera.Far = 80 * Radius;
-
-        MainCamera.MinDistance = Radius + 0.999f;
-        MainCamera.MaxDistance = MainCamera.Far;
-
-        MainCamera.DistanceFromTarget = Radius;
-
         MainCamera.GlobalPosition = Vector3.Back * MainCamera.DistanceFromTarget;
 
         CameraController.SetCurrent("Main");
+        MainCamera.DistanceFromTarget = Radius;
+
+        UpdateCamera();
 
         MainCamera.SetFrustumMeshInstance(
             TessellationData.CullingMargin,
             TessellationData.CullingDepth
         );
+    }
+
+    public void UpdateCamera()
+    {
+        MainCamera.MinDistance = Radius + 0.999f;
+        MainCamera.MaxDistance = Radius * 10.0f;
+
+        MainCamera.Far = MainCamera.DistanceFromTarget + Radius;
     }
 
     private Vector3 _direction = Vector3.Zero;
@@ -304,30 +334,4 @@ public partial class PlanetController : Node
 
         SurfaceAttachment.AddChild(mesh);
     }
-
-    public override void _PhysicsProcess(double delta)
-    {
-        if (Quiting)
-            return;
-
-        ProcessMovement(delta);
-
-        Vector3 planetCenter = PlanetSpatial.PlanetToWorld(Vector3.Zero);
-
-        foreach (RigidBody3D body in CollisionTestSpheres.GetChildren().Cast<RigidBody3D>())
-        {
-            Vector3 toPlanet = planetCenter - body.GlobalPosition;
-            float distance = toPlanet.Length();
-
-            if (distance <= 0.0001f)
-                continue;
-
-            Vector3 direction = toPlanet / distance;
-
-            body.ApplyCentralForce(
-                direction * 50.0f
-            );
-        }
-    }
-
 }

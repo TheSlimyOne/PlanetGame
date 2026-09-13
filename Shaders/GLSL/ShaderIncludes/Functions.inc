@@ -14,10 +14,10 @@ vec3 get_tile_cache_uv(
 	{
 	int total_resolution_mip_count = low_resolution_mip_count + high_resolution_mip_count;
 
-	float grid_size = exp2(float(total_resolution_mip_count - 1));
+	int grid_size = 1 << (total_resolution_mip_count - 1);
 
 	ivec3 indirection_index = ivec3(
-		ivec2(floor(uv * grid_size)),
+		ivec2(floor(uv * float(grid_size))),
 		normal_id
 	);
 
@@ -35,8 +35,8 @@ vec3 get_tile_cache_uv(
 
 	if (valid_flag == 255u)
 	{
-		float lod_grid_size = grid_size / exp2(float(mip_index));
-		vec2 grid_uv = fract(uv * lod_grid_size);
+		int mip_grid_size = 1 << mip_index;
+		vec2 grid_uv = fract(uv * float(mip_grid_size));
 
 		return vec3(grid_uv, float(tile_index));
 	}

@@ -30,7 +30,7 @@ public partial class PlanetSpatial
 
     public void ReorientatePlanet()
     {
-        PlanetTranslation = Transform3D.Identity.Translated(Vector3.Back * (-TessellationData.Radius));
+        PlanetTranslation = Transform3D.Identity.Translated(Vector3.Back * -TessellationData.Radius);
         PlanetScale = Transform3D.Identity.Scaled(Vector3.One * TessellationData.Radius);
     }
 

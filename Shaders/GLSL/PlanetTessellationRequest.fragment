@@ -87,7 +87,7 @@ void main() {
     int total_resolution_mip_count = low_resolution_mip_count + high_resolution_mip_count;
 
 	int grid_size = 1 << (total_resolution_mip_count - 1);
-    int mip_grid_size = 1 << (mip_index);
+    int mip_grid_size = 1 << mip_index;
 
     vec2 tile_coordinate = floor(adjusted_uv * mip_grid_size);
 

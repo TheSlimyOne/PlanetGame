@@ -16,7 +16,7 @@ public static class VectorUtils
         Vector3.Back,
         Vector3.Forward,
     };
-    public static readonly int[] NormalIDs =
+    public static readonly uint[] NormalIDs =
     {
         0,
         1,
@@ -26,7 +26,7 @@ public static class VectorUtils
         5,
     };
 
-    public static readonly Dictionary<Vector3, int> NormalToNormalID = new()
+    public static readonly Dictionary<Vector3, uint> NormalToNormalID = new()
     {
         {Vector3.Right, 0},
         {Vector3.Left, 1},
@@ -190,7 +190,7 @@ public static class VectorUtils
         return cubePoint;
     }
 
-    public static Vector2 PointOnCubeToPlaneUV(int normalId, Vector3 point)
+    public static Vector2 PointOnCubeToPlaneUV(uint normalId, Vector3 point)
     {
         Vector2 uv = Vector2.Zero;
 

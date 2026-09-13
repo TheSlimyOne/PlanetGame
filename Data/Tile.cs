@@ -79,7 +79,7 @@ namespace PlanetGame.Data
 
         public uint NormalId => _id.NormalId;
         public uint Encoding => _id.Encoding;
-        public int Mip => _id.Mip;
+        public int MipIndex => _id.Mip;
         public uint Value => _id.Value;
 
         public enum TileMipType
@@ -208,16 +208,27 @@ namespace PlanetGame.Data
         public override string ToString()
         {
             Vector2 coordinate = GetTileCoordinate();
-            return $"{Mip}-{NormalId}-{coordinate.X}-{coordinate.Y}";
+            return $"{MipIndex}-{NormalId}-{coordinate.X}-{coordinate.Y}";
         }
 
         public Vector2I GetTileCoordinate() => _id.GetTileCoordinate();
 
         public uint GetTileIndex(uint tileCount)
         {
-            uint pow4 = 1u << (Mip * 2);
+            uint pow4 = 1u << (MipIndex * 2);
             uint normalizedIndex = Encoding - (2 * pow4 + 1) / 3;
             uint normalIdOffset = tileCount / 6 * NormalId;
+
+            return normalizedIndex + normalIdOffset;
+        }
+
+        public static uint GetTileIndex(uint mipIndex, uint normalId, uint xIndex, uint yIndex, uint tileCount)
+        {
+            uint pow4 = 1u << ((int)mipIndex * 2);
+            uint encoding = TileID.GetTileEncoding(mipIndex, xIndex, yIndex);
+
+            uint normalizedIndex = encoding - (2 * pow4 + 1) / 3;
+            uint normalIdOffset = tileCount / 6 * normalId;
 
             return normalizedIndex + normalIdOffset;
         }
@@ -236,7 +247,7 @@ namespace PlanetGame.Data
             Tile tile = new(normalId, encoding);
             Vector2 a = tile.GetTileCoordinate();
 
-            uint encoding2 = TileID.GetTileEncoding((uint)tile.Mip, (uint)a.X, (uint)a.Y);
+            uint encoding2 = TileID.GetTileEncoding((uint)tile.MipIndex, (uint)a.X, (uint)a.Y);
             GD.PrintS(encoding, encoding2);
             
 

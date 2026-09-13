@@ -45,7 +45,7 @@ namespace PlanetGame.Data
 
         public int GetMipSize(uint mipIndex)
         {
-            return (int)(BaseGridSize / Mathf.Pow(2, mipIndex));
+            return 1 << (int)mipIndex;
         }
 
         public bool IsValidTileName(string name)
