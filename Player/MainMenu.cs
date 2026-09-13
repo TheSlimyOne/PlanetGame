@@ -1,15 +1,12 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Godot;
+using PlanetGame.Planet.Rendering.Generation.TileGeneration;
 using PlanetGame.Shaders;
-using PlanetGame.Rendering.VirtualTexturing;
-using PlanetGame.Util;
 using static SaveManager;
 
 public partial class MainMenu : MarginContainer
 {
+	public static MainMenu Instance { get; private set; }
+
 	[Export] private OptionButton LoadOptions;
 	[Export] private Button LoadSave;
 	[Export] private Button AlbedoSave;
@@ -30,6 +27,17 @@ public partial class MainMenu : MarginContainer
 
 	private string SelectedSave;
 
+	public override void _EnterTree()
+	{
+		Instance = this;
+	}
+
+	public override void _ExitTree()
+	{
+		if (Instance == this)
+			Instance = null;
+	}
+
 	public override void _Ready()
 	{
 		LoadSave.Disabled = true;
@@ -40,22 +48,20 @@ public partial class MainMenu : MarginContainer
 		DemoPlanet.Planet.Mesh.SurfaceSetMaterial(0, shader);
 	}
 
-	public override void _EnterTree()
-	{
-		TileManager.OnTileGeneratedProgress += OnTileProgress;
-	}
+	// public override void _EnterTree()
+	// {
+	// 	TileGenerator.OnTileGeneratedProgress += OnTileProgress;
+	// }
 
-	public override void _ExitTree()
-	{
-		TileManager.OnTileGeneratedProgress -= OnTileProgress;
-	}
+	// public override void _ExitTree()
+	// {
+	// 	TileGenerator.OnTileGeneratedProgress -= OnTileProgress;
+	// }
 
 	private void OnTileProgress(int current, string outputText, int maxValue)
 	{
 		CallDeferred(nameof(UpdateProgressBar), current, outputText, maxValue);
 	}
-
-	public void OpenSavesFolder() => OS.ShellShowInFileManager(ProjectSettings.GlobalizePath("user://Saves"));
 
 	public void UpdateProgressBar(int currentCount, string outputText, int maxValue)
 	{
@@ -98,8 +104,16 @@ public partial class MainMenu : MarginContainer
 		}
 	}
 
+	public void OpenSavesFolder()
+	{
+		OS.ShellOpen(ProjectSettings.GlobalizePath("user://"));
+	}
+
 	public void OnSaveSelection(int index)
 	{
+		if (index < 0 || index >= LoadOptions.ItemCount)
+			return;
+
 		SelectedSave = LoadOptions.GetItemText(index);
 		LoadSave.Disabled = false;
 
@@ -148,7 +162,7 @@ public partial class MainMenu : MarginContainer
 	public void OnLoad()
 	{
 		CurrentSave = SelectedSave;
-		GetTree().ChangeSceneToFile("res://Planet/Scenes/planet.tscn");
+		GetTree().ChangeSceneToFile("res://Planet/planet.tscn");
 	}
 	public void OnRenerateTiles()
 	{
@@ -159,29 +173,30 @@ public partial class MainMenu : MarginContainer
 	{
 		string saveName = SaveName.Text;
 		if (NewSaveAlbedo == null || NewSaveHeightmap == null)
-			return;
+		{
+			saveName = "Earth";
+			NewSaveAlbedo = Image.LoadFromFile("user://Albedo.png");
+			NewSaveHeightmap = Image.LoadFromFile("user://Heightmap.png");
+		}
 
-		// string saveName = "TEST BORDER";
-		// Image test1 = Image.LoadFromFile("user://Albedo.png");
-		// Image test2 = Image.LoadFromFile("user://Heightmap.png");
 		// WriteNewSave(saveName, test1, test2, 5, [4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
-		WriteNewSave(saveName, NewSaveAlbedo, NewSaveHeightmap, 5, 0, [4, 4, 3, 3, 2, 2, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
 		GD.Print("Creating Save:", saveName);
+		WriteNewSave(saveName, NewSaveAlbedo, NewSaveHeightmap, [4, 4, 3, 3, 2, 2, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], OnTileProgress);
 		CurrentSave = saveName;
 	}
 
 	public void GenerateDebugTiles()
 	{
-		PackedScene generatorScene = ResourceLoader.Load<PackedScene>("res://Player/UI/DebugTileGenerator.tscn");
-		DebugTileGenerator instance = generatorScene.Instantiate<DebugTileGenerator>();
-		Image background = Image.CreateEmpty(256, 256, false, Image.Format.Rgbaf);
-		int padding = 10;
-		background.Fill(Colors.Orange);
-		background.FillRect(new Rect2I(padding, padding, 255 - 2 * padding, 255 - 2 * padding), Colors.Black);
+		// PackedScene generatorScene = ResourceLoader.Load<PackedScene>("res://Player/UI/DebugTileGenerator.tscn");
+		// DebugTileGenerator instance = generatorScene.Instantiate<DebugTileGenerator>();
+		// Image background = Image.CreateEmpty(256, 256, false, Image.Format.Rgbaf);
+		// int padding = 10;
+		// background.Fill(Colors.Orange);
+		// background.FillRect(new Rect2I(padding, padding, 255 - 2 * padding, 255 - 2 * padding), Colors.Black);
 
-		instance.SetBackground(background);
-		instance.GenerateDebugTilesAsync(GetTree(), 5);
-
+		// instance.SetBackground(background);
+		// instance.GenerateDebugTilesAsync(GetTree(), 5);
+		Image test1 = Image.LoadFromFile("user://Albedo.png");
 	}
 
 	public void OnQuit()

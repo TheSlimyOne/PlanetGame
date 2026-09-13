@@ -1,7 +1,5 @@
 #include "res://Assets/Shaders/Constants.gdshaderinc"
 
-
-
 ivec2 quickPI_2(int a) {
     int b = a & 3;
     int b1 = b >> 1;

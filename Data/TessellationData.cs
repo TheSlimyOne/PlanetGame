@@ -1,8 +1,8 @@
 using Godot;
 
-namespace PlanetGame.Rendering.Surface
+namespace PlanetGame.Data
 {
-    public class TessellationData
+    public class TessellationData : ISavable
     {
         public float Radius;
         public uint Resolution;
@@ -11,13 +11,11 @@ namespace PlanetGame.Rendering.Surface
         public uint MaximumLod;
         public uint MinimumLod;
         public uint MaximumKeys;
-        public uint StartingLod;
         public float CullingDepth;
         public Vector4 CullingMargin;
-
         public TessellationData() { }
 
-        public TessellationData(float radius, uint resolution, float heightScale, float subFactor, uint maximumLod, uint minimumLod, uint maximumKeys, uint startingLod, float cullingDepth, Vector4 cullingMargin)
+        public TessellationData(float radius, uint resolution, float heightScale, float subFactor, uint maximumLod, uint minimumLod, uint maximumKeys, float cullingDepth, Vector4 cullingMargin)
         {
             Radius = radius;
             Resolution = resolution;
@@ -26,12 +24,9 @@ namespace PlanetGame.Rendering.Surface
             MaximumLod = maximumLod;
             MinimumLod = minimumLod;
             MaximumKeys = maximumKeys;
-            StartingLod = startingLod;
             CullingDepth = cullingDepth;
             CullingMargin = cullingMargin;
         }
-
-        public uint GetStartingPrimitiveCount => (uint)(6 * Mathf.Pow(4, StartingLod + 1));
 
         public override string ToString()
         {
@@ -43,7 +38,6 @@ namespace PlanetGame.Rendering.Surface
             MaximumLod: {MaximumLod}
             MinimumLod: {MinimumLod}
             MaximumKeys: {MaximumKeys}
-            StartingLod: {StartingLod}
             CullingMargin: {CullingMargin}
             """;
         }

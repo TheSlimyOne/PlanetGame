@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using Godot;
 using Godot.Collections;
 using PlanetGame.Shaders;
-using PlanetGame.Shaders.Dispatchers;
 using UniformException;
 
 namespace Uniform

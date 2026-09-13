@@ -33,12 +33,18 @@ varying float morph;
 
 varying float elevation;
 varying vec2 plane_vertex_uv;
+varying vec3 local_position;
 
 varying flat int lod;
 
 uniform int low_resolution_mip_count;
 uniform int high_resolution_mip_count;
 uniform int[32] lod_to_mip_map;
+
+uniform vec3 mouse_position;
+uniform float brush_size;
+uniform float brush_opacity;
+uniform float brush_hardness;
 
 void vertex() {
 	key = floatBitsToUint(INSTANCE_CUSTOM);
@@ -89,16 +95,20 @@ void vertex() {
 		plane_vertex_uv = get_plane_uv(int(key.z), cube_local_position);
 	}
 	
+	local_position = local_point;
+	
 	lod = get_lod_of_key(key.xy);
 	int mip_index = lod_to_mip_map[lod] + high_resolution_mip_count;
 	int total_resolution_mip_count = low_resolution_mip_count + high_resolution_mip_count;
 	float lod_scale = pow(2.0, float(int(current_lod)));
 	
 	vec3 world_position = get_world_space_point(local_point, planet_transform_matrix);
+	
 	vec3 tile_uv = get_tile_uv(terrain_indirection_table, plane_vertex_uv, int(key.z), low_resolution_mip_count, high_resolution_mip_count);
 	elevation = get_tile(height_map_tile_cache, tile_uv).r;
 	
 	NORMAL = (vec4(local_point, 1) * get_rotation_from_matrix(planet_transform_matrix)).xyz;
 	VERTEX = world_position + NORMAL * height_scale * elevation;
+	
 
 }

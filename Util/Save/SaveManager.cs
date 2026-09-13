@@ -1,107 +1,25 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Godot;
-using PlanetGame.Rendering.Surface;
-using PlanetGame.Rendering.VirtualTexturing;
+using PlanetGame.Data;
+using PlanetGame.Planet.Rendering.Generation.TileGeneration;
+using PlanetGame.Planet.Rendering.VirtualTexturing;
 
 public static class SaveManager
 {
     #region Save Data
 
-    public class WorldSave
+    public const uint VERSION = 1;
+
+    private struct SaveData
     {
-        public WorldSave() { }
-
-        public TessellationData TessellationData { get; set; } = new();
-        public VirtualTextureData VirtualTextureData { get; set; } = new();
-
-        public string BaseDirectory { get; set; }
-
-        public string BaseAlbedo { get; set; }
-        public string BaseHeightmap { get; set; }
-
-        public string ThumbnailAlbedo { get; set; }
-        public string ThumbnailHeightmap { get; set; }
-
-        public string TilesAlbedo { get; set; }
-        public string TilesHeightmap { get; set; }
-        public string TilesNormalMap { get; set; }
-
-        public Vector3 PlanetPosition { get; set; } = Vector3.Zero;
-        public Vector3 PlanetRotation { get; set; } = Vector3.Zero;
-        public Vector3 PlanetScale { get; set; } = Vector3.One;
-
-        public Transform3D GetTranslationTransform()
-        {
-            return new Transform3D(Basis.Identity, PlanetPosition);
-        }
-
-        public Transform3D GetRotationTransform()
-        {
-            return new Transform3D(Basis.FromEuler(PlanetRotation), Vector3.Zero);
-        }
-
-        public Transform3D GetScaleTransform()
-        {
-            return new Transform3D(Basis.Identity.Scaled(PlanetScale), Vector3.Zero);
-        }
-
-        public Transform3D[] GetTransforms()
-        {
-            return
-            [
-                GetTranslationTransform(),
-                GetRotationTransform(),
-                GetScaleTransform()
-            ];
-        }
-
-        public override string ToString()
-        {
-            return $"""
-            TessellationData:
-            {TessellationData}
-
-            VirtualTextureData:
-            {VirtualTextureData}
-
-            BaseDirectory: {BaseDirectory}
-            BaseAlbedo: {BaseAlbedo}
-            BaseHeightmap: {BaseHeightmap}
-
-            ThumbnailAlbedo: {ThumbnailAlbedo}
-            ThumbnailHeightmap: {ThumbnailHeightmap}
-
-            TilesAlbedo: {TilesAlbedo}
-            TilesHeightmap: {TilesHeightmap}
-            TilesNormalMap: {TilesNormalMap}
-
-            PlanetPosition: {PlanetPosition}
-            PlanetRotation: {PlanetRotation}
-            PlanetScale: {PlanetScale}
-            """;
-        }
-    }
-
-    public struct SavePaths
-    {
-        public string BaseDirectory;
-        public string BaseImagesDir;
-        public string ThumbnailsDir;
-        public string TileDir;
-
-        public string BaseAlbedo;
-        public string BaseHeightmap;
-
-        public string ThumbnailAlbedo;
-        public string ThumbnailHeightmap;
-
-        public string TileAlbedoDir;
-        public string TileHeightmapDir;
+        public VirtualTextureData VirtualTextureData;
+        public TessellationData TessellationData;
+        public WorldData WorldData;
+        public DirectoryData DirectoryData;
     }
 
     public enum SaveDataIdentifier
@@ -151,6 +69,7 @@ public static class SaveManager
     #region Save State
 
     private const string SAVE_PATH = "user://Saves/saves.json";
+    private const string BRUSH_SAVE_PATH = "user://brush.json";
 
     private static readonly JsonSerializerOptions Options = new()
     {
@@ -160,18 +79,31 @@ public static class SaveManager
         IncludeFields = true
     };
 
-    private static Dictionary<string, WorldSave> Saves = GetSaves();
+    private static Dictionary<string, SaveData> Saves = GetSaves();
+    private static string _currentSave;
 
-    public static string CurrentSave { get; set; }
+    public static string CurrentSave
+    {
+        get => _currentSave;
+        set
+        {
+            _currentSave = value;
+            LoadSave(value);
+        }
+    }
 
-    public static WorldSave CurrentWorldSave => Saves[CurrentSave];
+    public static VirtualTextureData VirtualTextureData;
+    public static TessellationData TessellationData;
+    public static WorldData WorldData;
+    public static DirectoryData DirectoryData;
+
 
 
     #endregion
 
     #region Save Reading And Writing
 
-    private static Dictionary<string, WorldSave> GetSaves()
+    private static Dictionary<string, SaveData> GetSaves()
     {
         if (!FileAccess.FileExists(SAVE_PATH))
             return [];
@@ -183,7 +115,7 @@ public static class SaveManager
         if (string.IsNullOrWhiteSpace(jsonText))
             return [];
 
-        return JsonSerializer.Deserialize<Dictionary<string, WorldSave>>(jsonText, Options) ?? [];
+        return JsonSerializer.Deserialize<Dictionary<string, SaveData>>(jsonText, Options) ?? [];
     }
 
     public static void RefreshSaves()
@@ -199,15 +131,27 @@ public static class SaveManager
         fileAccess.StoreString(jsonText);
     }
 
-    public static void OverrideSave(string saveName, WorldSave worldSave)
+    private static void LoadSave(string saveName)
     {
-        Saves[saveName] = worldSave;
-        WriteSaves();
+        SaveData save = Saves[saveName];
+
+        VirtualTextureData = save.VirtualTextureData;
+        TessellationData = save.TessellationData;
+        WorldData = save.WorldData;
+        DirectoryData = save.DirectoryData;
     }
 
-    public static WorldSave GetSave(string saveName)
+    public static void SaveCurrentData(string saveName)
     {
-        return Saves[saveName];
+        Saves[saveName] = new SaveData
+        {
+            VirtualTextureData = VirtualTextureData,
+            TessellationData = TessellationData,
+            WorldData = WorldData,
+            DirectoryData = DirectoryData
+        };
+
+        WriteSaves();
     }
 
     public static string[] GetSaveNames()
@@ -217,44 +161,40 @@ public static class SaveManager
 
     public static bool SaveNameExist(string saveName)
     {
-        if (!Saves.TryGetValue(saveName, out WorldSave save))
+        if (!Saves.TryGetValue(saveName, out SaveData save))
             return false;
 
-        return DirectoryExist(save.BaseDirectory);
+        return DirectoryExist(save.DirectoryData.BaseDirectory);
     }
 
     #endregion
 
     #region Save Creation
 
-    public static SavePaths CreatePaths(string saveName)
+    public static DirectoryData CreateDirectories(string saveName)
     {
         string baseDirectory = $"user://Saves/{saveName}";
-        string baseImagesDir = $"{baseDirectory}/Base Images";
-        string thumbnailsDir = $"{baseDirectory}/Thumbnails";
-        string tileDir = $"{baseDirectory}/Tiles";
+        string baseImageDirectory = $"{baseDirectory}/Base Images";
+        string thumbnailsDirectory = $"{baseDirectory}/Thumbnails";
+        string tileDirectory = $"{baseDirectory}/Tiles";
 
-        string baseAlbedo = $"{baseImagesDir}/Albedo.png";
-        string baseHeightmap = $"{baseImagesDir}/Heightmap.png";
+        string baseAlbedo = $"{baseImageDirectory}/Albedo.png";
+        string baseHeightmap = $"{baseImageDirectory}/Heightmap.png";
 
-        string thumbnailAlbedo = $"{thumbnailsDir}/Albedo Thumbnail.png";
-        string thumbnailHeightmap = $"{thumbnailsDir}/Heightmap Thumbnail.png";
+        string thumbnailAlbedo = $"{thumbnailsDirectory}/Albedo Thumbnail.png";
+        string thumbnailHeightmap = $"{thumbnailsDirectory}/Heightmap Thumbnail.png";
 
-        string tileAlbedoDir = $"{tileDir}/Albedo";
-        string tileHeightmapDir = $"{tileDir}/Heightmap";
+        string tileAlbedo = $"{tileDirectory}/{GetTileFileName(TileCache.TileCacheType.ALBEDO)}";
+        string tileHeightmap = $"{tileDirectory}/{GetTileFileName(TileCache.TileCacheType.HEIGHTMAP)}";
 
         DirAccess.MakeDirRecursiveAbsolute(baseDirectory);
-        DirAccess.MakeDirRecursiveAbsolute(baseImagesDir);
-        DirAccess.MakeDirRecursiveAbsolute(thumbnailsDir);
-        DirAccess.MakeDirRecursiveAbsolute(tileAlbedoDir);
-        DirAccess.MakeDirRecursiveAbsolute(tileHeightmapDir);
+        DirAccess.MakeDirRecursiveAbsolute(baseImageDirectory);
+        DirAccess.MakeDirRecursiveAbsolute(thumbnailsDirectory);
+        DirAccess.MakeDirRecursiveAbsolute(tileDirectory);
 
-        return new SavePaths
+        return new DirectoryData
         {
             BaseDirectory = baseDirectory,
-            BaseImagesDir = baseImagesDir,
-            ThumbnailsDir = thumbnailsDir,
-            TileDir = tileDir,
 
             BaseAlbedo = baseAlbedo,
             BaseHeightmap = baseHeightmap,
@@ -262,12 +202,12 @@ public static class SaveManager
             ThumbnailAlbedo = thumbnailAlbedo,
             ThumbnailHeightmap = thumbnailHeightmap,
 
-            TileAlbedoDir = tileAlbedoDir,
-            TileHeightmapDir = tileHeightmapDir
+            TileAlbedo = tileAlbedo,
+            TileHeightmap = tileHeightmap
         };
     }
 
-    public static async Task WriteNewSave(string saveName, Image albedo, Image heightmap, int lowResolutionMipCount, int highResolutionMipCount, int[] lodToMipMap)
+    public static async Task WriteNewSave(string saveName, Image albedo, Image heightmap, int[] lodToMipMap, Action<int, string, int> onProgress)
     {
         Vector2I size = new(16384, 8192);
 
@@ -276,58 +216,82 @@ public static class SaveManager
         if (albedo.GetSize() != heightmap.GetSize())
             heightmap.Resize(albedo.GetSize().X, albedo.GetSize().Y);
 
-        SavePaths paths = CreatePaths(saveName);
+        DirectoryData = CreateDirectories(saveName);
 
-        WorldSave worldSave = new()
+        VirtualTextureData = new VirtualTextureData(
+            6,
+            0,
+            lodToMipMap,
+            [
+                "0_0_0_0",
+                "0_1_0_0",
+                "0_2_0_0",
+                "0_3_0_0",
+                "0_4_0_0",
+                "0_5_0_0",
+            ]
+        );
+
+        TessellationData = new TessellationData(
+            radius: 100,
+            resolution: 5,
+            heightScale: 0.025f,
+            subFactor: 4,
+            maximumLod: 12,
+            minimumLod: 0,
+            maximumKeys: 40000,
+            cullingDepth: 1,
+            cullingMargin: new Vector4(0.09f, 0.09f, 0.3f, 15)
+        );
+
+        _currentSave = saveName;
+
+        albedo.SavePng(DirectoryData.BaseAlbedo);
+        heightmap.SavePng(DirectoryData.BaseHeightmap);
+
+        GenerateThumbnail(albedo).SavePng(DirectoryData.ThumbnailAlbedo);
+        GenerateThumbnail(heightmap).SavePng(DirectoryData.ThumbnailHeightmap);
+
+        SaveCurrentData(saveName);
+
+        TileFile albedoTileFile = new(albedo.GetSize(),
+            Image.Format.Rgba8,
+            DirectoryData.TileAlbedo);
+
+        TileFile heightmapTileFile = new(heightmap.GetSize(),
+            Image.Format.R8,
+            DirectoryData.TileHeightmap);
+
+        GD.Print("Creating Tiles");
+        albedoTileFile.OnTileGeneratedProgress += onProgress;
+        try
         {
-            BaseDirectory = paths.BaseDirectory,
-            BaseAlbedo = paths.BaseAlbedo,
-            BaseHeightmap = paths.BaseHeightmap,
+            await albedoTileFile.CreateTiles(albedo);
+        }
+        finally
+        {
+            albedoTileFile.OnTileGeneratedProgress -= onProgress;
+        }
 
-            ThumbnailAlbedo = paths.ThumbnailAlbedo,
-            ThumbnailHeightmap = paths.ThumbnailHeightmap,
 
-            TilesAlbedo = paths.TileAlbedoDir,
-            TilesHeightmap = paths.TileHeightmapDir,
+        heightmapTileFile.OnTileGeneratedProgress += onProgress;
+        try
+        {
+            await heightmapTileFile.CreateTiles(heightmap);
+        }
+        finally
+        {
+            heightmapTileFile.OnTileGeneratedProgress -= onProgress;
+        }
+        
+        GD.Print("Finished Creating Tiles");
 
-            VirtualTextureData = new VirtualTextureData(
-                (uint)(albedo.GetHeight() / Mathf.Pow(2, lowResolutionMipCount - 1)),
-                (uint)lowResolutionMipCount,
-                (uint)highResolutionMipCount,
-                lodToMipMap,
-                [
-                    "4_0_0_0",
-                    "4_1_0_0",
-                    "4_2_0_0",
-                    "4_3_0_0",
-                    "4_4_0_0",
-                    "4_5_0_0",
-                ]
-            ),
+    }
 
-            TessellationData = new TessellationData(
-                radius: 100,
-                resolution: 5,
-                heightScale: 0.025f,
-                subFactor: 4,
-                maximumLod: 12,
-                minimumLod: 0,
-                maximumKeys: 40000,
-                startingLod: 2,
-                cullingDepth: 1,
-                cullingMargin: new Vector4(0.09f, 0.09f, 0.3f, 15)
-            )
-        };
-
-        albedo.SavePng(paths.BaseAlbedo);
-        heightmap.SavePng(paths.BaseHeightmap);
-
-        GenerateThumbnail(albedo).SavePng(paths.ThumbnailAlbedo);
-        GenerateThumbnail(heightmap).SavePng(paths.ThumbnailHeightmap);
-
-        await GenerateTiles(worldSave, albedo, heightmap);
-
-        OverrideSave(saveName, worldSave);
+    private static string GetTileFileName(TileCache.TileCacheType tileCacheType)
+    {
+        string tilePrefix = TileCache.GetTileCacheTypeName(tileCacheType).ToLower();
+        return $"{tilePrefix}_tiles.bin";
     }
 
     #endregion
@@ -336,44 +300,19 @@ public static class SaveManager
 
     public static void StoreCurrentTransform(string saveName, Transform3D translation, Transform3D rotation, Transform3D scale)
     {
-        WorldSave save = GetSave(saveName);
+        if (_currentSave != saveName)
+            CurrentSave = saveName;
 
-        save.PlanetPosition = translation.Origin;
-        save.PlanetRotation = rotation.Basis.GetEuler();
-        save.PlanetScale = scale.Basis.Scale;
+        WorldData.PlanetPosition = translation.Origin;
+        WorldData.PlanetRotation = rotation.Basis.GetEuler();
+        WorldData.PlanetScale = scale.Basis.Scale;
+
+        SaveCurrentData(saveName);
     }
 
     #endregion
 
     #region Tile Generation
-
-    public static async Task GenerateTiles(WorldSave save, Image albedo, Image heightmap)
-    {
-        GD.Print("Generating");
-
-        int mipCount = (int)(
-            save.VirtualTextureData.LowResolutionMipCount +
-            save.VirtualTextureData.HighResolutionMipCount
-        );
-
-        GD.Print("Generating Albedo map");
-
-        await TileManager.GenerateTilesAsync(
-            albedo,
-            mipCount - 1,
-            save.TilesAlbedo,
-            0
-        );
-
-        GD.Print("Generating Heightmap");
-
-        await TileManager.GenerateTilesAsync(
-            heightmap,
-            mipCount - 1,
-            save.TilesHeightmap,
-            0
-        );
-    }
 
     private static Image GenerateThumbnail(Image originalImage)
     {
@@ -392,7 +331,7 @@ public static class SaveManager
     public static bool IsValidDirectory(string saveName, SaveDataIdentifier directory)
     {
         return DirectoryExist(GetDirectoryPath(saveName, directory));
-    }
+}
 
     public static void EnsureDirectoryExists(string saveName, SaveDataIdentifier directory)
     {
@@ -404,24 +343,24 @@ public static class SaveManager
 
     public static string GetSaveDirectory(string saveName)
     {
-        return Saves[saveName].BaseDirectory;
+        return Saves[saveName].DirectoryData.BaseDirectory;
     }
 
     public static string GetDirectoryPath(string saveName, SaveDataIdentifier directory)
     {
         return directory switch
         {
-            SaveDataIdentifier.ROOT_SAVE_DIRECTORY => Saves[saveName].BaseDirectory,
+            SaveDataIdentifier.ROOT_SAVE_DIRECTORY => Saves[saveName].DirectoryData.BaseDirectory,
 
-            SaveDataIdentifier.BASE_ALBEDO => Saves[saveName].BaseAlbedo,
-            SaveDataIdentifier.BASE_HEIGHT_MAP => Saves[saveName].BaseHeightmap,
+            SaveDataIdentifier.BASE_ALBEDO => Saves[saveName].DirectoryData.BaseAlbedo,
+            SaveDataIdentifier.BASE_HEIGHT_MAP => Saves[saveName].DirectoryData.BaseHeightmap,
 
-            SaveDataIdentifier.TILE_ALBEDO => Saves[saveName].TilesAlbedo,
-            SaveDataIdentifier.TILE_HEIGHT_MAP => Saves[saveName].TilesHeightmap,
-            SaveDataIdentifier.TILE_NORMAL_MAP => Saves[saveName].TilesNormalMap,
+            SaveDataIdentifier.TILE_ALBEDO => Saves[saveName].DirectoryData.TileAlbedo,
+            SaveDataIdentifier.TILE_HEIGHT_MAP => Saves[saveName].DirectoryData.TileHeightmap,
+            SaveDataIdentifier.TILE_NORMAL_MAP => Saves[saveName].DirectoryData.TileNormalMap,
 
-            SaveDataIdentifier.THUMBNAIL_ALEBDO => Saves[saveName].ThumbnailAlbedo,
-            SaveDataIdentifier.THUMBNAIL_HEIGHT_MAP => Saves[saveName].ThumbnailHeightmap,
+            SaveDataIdentifier.THUMBNAIL_ALEBDO => Saves[saveName].DirectoryData.ThumbnailAlbedo,
+            SaveDataIdentifier.THUMBNAIL_HEIGHT_MAP => Saves[saveName].DirectoryData.ThumbnailHeightmap,
 
             _ => string.Empty
         };
@@ -473,14 +412,6 @@ public static class SaveManager
         }
 
         return images;
-    }
-
-    public static Image GetTile(string saveName, SaveDataIdentifier tileIdentifier, string fileName)
-    {
-        string directory = GetDirectoryPath(saveName, tileIdentifier);
-        string path = $"{directory}/{fileName}.png";
-
-        return Image.LoadFromFile(path);
     }
 
     #endregion

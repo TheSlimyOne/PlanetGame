@@ -1,13 +1,12 @@
 using System;
-using System.Linq;
 using Godot;
-using PlanetGame.Shaders;
+using PlanetGame.Data;
 
-namespace PlanetGame.Rendering.VirtualTexturing
+namespace PlanetGame.Planet.Rendering.VirtualTexturing
 {
     public class ResidencyTable : VirtualTextureTable
     {
-        private static VirtualTextureData VirtualTextureData => SaveManager.CurrentWorldSave.VirtualTextureData;
+        private static VirtualTextureData VirtualTextureData => SaveManager.VirtualTextureData;
 
         public Texture2Drd Table
         {

@@ -1,13 +1,12 @@
 using Godot;
-using PlanetGame.Rendering.Surface;
-using PlanetGame.Rendering.VirtualTexturing;
+using PlanetGame.Data;
 using PlanetGame.Util;
 using PlanetGame.Util.DebugUIComponents;
 
 public partial class CustomCamera : Camera3D
 {
-	private static TessellationData TessellationData => SaveManager.CurrentWorldSave.TessellationData;
-	private static VirtualTextureData VirtualTextureData => SaveManager.CurrentWorldSave.VirtualTextureData;
+	private static TessellationData TessellationData => SaveManager.TessellationData;
+	private static VirtualTextureData VirtualTextureData => SaveManager.VirtualTextureData;
 
 	[Export] public float BaseZoomSpeed { get; set; }
 	[Export] public float MaxDistance { get; set; }
@@ -35,9 +34,12 @@ public partial class CustomCamera : Camera3D
 	RemoteTransform3D FollowRemote;
 	public bool HasMoved { get; private set; }
 
+	public bool FrustumVisable { get; private set; } = false;
+
 	public override void _Ready()
 	{
 		DebugMenuController.Instance.AddSection("Camera", 0, false, null, 250);
+		DebugMenuController.Instance.AddButton("Frustums", "Camera", () => FrustumVisable, () => FrustumVisable = !FrustumVisable);
 		DebugMenuController.Instance.AddLabel("Distance", "Camera", () => $"{DistanceFromTarget}");
 		DebugMenuController.Instance.AddLabel("Camera Mode", "Camera", () => $"{GetViewport().DebugDraw}");
 		DebugMenuController.Instance.AddSlider("Culling Margin", "Camera",
@@ -111,6 +113,13 @@ public partial class CustomCamera : Camera3D
 
 
 	}
+
+    public override void _Process(double delta)
+    {
+        _cullingMarginFrustumInstance.Visible = FrustumVisable;
+		_frustumInstance.Visible = FrustumVisable;
+    }
+
 
 	public override void _PhysicsProcess(double delta)
 	{

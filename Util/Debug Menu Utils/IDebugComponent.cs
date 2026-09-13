@@ -1,11 +1,13 @@
-namespace PlanetGame.Util.DebugUIComponents;
-public interface IDebugComponent
+namespace PlanetGame.Util.DebugUIComponents
 {
-    public string TechnicalName { get; protected set; }
-	bool IsTemplate { get; set; }
+    public interface IDebugComponent
+    {
+        public string TechnicalName { get; protected set; }
+    	bool IsTemplate { get; set; }
 
-	protected static string GetTechnicalName(string name)
-	{
-		return name.ToLower().Replace(" ", "_");
-	}
+    	protected static string GetTechnicalName(string name)
+    	{
+    		return name.ToLower().Replace(" ", "_");
+    	}
+    }
 }

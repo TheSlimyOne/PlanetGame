@@ -35,11 +35,13 @@ void main()
 
     uvec4 result = uvec4(0);
 
-    for (int mip_index = 0; mip_index < total_resolution_mip_count; mip_index++)
+    for (int mip_index = total_resolution_mip_count - 1; mip_index >= 0; mip_index--)
     {
         int layer = normal_id * total_resolution_mip_count + mip_index;
 
-        uvec4 indirection_data = floatBitsToUint(imageLoad(IndirectionTable, ivec3(pixel, layer)));
+        uvec4 indirection_data = floatBitsToUint(
+            imageLoad(IndirectionTable, ivec3(pixel, layer))
+        );
 
         if (indirection_data.z != 0u)
         {

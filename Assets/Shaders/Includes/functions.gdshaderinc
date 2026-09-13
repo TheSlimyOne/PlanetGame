@@ -110,7 +110,7 @@ vec4 get_tile(sampler2DArray tile_cache, vec3 tile_uv) {
 ivec3 get_indirection_index(vec2 uv, int normal_id, int low_resolution_mip_count, int high_resolution_mip_count) {
 	int total_resolution_mip_count = low_resolution_mip_count + high_resolution_mip_count;
 	float grid_size = exp2(float(total_resolution_mip_count - 1));
-
+	
 	return ivec3(ivec2(floor(uv * grid_size)), normal_id);
 }
 
@@ -241,8 +241,8 @@ vec3 get_tile_uv(sampler2DArray indirection_table, vec2 uv, int normal_id, int l
 		mip_index
 	);
 
-	float lod_grid_size = grid_size / exp2(float(mip_index));
-	vec2 tile_uv = fract(uv * lod_grid_size);
+	float mip_grid_size = float(1 << mip_index);
+	vec2 tile_uv = fract(uv * mip_grid_size);
 
 	return vec3(tile_uv, float(tile_index));
 }

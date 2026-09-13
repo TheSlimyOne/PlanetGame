@@ -2,11 +2,10 @@ using System;
 using System.Linq;
 using Godot;
 
-namespace PlanetGame.Rendering.VirtualTexturing
+namespace PlanetGame.Data
 {
-    public class VirtualTextureData
+    public class VirtualTextureData : ISavable
     {
-        public uint TileSize;
         public uint HighResolutionMipCount;
         public uint LowResolutionMipCount;
         public int[] LodToMipMap = new int[32];
@@ -18,9 +17,8 @@ namespace PlanetGame.Rendering.VirtualTexturing
 
         public VirtualTextureData() { }
 
-        public VirtualTextureData(uint tileSize, uint lowResolutionMipCount, uint highResolutionMipCount, int[] lodToMipMap, string[] fallBackTiles)
+        public VirtualTextureData(uint lowResolutionMipCount, uint highResolutionMipCount, int[] lodToMipMap, string[] fallBackTiles)
         {
-            TileSize = tileSize;
             LowResolutionMipCount = lowResolutionMipCount;
             HighResolutionMipCount = highResolutionMipCount;
             LodToMipMap = lodToMipMap;
@@ -50,9 +48,9 @@ namespace PlanetGame.Rendering.VirtualTexturing
             return (int)(BaseGridSize / Mathf.Pow(2, mipIndex));
         }
 
-        public bool IsValidTileName(string tileName)
+        public bool IsValidTileName(string name)
         {
-            string[] tileData = tileName.Split('_');
+            string[] tileData = name.Split('_');
             if (tileData.Length != 4)
                 return false;
 
@@ -78,10 +76,24 @@ namespace PlanetGame.Rendering.VirtualTexturing
             return true;
         }
 
+        public (uint mipIndex, uint normalId, uint xIndex, uint yIndex) GetTileName(string name)
+        {
+            if (!IsValidTileName(name))
+                throw new Exception($"Tile name {name} is not valid");
+
+            string[] tileData = name.Split('_');
+
+            uint mipIndex = uint.Parse(tileData[0]);
+            uint normalId = uint.Parse(tileData[1]);
+            uint xIndex = uint.Parse(tileData[2]);
+            uint yIndex = uint.Parse(tileData[3]);
+
+            return (mipIndex, normalId, xIndex, yIndex);
+        }
+
         public override string ToString()
         {
             return $"""
-            TileSize: {TileSize}
             LowResolutionMipCount: {LowResolutionMipCount}
             HighResolutionMipCount: {HighResolutionMipCount}
             TotalMipLayersPerFace: {TotalMipLayersPerFace}

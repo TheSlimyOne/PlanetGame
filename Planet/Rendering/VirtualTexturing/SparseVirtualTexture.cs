@@ -2,20 +2,21 @@ using System.Threading.Tasks;
 using PlanetGame.Shaders.Dispatchers;
 using Godot;
 using PlanetGame.Shaders.RenderPasses;
-using PlanetGame.Rendering.Surface;
 using PlanetGame.Util;
 using System.Collections.Generic;
-using static PlanetGame.Planet.PlanetRenderer;
 using Uniform;
 using PlanetGame.Util.DebugUIComponents;
 using System;
+using PlanetGame.Data;
+using static PlanetGame.Planet.Rendering.PlanetRenderer;
 
-namespace PlanetGame.Rendering.VirtualTexturing
+namespace PlanetGame.Planet.Rendering.VirtualTexturing
 {
     public class SparseVirtualTexture
     {
-        private static VirtualTextureData VirtualTextureData => SaveManager.CurrentWorldSave.VirtualTextureData;
-        private static TessellationData TessellationData => SaveManager.CurrentWorldSave.TessellationData;
+        private static VirtualTextureData VirtualTextureData => SaveManager.VirtualTextureData;
+        private static TessellationData TessellationData => SaveManager.TessellationData;
+        private static DirectoryData DirectoryData => SaveManager.DirectoryData;
 
         public ResolveTileRequestDispatcher ResolveTileRequest { get; private set; }
         public ValidateCacheDispatcher ValidateTileCache { get; private set; }
@@ -24,8 +25,7 @@ namespace PlanetGame.Rendering.VirtualTexturing
 
         public IndirectionTable IndirectionTable { get; private set; }
         public ConsolidatedIndirectionTable ConsolidatedIndirectionTable { get; private set; }
-        public TileCache AlbedoTileCache { get; private set; }
-        public TileCache HeightTileCache { get; private set; }
+        private Dictionary<TileCache.TileCacheType, TileCache> _tileCaches = [];
         public ResidencyTable ResidencyTable { get; private set; }
         public StateTable StateTable { get; private set; }
 
@@ -36,10 +36,9 @@ namespace PlanetGame.Rendering.VirtualTexturing
 
         public SparseVirtualTexture(MultiMeshRD triangleMultiMesh, Vector2I viewSize, Dictionary<BufferNames, ShaderUniform> sharedUniforms)
         {
-            SaveManager.WorldSave worldSave = SaveManager.CurrentWorldSave;
-
-            AlbedoTileCache = new(worldSave.TilesAlbedo, worldSave.BaseAlbedo, Colors.Magenta, Image.Format.Rgba8);
-            HeightTileCache = new(worldSave.TilesHeightmap, worldSave.BaseHeightmap, Colors.Black, Image.Format.R8);
+            _tileCaches[TileCache.TileCacheType.ALBEDO] = new(DirectoryData.TileAlbedo, Colors.Magenta, Image.Format.Rgba8);
+        
+            _tileCaches[TileCache.TileCacheType.HEIGHTMAP] = new(DirectoryData.TileHeightmap, Colors.Black, Image.Format.R8);
 
             IndirectionTable = new();
             ConsolidatedIndirectionTable = new();
@@ -52,6 +51,14 @@ namespace PlanetGame.Rendering.VirtualTexturing
             FlattenIndirectionTableDispatcher = new(this);
 
             BindDebugSettings();
+        }
+
+        public TileCache GetTileCache(TileCache.TileCacheType type)
+        {
+            if (_tileCaches.TryGetValue(type, out TileCache cache))
+                return cache;
+
+            throw new KeyNotFoundException($"Tile cache '{type}' was not found.");
         }
 
         public void CreateUniforms()
@@ -76,23 +83,35 @@ namespace PlanetGame.Rendering.VirtualTexturing
 
             if (data.Length > 0)
             {
-                await Parallel.ForEachAsync(data, new ParallelOptions { MaxDegreeOfParallelism = 4 }, async (tileData, _) =>
+                // await Parallel.ForEachAsync(data, new ParallelOptions { MaxDegreeOfParallelism = 4 }, async (tileData, _) =>
+                foreach (var tileData in data)
                 {
                     // await Task.Delay(SIMULATED_DISK_LATENCY_MS, _);
 
-                    uint xCoord = tileData.tileX;
-                    uint yCoord = tileData.tileY;
+                    uint xIndex = tileData.tileX;
+                    uint yIndex = tileData.tileY;
                     uint mipIndex = tileData.tileZ % VirtualTextureData.TotalMipLayersPerFace;
                     uint normalId = (tileData.tileZ - mipIndex) / VirtualTextureData.TotalMipLayersPerFace;
                     uint slot = tileData.slot;
 
-                    int realMipIndex = (int)(mipIndex - VirtualTextureData.HighResolutionMipCount);
+                    // if (mipIndex == 5)
+                    // {
+                        
+                        // GD.PrintS("requesting");
+                    // }
 
-                    string tileName = $"{realMipIndex}_{normalId}_{xCoord}_{yCoord}";
+                    // int realMipIndex = (int)(mipIndex - VirtualTextureData.HighResolutionMipCount);
 
-                    AlbedoTileCache.InsertTile(tileName, slot);
-                    HeightTileCache.InsertTile(tileName, slot);
-                });
+                    // string tileName = $"{realMipIndex}_{normalId}_{xIndex}_{yIndex}";
+
+                    Tile tile = new(mipIndex, normalId, xIndex, yIndex);
+                    // int mipSize = (int)VirtualTextureData.BaseGridSize / (1 << ((int)tileData.tileZ));
+                    // GD.PrintS(xIndex / mipSize, yIndex / mipSize, "|", xIndex, yIndex, "|",  tileData.tileZ, ".");
+
+                    GetTileCache(TileCache.TileCacheType.ALBEDO).InsertTile(tile, slot);
+                    GetTileCache(TileCache.TileCacheType.HEIGHTMAP).InsertTile(tile, slot);
+                }
+                // );
 
                 ValidateTileCache.Invoke();
                 FlattenIndirectionTableDispatcher.Invoke();
@@ -123,11 +142,11 @@ namespace PlanetGame.Rendering.VirtualTexturing
             ConsolidatedIndirectionTable.ClearStorageTexture();
             ConsolidatedIndirectionTable.SetFallbackSlots();
 
-            AlbedoTileCache.ClearStorageTexture();
-            AlbedoTileCache.SetFallbackSlots();
-
-            HeightTileCache.ClearStorageTexture();
-            HeightTileCache.SetFallbackSlots();
+            foreach (TileCache cache in _tileCaches.Values)
+            {
+                cache.ClearStorageTexture();
+                cache.SetFallbackSlots();
+            }
 
             ResidencyTable.ClearStorageTexture();
             ResidencyTable.SetFallbackSlots();
@@ -176,28 +195,29 @@ namespace PlanetGame.Rendering.VirtualTexturing
 
         public void CleanupGPUResources()
         {
-            IndirectionTable.DeleteVisualization();
+            IndirectionTable?.DeleteVisualization();
             IndirectionTable = default;
 
-            ConsolidatedIndirectionTable.DeleteVisualization();
+            ConsolidatedIndirectionTable?.DeleteVisualization();
             ConsolidatedIndirectionTable = default;
 
-            AlbedoTileCache.DeleteVisualization();
-            AlbedoTileCache = default;
+            foreach (TileCache cache in _tileCaches.Values)
+            {
+                cache.DeleteVisualization();
+            }
 
-            HeightTileCache.DeleteVisualization();
-            HeightTileCache = default;
+            _tileCaches.Clear();
 
-            ResidencyTable.DeleteVisualization();
+            ResidencyTable?.DeleteVisualization();
             ResidencyTable = default;
 
-            StateTable.DeleteVisualization();
+            StateTable?.DeleteVisualization();
             StateTable = default;
 
-            ResolveTileRequest.CleanupGPU();
-            ValidateTileCache.CleanupGPU();
-            SvtFeedbackRenderPass.CleanupGPU();
-            FlattenIndirectionTableDispatcher.CleanupGPU();
+            ResolveTileRequest?.CleanupGPU();
+            ValidateTileCache?.CleanupGPU();
+            SvtFeedbackRenderPass?.CleanupGPU();
+            FlattenIndirectionTableDispatcher?.CleanupGPU();
 
             ResolveTileRequest = default;
             ValidateTileCache = default;
@@ -213,22 +233,19 @@ namespace PlanetGame.Rendering.VirtualTexturing
 
             DebugMenuController.Instance.AddActionButton("Wipe Virtual Texture", "Virtual Texturing", ClearVirtualTexture);
 
-            DebugMenuController.Instance.AddTexture("State Table", "Virtual Texturing", StateTable.CreateVisualization());
+            DebugMenuController.Instance.AddTexture("State Table", "Virtual Texturing", StateTable.CreateVisualization(), false);
 
-            DebugMenuController.Instance.AddTexture("Indirection Table", "Virtual Texturing", IndirectionTable.CreateVisualization());
+            DebugMenuController.Instance.AddTexture("Indirection Table", "Virtual Texturing", IndirectionTable.CreateVisualization(), false);
 
-            DebugMenuController.Instance.AddTexture("Residency Table", "Virtual Texturing", ResidencyTable.CreateVisualization());
+            DebugMenuController.Instance.AddTexture("Residency Table", "Virtual Texturing", ResidencyTable.CreateVisualization(), false);
 
-            DebugMenuController.Instance.AddTexture("Albedo Tile Cache", "Virtual Texturing", AlbedoTileCache.CreateVisualization("Albedo"));
+            DebugMenuController.Instance.AddTexture("Albedo Tile Cache", "Virtual Texturing", GetTileCache(TileCache.TileCacheType.ALBEDO).CreateVisualization("Albedo"), false);
 
-            DebugMenuController.Instance.AddTexture("Height Tile Cache", "Virtual Texturing", HeightTileCache.CreateVisualization("Height"));
-            
-            DebugMenuController.Instance.AddTexture("Flatten Indirection Table", "Virtual Texturing", ConsolidatedIndirectionTable.CreateVisualization());
+            DebugMenuController.Instance.AddTexture("Heightmap Tile Cache", "Virtual Texturing", GetTileCache(TileCache.TileCacheType.HEIGHTMAP).CreateVisualization("Heightmap"), false);
 
-            DebugMenuController.Instance.AddTexture("Picking Texture", "Virtual Texturing", new TextureRect
-            {
-                Texture = SvtFeedbackRenderPass.GetPickingTexture()
-            });
+            DebugMenuController.Instance.AddTexture("Flatten Indirection Table", "Virtual Texturing", ConsolidatedIndirectionTable.CreateVisualization(), false);
+
+            DebugMenuController.Instance.AddTexture("Picking Texture", "Virtual Texturing", new TextureRect { Texture = SvtFeedbackRenderPass.GetPickingTexture() }, false);
         }
     }
 }

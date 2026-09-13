@@ -1,11 +1,10 @@
 using System;
-using PlanetGame.Shaders.Dispatchers;
 using Godot;
 using System.Collections.Generic;
 using Uniform;
-using PlanetGame.Util;
-using PlanetGame.Rendering.VirtualTexturing;
 using PlanetGame.Planet;
+using PlanetGame.Planet.Rendering;
+using PlanetGame.Planet.Rendering.VirtualTexturing;
 
 namespace PlanetGame.Shaders.RenderPasses
 {
@@ -46,7 +45,7 @@ namespace PlanetGame.Shaders.RenderPasses
 
                 [BufferNames.EXTERNAL_DATA] = _shaderedShaderUniforms[PlanetRenderer.BufferNames.EXTERNAL_DATA],
 
-                [BufferNames.HEIGHT_MAP] = new Texture2DUniform(this, (int)BufferNames.HEIGHT_MAP, _sparseVirtualTexture.HeightTileCache.GetRdRid(), RenderingDevice.UniformType.SamplerWithTexture, true),
+                [BufferNames.HEIGHT_MAP] = new Texture2DUniform(this, (int)BufferNames.HEIGHT_MAP, _sparseVirtualTexture.GetTileCache(TileCache.TileCacheType.HEIGHTMAP).GetRdRid(), RenderingDevice.UniformType.SamplerWithTexture, true),
 
                 [BufferNames.CONSOLIDATED_INDIRECTION_TABLE] = new Texture2DUniform(this, (int)BufferNames.CONSOLIDATED_INDIRECTION_TABLE, _sparseVirtualTexture.ConsolidatedIndirectionTable.GetRdRid(), RenderingDevice.UniformType.SamplerWithTexture, true),
             };
@@ -270,6 +269,9 @@ namespace PlanetGame.Shaders.RenderPasses
         {
             Vector2 normalizedMousePosition = mousePosition / screenSize;
 
+            if (_pickingImage == null)
+                return Vector3.Inf;
+
             Vector2I pixelPosition = new(
                 Mathf.Clamp(
                     (int)(normalizedMousePosition.X * _pickingImage.GetWidth()),
@@ -285,7 +287,6 @@ namespace PlanetGame.Shaders.RenderPasses
 
             Color pickingData = _pickingImage.GetPixelv(pixelPosition);
 
-            // Return an invald value if not a valid pick
             if (pickingData.A <= 0)
                 return Vector3.Inf;
 

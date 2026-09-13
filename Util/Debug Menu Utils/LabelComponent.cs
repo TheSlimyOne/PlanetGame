@@ -1,44 +1,46 @@
 using System;
 using Godot;
-using PlanetGame.Util.DebugUIComponents;
 
-public partial class LabelComponent : PanelContainer, IDebugComponent
+namespace PlanetGame.Util.DebugUIComponents
 {
-	public string TechnicalName { get; set; }
-	public bool IsTemplate { get; set; } = true;
-
-	private Label _label;
-	private Label _value;
-
-	private Func<string> _getValue;
-
-	public override void _Ready()
+	public partial class LabelComponent : PanelContainer, IDebugComponent
 	{
-		_label = GetNode<Label>("%Label");
-		_value = GetNode<Label>("%Value");
-	}
+		public string TechnicalName { get; set; }
+		public bool IsTemplate { get; set; } = true;
 
-	public void Initialize(string name, Func<string> getValue, bool isTemplate = false)
-	{
-		TechnicalName = name.ToCamelCase();
-		IsTemplate = isTemplate;
+		private Label _label;
+		private Label _value;
 
-		Name = $"{TechnicalName}LabelComponent";
+		private Func<string> _getValue;
 
-		_getValue = getValue;
+		public override void _Ready()
+		{
+			_label = GetNode<Label>("%Label");
+			_value = GetNode<Label>("%Value");
+		}
 
-		_label ??= GetNode<Label>("%Label");
-		_value ??= GetNode<Label>("%Value");
+		public void Initialize(string name, Func<string> getValue, bool isTemplate = false)
+		{
+			TechnicalName = name.ToCamelCase();
+			IsTemplate = isTemplate;
 
-		_label.Text = name;
-		_value.Text = getValue?.Invoke() ?? "Value";
-	}
+			Name = $"{TechnicalName}LabelComponent";
 
-	public override void _Process(double delta)
-	{
-		if (_getValue == null)
-			return;
+			_getValue = getValue;
 
-		_value.Text = _getValue();
+			_label ??= GetNode<Label>("%Label");
+			_value ??= GetNode<Label>("%Value");
+
+			_label.Text = name;
+			_value.Text = getValue?.Invoke() ?? "Value";
+		}
+
+		public override void _Process(double delta)
+		{
+			if (_getValue == null)
+				return;
+
+			_value.Text = _getValue();
+		}
 	}
 }

@@ -1,14 +1,15 @@
 using System;
 using Uniform;
 using Godot;
-using PlanetGame.Rendering.VirtualTexturing;
+using PlanetGame.Planet.Rendering.VirtualTexturing;
+using PlanetGame.Data;
 
 namespace PlanetGame.Shaders.Dispatchers
 {
 	public class FlattenIndirectionTableDispatcher : Dispatcher<FlattenIndirectionTableDispatcher.BufferNames>
 	{
 		private static ShaderProgramPaths _shaderPath = new() { Compute = ShaderPaths.FLATTEN_INDIRECTION_TABLE };
-    	private static VirtualTextureData VirtualTextureData => SaveManager.CurrentWorldSave.VirtualTextureData;
+    	private static VirtualTextureData VirtualTextureData => SaveManager.VirtualTextureData;
 		
 		public enum BufferNames
 		{

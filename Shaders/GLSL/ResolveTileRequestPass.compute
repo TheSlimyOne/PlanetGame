@@ -84,13 +84,11 @@ void main() {
         slot / sqrt_total_texture_slots
     );
 
-    int mip_size = 1 << mip_index;
-    int mip_grid_size = int(grid_size) >> mip_index;
-    int mip_step = int(grid_size) / mip_grid_size;
+    int mip_size = int(grid_size) >> mip_index;
 
     uvec3 request_coords = uvec3(
-        indirection_index.x / mip_step,
-        indirection_index.y / mip_step,
+        indirection_index.x / mip_size,
+        indirection_index.y / mip_size,
         indirection_index.z
     );
 
@@ -98,7 +96,7 @@ void main() {
     uvec4 prev_tile_data = floatBitsToUint(imageLoad(ResidencyTable, residency_index));
     if (prev_tile_data.w != 0u) {
         int prev_mip_index = int(prev_tile_data.z % total_resolution_mip_count);
-        int prev_lod_size = 1 << prev_mip_index;
+        int prev_lod_size = int(grid_size) >> prev_mip_index;
         set_indirection_entry(IndirectionTable, ivec3(prev_tile_data.xyz), prev_lod_size, uvec4(0u));
     }
 

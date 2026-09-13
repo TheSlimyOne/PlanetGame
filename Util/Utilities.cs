@@ -172,6 +172,11 @@ namespace PlanetGame.Util
             return result.Trim('_');
         }
 
+        public static int Log2(int x)
+        {
+            return (int)(Mathf.Log(x) / Mathf.Log(2));
+        }
+
         public static string ToCamelCase(string snakeCase)
         {
             string[] words = snakeCase.Split('_');

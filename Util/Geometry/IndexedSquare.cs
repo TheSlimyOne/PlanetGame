@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Godot;
 namespace PlanetGame.Util.Geometry
 {
     public struct IndexedSquare(int indexA, int indexB, int indexC, int indexD)

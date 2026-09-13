@@ -2,19 +2,18 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Godot;
-using PlanetGame.Planet;
-using PlanetGame.Rendering.VirtualTexturing;
+using PlanetGame.Data;
 using PlanetGame.Shaders.Dispatchers;
 using PlanetGame.Util;
 using PlanetGame.Util.DebugUIComponents;
 using Uniform;
-using static PlanetGame.Planet.PlanetRenderer;
+using static PlanetGame.Planet.Rendering.PlanetRenderer;
 
 namespace PlanetGame.Rendering.Surface
 {
     public class TerrainTessellator
     {
-        private static TessellationData TessellationData => SaveManager.CurrentWorldSave.TessellationData;
+        private static TessellationData TessellationData => SaveManager.TessellationData;
         public ExecuteTessellationPassDispatcher ExecuteTessellationPass { get; private set; }
         public PrepareTessellationPassDispatcher PrepareTessellationPass { get; private set; }
 
@@ -54,9 +53,9 @@ namespace PlanetGame.Rendering.Surface
 
         public void CleanupGPUResources()
         {
-            PrepareTessellationPass.CleanupGPU();
-            ExecuteTessellationPass.CleanupGPU();
-            TriangleMultiMesh.CleanupGPU();
+            PrepareTessellationPass?.CleanupGPU();
+            ExecuteTessellationPass?.CleanupGPU();
+            TriangleMultiMesh?.CleanupGPU();
 
 
             PrepareTessellationPass = default;

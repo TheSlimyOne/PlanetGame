@@ -2,175 +2,177 @@ using System;
 using System.Collections.Generic;
 using Godot;
 using PlanetGame.Rendering.Surface;
-using PlanetGame.Rendering.VirtualTexturing;
+using PlanetGame.Planet.Rendering.VirtualTexturing;
 using PlanetGame.Shaders.Dispatchers;
 using Uniform;
 
-namespace PlanetGame.Shaders.RenderPasses;
-
-public partial class SvtDepthPrepass : RenderPass<SvtDepthPrepass.BufferNames>
+namespace PlanetGame.Shaders.RenderPasses
 {
-    private static ShaderProgramPaths _shaderPath = new() { Vertex = ShaderPaths.PLANET_TESSELLATION_VERTEX, Fragment = ShaderPaths.EMPTY_FRAGMENT };
-    public TerrainTessellator TerrainTessellator { get; }
-    public SparseVirtualTexture SparseVirtualTexture { get; }
-
-    private Rid _depthBuffer;
-
-    public enum BufferNames
+    public partial class SvtDepthPrepass : RenderPass<SvtDepthPrepass.BufferNames>
     {
-        MULTIMESH_BUFFER,
-        EXTERNAL_DATA,
-        HEIGHT_MAP,
-        INDIRECTION_TABLE,
-        STATE_TABLE
-    }
+        private static ShaderProgramPaths _shaderPath = new() { Vertex = ShaderPaths.PLANET_TESSELLATION_VERTEX, Fragment = ShaderPaths.EMPTY_FRAGMENT };
+        public TerrainTessellator TerrainTessellator { get; }
+        public SparseVirtualTexture SparseVirtualTexture { get; }
 
-    public SvtDepthPrepass(TerrainTessellator terrainTessellator, SparseVirtualTexture sparseVirtualTexture, Rid depthBuffer, Vector2I viewSize, Mesh mesh) : base(_shaderPath, viewSize)
-    {
-        TerrainTessellator = terrainTessellator;
-        SparseVirtualTexture = sparseVirtualTexture;
-        _depthBuffer = depthBuffer;
+        private Rid _depthBuffer;
 
-        SetupShader(mesh);
-    }
-
-    public override void CreateUniforms()
-    {
-        _shaderUniforms = new Dictionary<Enum, ShaderUniform>
+        public enum BufferNames
         {
-            [BufferNames.MULTIMESH_BUFFER] =
-                TerrainTessellator.ExecuteTessellationPass[
-                    ExecuteTessellationPassDispatcher.BufferNames.MULTIMESH_BUFFER
-                ],
+            MULTIMESH_BUFFER,
+            EXTERNAL_DATA,
+            HEIGHT_MAP,
+            INDIRECTION_TABLE,
+            STATE_TABLE
+        }
 
-            [BufferNames.EXTERNAL_DATA] =
-                TerrainTessellator.ExecuteTessellationPass[
-                    ExecuteTessellationPassDispatcher.BufferNames.EXTERNAL_DATA
-                ],
+        public SvtDepthPrepass(TerrainTessellator terrainTessellator, SparseVirtualTexture sparseVirtualTexture, Rid depthBuffer, Vector2I viewSize, Mesh mesh) : base(_shaderPath, viewSize)
+        {
+            TerrainTessellator = terrainTessellator;
+            SparseVirtualTexture = sparseVirtualTexture;
+            _depthBuffer = depthBuffer;
 
-            [BufferNames.HEIGHT_MAP] = new Texture2DUniform(
-                this,
-                (int)BufferNames.HEIGHT_MAP,
-                SparseVirtualTexture.HeightTileCache.GetRdRid(),
-                RenderingDevice.UniformType.SamplerWithTexture,
-                true
-            ),
+            SetupShader(mesh);
+        }
 
-            [BufferNames.INDIRECTION_TABLE] = new Texture2DUniform(
-                this,
-                (int)BufferNames.INDIRECTION_TABLE,
-                SparseVirtualTexture.IndirectionTable.GetRdRid(),
-                RenderingDevice.UniformType.SamplerWithTexture,
-                true
-            ),
+        public override void CreateUniforms()
+        {
+            _shaderUniforms = new Dictionary<Enum, ShaderUniform>
+            {
+                [BufferNames.MULTIMESH_BUFFER] =
+                    TerrainTessellator.ExecuteTessellationPass[
+                        ExecuteTessellationPassDispatcher.BufferNames.MULTIMESH_BUFFER
+                    ],
 
-            [BufferNames.STATE_TABLE] = new Texture2DUniform(
-                this,
-                (int)BufferNames.STATE_TABLE,
-                SparseVirtualTexture.StateTable.GetRdRid(),
-                RenderingDevice.UniformType.Image,
-                true
-            )
-        };
+                [BufferNames.EXTERNAL_DATA] =
+                    TerrainTessellator.ExecuteTessellationPass[
+                        ExecuteTessellationPassDispatcher.BufferNames.EXTERNAL_DATA
+                    ],
 
-        CreateUniformSet();
-    }
+                [BufferNames.HEIGHT_MAP] = new Texture2DUniform(
+                    this,
+                    (int)BufferNames.HEIGHT_MAP,
+                    SparseVirtualTexture.GetTileCache(TileCache.TileCacheType.HEIGHTMAP).GetRdRid(),
+                    RenderingDevice.UniformType.SamplerWithTexture,
+                    true
+                ),
+
+                [BufferNames.INDIRECTION_TABLE] = new Texture2DUniform(
+                    this,
+                    (int)BufferNames.INDIRECTION_TABLE,
+                    SparseVirtualTexture.IndirectionTable.GetRdRid(),
+                    RenderingDevice.UniformType.SamplerWithTexture,
+                    true
+                ),
+
+                [BufferNames.STATE_TABLE] = new Texture2DUniform(
+                    this,
+                    (int)BufferNames.STATE_TABLE,
+                    SparseVirtualTexture.StateTable.GetRdRid(),
+                    RenderingDevice.UniformType.Image,
+                    true
+                )
+            };
+
+            CreateUniformSet();
+        }
 
 #nullable enable
-    public override void Invoke(byte[]? pushConstants = null)
-    {
-        long drawList = RenderingDevice.DrawListBegin(
-            _framebuffer,
-            RenderingDevice.DrawFlags.ClearDepth,
-            [],
-            1.0f,
-            0
-        );
-
-        RenderingDevice.DrawListBindRenderPipeline(drawList, _pipeline);
-        RenderingDevice.DrawListBindVertexArray(
-            drawList,
-            _geometry.VertexArray
-        );
-        RenderingDevice.DrawListBindIndexArray(
-            drawList,
-            _geometry.IndexArray
-        );
-        RenderingDevice.DrawListBindUniformSet(
-            drawList,
-            _uniformSet,
-            0
-        );
-
-        RenderingDevice.DrawListDrawIndirect(
-            drawList,
-            true,
-            TerrainTessellator.PrepareTessellationPass[
-                PrepareTessellationPassDispatcher.BufferNames.DRAW_DISPATCH_BUFFER
-            ].Rid
-        );
-
-        RenderingDevice.DrawListEnd();
-    }
-
-    protected override Rid CreatePipeline()
-    {
-        return RenderingDevice.RenderPipelineCreate(
-            _shader,
-            _framebufferFormat,
-            _geometry.VertexFormat,
-            RenderingDevice.RenderPrimitive.Triangles,
-            new RDPipelineRasterizationState
-            {
-                CullMode = RenderingDevice.PolygonCullMode.Back,
-                Wireframe = false,
-                LineWidth = 1.0f
-            },
-            new RDPipelineMultisampleState(),
-            new RDPipelineDepthStencilState
-            {
-                EnableDepthTest = true,
-                EnableDepthWrite = true,
-                DepthCompareOperator =
-                    RenderingDevice.CompareOperator.Less
-            },
-            new RDPipelineColorBlendState()
-        );
-    }
-
-    protected override Rid CreateFramebuffer()
-    {
-        RDAttachmentFormat depthAttachmentFormat = new()
+        public override void Invoke(byte[]? pushConstants = null)
         {
-            Format = RenderingDevice.DataFormat.D32Sfloat,
-            Samples = RenderingDevice.TextureSamples.Samples1,
-            UsageFlags = (uint)(
-                RenderingDevice.TextureUsageBits.DepthStencilAttachmentBit |
-                RenderingDevice.TextureUsageBits.SamplingBit |
-                RenderingDevice.TextureUsageBits.CanCopyFromBit
-            )
-        };
+            long drawList = RenderingDevice.DrawListBegin(
+                _framebuffer,
+                RenderingDevice.DrawFlags.ClearDepth,
+                [],
+                1.0f,
+                0
+            );
 
-        _framebufferFormat = RenderingDevice.FramebufferFormatCreate(
-            [depthAttachmentFormat]
-        );
+            RenderingDevice.DrawListBindRenderPipeline(drawList, _pipeline);
+            RenderingDevice.DrawListBindVertexArray(
+                drawList,
+                _geometry.VertexArray
+            );
+            RenderingDevice.DrawListBindIndexArray(
+                drawList,
+                _geometry.IndexArray
+            );
+            RenderingDevice.DrawListBindUniformSet(
+                drawList,
+                _uniformSet,
+                0
+            );
 
-        return RenderingDevice.FramebufferCreate(
-            [_depthBuffer]
-        );
+            RenderingDevice.DrawListDrawIndirect(
+                drawList,
+                true,
+                TerrainTessellator.PrepareTessellationPass[
+                    PrepareTessellationPassDispatcher.BufferNames.DRAW_DISPATCH_BUFFER
+                ].Rid
+            );
+
+            RenderingDevice.DrawListEnd();
+        }
+
+        protected override Rid CreatePipeline()
+        {
+            return RenderingDevice.RenderPipelineCreate(
+                _shader,
+                _framebufferFormat,
+                _geometry.VertexFormat,
+                RenderingDevice.RenderPrimitive.Triangles,
+                new RDPipelineRasterizationState
+                {
+                    CullMode = RenderingDevice.PolygonCullMode.Back,
+                    Wireframe = false,
+                    LineWidth = 1.0f
+                },
+                new RDPipelineMultisampleState(),
+                new RDPipelineDepthStencilState
+                {
+                    EnableDepthTest = true,
+                    EnableDepthWrite = true,
+                    DepthCompareOperator =
+                        RenderingDevice.CompareOperator.Less
+                },
+                new RDPipelineColorBlendState()
+            );
+        }
+
+        protected override Rid CreateFramebuffer()
+        {
+            RDAttachmentFormat depthAttachmentFormat = new()
+            {
+                Format = RenderingDevice.DataFormat.D32Sfloat,
+                Samples = RenderingDevice.TextureSamples.Samples1,
+                UsageFlags = (uint)(
+                    RenderingDevice.TextureUsageBits.DepthStencilAttachmentBit |
+                    RenderingDevice.TextureUsageBits.SamplingBit |
+                    RenderingDevice.TextureUsageBits.CanCopyFromBit
+                )
+            };
+
+            _framebufferFormat = RenderingDevice.FramebufferFormatCreate(
+                [depthAttachmentFormat]
+            );
+
+            return RenderingDevice.FramebufferCreate(
+                [_depthBuffer]
+            );
+        }
+
+        public override void UpdateUniforms()
+        {
+        }
+
+        public override void CleanupGPU()
+        {
+            if (RenderingDevice == null)
+                return;
+
+            _depthBuffer = default;
+
+            base.CleanupGPU();
+        }
     }
 
-    public override void UpdateUniforms()
-    {
-    }
-
-    public override void CleanupGPU()
-    {
-        if (RenderingDevice == null)
-            return;
-
-        _depthBuffer = default;
-
-        base.CleanupGPU();
-    }
 }

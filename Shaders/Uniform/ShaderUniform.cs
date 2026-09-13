@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using Godot;
 using PlanetGame.Shaders;
-using PlanetGame.Shaders.Dispatchers;
 
 namespace Uniform
 {

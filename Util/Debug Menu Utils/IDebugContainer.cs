@@ -1,8 +1,9 @@
 using Godot;
 
-namespace PlanetGame.Util.DebugUIComponents;
-
-public interface IDebugContainer
+namespace PlanetGame.Util.DebugUIComponents
 {
-	void AddContent(Control control, int order = 0);
+    public interface IDebugContainer
+    {
+    	void AddContent(Control control, int order = 0);
+    }
 }

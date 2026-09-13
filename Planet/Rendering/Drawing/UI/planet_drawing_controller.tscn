@@ -1,0 +1,13 @@
+[gd_scene format=3 uid="uid://cyxfspkokpybd"]
+
+[ext_resource type="Script" uid="uid://cttqll8wtg7l7" path="res://Planet/Rendering/Drawing/UI/PlanetDrawingController.cs" id="1_cjaky"]
+
+[node name="PlanetDrawingController" type="Control" unique_id=364081334]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_cjaky")

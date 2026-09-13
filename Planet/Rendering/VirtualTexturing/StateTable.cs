@@ -1,24 +1,20 @@
 using System;
-using System.Linq;
 using Godot;
-using PlanetGame.Shaders;
+using PlanetGame.Data;
 
-namespace PlanetGame.Rendering.VirtualTexturing
+namespace PlanetGame.Planet.Rendering.VirtualTexturing
 {
     public class StateTable : VirtualTextureTable
     {
-        private static VirtualTextureData VirtualTextureData => SaveManager.CurrentWorldSave.VirtualTextureData;
+        private static VirtualTextureData VirtualTextureData => SaveManager.VirtualTextureData;
         public Texture2DArrayRD Table
         {
             get => (Texture2DArrayRD)_storageTexture;
             protected set => _storageTexture = value;
         }
 
-
-        // TODO need to recognize if there is border pixels 
         public StateTable()
         {
-
             uint gridSize = VirtualTextureData.BaseGridSize;
 
             Format = RenderingDevice.DataFormat.R8G8B8A8Unorm;
@@ -68,7 +64,7 @@ namespace PlanetGame.Rendering.VirtualTexturing
 
                 int mip_index = tile_position.x;
 
-                int mip_grid_size = max(tile_size.x >> mip_index, 1);
+                int mip_grid_size = 1 << (mip_index);;
                 int mip_step = max(tile_size.x / mip_grid_size, 1);
 
                 ivec2 mip_position = ivec2(clamp(grid_cell_uv, vec2(0.0), vec2(1.0 - 0.000001)) * float(mip_grid_size));

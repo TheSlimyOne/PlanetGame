@@ -1,7 +1,6 @@
 using Godot;
-using System;
 using System.Threading.Tasks;
-namespace PlanetGame.Rendering.VirtualTexturing
+namespace PlanetGame.Planet.Rendering.VirtualTexturing
 {
 	public partial class DebugTileGenerator : Control
 	{
@@ -25,13 +24,13 @@ namespace PlanetGame.Rendering.VirtualTexturing
 				{
 					for (int tileIndex = 0; tileIndex < tilesPerSide * tilesPerSide; tileIndex++)
 					{
-						int tileY = tileIndex / tilesPerSide;
-						int tileX = tileIndex % tilesPerSide;
-						string label = $"{mipIndex}-{normalId}-{tileX}-{tileY}";
+						int x = tileIndex / tilesPerSide;
+						int y = tileIndex % tilesPerSide;
+						string label = $"{mipIndex}-{normalId}-{y}-{x}";
 
 						_lblMipIndex.Text = mipIndex.ToString();
 						_lblNormalId.Text = normalId.ToString();
-						_lblTileCoords.Text = $"({tileX}, {tileY})";
+						_lblTileCoords.Text = $"({y}, {x})";
 						Image outputImage = null;
 						await ToSignal(RenderingServer.Singleton, "frame_post_draw");
 

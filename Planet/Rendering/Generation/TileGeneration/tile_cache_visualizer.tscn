@@ -1,0 +1,95 @@
+[gd_scene format=3 uid="uid://bqwv2gkwg48h3"]
+
+[ext_resource type="Script" uid="uid://go0y1kdyus4g" path="res://Planet/Rendering/Generation/TileGeneration/TileCacheVisualizer.cs" id="1_d4c2k"]
+
+[node name="TileCacheVisualizer" type="MarginContainer" unique_id=2134731571]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+script = ExtResource("1_d4c2k")
+
+[node name="Container" type="PanelContainer" parent="." unique_id=1592390813]
+layout_mode = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="Container" unique_id=963281006]
+layout_mode = 2
+
+[node name="Container" type="VBoxContainer" parent="Container/MarginContainer" unique_id=1910644454]
+layout_mode = 2
+
+[node name="Header" type="HBoxContainer" parent="Container/MarginContainer/Container" unique_id=1716077430]
+layout_mode = 2
+size_flags_vertical = 0
+
+[node name="ItemCount" type="HBoxContainer" parent="Container/MarginContainer/Container/Header" unique_id=1631115098]
+layout_mode = 2
+size_flags_horizontal = 6
+alignment = 1
+
+[node name="SaveLabel" type="Label" parent="Container/MarginContainer/Container/Header/ItemCount" unique_id=1260430134]
+layout_mode = 2
+text = "Save"
+
+[node name="SaveOptions" type="OptionButton" parent="Container/MarginContainer/Container/Header/ItemCount" unique_id=866984655]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(180, 0)
+layout_mode = 2
+size_flags_horizontal = 6
+toggle_mode = false
+
+[node name="NormalIdLabel" type="Label" parent="Container/MarginContainer/Container/Header/ItemCount" unique_id=509452675]
+layout_mode = 2
+text = "Normal Id"
+
+[node name="NormalIdOption" type="OptionButton" parent="Container/MarginContainer/Container/Header/ItemCount" unique_id=1059517406]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(180, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Mip" type="Label" parent="Container/MarginContainer/Container/Header/ItemCount" unique_id=734125629]
+layout_mode = 2
+text = "Mip"
+
+[node name="MipOption" type="OptionButton" parent="Container/MarginContainer/Container/Header/ItemCount" unique_id=2011242414]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(180, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="AspectRatioContainer" type="AspectRatioContainer" parent="Container/MarginContainer/Container" unique_id=1715462777]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="DisplayTextureContainer" type="GridContainer" parent="Container/MarginContainer/Container/AspectRatioContainer" unique_id=1104169962]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/h_separation = 1
+theme_override_constants/v_separation = 1
+
+[node name="Footer" type="HBoxContainer" parent="Container/MarginContainer/Container" unique_id=1869937055]
+layout_mode = 2
+
+[node name="CurrentItemData" type="HBoxContainer" parent="Container/MarginContainer/Container/Footer" unique_id=186789624]
+layout_mode = 2
+size_flags_horizontal = 6
+alignment = 1
+
+[node name="EncodingLabel" type="Label" parent="Container/MarginContainer/Container/Footer/CurrentItemData" unique_id=803231713]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 0
+text = "Encoding: X"
+
+[node name="Spacing" type="Control" parent="Container/MarginContainer/Container/Footer/CurrentItemData" unique_id=127549280]
+custom_minimum_size = Vector2(10, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+
+[connection signal="item_selected" from="Container/MarginContainer/Container/Header/ItemCount/SaveOptions" to="." method="OnSaveSelection"]
+[connection signal="pressed" from="Container/MarginContainer/Container/Header/ItemCount/SaveOptions" to="." method="OnOpenSavesList"]

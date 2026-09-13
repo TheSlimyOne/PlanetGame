@@ -1,10 +1,11 @@
 using System;
 using Godot;
-namespace PlanetGame.Rendering.VirtualTexturing
+using PlanetGame.Data;
+namespace PlanetGame.Planet.Rendering.VirtualTexturing
 {
     public class ConsolidatedIndirectionTable : VirtualTextureTable
     {
-        private static VirtualTextureData VirtualTextureData => SaveManager.CurrentWorldSave.VirtualTextureData;
+        private static VirtualTextureData VirtualTextureData => SaveManager.VirtualTextureData;
 
         public Texture2DArrayRD Table
         {
@@ -152,7 +153,7 @@ namespace PlanetGame.Rendering.VirtualTexturing
                 int tileX = int.Parse(tileData[2]);
                 int tileY = int.Parse(tileData[3]);
 
-                int mipSize = 1 << mipIndex;
+                int mipSize = (int)gridSize >> mipIndex;
 
                 if(images[normalId] == null)
                     images[normalId] = Image.CreateEmpty((int)gridSize, (int)gridSize, false, FormatConverter.MatchDataFormat(Format));

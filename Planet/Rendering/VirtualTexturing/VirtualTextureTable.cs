@@ -1,5 +1,5 @@
 using Godot;
-namespace PlanetGame.Rendering.VirtualTexturing
+namespace PlanetGame.Planet.Rendering.VirtualTexturing
 {
     public abstract class VirtualTextureTable
     {

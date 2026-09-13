@@ -1,10 +1,11 @@
 using System;
 using Godot;
 using Uniform;
-using PlanetGame.Rendering.VirtualTexturing;
+using PlanetGame.Planet.Rendering.VirtualTexturing;
 using PlanetGame.Util;
 using PlanetGame.Planet;
 using System.Collections.Generic;
+using PlanetGame.Planet.Rendering;
 
 namespace PlanetGame.Shaders.Dispatchers
 {

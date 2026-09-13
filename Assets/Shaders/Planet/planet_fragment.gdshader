@@ -98,7 +98,7 @@ void fragment() {
 	int normal_id = int(key.z);
 	int total_resolution_mip_count = low_resolution_mip_count + high_resolution_mip_count;
 	int mip_index = lod_to_mip_map[lod] + high_resolution_mip_count;
-
+	
 	vec2 adjusted_uv = clamp(plane_vertex_uv, vec2(0.0), vec2(1.0 - EPS));
 
 	float grid_size = exp2(float(total_resolution_mip_count - 1));
@@ -151,20 +151,34 @@ void fragment() {
 		ALBEDO = vec3(age, 0.0, 0.0);
 	}
 	else if (show_in_cache) {
-	
-		
-	int mip = get_tile_mip(
-		terrain_indirection_table,
-		plane_vertex_uv,
-		normal_id,
-		low_resolution_mip_count,
-		high_resolution_mip_count
-	);
+		int mip = get_tile_mip(
+			terrain_indirection_table,
+			plane_vertex_uv,
+			normal_id,
+			low_resolution_mip_count,
+			high_resolution_mip_count
+		);
 
 		vec3 real_color = pow(get_tile(albedo_tile_cache, tile_uv).xyz, vec3(2.2));
 		ALBEDO = mix(real_color, mip_to_colors[mip], 0.15);
 	}
 	else if (show_keys) {
 		ALBEDO = displayBranches();
+	}
+	
+	float tile_size = float(textureSize(albedo_tile_cache, 0).x);
+	float face_resolution = tile_size * float(grid_size);
+
+	float local_brush_size = (brush_size / face_resolution) * 2.0;
+	float brush_distance = distance(mouse_position, local_position) / local_brush_size;
+
+	if (brush_distance < 1.0)
+	{
+		float hardness_factor = 1.0;
+
+		if (brush_hardness < 1.0 && brush_distance > brush_hardness)
+			hardness_factor = 1.0 - ((brush_distance - brush_hardness) / (1.0 - brush_hardness));
+
+		ALBEDO = mix(ALBEDO, vec3(1.0), 0.15 * hardness_factor);
 	}
 }

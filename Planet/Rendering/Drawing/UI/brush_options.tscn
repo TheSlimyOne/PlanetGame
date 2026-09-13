@@ -1,0 +1,114 @@
+[gd_scene format=3 uid="uid://dtnwl4hiawq1k"]
+
+[ext_resource type="Script" uid="uid://443r61q6pppa" path="res://Planet/Rendering/Drawing/UI/BrushOptions.cs" id="1_fv7xb"]
+
+[node name="BrushOptions" type="PanelContainer" unique_id=1858348814]
+offset_right = 344.0
+offset_bottom = 436.0
+size_flags_horizontal = 0
+size_flags_vertical = 0
+script = ExtResource("1_fv7xb")
+
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=1395727002]
+layout_mode = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer" unique_id=1460576130]
+layout_mode = 2
+
+[node name="BaseBrushSettings" type="HBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=1731384488]
+layout_mode = 2
+
+[node name="Options" type="VBoxContainer" parent="MarginContainer/VBoxContainer/BaseBrushSettings" unique_id=996560685]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Size" type="VBoxContainer" parent="MarginContainer/VBoxContainer/BaseBrushSettings/Options" unique_id=358815455]
+layout_mode = 2
+
+[node name="OutputContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer/BaseBrushSettings/Options/Size" unique_id=1155891521]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/BaseBrushSettings/Options/Size/OutputContainer" unique_id=2033604995]
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 1
+text = "Size:"
+
+[node name="Spacing" type="Control" parent="MarginContainer/VBoxContainer/BaseBrushSettings/Options/Size/OutputContainer" unique_id=338038602]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="SizeInput" type="LineEdit" parent="MarginContainer/VBoxContainer/BaseBrushSettings/Options/Size/OutputContainer" unique_id=1530019854]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 10
+text = "10 px"
+
+[node name="SizeSlider" type="HSlider" parent="MarginContainer/VBoxContainer/BaseBrushSettings/Options/Size" unique_id=2146871535]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="Spacer" type="Control" parent="MarginContainer/VBoxContainer/BaseBrushSettings/Options" unique_id=762634489]
+custom_minimum_size = Vector2(0, 9)
+layout_mode = 2
+
+[node name="Hardness" type="VBoxContainer" parent="MarginContainer/VBoxContainer/BaseBrushSettings/Options" unique_id=1966339580]
+layout_mode = 2
+
+[node name="OutputContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer/BaseBrushSettings/Options/Hardness" unique_id=1321446514]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/BaseBrushSettings/Options/Hardness/OutputContainer" unique_id=1472504976]
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 1
+text = "Hardness:"
+
+[node name="Spacing" type="Control" parent="MarginContainer/VBoxContainer/BaseBrushSettings/Options/Hardness/OutputContainer" unique_id=936721906]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="HardnessInput" type="LineEdit" parent="MarginContainer/VBoxContainer/BaseBrushSettings/Options/Hardness/OutputContainer" unique_id=768261371]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 10
+text = "100%"
+
+[node name="HardnessSlider" type="HSlider" parent="MarginContainer/VBoxContainer/BaseBrushSettings/Options/Hardness" unique_id=2129715407]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="Spacer2" type="Control" parent="MarginContainer/VBoxContainer/BaseBrushSettings/Options" unique_id=1219168267]
+custom_minimum_size = Vector2(0, 9)
+layout_mode = 2
+
+[node name="Opacity" type="VBoxContainer" parent="MarginContainer/VBoxContainer/BaseBrushSettings/Options" unique_id=1677337660]
+layout_mode = 2
+
+[node name="OutputContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer/BaseBrushSettings/Options/Opacity" unique_id=306618745]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/BaseBrushSettings/Options/Opacity/OutputContainer" unique_id=353957178]
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 1
+text = "Opacity:"
+
+[node name="Spacing" type="Control" parent="MarginContainer/VBoxContainer/BaseBrushSettings/Options/Opacity/OutputContainer" unique_id=466977955]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="OpacityInput" type="LineEdit" parent="MarginContainer/VBoxContainer/BaseBrushSettings/Options/Opacity/OutputContainer" unique_id=108897175]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 10
+text = "100%"
+
+[node name="OpacitySlider" type="HSlider" parent="MarginContainer/VBoxContainer/BaseBrushSettings/Options/Opacity" unique_id=442921252]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="BrushSelection" type="GridContainer" parent="MarginContainer/VBoxContainer" unique_id=412931388]
+unique_name_in_owner = true
+layout_mode = 2
+columns = 5

@@ -104,11 +104,11 @@ uvec2 right_shift_64(uvec2 node_id, uint shift) {
 /*
     msb - 2 => is the offset to ignore the leading 01
     level * 2 => level is used as an index. Used to tell how much to shift over to get the bits in question.
-    Multiplied by 2 so to shift over two each time.
     Returns a 2 digit binary number
 */
 uint get_branching(uvec2 key, int level, int msb) {
-    return (right_shift_64(key, (msb - 2) - (level * 2)).y & 0x3);
+    int shift = (msb - 2) - (level * 2);
+    return right_shift_64(key, shift).y & 0x3;
 }
 
 vec3 point_on_cube_to_point_on_sphere(vec3 p) {

@@ -1,15 +1,13 @@
 using System.Collections.Generic;
 using System.Linq;
 using Godot;
-using PlanetGame.Rendering.Surface;
-using PlanetGame.Rendering.VirtualTexturing;
+using PlanetGame.Data;
 
-public class PlanetCollisionController(PlanetController planetController)
+public class PlanetCollisionController
 {
-    private readonly PlanetController _planetController = planetController;
-
-    private static TessellationData TessellationData => SaveManager.CurrentWorldSave.TessellationData;
-    private static VirtualTextureData VirtualTextureData => SaveManager.CurrentWorldSave.VirtualTextureData;
+    public StaticBody3D CollisionBody = new();
+    private static TessellationData TessellationData => SaveManager.TessellationData;
+    private static VirtualTextureData VirtualTextureData => SaveManager.VirtualTextureData;
 
     private const uint COLLISION_RESOLUTION = 10;
     private const uint COLLISION_SQUARE = 12;
@@ -17,8 +15,13 @@ public class PlanetCollisionController(PlanetController planetController)
 
     private Vector2[] _baseCollisionVertices;
     private int[] _collisionTriangles;
+    private PlanetQuery _planetQuery;
 
-    public StaticBody3D CollisionBody = new();
+    public PlanetCollisionController(PlanetQuery planetQuery)
+    {
+        _planetQuery = planetQuery;
+        GenerateBaseCollisionMesh();
+    }
 
     public void GenerateBaseCollisionMesh()
     {
@@ -53,70 +56,70 @@ public class PlanetCollisionController(PlanetController planetController)
 
     public void CreateCollisionPlane(Vector3 from)
     {
-        if (!_planetController.TryGetSurfacePoint(from, out PlanetController.PlanetSurfacePoint surfacePoint))
-            return;
+        // if (!_planetQuery.TryGetSurfacePoint(from, out PlanetQuery.PlanetSurfacePoint surfacePoint))
+        //     return;
 
-        ClearCollisionPlane();
+        // ClearCollisionPlane();
 
-        float radius = TessellationData.Radius;
-        float heightScale = TessellationData.HeightScale;
+        // float radius = TessellationData.Radius;
+        // float heightScale = TessellationData.HeightScale;
 
-        int lod = Mathf.FloorToInt(_planetController.GetLodOfPoint(surfacePoint.LocalSpherePoint, true));
-        int mip = VirtualTextureData.LodToMipMap[lod];
+        // int lod = Mathf.FloorToInt(_planetQuery.GetLodOfPoint(surfacePoint.LocalSpherePoint, true));
+        // int mip = VirtualTextureData.LodToMipMap[lod];
 
-        int gridSize = 1 << lod;
-        float gridStep = 1.0f / gridSize;
+        // int gridSize = 1 << lod;
+        // float gridStep = 1.0f / gridSize;
 
-        Vector2 gridCoordinate = (surfacePoint.UV * gridSize).Floor();
-        Vector2 tileMinUV = gridCoordinate / gridSize;
+        // Vector2 gridCoordinate = (surfacePoint.UV * gridSize).Floor();
+        // Vector2 tileMinUV = gridCoordinate / gridSize;
 
-        Queue<Vector2> tileQueue = GetCollisionTileQueue(tileMinUV, gridStep);
+        // Queue<Vector2> tileQueue = GetCollisionTileQueue(tileMinUV, gridStep);
 
-        float mipGridSize = VirtualTextureData.GetMipSize((uint)mip);
+        // float mipGridSize = VirtualTextureData.GetMipSize((uint)mip);
 
-        float collisionMinX = Mathf.Max(0.0f, tileMinUV.X - COLLISION_SQUARE * gridStep);
-        float collisionMaxX = Mathf.Min(1.0f - gridStep, tileMinUV.X + COLLISION_SQUARE * gridStep);
-        float collisionMinY = Mathf.Max(0.0f, tileMinUV.Y - COLLISION_SQUARE * gridStep);
-        float collisionMaxY = Mathf.Min(1.0f - gridStep, tileMinUV.Y + COLLISION_SQUARE * gridStep);
+        // float collisionMinX = Mathf.Max(0.0f, tileMinUV.X - COLLISION_SQUARE * gridStep);
+        // float collisionMaxX = Mathf.Min(1.0f - gridStep, tileMinUV.X + COLLISION_SQUARE * gridStep);
+        // float collisionMinY = Mathf.Max(0.0f, tileMinUV.Y - COLLISION_SQUARE * gridStep);
+        // float collisionMaxY = Mathf.Min(1.0f - gridStep, tileMinUV.Y + COLLISION_SQUARE * gridStep);
 
-        while (tileQueue.Count > 0)
-        {
-            Vector2 tileUV = tileQueue.Dequeue();
-            Vector2I tileCoords = (Vector2I)(tileUV * mipGridSize).Floor();
+        // while (tileQueue.Count > 0)
+        // {
+        //     Vector2 tileUV = tileQueue.Dequeue();
+        //     Vector2I tileCoords = (Vector2I)(tileUV * mipGridSize).Floor();
 
-            string path = $"{mip}_{surfacePoint.NormalId}_{tileCoords.X}_{tileCoords.Y}";
+        //     string path = $"{mip}_{surfacePoint.NormalId}_{tileCoords.X}_{tileCoords.Y}";
 
-            Image heightmap = SaveManager.GetTile(
-                SaveManager.CurrentSave,
-                SaveManager.SaveDataIdentifier.TILE_HEIGHT_MAP,
-                path
-            );
+        //     Image heightmap = SaveManager.GetTile(
+        //         SaveManager.CurrentSave,
+        //         SaveManager.SaveDataIdentifier.TILE_HEIGHT_MAP,
+        //         path
+        //     );
 
-            if (heightmap == null)
-                continue;
+        //     if (heightmap == null)
+        //         continue;
 
-            bool raiseLeftEdge = Mathf.IsEqualApprox(tileUV.X, collisionMinX);
-            bool raiseRightEdge = Mathf.IsEqualApprox(tileUV.X, collisionMaxX);
-            bool raiseTopEdge = Mathf.IsEqualApprox(tileUV.Y, collisionMinY);
-            bool raiseBottomEdge = Mathf.IsEqualApprox(tileUV.Y, collisionMaxY);
+        //     bool raiseLeftEdge = Mathf.IsEqualApprox(tileUV.X, collisionMinX);
+        //     bool raiseRightEdge = Mathf.IsEqualApprox(tileUV.X, collisionMaxX);
+        //     bool raiseTopEdge = Mathf.IsEqualApprox(tileUV.Y, collisionMinY);
+        //     bool raiseBottomEdge = Mathf.IsEqualApprox(tileUV.Y, collisionMaxY);
 
-            Vector3[] vertices = GenerateCollisionVertices(
-                tileUV,
-                gridStep,
-                surfacePoint.NormalId,
-                radius,
-                heightmap,
-                heightScale,
-                tileCoords,
-                mipGridSize,
-                raiseLeftEdge,
-                raiseRightEdge,
-                raiseTopEdge,
-                raiseBottomEdge
-            );
+        //     Vector3[] vertices = GenerateCollisionVertices(
+        //         tileUV,
+        //         gridStep,
+        //         surfacePoint.NormalId,
+        //         radius,
+        //         heightmap,
+        //         heightScale,
+        //         tileCoords,
+        //         mipGridSize,
+        //         raiseLeftEdge,
+        //         raiseRightEdge,
+        //         raiseTopEdge,
+        //         raiseBottomEdge
+        //     );
 
-            AddCollisionShape(vertices);
-        }
+        //     AddCollisionShape(vertices);
+        // }
     }
 
     private void ClearCollisionPlane()

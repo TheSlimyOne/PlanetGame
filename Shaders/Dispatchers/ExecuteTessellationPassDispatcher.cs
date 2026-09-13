@@ -1,17 +1,17 @@
 using System;
 using Uniform;
-using Godot;
 using PlanetGame.Util;
-using PlanetGame.Planet;
 using System.Collections.Generic;
 using PlanetGame.Rendering.Surface;
+using PlanetGame.Data;
+using PlanetGame.Planet.Rendering;
 
 namespace PlanetGame.Shaders.Dispatchers
 {
 	public class ExecuteTessellationPassDispatcher : Dispatcher<ExecuteTessellationPassDispatcher.BufferNames>
 	{
 		private static ShaderProgramPaths _shaderPath = new() { Compute = ShaderPaths.EXECUTE_TESSELLATION_PASS };
-		private static TessellationData TessellationData => SaveManager.CurrentWorldSave.TessellationData;
+		private static TessellationData TessellationData => SaveManager.TessellationData;
 		
 		public enum BufferNames
 		{
@@ -136,7 +136,7 @@ namespace PlanetGame.Shaders.Dispatchers
 
 			for (int i = 0; i < 6; i++)
 			{
-				Key[] faceData = Key.GenerateFullFace((int)TessellationData.StartingLod, i);
+				Key[] faceData = Key.GenerateFullFace((int)PlanetRenderer.STARTING_LOD, i);
 				Array.Copy(faceData, 0, readList, i * faceData.Length, faceData.Length);
 			}
 

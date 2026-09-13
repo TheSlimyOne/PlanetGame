@@ -1,7 +1,7 @@
 using System;
 using Uniform;
 using Godot;
-using PlanetGame.Rendering.VirtualTexturing;
+using PlanetGame.Planet.Rendering.VirtualTexturing;
 namespace PlanetGame.Shaders.Dispatchers
 {
     public class ValidateCacheDispatcher : Dispatcher<ValidateCacheDispatcher.BufferNames>

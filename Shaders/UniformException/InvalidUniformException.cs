@@ -1,12 +1,14 @@
 using System;
 
-namespace UniformException;
-
-public class InvalidUniformException : InvalidOperationException 
+namespace UniformException
 {
-    public InvalidUniformException(string message)
-        : base(message) { }
+    public class InvalidUniformException : InvalidOperationException 
+    {
+        public InvalidUniformException(string message)
+            : base(message) { }
 
-    public InvalidUniformException(string message, Exception innerException)
-        : base(message, innerException) { }
+        public InvalidUniformException(string message, Exception innerException)
+            : base(message, innerException) { }
+    }
+
 }

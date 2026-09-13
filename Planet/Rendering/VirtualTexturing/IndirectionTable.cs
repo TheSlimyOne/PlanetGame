@@ -1,12 +1,11 @@
 using System;
-using System.Linq;
 using Godot;
-using PlanetGame.Shaders;
-namespace PlanetGame.Rendering.VirtualTexturing
+using PlanetGame.Data;
+namespace PlanetGame.Planet.Rendering.VirtualTexturing
 {
     public class IndirectionTable : VirtualTextureTable
     {
-        private static VirtualTextureData VirtualTextureData => SaveManager.CurrentWorldSave.VirtualTextureData;
+        private static VirtualTextureData VirtualTextureData => SaveManager.VirtualTextureData;
 
         public Texture2DArrayRD Table
         {
@@ -120,15 +119,15 @@ namespace PlanetGame.Rendering.VirtualTexturing
             for (uint i = 0; i < fallBackTiles.Length; i++)
             {
                 string[] tileData = fallBackTiles[i].Split('_');
-                int realMipIndex = int.Parse(tileData[0]);
 
-                int mipIndex = realMipIndex + (int)VirtualTextureData.HighResolutionMipCount;
+                int mipIndex = int.Parse(tileData[0]);
                 int normalId = int.Parse(tileData[1]);
                 int tileX = int.Parse(tileData[2]);
                 int tileY = int.Parse(tileData[3]);
 
                 int tileLayer = (int)totalMipLayers * normalId + mipIndex;
-                int mipSize = 1 << mipIndex;
+
+                int mipSize = (int)gridSize >> mipIndex;
 
                 if(images[tileLayer] == null)
                     images[tileLayer] = Image.CreateEmpty((int)gridSize, (int)gridSize, false, FormatConverter.MatchDataFormat(Format));

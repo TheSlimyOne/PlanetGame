@@ -1,13 +1,10 @@
 [gd_scene format=3 uid="uid://c1roirj1ei3ci"]
 
-[ext_resource type="Script" uid="uid://dwsnsgxikjqsw" path="res://Planet/PlanetController.cs" id="1_qtwtp"]
+[ext_resource type="Script" uid="uid://bfb3es1lx1wkq" path="res://Planet/PlanetController.cs" id="1_qtwtp"]
 [ext_resource type="Texture2D" uid="uid://blsfgfpl1on6b" path="res://Assets/Images/panorama_image.png" id="3_ldv5r"]
 [ext_resource type="Script" uid="uid://unvbtm76ncqo" path="res://Player/Camera/CameraController.cs" id="5_usljo"]
 [ext_resource type="Script" uid="uid://b6v56lt0ryyap" path="res://Player/Camera/OrbitalCamera3D.cs" id="6_ldv5r"]
 [ext_resource type="PackedScene" uid="uid://bfuimmw6gqopu" path="res://Assets/Models/Scenes/camera.blend" id="6_qtwtp"]
-[ext_resource type="Script" uid="uid://cjp2s5cfd7yu4" path="res://Rendering/VirtualTexturing/Drawing/DrawingController.cs" id="7_8fcaf"]
-
-[sub_resource type="SphereMesh" id="SphereMesh_f8uwt"]
 
 [sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_eodwd"]
 panorama = ExtResource("3_ldv5r")
@@ -24,21 +21,16 @@ glow_enabled = true
 
 [sub_resource type="MultiMesh" id="MultiMesh_ldv5r"]
 
-[node name="Planet" type="Node3D" unique_id=1057872115 node_paths=PackedStringArray("CameraController", "SurfaceAttachment", "DrawingController", "MainLightSource", "WorldEnvironment")]
+[node name="Planet" type="Node" unique_id=601520790 node_paths=PackedStringArray("CameraController", "SurfaceAttachment", "MainLightSource", "WorldEnvironment")]
 script = ExtResource("1_qtwtp")
 CameraController = NodePath("CameraController")
 SurfaceAttachment = NodePath("SurfaceAttachment")
-DrawingController = NodePath("DrawingController")
 MainLightSource = NodePath("SurfaceAttachment/MainLightSource")
 WorldEnvironment = NodePath("WorldEnvironment")
 BaseZoomSpeed = 1.0
 BaseRotationSpeed = 1.0
 MovementEasing = 10.0
 PointRadius = 0.25
-
-[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=2059454453]
-visible = false
-mesh = SubResource("SphereMesh_f8uwt")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=113934984]
 environment = SubResource("Environment_qqt2a")
@@ -70,6 +62,3 @@ DistanceFromTarget = 800.0
 
 [node name="Camera" parent="CameraController/Main" unique_id=464412187 instance=ExtResource("6_qtwtp")]
 transform = Transform3D(-0.025, 0, 3.774895e-09, 0, 0.025, 0, -3.774895e-09, 0, -0.025, 0, -0.038, 0.101288)
-
-[node name="DrawingController" type="Node" parent="." unique_id=252037683]
-script = ExtResource("7_8fcaf")
