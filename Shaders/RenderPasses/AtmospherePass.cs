@@ -38,16 +38,6 @@ namespace PlanetGame.Shaders.RenderPasses
             _shaderUniforms = [];
 
             _shaderUniforms[BufferNames.DEPTH_TEXTURE] = new Texture2DUniform(this, RenderingDevice, (int)BufferNames.DEPTH_TEXTURE,
-                new RDTextureFormat
-                {
-                    TextureType = RenderingDevice.TextureType.Type2D,
-                    Format = RenderingDevice.DataFormat.D32Sfloat,
-                    Samples = RenderingDevice.TextureSamples.Samples1,
-                    UsageBits =
-                        RenderingDevice.TextureUsageBits.SamplingBit |
-                        RenderingDevice.TextureUsageBits.CanCopyToBit |
-                        RenderingDevice.TextureUsageBits.CanCopyFromBit
-                },
                 RenderingDevice.UniformType.SamplerWithTexture,
                 perserved: true
             );
@@ -57,8 +47,6 @@ namespace PlanetGame.Shaders.RenderPasses
 			);
 
             _shaderUniforms[BufferNames.WORLD_DATA] = _sharedShaderUniforms[PlanetRenderer.BufferNames.WORLD_DATA];
-
-            CreateUniformSet();
         }
 
 #nullable enable
@@ -178,6 +166,8 @@ namespace PlanetGame.Shaders.RenderPasses
 
         public void SetDepthUniform(Rid depth)
         {
+            // _shaderUniforms[BufferNames.DEPTH_TEXTURE] = new
+           
             Texture2DUniform uniform = GetUniform<Texture2DUniform>(BufferNames.DEPTH_TEXTURE);
             if (depth != uniform.Rid)
             {

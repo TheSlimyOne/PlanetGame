@@ -53,8 +53,11 @@ public partial class PlanetController : Node
 
     private Rid _terrainInstance;
 
+
     public override void _Ready()
     {
+        _lastViewportSize = GetViewport().GetVisibleRect().Size;
+
         SetupCameras();
 
         PlanetRenderer = new(WorldEnvironment, MainCamera);
@@ -87,27 +90,49 @@ public partial class PlanetController : Node
         }, 1000);
     }
 
-    #region Process
+#region Process
+    private bool _isResizing;
+    private Vector2 _lastViewportSize;
+    private int _stableResizeFrames;
 
+    private void UpdateResizeState()
+    {
+        Vector2 size = GetViewport().GetVisibleRect().Size;
 
+        if (size != _lastViewportSize)
+        {
+            _lastViewportSize = size;
+            _stableResizeFrames = 0;
+            _isResizing = true;
+            return;
+        }
 
-    
+        if (!_isResizing)
+            return;
+
+        _stableResizeFrames++;
+
+        if (_stableResizeFrames >= 2)
+            _isResizing = false;
+    }
 
     public override void _Process(double delta)
     {
-        if (Quiting)
+        UpdateResizeState();
+
+        if (Quiting || _isResizing)
             return;
 
         WorldData.OrientatePlanet();
 
         PlanetRenderer.UpdateHeightOffset(PlanetQuery, MainCamera.GlobalPosition, MainCamera.DistanceFromTarget, delta);
 
-        PlanetRenderer?.Invoke();
+            PlanetRenderer?.Invoke();
     }
 
     public override void _PhysicsProcess(double delta)
     {
-        if (Quiting)
+        if (Quiting || _isResizing)
             return;
 
         ProcessMovement(delta);
@@ -130,8 +155,7 @@ public partial class PlanetController : Node
             );
         }
     }
-
-    #endregion
+#endregion
 
     public void SetupCameras()
     {

@@ -23,12 +23,12 @@ public partial class AtmosphereEffect : CompositorEffect
         EffectCallbackType = EffectCallbackTypeEnum.PostSky;
         AccessResolvedDepth = true;
 
-        DebugMenuController.Instance.AddSection("Atmosphere", 0, false, "Rendering", 400);
-        DebugMenuController.Instance.AddSlider("Atmosphere Radius", "Atmosphere", () => AtmosphereData.Radius - WorldData.Radius, value =>
+        DebugMenuController.Instance.AddSection("Atmosphere", 0, false, null, 400);
+        DebugMenuController.Instance.AddSlider("Atmosphere Radius", "Atmosphere", () => AtmosphereData.Radius, value =>
         {
-            AtmosphereData.Radius = WorldData.Radius + value;
+            AtmosphereData.Radius = value;
             AtmospherePass.UpdateUniforms();
-        }, 0, 100, 1);
+        }, 0, 200, 1);
     }
 
     public override void _RenderCallback(int effectCallbackType, Godot.RenderData renderData)

@@ -58,6 +58,11 @@ void main()
         ray_direction
     );
 
+    if (hit.y <= 0.0) {
+        frag = vec4(0.0);
+        return;
+    }
+
     float distance_to_atmosphere = hit.x;
     float distance_through_atmosphere = hit.y - hit.x;
 

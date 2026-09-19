@@ -9,31 +9,34 @@ namespace Uniform
 {
 	public partial class Texture2DUniform : ShaderUniform
 	{
+		private Rid _samplerRid;
 		public RDTextureFormat TextureFormat { get; protected set; }
 		public RDSamplerState SamplerState { get; protected set; }
 
-		public void SetRid(Rid rid)
+		public void SetRid(Rid rid, RDTextureFormat textureFormat = null, bool perserved = true, bool freePreviousRid = false)
 		{
-			RenderingDevice.FreeRid(Rid);
+			if (Rid != rid && freePreviousRid && !Perserved && Rid.IsValid)
+				RenderingDevice.FreeRid(Rid);
+
+			RenderingDevice.UniformType uniformType = Uniform.UniformType;
+
 			Rid = rid;
-			TextureFormat = RenderingDevice.TextureGetFormat(Rid);
+			TextureFormat = textureFormat ?? RenderingDevice.TextureGetFormat(Rid);
 
 			Uniform = new()
 			{
-				UniformType = Uniform.UniformType,
+				UniformType = uniformType,
 				Binding = Binding
 			};
 
-			if (Uniform.UniformType == RenderingDevice.UniformType.Sampler || Uniform.UniformType == RenderingDevice.UniformType.SamplerWithTexture || Uniform.UniformType == RenderingDevice.UniformType.SamplerWithTextureBuffer)
-			{
-				Uniform.AddId(RenderingDevice.SamplerCreate(SamplerState));
-			}
+			if (UsesSampler())
+				Uniform.AddId(_samplerRid);
 
 			Uniform.AddId(Rid);
+
+			Perserved = perserved;
 		}
 
-		// TODO prob should implement perserved lol idk how I missed that
-		// got it partial done ig
 		public Texture2DUniform(IGPUResource owner, RenderingDevice renderingDevice, int binding, RDTextureFormat format, RenderingDevice.UniformType uniformType, List<byte[]> textureData = null, bool perserved = false) : base(renderingDevice, binding, owner, perserved)
 		{
 			TextureFormat = format;
@@ -44,17 +47,33 @@ namespace Uniform
 				Binding = binding
 			};
 
-			if (uniformType == RenderingDevice.UniformType.Sampler || uniformType == RenderingDevice.UniformType.SamplerWithTexture || uniformType == RenderingDevice.UniformType.SamplerWithTextureBuffer)
+			if (UsesSampler())
 			{
-				SamplerState = new RDSamplerState()
-				{
-					// TODO Figure this bs out 
-					//MinFilter = RenderingDevice.SamplerFilter.Linear
-				};
-				Uniform.AddId(RenderingDevice.SamplerCreate(SamplerState));
+				SamplerState = new RDSamplerState();
+				_samplerRid = RenderingDevice.SamplerCreate(SamplerState);
+				Uniform.AddId(_samplerRid);
 			}
 
 			Uniform.AddId(Rid);
+		}
+
+		// Creates an empty Texture2DUniform (i.e. the Rid and TextureFormat will need to be set later)
+		public Texture2DUniform(IGPUResource owner, RenderingDevice renderingDevice, int binding, RenderingDevice.UniformType uniformType, bool perserved = false) : base(renderingDevice, binding, owner, perserved)
+		{
+			Rid = new();
+
+			Uniform = new()
+			{
+				UniformType = uniformType,
+				Binding = binding
+			};
+
+			if (UsesSampler())
+			{
+				SamplerState = new RDSamplerState();
+				_samplerRid = RenderingDevice.SamplerCreate(SamplerState);
+				Uniform.AddId(_samplerRid);
+			}
 		}
 
 		public Texture2DUniform(IGPUResource owner, RenderingDevice renderingDevice, int binding, RenderingDevice.UniformType uniformType, Image[] images, bool perserved = false) : base(renderingDevice, binding, owner, perserved)
@@ -98,14 +117,11 @@ namespace Uniform
 				Binding = binding
 			};
 
-			if (uniformType == RenderingDevice.UniformType.Sampler || uniformType == RenderingDevice.UniformType.SamplerWithTexture || uniformType == RenderingDevice.UniformType.SamplerWithTextureBuffer)
+			if (UsesSampler())
 			{
-				SamplerState = new RDSamplerState()
-				{
-					// TODO Figure this bs out 
-					//MinFilter = RenderingDevice.SamplerFilter.Linear
-				};
-				Uniform.AddId(RenderingDevice.SamplerCreate(SamplerState));
+				SamplerState = new RDSamplerState();
+				_samplerRid = RenderingDevice.SamplerCreate(SamplerState);
+				Uniform.AddId(_samplerRid);
 			}
 
 			Uniform.AddId(Rid);
@@ -113,8 +129,8 @@ namespace Uniform
 
 		private Texture2DUniform(IGPUResource owner, Texture2DUniform textureUniform, int binding) : base(textureUniform.RenderingDevice, binding, owner, textureUniform.Perserved)
 		{
-			TextureFormat = textureUniform.TextureFormat;
 			Rid = textureUniform.Rid;
+			TextureFormat = textureUniform.TextureFormat;
 
 			Uniform = new()
 			{
@@ -122,12 +138,14 @@ namespace Uniform
 				Binding = binding
 			};
 
-			SamplerState = textureUniform.SamplerState;
-
-			foreach (Rid rid in textureUniform.Uniform.GetIds())
+			if (UsesSampler())
 			{
-				Uniform.AddId(rid);
+				SamplerState = textureUniform.SamplerState;
+				_samplerRid = RenderingDevice.SamplerCreate(SamplerState);
+				Uniform.AddId(_samplerRid);
 			}
+
+			Uniform.AddId(Rid);
 		}
 
 		public Texture2DUniform(IGPUResource owner, int binding, Rid rid, RenderingDevice.UniformType uniformType, bool perserved = false) : base(binding, owner, perserved)
@@ -141,19 +159,19 @@ namespace Uniform
 				Binding = binding
 			};
 
-			if (uniformType == RenderingDevice.UniformType.Sampler || uniformType == RenderingDevice.UniformType.SamplerWithTexture || uniformType == RenderingDevice.UniformType.SamplerWithTextureBuffer)
+			if (UsesSampler())
 			{
 				SamplerState = new RDSamplerState()
 				{
-					// TODO Figure this bs out 
-					//MinFilter = RenderingDevice.SamplerFilter.Linear
 					MagFilter = RenderingDevice.SamplerFilter.Linear,
 					MinFilter = RenderingDevice.SamplerFilter.Linear,
 					RepeatU = RenderingDevice.SamplerRepeatMode.ClampToEdge,
 					RepeatV = RenderingDevice.SamplerRepeatMode.ClampToEdge,
 					RepeatW = RenderingDevice.SamplerRepeatMode.ClampToEdge
 				};
-				Uniform.AddId(RenderingDevice.SamplerCreate(SamplerState));
+
+				_samplerRid = RenderingDevice.SamplerCreate(SamplerState);
+				Uniform.AddId(_samplerRid);
 			}
 
 			Uniform.AddId(Rid);
@@ -203,7 +221,6 @@ namespace Uniform
 		public void ClearTexture(Color color, uint baseMipmap = 0, uint mipmapCount = 1, uint baseLayer = 0, uint layerCount = 1) => RenderingDevice.TextureClear(Rid, color, baseMipmap, mipmapCount, baseLayer, layerCount);
 
 		public override void UpdateUniform(byte[] data) => RenderingDevice.TextureUpdate(Rid, 0, data);
-		public void UpdateUniform(uint offset, uint sizeBytes, byte[] data) => RenderingDevice.BufferUpdate(Rid, offset, sizeBytes, data);
 
 		public void SetImage(Image image) => UpdateUniform(image.GetData());
 		public void SetImage(Image[] images)
@@ -240,5 +257,21 @@ namespace Uniform
 			image.Fill(color);
 			return image.GetData();
 		}
+
+		private bool UsesSampler()
+		{
+			return Uniform.UniformType == RenderingDevice.UniformType.SamplerWithTexture;
+		}
+
+		public override void FreeRids()
+        {
+            if (RenderingDevice == null) return;
+
+            base.FreeRids();
+
+			_samplerRid = new();
+			SamplerState = default;
+			TextureFormat = default;
+        }
 	}
 }
