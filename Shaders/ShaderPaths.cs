@@ -12,13 +12,17 @@ namespace PlanetGame.Shaders
         public const string EXECUTE_TESSELLATION_PASS = "res://Shaders/GLSL/ExecuteTessellationPass.compute";
         public const string PREPARE_TESSELLATION_PASS = "res://Shaders/GLSL/PrepareTessellationPass.compute";
         public const string RESOLVE_TILE_REQUEST_PASS = "res://Shaders/GLSL/ResolveTileRequestPass.compute";
-        public const string PLANET_TESSELLATION_VERTEX = "res://Shaders/GLSL/PlanetTessellation.vertex";
+        public const string PLANET_VERTEX = "res://Shaders/GLSL/Planet.vertex";
+        public const string PLANET_FRAGMENT = "res://Shaders/GLSL/Planet.fragment";
         public const string VALIDATE_TILE_CACHE = "res://Shaders/GLSL/ValidateTileCache.compute";
         public const string FLATTEN_INDIRECTION_TABLE = "res://Shaders/GLSL/FlattenIndirectionTable.compute";
 
-        public const string PLANET_POST_PROCESS_FRAGMENT = "res://Shaders/GLSL/PlanetPostProcess.fragment";
+        public const string ATMOSPHERE_FRAGMENT = "res://Shaders/GLSL/Atmosphere.fragment";
+        public const string ATMOSPHERE_VERTEX = "res://Shaders/GLSL/Atmosphere.vertex";
+        // public const string PLANET_POST_PROCESS_FRAGMENT = "res://Shaders/GLSL/PlanetPostProcess.fragment";
         public const string PLANET_TESSELLATION_REQUEST_FRAGMENT = "res://Shaders/GLSL/PlanetTessellationRequest.fragment";
         public const string EMPTY_FRAGMENT = "res://Shaders/GLSL/empty.fragment";
+        public const string EMPTY_VERTEX = "res://Shaders/GLSL/empty.vertex";
 
         
         // Gdshaders

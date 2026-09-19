@@ -9,20 +9,19 @@ namespace PlanetGame.Shaders.RenderPasses
 {
     public interface IRenderable : IGPUResource { }
 
-    public abstract class RenderPass<TEnum>(RenderingDevice renderingDevice, Vector2I viewSize, ShaderProgramPaths shaderPath) : IRenderable where TEnum : Enum
+    public abstract class RenderPass<TEnum>(RenderingDevice renderingDevice, ShaderProgramPaths shaderPath) : IRenderable where TEnum : Enum
     {
         public RenderingDevice RenderingDevice { get; private set; } = renderingDevice;
-        public Vector2I ViewSize { get; private set; } = viewSize;
+        // public Vector2I ViewSize { get; private set; } = viewSize;
 
         protected ShaderProgramPaths _shaderProgramPaths = shaderPath;
         protected Rid _uniformSet;
         protected Rid _shader;
         protected Rid _pipeline;
         protected Rid _framebuffer;
-        protected Rid _framebufferTexture;
+        protected readonly System.Collections.Generic.Dictionary<string, Rid> _framebufferAttachments = [];
 
         protected long _framebufferFormat;
-        protected byte[] _pushConstants;
         protected RenderGeometry _geometry;
 
         protected struct RenderGeometry
@@ -39,7 +38,7 @@ namespace PlanetGame.Shaders.RenderPasses
 
         protected System.Collections.Generic.Dictionary<Enum, ShaderUniform> _shaderUniforms;
 
-        protected RenderPass(ShaderProgramPaths shaderPath, Vector2I viewSize) : this(RenderingServer.GetRenderingDevice(), viewSize, shaderPath) { }
+        protected RenderPass(ShaderProgramPaths shaderPath) : this(RenderingServer.GetRenderingDevice(), shaderPath) { }
 
         public ShaderUniform this[Enum @enum]
         {
@@ -51,20 +50,43 @@ namespace PlanetGame.Shaders.RenderPasses
 
         // TODO maybe rename this to resetUniforms
         public abstract void UpdateUniforms();
-    
-        #nullable enable
+
+#nullable enable
         public abstract void Invoke(byte[]? pushConstants = null);
         public abstract void CreateUniforms();
 
         public virtual void SetupShader(Mesh mesh)
         {
-            _shader = CreateShader();
-            _framebuffer = CreateFramebuffer();
-            _geometry = CreateGeometry(mesh);
-            _pipeline = CreatePipeline();
+            SetFramebufferProperties();
+            CreateShader();
+            CreateGeometry(mesh);
+            CreatePipeline();
         }
 
-        protected Rid CreateShader()
+        protected void CreateFramebufferFormat(Array<RDAttachmentFormat> attachmentFormats)
+        {
+            _framebufferFormat = RenderingDevice.FramebufferFormatCreate(attachmentFormats);
+        }
+
+        protected void CreateFramebuffer(List<(Rid Texture, string Name)> attachmentData)
+        {
+            if (RenderingDevice.FramebufferIsValid(_framebuffer))
+                RenderingDevice.FreeRid(_framebuffer);
+
+            _framebufferAttachments.Clear();
+
+            Array<Rid> attachments = [];
+
+            foreach((Rid texture, string name) in attachmentData)
+            {
+                attachments.Add(texture);
+                _framebufferAttachments[name] = texture;
+            }
+
+            _framebuffer = RenderingDevice.FramebufferCreate(attachments);
+        }
+
+        protected void CreateShader()
         {
             if (_shaderProgramPaths.Vertex != "" && _shaderProgramPaths.Fragment != "")
             {
@@ -90,16 +112,53 @@ namespace PlanetGame.Shaders.RenderPasses
                         GD.PrintErr(shaderSpirV.CompileErrorFragment.StripEdges().Replace("ERROR: ", ""));
                     }
                 }
-                return shader;
+                _shader = shader;
             }
             else
             {
                 GD.PrintErr($"Invalid shader for a render pass:\n\tVertex: {_shaderProgramPaths.Vertex}\n\tFragment: {_shaderProgramPaths.Fragment}\n\tCompute {_shaderProgramPaths.Compute}");
-                return new();
+                _shader = new();
             }
         }
 
-        protected abstract Rid CreatePipeline();
+        protected virtual void CreateGeometry(Mesh mesh)
+        {
+            RenderGeometry geometry = new();
+            Godot.Collections.Array arrays = mesh.SurfaceGetArrays(0);
+            Vector3[] vertices = arrays[(int)Mesh.ArrayType.Vertex].AsVector3Array();
+            Vector3[] normals = arrays[(int)Mesh.ArrayType.Normal].AsVector3Array();
+            int[] indices = arrays[(int)Mesh.ArrayType.Index].AsInt32Array();
+
+            byte[] vertexData = [.. Utilities.ToBytes<Vector3>(vertices)];
+            byte[] normalData = [.. Utilities.ToBytes<Vector3>(normals)];
+
+            geometry.VertexFormat = CreateVertexFormat();
+
+            geometry.VertexBuffer = RenderingDevice.VertexBufferCreate(
+                (uint)vertexData.Length,
+                vertexData
+            );
+
+            geometry.NormalBuffer = RenderingDevice.VertexBufferCreate(
+                (uint)normalData.Length,
+                normalData
+            );
+
+            geometry.VertexArray = RenderingDevice.VertexArrayCreate(
+                (uint)vertices.Length,
+                geometry.VertexFormat,
+                [geometry.VertexBuffer, geometry.NormalBuffer]
+            );
+
+            byte[] indexData = [.. Utilities.ToBytes<int>(indices)];
+            geometry.IndexBuffer = RenderingDevice.IndexBufferCreate((uint)indices.Length, RenderingDevice.IndexBufferFormat.Uint32, indexData);
+            geometry.IndexArray = RenderingDevice.IndexArrayCreate(geometry.IndexBuffer, 0, (uint)indices.Length);
+            _geometry = geometry;
+        }
+
+        protected abstract void SetFramebufferProperties();
+        protected abstract void CreatePipeline();
+
         protected void CreateUniformSet()
         {
             Array<RDUniform> bindings = [];
@@ -107,7 +166,7 @@ namespace PlanetGame.Shaders.RenderPasses
             {
                 TEnum @enum = (TEnum)Enum.ToObject(typeof(TEnum), i);
                 ShaderUniform shaderUniform = _shaderUniforms[@enum];
-            
+
                 if (shaderUniform.Owner != this)
                     _shaderUniforms[@enum] = shaderUniform.RebindUniform(this, RenderingDevice, i);
 
@@ -150,118 +209,42 @@ namespace PlanetGame.Shaders.RenderPasses
             ]);
         }
 
-        protected virtual RenderGeometry CreateGeometry(Mesh mesh)
-        {
-            RenderGeometry geometry = new();
-            Godot.Collections.Array arrays = mesh.SurfaceGetArrays(0);
-            Vector3[] vertices = arrays[(int)Mesh.ArrayType.Vertex].AsVector3Array();
-            Vector3[] normals = arrays[(int)Mesh.ArrayType.Normal].AsVector3Array();
-            int[] indices = arrays[(int)Mesh.ArrayType.Index].AsInt32Array();
-
-            byte[] vertexData = [.. Utilities.ToBytes<Vector3>(vertices)];
-            byte[] normalData = [.. Utilities.ToBytes<Vector3>(normals)];
-
-            geometry.VertexFormat = CreateVertexFormat();
-
-            geometry.VertexBuffer = RenderingDevice.VertexBufferCreate(
-                (uint)vertexData.Length,
-                vertexData
-            );
-
-            geometry.NormalBuffer = RenderingDevice.VertexBufferCreate(
-                (uint)normalData.Length,
-                normalData
-            );
-
-            geometry.VertexArray = RenderingDevice.VertexArrayCreate(
-                (uint)vertices.Length,
-                geometry.VertexFormat,
-                [geometry.VertexBuffer, geometry.NormalBuffer]
-            );
-
-            byte[] indexData = [.. Utilities.ToBytes<int>(indices)];
-            geometry.IndexBuffer = RenderingDevice.IndexBufferCreate((uint)indices.Length, RenderingDevice.IndexBufferFormat.Uint32, indexData);
-            geometry.IndexArray = RenderingDevice.IndexArrayCreate(geometry.IndexBuffer, 0, (uint)indices.Length);
-            return geometry;
-        }
-
-        protected virtual Rid CreateFramebuffer()
-        {
-            RDTextureFormat textureFormat = new()
-            {
-                TextureType = RenderingDevice.TextureType.Type2D,
-                Width = (uint)ViewSize.X,
-                Height = (uint)ViewSize.Y,
-                Depth = 1,
-                ArrayLayers = 1,
-                Mipmaps = 1,
-                Format = RenderingDevice.DataFormat.R32G32B32A32Sfloat,
-                Samples = RenderingDevice.TextureSamples.Samples1,
-                UsageBits = RenderingDevice.TextureUsageBits.ColorAttachmentBit |
-                            RenderingDevice.TextureUsageBits.CanCopyFromBit |
-                            RenderingDevice.TextureUsageBits.SamplingBit
-            };
-        
-            _framebufferTexture = RenderingDevice.TextureCreate(
-                textureFormat,
-                new()
-            );
-
-            return RenderingDevice.FramebufferCreate(
-                [_framebufferTexture]
-            );
-        }
-    
-
         public bool IsValid()
         {
             return Error == "";
         }
 
-        public void SubmitThenSync()
-        {
-            Submit();
-            Sync();
-        }
-
-        public void Submit()
-        {
-            if (RenderingServer.GetRenderingDevice() == RenderingDevice)
-                throw new InvalidOperationException("Cannot submit on the main rendering device.");
-            RenderingDevice.Submit();
-        }
-
-        public void Sync()
-        {
-            if (RenderingServer.GetRenderingDevice() == RenderingDevice)
-                throw new InvalidOperationException("Cannot sync on the main rendering device.");
-            RenderingDevice.Sync();
-        }
-
         public virtual void CleanupGPU()
         {
-        
             if (RenderingDevice == null)
                 return;
 
             if (RenderingDevice.UniformSetIsValid(_uniformSet))
                 RenderingDevice.FreeRid(_uniformSet);
+
             if (RenderingDevice.RenderPipelineIsValid(_pipeline))
                 RenderingDevice.FreeRid(_pipeline);
+
             if (_shader.IsValid)
                 RenderingDevice.FreeRid(_shader);
-            if (RenderingDevice.TextureIsValid(_framebuffer))
+
+            if (RenderingDevice.FramebufferIsValid(_framebuffer))
                 RenderingDevice.FreeRid(_framebuffer);
-            if (_framebufferTexture.IsValid)
-                RenderingDevice.FreeRid(_framebufferTexture);
+
+            _framebufferAttachments.Clear();
+
             if (_geometry.VertexArray.IsValid)
                 RenderingDevice.FreeRid(_geometry.VertexArray);
+
             if (_geometry.IndexArray.IsValid)
                 RenderingDevice.FreeRid(_geometry.IndexArray);
+
             if (_geometry.VertexBuffer.IsValid)
                 RenderingDevice.FreeRid(_geometry.VertexBuffer);
+
             if (_geometry.NormalBuffer.IsValid)
                 RenderingDevice.FreeRid(_geometry.NormalBuffer);
+
             if (_geometry.IndexBuffer.IsValid)
                 RenderingDevice.FreeRid(_geometry.IndexBuffer);
 
@@ -274,19 +257,37 @@ namespace PlanetGame.Shaders.RenderPasses
                     Enum uniformName = kvp.Key;
                     ShaderUniform shaderUniform = kvp.Value;
 
-                    if (IGPUResource.Verbose) GD.Print("========================");
-                    if (IGPUResource.Verbose) GD.Print($"Clearing {uniformName} in {GetType().Name} ID: {GetID()} Owner: {shaderUniform.Owner}");
+                    if (IGPUResource.Verbose)
+                        GD.Print("========================");
+
+                    if (IGPUResource.Verbose)
+                        GD.Print($"Clearing {uniformName} in {GetType().Name} ID: {GetID()} Owner: {shaderUniform.Owner}");
+
                     if (shaderUniform.Owner == this)
                     {
-                        if (IGPUResource.Verbose) GD.Print(shaderUniform.Rid);
+                        if (IGPUResource.Verbose)
+                            GD.Print(shaderUniform.Rid);
+
                         shaderUniform.FreeRids();
                     }
-                    else if (IGPUResource.Verbose) GD.Print($"{GetType().Name} does not own this uniform. Not free rid");
-                    if (IGPUResource.Verbose) GD.Print("========================");
+                    else if (IGPUResource.Verbose)
+                    {
+                        GD.Print($"{GetType().Name} does not own this uniform. Not free rid");
+                    }
+
+                    if (IGPUResource.Verbose)
+                        GD.Print("========================");
                 }
             }
 
             _shaderUniforms = null;
+
+            _uniformSet = default;
+            _pipeline = default;
+            _shader = default;
+            _framebuffer = default;
+            _framebufferFormat = 0;
+
             RenderingDevice = null;
         }
 
@@ -306,7 +307,5 @@ namespace PlanetGame.Shaders.RenderPasses
             return hash.ToHashCode();
         }
     }
-
-
 }
 

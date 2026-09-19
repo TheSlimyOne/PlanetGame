@@ -1,0 +1,70 @@
+#[fragment]
+#version 450
+
+layout(set = 0, binding = 0) uniform sampler2D depth_texture;
+
+layout(location = 0) in vec3 view_vector;
+
+layout(location = 0) out vec4 frag;
+
+layout(set = 0, binding = 1, std430) buffer restrict readonly AtmosphereData {
+	float radius;
+} atmosphere_data;
+
+layout(std430, binding = 2) readonly buffer WorldData {
+    float radius;
+    float height_scale;
+    vec2 padding;
+    mat4 planet_transform_matrix;
+};
+
+
+layout(push_constant, std430) uniform PushConstants {
+    mat4 view_projection_matrix;
+    vec4 camera_position_fovy;
+} push_constants;
+
+
+vec2 ray_sphere_intersection(vec3 sphere_center, float sphere_radius, vec3 ray_origin, vec3 ray_direction) {
+    vec3 offset = ray_origin - sphere_center;
+
+    float b = dot(offset, ray_direction);
+    float c = dot(offset, offset) - sphere_radius * sphere_radius;
+    float h = b * b - c;
+
+    if (h < 0.0)
+        return vec2(-1.0);
+
+    h = sqrt(h);
+
+    return vec2(-b - h, -b + h);
+}
+
+void main()
+{
+    ivec2 pixel = ivec2(gl_FragCoord.xy);
+
+    float depth = texelFetch(depth_texture, pixel, 0).r;
+
+    vec3 sphere_center = planet_transform_matrix[3].xyz;
+
+    vec3 camera_position = push_constants.camera_position_fovy.xyz;
+    vec3 ray_direction = normalize(view_vector);
+
+   vec2 hit = ray_sphere_intersection(
+        sphere_center,
+        atmosphere_data.radius,
+        camera_position,
+        ray_direction
+    );
+
+    float distance_to_atmosphere = hit.x;
+    float distance_through_atmosphere = hit.y - hit.x;
+
+    float test = distance_through_atmosphere / (atmosphere_data.radius * 2.0);
+
+    frag = vec4(test);
+
+    // depth *= 1000.0;
+    // frag = vec4(vec3(depth), 1.0);
+}

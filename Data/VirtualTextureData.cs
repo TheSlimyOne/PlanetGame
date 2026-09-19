@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using Godot;
+using PlanetGame.Util;
 
 namespace PlanetGame.Data
 {
@@ -8,7 +9,7 @@ namespace PlanetGame.Data
     {
         public uint HighResolutionMipCount;
         public uint LowResolutionMipCount;
-        public int[] LodToMipMap = new int[32];
+        public uint[] LodToMipMap = new uint[32];
         public string[] FallBackTiles = new string[6];
 
         public uint TotalMipLayersPerFace => LowResolutionMipCount + HighResolutionMipCount;
@@ -17,7 +18,7 @@ namespace PlanetGame.Data
 
         public VirtualTextureData() { }
 
-        public VirtualTextureData(uint lowResolutionMipCount, uint highResolutionMipCount, int[] lodToMipMap, string[] fallBackTiles)
+        public VirtualTextureData(uint lowResolutionMipCount, uint highResolutionMipCount, uint[] lodToMipMap, string[] fallBackTiles)
         {
             LowResolutionMipCount = lowResolutionMipCount;
             HighResolutionMipCount = highResolutionMipCount;
@@ -26,21 +27,11 @@ namespace PlanetGame.Data
             FallBackTiles =
             [
                 .. fallBackTiles
-                    .OrderByDescending(x => int.Parse(x.Split('_')[0]))
-                    .ThenByDescending(x => int.Parse(x.Split('_')[1]))
-                    .ThenByDescending(x => int.Parse(x.Split('_')[2]))
-                    .ThenByDescending(x => int.Parse(x.Split('_')[3]))
+                    .OrderByDescending(x => uint.Parse(x.Split('_')[0]))
+                    .ThenByDescending(x => uint.Parse(x.Split('_')[1]))
+                    .ThenByDescending(x => uint.Parse(x.Split('_')[2]))
+                    .ThenByDescending(x => uint.Parse(x.Split('_')[3]))
             ];
-        }
-
-        public uint GetMipIndex(int mip)
-        {
-            return (uint)(mip + HighResolutionMipCount);
-        }
-
-        public int GetRealMipIndex(uint mipIndex)
-        {
-            return (int)(mipIndex - HighResolutionMipCount);
         }
 
         public int GetMipSize(uint mipIndex)
@@ -54,20 +45,16 @@ namespace PlanetGame.Data
             if (tileData.Length != 4)
                 return false;
 
-            if (!int.TryParse(tileData[0], out int realMipIndex)) return false;
-            if (!int.TryParse(tileData[1], out int normalId)) return false;
-            if (!int.TryParse(tileData[2], out int tileX)) return false;
-            if (!int.TryParse(tileData[3], out int tileY)) return false;
+            if (!uint.TryParse(tileData[0], out uint mipIndex)) return false;
+            if (!uint.TryParse(tileData[1], out uint normalId)) return false;
+            if (!uint.TryParse(tileData[2], out uint tileX)) return false;
+            if (!uint.TryParse(tileData[3], out uint tileY)) return false;
 
             if (normalId < 0 || normalId >= 6) return false;
 
-            if (realMipIndex < 0 && Mathf.Abs(realMipIndex) > HighResolutionMipCount)
+            if (mipIndex < 0 || mipIndex > TotalMipLayersPerFace)
                 return false;
 
-            if (realMipIndex >= 0 && realMipIndex >= LowResolutionMipCount)
-                return false;
-
-            uint mipIndex = GetMipIndex(realMipIndex);
             int mipSize = GetMipSize(mipIndex);
 
             if (tileX < 0 || tileX >= mipSize) return false;
@@ -89,6 +76,33 @@ namespace PlanetGame.Data
             uint yIndex = uint.Parse(tileData[3]);
 
             return (mipIndex, normalId, xIndex, yIndex);
+        }
+
+        /// <summary>
+        /// Serializes this data to match the expected GPU buffer layout.
+        /// </summary>
+        /// <remarks>
+        /// <code>
+        /// layout(std430, binding = X) readonly buffer VirtualTextureData {
+        ///     uint low_resolution_mip_count;
+        ///     uint high_resolution_mip_count;
+        ///     uint grid_size;
+        ///     uint total_fallback_tiles;
+        ///
+        ///     uint lod_to_mip_map[32];
+        /// };
+        /// </code>
+        /// </remarks>
+        public byte[] ToBytes()
+        {
+            return [
+                .. Utilities.ToBytesSingle(LowResolutionMipCount),
+                .. Utilities.ToBytesSingle(HighResolutionMipCount),
+                .. Utilities.ToBytesSingle(BaseGridSize),
+                .. Utilities.ToBytesSingle(FallBackTiles.Length),
+
+                .. Utilities.ToBytes<uint>(LodToMipMap),
+            ];
         }
 
         public override string ToString()

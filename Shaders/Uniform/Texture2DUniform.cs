@@ -12,6 +12,26 @@ namespace Uniform
 		public RDTextureFormat TextureFormat { get; protected set; }
 		public RDSamplerState SamplerState { get; protected set; }
 
+		public void SetRid(Rid rid)
+		{
+			RenderingDevice.FreeRid(Rid);
+			Rid = rid;
+			TextureFormat = RenderingDevice.TextureGetFormat(Rid);
+
+			Uniform = new()
+			{
+				UniformType = Uniform.UniformType,
+				Binding = Binding
+			};
+
+			if (Uniform.UniformType == RenderingDevice.UniformType.Sampler || Uniform.UniformType == RenderingDevice.UniformType.SamplerWithTexture || Uniform.UniformType == RenderingDevice.UniformType.SamplerWithTextureBuffer)
+			{
+				Uniform.AddId(RenderingDevice.SamplerCreate(SamplerState));
+			}
+
+			Uniform.AddId(Rid);
+		}
+
 		// TODO prob should implement perserved lol idk how I missed that
 		// got it partial done ig
 		public Texture2DUniform(IGPUResource owner, RenderingDevice renderingDevice, int binding, RDTextureFormat format, RenderingDevice.UniformType uniformType, List<byte[]> textureData = null, bool perserved = false) : base(renderingDevice, binding, owner, perserved)
@@ -193,7 +213,7 @@ namespace Uniform
 				RenderingDevice.TextureUpdate(Rid, i, images[i].GetData());
 			}
 		}
-		
+
 		public override List<byte[]> GetByteData()
 		{
 			List<byte[]> data = [];

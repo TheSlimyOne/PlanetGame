@@ -88,7 +88,9 @@ namespace PlanetGame.Planet.Rendering.VirtualTexturing
 
             RenderingServer.CallOnRenderThread(Callable.From(() =>
             {
-                RenderingServer.GetRenderingDevice().TextureUpdate(GetRdRid(), slot, imageData);
+                RenderingServer.GetRenderingDevice().TextureUpdate(
+                    GetRdRid(), slot, imageData
+                );
             }));
 
             return true;
@@ -96,7 +98,7 @@ namespace PlanetGame.Planet.Rendering.VirtualTexturing
 
         public Image GetTileImage(uint mipIndex, uint normalId, uint xIndex, uint yIndex)
         {
-            return DataSource.GetTileImage(mipIndex, normalId, xIndex, yIndex); 
+            return DataSource.GetTileImage(mipIndex, normalId, xIndex, yIndex);
         }
 
         public override TextureRect CreateVisualization(string name)

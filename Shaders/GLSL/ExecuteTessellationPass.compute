@@ -31,32 +31,32 @@ layout(set = 0, binding = 4, std430) buffer restrict writeonly WriteCullList {
     uvec4 write_cull_list[];
 };
 
-layout(set = 0, binding = 5, std430) buffer restrict readonly ExternalData {
-	int low_resolution_mip_count;
-	int high_resolution_mip_count;
-	int resolution;
+layout(set = 0, binding = 5, std430) readonly buffer TessellationData {
+    uint resolution;
+    float sub_factor;
+    uint maximum_lod;
+    uint minimum_lod;
 
-	float radius;
-
-	float height_scale;
-	float sub_factor;
-	uint debug_flags;
-	int maximum_lod;
-
-	int minimum_lod;
 	float height_offset;
-	vec2 morph_range;
-
-	mat4 planet_transform_matrix;
-
-	int lod_to_mip_map[32];
 };
 
-layout(set = 0, binding = 6, std430) buffer restrict OutputBuffer {
+layout(set = 0, binding = 6,  std430) readonly buffer WorldData {
+    float radius;
+    float height_scale;
+    vec2 padding;
+    mat4 planet_transform_matrix;
+};
+
+layout(set = 0, binding = 7, std430) buffer restrict readonly RenderData {
+	uint debug_flags;
+
+};
+
+layout(set = 0, binding = 8, std430) buffer restrict OutputBuffer {
     float data[];
 } output_buffer;
 
-layout(set = 0, binding = 7, std430) buffer restrict GlobalKeyData {
+layout(set = 0, binding = 9, std430) buffer restrict GlobalKeyData {
     uint max_lod;
     uint min_lod;
     uint stable_key_count;

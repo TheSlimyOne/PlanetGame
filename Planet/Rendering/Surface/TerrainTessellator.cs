@@ -64,6 +64,18 @@ namespace PlanetGame.Rendering.Surface
             TriangleMultiMesh = default;
         }
 
+        private bool _planetInstanceVisible = false;
+
+        public bool PlanetInstanceVisible
+        {
+            get => _planetInstanceVisible;
+            set
+            {
+                _planetInstanceVisible = value;
+                RenderingServer.InstanceSetVisible(_planetInstance, value);
+            }
+        }
+
         public bool IsValidForProcessing()
         {
             return ExecuteTessellationPass?.IsValid() == true && PrepareTessellationPass?.IsValid() == true;

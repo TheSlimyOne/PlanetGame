@@ -8,15 +8,14 @@ public class PlanetQuery
 {
     private static TessellationData TessellationData => SaveManager.TessellationData;
     private static VirtualTextureData VirtualTextureData => SaveManager.VirtualTextureData;
-    private PlanetSpatial _planetSpatial;
+    private static WorldData WorldData => SaveManager.WorldData;
     private PlanetRenderer _planetRenderer;
     private CustomCamera _queryCamera;
 
 
-    public PlanetQuery(CustomCamera queryCamera, PlanetSpatial planetSpatial, PlanetRenderer planetRenderer)
+    public PlanetQuery(CustomCamera queryCamera, PlanetRenderer planetRenderer)
     {
         _queryCamera = queryCamera;
-        _planetSpatial = planetSpatial;
         _planetRenderer = planetRenderer;
     }
 
@@ -45,6 +44,20 @@ public class PlanetQuery
             return HashCode.Combine(UV, NormalId, MipIndex);
         }
 
+        public override string ToString()
+        {
+            return $"{MipIndex}, {UV}";
+        }
+
+    }
+
+    public static Tile.TileID GetTileIdFromSurfacePoint(PlanetSurfacePoint surfacePoint)
+    {
+        uint mipIndex = surfacePoint.MipIndex;
+        float mipGridSize = VirtualTextureData.GetMipSize(mipIndex);
+        Vector2I tileCoords = (Vector2I)(surfacePoint.UV * mipGridSize).Floor();
+
+        return new Tile.TileID(surfacePoint.NormalId, mipIndex, (uint)tileCoords.X, (uint)tileCoords.Y);
     }
 
     public bool TryGetMouseSurfacePoint(out PlanetSurfacePoint surfacePoint, bool isLocalSpace = false, uint? desiredMipIndex = null)
@@ -73,8 +86,8 @@ public class PlanetQuery
         }
         else
         {
-            int lod = Mathf.CeilToInt(GetLodOfPoint(_planetSpatial.LocalToPlanet(localSpherePoint), false));
-            mip = VirtualTextureData.GetMipIndex(VirtualTextureData.LodToMipMap[lod]);
+            int lod = Mathf.CeilToInt(GetLodOfPoint(WorldData.LocalToPlanet(localSpherePoint), false));
+            mip = (uint)VirtualTextureData.LodToMipMap[lod];
         }
 
         surfacePoint = new PlanetSurfacePoint(
@@ -92,7 +105,7 @@ public class PlanetQuery
     {
         Vector3 localPoint = isLocalSpace
             ? point
-            : _planetSpatial.WorldToLocal(point);
+            : WorldData.WorldToLocal(point);
 
         if (localPoint.IsZeroApprox() || !localPoint.IsFinite())
             return (Vector3.Inf, Vector3.Inf);
@@ -109,7 +122,7 @@ public class PlanetQuery
             _queryCamera.GetViewport().GetMousePosition()
         );
 
-        return localPosition ? _planetSpatial.PlanetToLocal(position) : position;
+        return localPosition ? WorldData.PlanetToLocal(position) : position;
     }
 
     public Vector3 GetPlanetScreenPosition(Vector2 mousePosition)
@@ -122,18 +135,18 @@ public class PlanetQuery
         if (!localPickedPosition.IsFinite())
             return Vector3.Inf;
 
-        return _planetSpatial.LocalToPlanet(localPickedPosition);
+        return WorldData.LocalToPlanet(localPickedPosition);
     }
 
     public float GetLodOfPoint(Vector3 point, bool inWorldSpace)
     {
-        Vector3 planetPoint = inWorldSpace ? _planetSpatial.WorldToPlanet(point) : point;
-        Vector3 cameraPlanetPoint = _planetSpatial.WorldToPlanet(_queryCamera.GlobalPosition);
+        Vector3 planetPoint = inWorldSpace ? WorldData.WorldToPlanet(point) : point;
+        Vector3 cameraPlanetPoint = WorldData.WorldToPlanet(_queryCamera.GlobalPosition);
 
         float distanceToCamera = planetPoint.DistanceTo(cameraPlanetPoint);
 
-        float numerator = (distanceToCamera - _planetRenderer.HeightOffset) * Mathf.Tan(_queryCamera.GetCameraFov(true) / 2);
-        float denominator = Mathf.Sqrt2 * TessellationData.SubFactor * TessellationData.Radius;
+        float numerator = (distanceToCamera - TessellationData.HeightOffset) * Mathf.Tan(_queryCamera.GetCameraFov(true) / 2);
+        float denominator = Mathf.Sqrt2 * TessellationData.SubFactor * WorldData.Radius;
 
         return Mathf.Clamp(
             -Mathf.Log(numerator / denominator) / Mathf.Log(2.0f),
@@ -164,7 +177,7 @@ public class PlanetQuery
 
         float elevation = Sampler.SampleBilinear(heightmap, tileLocalUV).R;
 
-        return elevation * TessellationData.Radius * TessellationData.HeightScale;
+        return elevation * WorldData.Radius * WorldData.HeightScale;
     }
 
     

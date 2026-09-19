@@ -232,14 +232,17 @@ public partial class CustomCamera : Camera3D
 		viewport.Size = size;
 	}
 
-	public Projection GetViewProjectionMatrix()
-	{
-		return GetViewProjectionMatrix(Vector3.Zero);
-	}
-	public Projection GetViewProjectionMatrix(Vector3 offset)
+	public Projection GetViewProjectionMatrix(bool useRenderingDeviceFormat = true)
 	{
 		Transform3D viewMatrix = GlobalTransform.AffineInverse();
 		Projection projectionMatrix = GetCameraProjection();
+
+		if (useRenderingDeviceFormat)
+		{
+			projectionMatrix.Y.Y *= -1.0f;
+			projectionMatrix.Z.Z = (-1.0f - projectionMatrix.Z.Z) * 0.5f;
+			projectionMatrix.W.Z *= -0.5f;
+		}
 
 		Projection viewMatrix4 = new(
 			new Vector4(viewMatrix[0].X, viewMatrix[0].Y, viewMatrix[0].Z, 0),
@@ -249,6 +252,20 @@ public partial class CustomCamera : Camera3D
 		);
 
 		return projectionMatrix * viewMatrix4;
+	}
+
+	public static Projection GetViewProjectionMatrix(Transform3D transform, Projection cameraProjection, bool useRenderingDeviceFormat = false)
+	{
+		Transform3D viewMatrix = transform.AffineInverse();
+
+        Projection viewMatrix4 = new(
+            new Vector4(viewMatrix[0].X, viewMatrix[0].Y, viewMatrix[0].Z, 0),
+            new Vector4(viewMatrix[1].X, viewMatrix[1].Y, viewMatrix[1].Z, 0),
+            new Vector4(viewMatrix[2].X, viewMatrix[2].Y, viewMatrix[2].Z, 0),
+            new Vector4(viewMatrix[3].X, viewMatrix[3].Y, viewMatrix[3].Z, 1)
+        );
+
+        return cameraProjection * viewMatrix4;
 	}
 
 	public Camera3D GetCurrent()

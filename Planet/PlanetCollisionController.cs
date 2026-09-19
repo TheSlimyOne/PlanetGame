@@ -8,6 +8,7 @@ public class PlanetCollisionController
     public StaticBody3D CollisionBody = new();
     private static TessellationData TessellationData => SaveManager.TessellationData;
     private static VirtualTextureData VirtualTextureData => SaveManager.VirtualTextureData;
+    private static WorldData WorldData => SaveManager.WorldData;
 
     private const uint COLLISION_RESOLUTION = 10;
     private const uint COLLISION_SQUARE = 12;

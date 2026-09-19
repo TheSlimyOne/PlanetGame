@@ -82,7 +82,7 @@ public partial class PlanetDrawingController : Control
         if (!IsValid() || IsDrawing)
             return;
 
-        if (!_planetQuery.TryGetMouseSurfacePoint(out PlanetQuery.PlanetSurfacePoint surfacePoint, true, desiredMipIndex: 0))
+        if (!_planetQuery.TryGetMouseSurfacePoint(out PlanetQuery.PlanetSurfacePoint surfacePoint, true, desiredMipIndex: VirtualTextureData.TotalMipLayersPerFace - 1))
         {
             GD.Print("Nothing to draw");
             return;
@@ -128,7 +128,7 @@ public partial class PlanetDrawingController : Control
         if (!IsValid() || !IsDrawing)
             return;
 
-        if (_planetQuery.TryGetMouseSurfacePoint(out PlanetQuery.PlanetSurfacePoint surfacePoint, true, desiredMipIndex: 0))
+        if (_planetQuery.TryGetMouseSurfacePoint(out PlanetQuery.PlanetSurfacePoint surfacePoint, true, desiredMipIndex: VirtualTextureData.TotalMipLayersPerFace - 1))
             AddStrokePoint(surfacePoint);
     }
 

@@ -30,18 +30,19 @@ namespace PlanetGame.Planet.Rendering.Drawing
 
         public bool TryToAddStroke(PlanetQuery.PlanetSurfacePoint surfacePoint)
         {
+            
             StrokePoints.Add(surfacePoint);
 
             AddPoint(surfacePoint);
 
-            uint nextMipIndex = surfacePoint.MipIndex + 1;
+            int nextMipIndex = (int)surfacePoint.MipIndex - 1;
 
-            if (nextMipIndex < VirtualTextureData.TotalMipLayersPerFace)
+            if (nextMipIndex >= 0)
             {
                 PlanetQuery.PlanetSurfacePoint parentPoint = surfacePoint;
-                parentPoint.MipIndex = nextMipIndex;
+                parentPoint.MipIndex = (uint)nextMipIndex;
 
-                AddPoint(parentPoint);
+                TryToAddStroke(parentPoint);
             }
 
             return true;
@@ -49,6 +50,8 @@ namespace PlanetGame.Planet.Rendering.Drawing
 
         private void AddPoint(PlanetQuery.PlanetSurfacePoint surfacePoint)
         {
+            GD.Print(surfacePoint);
+
             // string tileName = TileManager.GetTileNameFromSurfacePoint(surfacePoint);
 
             // if (!TileNameToBrushStroke.TryGetValue(tileName, out BrushStroke stroke))

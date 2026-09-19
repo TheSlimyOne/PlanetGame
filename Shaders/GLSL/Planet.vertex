@@ -12,29 +12,38 @@ layout(set = 0, binding = 0, std430) readonly buffer InstanceBuffer
 	InstanceData instances[];
 };
 
-layout(set = 0, binding = 1, std430) buffer restrict readonly ExternalData {
-	int low_resolution_mip_count;
-	int high_resolution_mip_count;
-	int resolution;
+layout(set = 0, binding = 1, std430) readonly buffer VirtualTextureData {
+    uint low_resolution_mip_count;
+    uint high_resolution_mip_count;
+    uint grid_size;
+    uint total_fallback_tiles;
 
-	float radius;
-
-	float height_scale;
-	float sub_factor;
-	uint debug_flags;
-	int maximum_lod;
-
-	int minimum_lod;
-	float height_offset;
-	vec2 morph_range;
-
-	mat4 planet_transform_matrix;
-
-	int lod_to_mip_map[32];
+    uint lod_to_mip_map[32];
 };
 
-layout(set = 0, binding = 2) uniform sampler2DArray height_map_tile_cache;
-layout(set = 0, binding = 3) uniform sampler2DArray terrain_indirection_table;
+layout(std430, binding = 2) readonly buffer RenderData {
+    uint debug_flags;
+};
+
+layout(std430, binding = 3) readonly buffer TessellationData {
+    uint resolution;
+    float sub_factor;
+    uint maximum_lod;
+    uint minimum_lod;
+
+	float height_offset;
+};
+
+layout(std430, binding = 4) readonly buffer WorldData {
+    float radius;
+    float height_scale;
+    vec2 padding;
+    mat4 planet_transform_matrix;
+};
+
+layout(set = 0, binding = 5) uniform sampler2DArray albedo_tile_cache;
+layout(set = 0, binding = 6) uniform sampler2DArray heightmap_tile_cache;
+layout(set = 0, binding = 7) uniform sampler2DArray terrain_indirection_table;
 
 layout(push_constant, std430) uniform PushConstants {
     mat4 view_projection_matrix;
@@ -48,7 +57,7 @@ layout(location = 0) flat out uvec4 key;
 layout(location = 1) flat out uint flags;
 layout(location = 2) out float morph;
 layout(location = 3) out float elevation;
-layout(location = 4) out vec2 vertex_uv;
+layout(location = 4) out vec2 plane_vertex_uv;
 layout(location = 5) flat out int lod;
 layout(location = 6) out vec3 normal;
 layout(location = 7) out vec3 world_position;
@@ -61,6 +70,7 @@ layout(location = 8) flat out uint instance_id;
 
 void main() 
 { 
+	instance_id = gl_InstanceIndex;
 	bool is_morphing = (debug_flags & 2u) != 0u;
 	bool is_cube = (debug_flags & 4u) != 0u;
 
@@ -105,33 +115,32 @@ void main()
 		height_offset
 	);
 
-	if (is_morphing && false) {
-		morph = calculate_morph(local_point, key.xy, morph_range, lod_context);
-		vec2 morphed_vertex = morph_vertex(vertex.xy, morph, resolution);
+	// if (is_morphing && false) {
+	// 	morph = calculate_morph(local_point, key.xy, morph_range, lod_context);
+	// 	vec2 morphed_vertex = morph_vertex(vertex.xy, morph, resolution);
 
-		vec2 morphed_quad_position = get_quadtree_space_point(morphed_vertex, quadtree_space);
-		vec3 morphed_cube_local_position = get_polygon_space_point(morphed_quad_position, polygon_space);
-		vec3 morphed_sphere_local_position = point_on_cube_to_point_on_sphere(morphed_cube_local_position);
+	// 	vec2 morphed_quad_position = get_quadtree_space_point(morphed_vertex, quadtree_space);
+	// 	vec3 morphed_cube_local_position = get_polygon_space_point(morphed_quad_position, polygon_space);
+	// 	vec3 morphed_sphere_local_position = point_on_cube_to_point_on_sphere(morphed_cube_local_position);
 
-		local_point = is_cube ? morphed_cube_local_position : morphed_sphere_local_position;
-		vertex_uv = get_cube_uv(int(key.z), morphed_cube_local_position);
-	}
-	else 
+	// 	local_point = is_cube ? morphed_cube_local_position : morphed_sphere_local_position;
+	// 	plane_vertex_uv = get_plane_uv(int(key.z), morphed_cube_local_position);
+	// }
+	// else 
 	{
-		vertex_uv = get_cube_uv(int(key.z), cube_local_position);
+		plane_vertex_uv = get_plane_uv(key.z, cube_local_position);
 	}
 
 	lod = get_lod_of_key(key.xy);
 
-	int mip_index = lod_to_mip_map[lod] + high_resolution_mip_count;
-	vec3 tile_cache_uv = get_tile_cache_uv(
+	vec3 tile_cache_uv = get_tile_uv(
 		terrain_indirection_table,
-		vertex_uv,
-		int(key.z),
+		plane_vertex_uv,
+		key.z,
 		low_resolution_mip_count,
 		high_resolution_mip_count
 	);
-	elevation = get_tile(height_map_tile_cache, tile_cache_uv).r;
+	elevation = get_tile(heightmap_tile_cache, tile_cache_uv).r;
 	
 	normal = (vec4(local_point, 1) * get_rotation_from_matrix(planet_transform_matrix)).xyz; 
 
@@ -141,5 +150,5 @@ void main()
 	);
 
 	gl_Position = push_constants.view_projection_matrix * vec4(world_position, 1.0);
-	gl_Position.y = -gl_Position.y;    
+	// gl_Position.y = -gl_Position.y;    
 }

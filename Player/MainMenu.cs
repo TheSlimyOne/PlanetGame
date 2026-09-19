@@ -1,7 +1,6 @@
 using Godot;
-using PlanetGame.Planet.Rendering.Generation.TileGeneration;
 using PlanetGame.Shaders;
-using static SaveManager;
+// using static SaveManager;
 
 public partial class MainMenu : MarginContainer
 {
@@ -87,7 +86,7 @@ public partial class MainMenu : MarginContainer
 		LoadOptions.Clear();
 		
 		// RefreshSaves();
-		string[] saveNames = GetSaveNames();
+		string[] saveNames = SaveManager.GetSaveNames();
 		PopupMenu popupMenu = LoadOptions.GetPopup();
 		for (int i = 0; i < saveNames.Length; i++)
 		{
@@ -117,7 +116,7 @@ public partial class MainMenu : MarginContainer
 		SelectedSave = LoadOptions.GetItemText(index);
 		LoadSave.Disabled = false;
 
-		DemoPlanet.SetThumbnails(GetThumbnails(SelectedSave));
+		DemoPlanet.SetThumbnails(SaveManager.GetThumbnails(SelectedSave));
 	}
 
 	public void OpenFileDialog(string buttonID)
@@ -161,12 +160,12 @@ public partial class MainMenu : MarginContainer
 
 	public void OnLoad()
 	{
-		CurrentSave = SelectedSave;
+		SaveManager.CurrentSave = SelectedSave;
 		GetTree().ChangeSceneToFile("res://Planet/planet.tscn");
 	}
 	public void OnRenerateTiles()
 	{
-		CurrentSave = SelectedSave;
+		SaveManager.CurrentSave = SelectedSave;
 	}
 
 	public void OnStartNewGame()
@@ -181,8 +180,11 @@ public partial class MainMenu : MarginContainer
 
 		// WriteNewSave(saveName, test1, test2, 5, [4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
 		GD.Print("Creating Save:", saveName);
-		WriteNewSave(saveName, NewSaveAlbedo, NewSaveHeightmap, [4, 4, 3, 3, 2, 2, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], OnTileProgress);
-		CurrentSave = saveName;
+		SaveManager.WriteNewSave(saveName, NewSaveAlbedo, NewSaveHeightmap, 
+		[
+			0, 1, 2, 3, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5
+		], OnTileProgress);
+		SaveManager.CurrentSave = saveName;
 	}
 
 	public void GenerateDebugTiles()

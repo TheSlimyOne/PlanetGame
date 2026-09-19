@@ -51,12 +51,12 @@ vec3 displayBranches() {
 }
 
 vec3 calculate_normal(vec3 base_normal, vec3 tile_uv) {
-	vec2 texel_size = 1.0 / vec2(textureSize(height_map_tile_cache, 0).xy);
+	vec2 texel_size = 1.0 / vec2(textureSize(heightmap_tile_cache, 0).xy);
 
-	float up = get_tile(height_map_tile_cache, tile_uv + vec3(0.0, texel_size.y, 0.0)).r;
-	float down = get_tile(height_map_tile_cache, tile_uv - vec3(0.0, texel_size.y, 0.0)).r;
-	float left = get_tile(height_map_tile_cache, tile_uv - vec3(texel_size.x, 0.0, 0.0)).r;
-	float right = get_tile(height_map_tile_cache, tile_uv + vec3(texel_size.x, 0.0, 0.0)).r;
+	float up = get_tile(heightmap_tile_cache, tile_uv + vec3(0.0, texel_size.y, 0.0)).r;
+	float down = get_tile(heightmap_tile_cache, tile_uv - vec3(0.0, texel_size.y, 0.0)).r;
+	float left = get_tile(heightmap_tile_cache, tile_uv - vec3(texel_size.x, 0.0, 0.0)).r;
+	float right = get_tile(heightmap_tile_cache, tile_uv + vec3(texel_size.x, 0.0, 0.0)).r;
 
 	float height_x = right - left;
 	float height_y = up - down;
@@ -97,7 +97,7 @@ vec3 color_base_normal_and_adjecenies(vec2 uv, float coverage, int normal_id) {
 void fragment() {
 	int normal_id = int(key.z);
 	int total_resolution_mip_count = low_resolution_mip_count + high_resolution_mip_count;
-	int mip_index = lod_to_mip_map[lod] + high_resolution_mip_count;
+	int mip_index = lod_to_mip_map[lod];
 	
 	vec2 adjusted_uv = clamp(plane_vertex_uv, vec2(0.0), vec2(1.0 - EPS));
 

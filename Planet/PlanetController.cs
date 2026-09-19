@@ -10,8 +10,8 @@ public partial class PlanetController : Node
 {
     private static TessellationData TessellationData => SaveManager.TessellationData;
     private static VirtualTextureData VirtualTextureData => SaveManager.VirtualTextureData;
+    private static WorldData WorldData => SaveManager.WorldData;
 
-    public float Radius => TessellationData.Radius;
 
     [ExportGroup("Controllers")]
     [Export] public CameraController CameraController { get; private set; }
@@ -37,7 +37,6 @@ public partial class PlanetController : Node
     [Export] public float PointRadius { get; set; }
 
     PlanetRenderer PlanetRenderer;
-    PlanetSpatial PlanetSpatial;
 
     private bool Quiting = false;
 
@@ -58,9 +57,8 @@ public partial class PlanetController : Node
     {
         SetupCameras();
 
-        PlanetSpatial = new();
-        PlanetRenderer = new(MainCamera, PlanetSpatial);
-        PlanetQuery = new(MainCamera, PlanetSpatial, PlanetRenderer);
+        PlanetRenderer = new(WorldEnvironment, MainCamera);
+        PlanetQuery = new(MainCamera, PlanetRenderer);
         PlanetCollisionController = new(PlanetQuery);
 
         PlanetDrawingController = ScenePaths.InstantiateScene<PlanetDrawingController>(ScenePaths.PLANET_DRAWING_CONTROLLER);
@@ -91,49 +89,18 @@ public partial class PlanetController : Node
 
     #region Process
 
-    private double _heightUpdateTimer;
-    private float _targetHeightOffset;
-    private float _heightInterpolationSpeed = HEIGHT_INTERPOLATION_SPEED;
 
-    private const double HEIGHT_UPDATE_INTERVAL = 0.5;
-    private const float HEIGHT_INTERPOLATION_SPEED = 2;
-    private const float HEIGHT_UNDERGROUND_INTERPOLATION_SPEED = 4;
 
-    public void UpdateHeightOffset(double delta)
-    {
-        _heightUpdateTimer += delta;
-
-        if (_heightUpdateTimer >= HEIGHT_UPDATE_INTERVAL)
-        {
-            _heightUpdateTimer = 0;
-
-            float heightOffset = PlanetQuery.GetHeightAtPoint(MainCamera.GlobalPosition);
-
-            if (!float.IsNaN(heightOffset))
-            {
-                _targetHeightOffset = heightOffset;
-
-                _heightInterpolationSpeed = MainCamera.DistanceFromTarget > heightOffset
-                    ? HEIGHT_INTERPOLATION_SPEED
-                    : HEIGHT_INTERPOLATION_SPEED * HEIGHT_UNDERGROUND_INTERPOLATION_SPEED;
-            }
-        }
-
-        PlanetRenderer.HeightOffset = Mathf.Lerp(
-            PlanetRenderer.HeightOffset,
-            _targetHeightOffset,
-            1.0f - Mathf.Exp(-_heightInterpolationSpeed * (float)delta)
-        );
-    }
+    
 
     public override void _Process(double delta)
     {
         if (Quiting)
             return;
 
-        PlanetSpatial.ReorientatePlanet();
+        WorldData.OrientatePlanet();
 
-        UpdateHeightOffset(delta);
+        PlanetRenderer.UpdateHeightOffset(PlanetQuery, MainCamera.GlobalPosition, MainCamera.DistanceFromTarget, delta);
 
         PlanetRenderer?.Invoke();
     }
@@ -146,7 +113,7 @@ public partial class PlanetController : Node
         ProcessMovement(delta);
         UpdateCamera();
 
-        Vector3 planetCenter = PlanetSpatial.PlanetToWorld(Vector3.Zero);
+        Vector3 planetCenter = WorldData.PlanetToWorld(Vector3.Zero);
 
         foreach (RigidBody3D body in CollisionTestSpheres.GetChildren().Cast<RigidBody3D>())
         {
@@ -172,7 +139,7 @@ public partial class PlanetController : Node
         MainCamera.GlobalPosition = Vector3.Back * MainCamera.DistanceFromTarget;
 
         CameraController.SetCurrent("Main");
-        MainCamera.DistanceFromTarget = Radius;
+        MainCamera.DistanceFromTarget = WorldData.Radius;
 
         UpdateCamera();
 
@@ -184,10 +151,10 @@ public partial class PlanetController : Node
 
     public void UpdateCamera()
     {
-        MainCamera.MinDistance = Radius + 0.999f;
-        MainCamera.MaxDistance = Radius * 10.0f;
+        MainCamera.MinDistance = WorldData.Radius + 0.999f;
+        MainCamera.MaxDistance = WorldData.Radius * 10.0f;
 
-        MainCamera.Far = MainCamera.DistanceFromTarget + Radius;
+        MainCamera.Far = WorldData.Radius * 2; //MainCamera.DistanceFromTarget + Radius;
     }
 
     private Vector3 _direction = Vector3.Zero;
@@ -203,34 +170,34 @@ public partial class PlanetController : Node
         _direction.Z += Input.GetActionStrength("move_forward") - Input.GetActionStrength("move_backward");
         _direction = _direction.Clamp(-1, 1);
 
-        float minimumDistance = PlanetRenderer.HeightOffset + MinDistanceFromSurface;
+        float minimumDistance = TessellationData.HeightOffset + MinDistanceFromSurface;
 
         if (MainCamera.DistanceFromTarget < minimumDistance)
             MainCamera.DistanceFromTarget = minimumDistance;
 
-        float altitude = Mathf.Max(MainCamera.DistanceFromTarget - PlanetRenderer.HeightOffset, 1.0f);
-        float altitudeRatio = Mathf.Max(altitude / Radius, 0.0001f);
+        float altitude = Mathf.Max(MainCamera.DistanceFromTarget - TessellationData.HeightOffset, 1.0f);
+        float altitudeRatio = Mathf.Max(altitude / WorldData.Radius, 0.0001f);
         float speedScale = Mathf.Pow(altitudeRatio, 1.1f);
 
         float zoomSpeed = BaseZoomSpeed * speedScale;
         float rotationSpeed = BaseRotationSpeed * speedScale;
 
-        Vector3 forward = PlanetSpatial.PlanetTranslation.Origin.DirectionTo(MainCamera.GlobalPosition);
+        Vector3 forward = WorldData.Translation.Origin.DirectionTo(MainCamera.GlobalPosition);
         Vector3 right = MainCamera.Basis.X;
         Vector3 up = forward.Cross(right).Normalized();
 
-        PlanetSpatial.RotatePlanet(right, rotationSpeed * by * _direction.Z);
-        PlanetSpatial.RotatePlanet(up, rotationSpeed * by * _direction.X);
+        WorldData.RotatePlanet(right, rotationSpeed * by * _direction.Z);
+        WorldData.RotatePlanet(up, rotationSpeed * by * _direction.X);
 
-        WorldEnvironment.Environment.SkyRotation = PlanetSpatial.PlanetRotation.Basis.GetEuler();
+        WorldEnvironment.Environment.SkyRotation = WorldData.Rotation.Basis.GetEuler();
 
-        SurfaceAttachment.Transform = PlanetSpatial.PlanetTranslation * PlanetSpatial.PlanetRotation;
+        SurfaceAttachment.Transform = WorldData.Translation * WorldData.Rotation;
 
-        MainCamera.DistanceFromTarget += zoomSpeed * Radius * _direction.Y * by;
+        MainCamera.DistanceFromTarget += zoomSpeed * WorldData.Radius * _direction.Y * by;
 
         MainCamera.DistanceFromTarget = Mathf.Clamp(
             MainCamera.DistanceFromTarget,
-            PlanetRenderer.HeightOffset + MinDistanceFromSurface,
+            TessellationData.HeightOffset + MinDistanceFromSurface,
             MainCamera.MaxDistance
         );
 
@@ -250,7 +217,7 @@ public partial class PlanetController : Node
         {
             if (mouseEvent.ButtonIndex == MouseButton.Right && mouseEvent.Pressed)
             {
-                MainLightSource.Transform = PlanetSpatial.PlanetRotation.Inverse();
+                MainLightSource.Transform = WorldData.Rotation.Inverse();
 
                 if (false)
                 {
@@ -277,7 +244,7 @@ public partial class PlanetController : Node
                 {
                     CollisionTestSpheres.AddChild(
                         Utilities.SpawnTestSphere(
-                            PlanetSpatial.WorldToPlanet(MainCamera.GlobalPosition),
+                            WorldData.WorldToPlanet(MainCamera.GlobalPosition),
                             1
                         )
                     );
@@ -309,7 +276,7 @@ public partial class PlanetController : Node
         if (!planetSpacePoint.IsFinite())
             return;
 
-        Vector3 localSpacePoint = PlanetSpatial.PlanetToLocal(planetSpacePoint);
+        Vector3 localSpacePoint = WorldData.PlanetToLocal(planetSpacePoint);
 
         if (!PlanetQuery.TryGetSurfacePoint(localSpacePoint, out PlanetQuery.PlanetSurfacePoint surfacePoint, true))
             return;

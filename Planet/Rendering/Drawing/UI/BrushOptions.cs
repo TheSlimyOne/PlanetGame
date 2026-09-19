@@ -14,6 +14,7 @@ public partial class BrushOptions : PanelContainer
 
 	private static TessellationData TessellationData => SaveManager.TessellationData;
 	private static VirtualTextureData VirtualTextureData => SaveManager.VirtualTextureData;
+	private static WorldData WorldData => SaveManager.WorldData;
 
 	private LineEdit SizeInput => GetNode<LineEdit>("%SizeInput");
 	private HSlider SizeSlider => GetNode<HSlider>("%SizeSlider");
@@ -57,8 +58,8 @@ public partial class BrushOptions : PanelContainer
 
 	private void SetupRanges()
 	{
-		SizeSlider.MinValue = TessellationData.Radius * 0.0001f;
-		SizeSlider.MaxValue = TessellationData.Radius;
+		SizeSlider.MinValue = WorldData.Radius * 0.0001f;
+		SizeSlider.MaxValue = WorldData.Radius;
 		SizeSlider.Step = 1f;
 
 		HardnessSlider.MinValue = 0;

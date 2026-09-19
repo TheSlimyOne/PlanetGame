@@ -1,4 +1,3 @@
-using System.Threading.Tasks;
 using PlanetGame.Shaders.Dispatchers;
 using Godot;
 using PlanetGame.Shaders.RenderPasses;
@@ -94,19 +93,7 @@ namespace PlanetGame.Planet.Rendering.VirtualTexturing
                     uint normalId = (tileData.tileZ - mipIndex) / VirtualTextureData.TotalMipLayersPerFace;
                     uint slot = tileData.slot;
 
-                    // if (mipIndex == 5)
-                    // {
-                        
-                        // GD.PrintS("requesting");
-                    // }
-
-                    // int realMipIndex = (int)(mipIndex - VirtualTextureData.HighResolutionMipCount);
-
-                    // string tileName = $"{realMipIndex}_{normalId}_{xIndex}_{yIndex}";
-
                     Tile tile = new(mipIndex, normalId, xIndex, yIndex);
-                    // int mipSize = (int)VirtualTextureData.BaseGridSize / (1 << ((int)tileData.tileZ));
-                    // GD.PrintS(xIndex / mipSize, yIndex / mipSize, "|", xIndex, yIndex, "|",  tileData.tileZ, ".");
 
                     GetTileCache(TileCache.TileCacheType.ALBEDO).InsertTile(tile, slot);
                     GetTileCache(TileCache.TileCacheType.HEIGHTMAP).InsertTile(tile, slot);
@@ -245,7 +232,7 @@ namespace PlanetGame.Planet.Rendering.VirtualTexturing
 
             DebugMenuController.Instance.AddTexture("Flatten Indirection Table", "Virtual Texturing", ConsolidatedIndirectionTable.CreateVisualization(), false);
 
-            DebugMenuController.Instance.AddTexture("Picking Texture", "Virtual Texturing", new TextureRect { Texture = SvtFeedbackRenderPass.GetPickingTexture() }, false);
+            DebugMenuController.Instance.AddTexture("Picking Texture", "Virtual Texturing", new TextureRect { Texture = new Texture2Drd() { TextureRdRid = SvtFeedbackRenderPass.Picking } }, false);
         }
     }
 }

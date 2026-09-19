@@ -1,12 +1,12 @@
 using System;
 using Godot;
 using PlanetGame.Data;
-using static SaveManager;
 
 namespace PlanetGame.Planet.Rendering.Generation.TileGeneration
 {
 	public partial class TileCacheVisualizer : MarginContainer
 	{
+		private static VirtualTextureData VirtualTextureData => SaveManager.VirtualTextureData;
 		private OptionButton SaveOptions => GetNode<OptionButton>("%SaveOptions");
 		private OptionButton NormalIdOption => GetNode<OptionButton>("%NormalIdOption");
 		private OptionButton MipOption => GetNode<OptionButton>("%MipOption");
@@ -14,6 +14,7 @@ namespace PlanetGame.Planet.Rendering.Generation.TileGeneration
 		private GridContainer DisplayTextureContainer => GetNode<GridContainer>("%DisplayTextureContainer");
 
 		private Label EncodingLabel => GetNode<Label>("%EncodingLabel");
+
 		
 		private TileFile _file;
 		private string _selectedSave;
@@ -45,7 +46,7 @@ namespace PlanetGame.Planet.Rendering.Generation.TileGeneration
 
 			SaveOptions.Clear();
 
-			string[] saveNames = GetSaveNames();
+			string[] saveNames = SaveManager.GetSaveNames();
 
 			foreach (string saveName in saveNames)
 				SaveOptions.AddItem(saveName);
@@ -75,10 +76,12 @@ namespace PlanetGame.Planet.Rendering.Generation.TileGeneration
 
 			_selectedSave = SaveOptions.GetItemText(index);
 
+			SaveManager.CurrentSave = _selectedSave;
+
 			LoadFile(
-				GetDirectoryPath(
+				SaveManager.GetDirectoryPath(
 					_selectedSave,
-					SaveDataIdentifier.TILE_ALBEDO
+					SaveManager.SaveDataIdentifier.TILE_HEIGHT_MAP
 				)
 			);
 		}
@@ -87,6 +90,19 @@ namespace PlanetGame.Planet.Rendering.Generation.TileGeneration
 		{
 			_file?.Dispose();
 			_file = new TileFile(filePath);
+
+			GD.PrintS(
+				"Visualizer file:",
+				filePath,
+				"FileLength:",
+				_file.FileLength,
+				"TileCount:",
+				_file.TileCount,
+				"TileDataLength:",
+				_file.TileDataLength,
+				"SegmentSize:",
+				_file.TileSegmentSize
+			);
 
 			PopulateMipOptions();
 
@@ -122,8 +138,7 @@ namespace PlanetGame.Planet.Rendering.Generation.TileGeneration
 			if (_file == null || _file.TileCount == 0)
 				return;
 
-			Tile lastTile = Tile.GetTileByIndex(_file.TileCount - 1, _file.TileCount);
-			int mipCount = lastTile.MipIndex + 1;
+			int mipCount = (int)VirtualTextureData.TotalMipLayersPerFace;
 
 			for (int mipIndex = 0; mipIndex < mipCount; mipIndex++)
 				MipOption.AddItem(mipIndex.ToString());
@@ -158,6 +173,7 @@ namespace PlanetGame.Planet.Rendering.Generation.TileGeneration
 
 			ClearGrid();
 
+			int mipCount = (int)VirtualTextureData.TotalMipLayersPerFace;
 			int tilesPerSide = 1 << (int)_mipIndex;
 
 			DisplayTextureContainer.Columns = tilesPerSide;
@@ -197,12 +213,15 @@ namespace PlanetGame.Planet.Rendering.Generation.TileGeneration
 							$"Coordinate: {tile.GetTileCoordinate()}"
 					};
 
+					uint tileIndex = Tile.GetTileIndex(tile.MipIndex, tile.NormalId, x, y, _file.TileCount);
+					uint tileIndex2 = tile.GetTileIndex(_file.TileCount);
+
+
 					textureRect.MouseEntered += () =>
 					{
 						EncodingLabel.Text =
-							$"Encoding: {tile.Encoding} " +
-							Convert.ToString(tile.Encoding, 2)
-								.PadLeft(Tile.TileID.ENCODING_BITS, '0');
+							$"Encoding: {tile.Encoding} {Convert.ToString(tile.Encoding, 2).PadLeft(2 * mipCount - 1, '0')} " +
+							$"Index: {tile.GetTileIndex(_file.TileCount)}";
 					};
 
 					DisplayTextureContainer.AddChild(textureRect);

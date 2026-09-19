@@ -50,12 +50,11 @@ namespace PlanetGame.Planet.Rendering.VirtualTexturing
 
             string[] tileData = tileName.Split('_');
 
-            int realMipIndex = int.Parse(tileData[0]);
-            int normalId = int.Parse(tileData[1]);
-            int tileX = int.Parse(tileData[2]);
-            int tileY = int.Parse(tileData[3]);
+            uint mipIndex = uint.Parse(tileData[0]);
+            uint normalId = uint.Parse(tileData[1]);
+            uint tileX = uint.Parse(tileData[2]);
+            uint tileY = uint.Parse(tileData[3]);
 
-            uint mipIndex = VirtualTextureData.GetMipIndex(realMipIndex);
             int mipSize = VirtualTextureData.GetMipSize(mipIndex);
 
             List<string> names = [];
@@ -63,9 +62,9 @@ namespace PlanetGame.Planet.Rendering.VirtualTexturing
             if (includeSelf)
                 names.Add(tileName);
 
-            for (int currentMip = realMipIndex + 1; currentMip < VirtualTextureData.TotalMipLayersPerFace - 1; currentMip++)
+            for (uint currentMip = mipIndex + 1; currentMip < VirtualTextureData.TotalMipLayersPerFace - 1; currentMip++)
             {
-                int gridSize = VirtualTextureData.GetMipSize(VirtualTextureData.GetMipIndex(currentMip));
+                int gridSize = VirtualTextureData.GetMipSize(currentMip);
                 int scale = mipSize / gridSize;
 
                 names.Add($"{currentMip}_{normalId}_{tileX / scale}_{tileY / scale}");

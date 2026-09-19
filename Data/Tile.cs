@@ -14,10 +14,11 @@ namespace PlanetGame.Data
             private const uint ENCODING_MASK = (1u << ENCODING_BITS) - 1;
 
             public TileID(uint normalId, uint encoding) : this((normalId << ENCODING_BITS) | encoding) { }
+            public TileID(uint normalId, uint mipIndex, uint xIndex, uint yIndex) : this((normalId << ENCODING_BITS) | GetTileEncoding(mipIndex, xIndex, yIndex)) { }
 
             public uint NormalId => Value >> ENCODING_BITS;
             public uint Encoding => Value & ENCODING_MASK;
-            public int Mip => FindMSB(Encoding) / 2;
+            public uint Mip => (uint)(FindMSB(Encoding) / 2);
 
             private static int FindMSB(uint n)
             {
@@ -79,7 +80,7 @@ namespace PlanetGame.Data
 
         public uint NormalId => _id.NormalId;
         public uint Encoding => _id.Encoding;
-        public int MipIndex => _id.Mip;
+        public uint MipIndex => _id.Mip;
         public uint Value => _id.Value;
 
         public enum TileMipType
@@ -215,7 +216,7 @@ namespace PlanetGame.Data
 
         public uint GetTileIndex(uint tileCount)
         {
-            uint pow4 = 1u << (MipIndex * 2);
+            uint pow4 = 1u << (int)(MipIndex * 2);
             uint normalizedIndex = Encoding - (2 * pow4 + 1) / 3;
             uint normalIdOffset = tileCount / 6 * NormalId;
 

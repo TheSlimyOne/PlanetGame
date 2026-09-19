@@ -1,0 +1,38 @@
+#[fragment]
+#version 450
+
+layout(location = 0) flat in uvec4 key;
+layout(location = 4) in vec2 plane_vertex_uv;
+layout(location = 5) flat in int lod;
+
+layout(location = 0) out vec4 frag;
+
+layout(set = 0, binding = 1, std430) readonly buffer VirtualTextureData {
+    uint low_resolution_mip_count;
+    uint high_resolution_mip_count;
+    uint grid_size;
+    uint total_fallback_tiles;
+
+    uint lod_to_mip_map[32];
+};
+
+layout(set = 0, binding = 5) uniform sampler2DArray albedo_tile_cache;
+layout(set = 0, binding = 7) uniform sampler2DArray terrain_indirection_table;
+
+#[include] res://Shaders/GLSL/ShaderIncludes/TessellationFunctions.inc
+#[include] res://Shaders/GLSL/ShaderIncludes/Functions.inc
+
+void main()
+{
+    uint normal_id = key.z;
+
+    vec3 tile_uv = get_tile_uv(
+        terrain_indirection_table,
+        plane_vertex_uv,
+        normal_id,
+        low_resolution_mip_count,
+        high_resolution_mip_count
+    );
+
+    frag = vec4(pow(get_tile(albedo_tile_cache, tile_uv).xyz, vec3(2.2)), 1.0);
+}

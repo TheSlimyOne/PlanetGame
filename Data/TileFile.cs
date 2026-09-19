@@ -20,9 +20,10 @@ public class TileFile : IDisposable
     public uint TileCount { get; private set; }
     public uint TileDataLength { get; private set; }
     public uint TileSize { get; private set; }
+    public ulong TileSegmentSize { get; private set; }
 
+    public ulong FileLength => _file.GetLength();
     private ulong _headerSize;
-    private ulong _tileSegmentSize;
 
     public bool IsProcessingTiles { get; private set; } = false;
 
@@ -31,7 +32,7 @@ public class TileFile : IDisposable
         FilePath = filePath;
         if (!FileAccess.FileExists(FilePath))
             throw new InvalidOperationException($"Tile file doesn't exists: {FilePath}");
-        
+
         _file = FileAccess.Open(filePath, FileAccess.ModeFlags.Read);
 
         ReadHeader();
@@ -42,7 +43,7 @@ public class TileFile : IDisposable
         FilePath = destination;
         if (FileAccess.FileExists(FilePath))
             throw new InvalidOperationException($"Tile file already exists: {FilePath}");
-        
+
         _file = FileAccess.Open(FilePath, FileAccess.ModeFlags.WriteRead);
 
         Magic = MAGIC;
@@ -58,7 +59,7 @@ public class TileFile : IDisposable
         }
 
         _headerSize = _file.GetPosition();
-        _tileSegmentSize = sizeof(uint) + TileDataLength;
+        TileSegmentSize = sizeof(uint) + TileDataLength;
     }
 
     private void ReadHeader()
@@ -74,7 +75,7 @@ public class TileFile : IDisposable
             throw new InvalidOperationException("Invalid tile file.");
 
         _headerSize = _file.GetPosition();
-        _tileSegmentSize = sizeof(uint) + TileDataLength;
+        TileSegmentSize = sizeof(uint) + TileDataLength;
     }
 
     private bool WriteHeader()
@@ -105,9 +106,26 @@ public class TileFile : IDisposable
     {
         SeekTile(tileIndex);
 
-        _file.Get32();
+        ulong position = _file.GetPosition();
+        ulong fileLength = FileLength;
 
-        return _file.GetBuffer(TileDataLength);
+        uint encoding = _file.Get32();
+
+        if (encoding == 0)
+        {
+            GD.PushError($"Invalid tile encoding 0. TileIndex: {tileIndex}, Position: {position}, FileLength: {fileLength}, BytesRemaining: {fileLength - position}");
+            return [];
+        }
+
+        byte[] data = _file.GetBuffer(TileDataLength);
+
+        if (data.Length != TileDataLength)
+        {
+            GD.PushError($"Incomplete tile data. TileIndex: {tileIndex}, Encoding: {encoding}, Expected: {TileDataLength}, Got: {data.Length}, StartPosition: {position}");
+            return [];
+        }
+
+        return data;
     }
 
     public Image GetTileImage(Tile tile)
@@ -124,6 +142,12 @@ public class TileFile : IDisposable
     public Image GetTileImage(uint tileIndex)
     {
         byte[] data = GetTileData(tileIndex);
+
+        if (data.Length <= 0)
+        {
+            GD.PushError($"Tile {tileIndex} returned no image data.");
+            return null;
+        }
 
         return Image.CreateFromData(
             (int)TileSize,
@@ -146,17 +170,45 @@ public class TileFile : IDisposable
         byte[] data = image.GetData();
 
         if (data.Length != TileDataLength)
-            throw new InvalidOperationException($"Expected {TileDataLength} bytes, received {data.Length}.");
+        {
+            throw new InvalidOperationException(
+                $"Expected {TileDataLength} bytes, received {data.Length}."
+            );
+        }
 
-        _file.Store32(tile.Value);
-        _file.StoreBuffer(data);
+        ulong position = _file.GetPosition();
+
+        if (!_file.Store32(tile.Value))
+        {
+            throw new System.IO.IOException(
+                $"Failed to write tile ID {tile.Value} at position {position}."
+            );
+        }
+
+        if (!_file.StoreBuffer(data))
+        {
+            throw new System.IO.IOException(
+                $"Failed to write tile data for {tile.Value} at position {position + sizeof(uint)}."
+            );
+        }
     }
 
     private void SeekTile(uint tileIndex)
     {
-        ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(tileIndex, TileCount);
+        ulong position = _headerSize + tileIndex * TileSegmentSize;
 
-        _file.Seek(_headerSize + tileIndex * _tileSegmentSize);
+        if (position + TileSegmentSize > FileLength)
+        {
+            throw new IndexOutOfRangeException(
+                $"Tile index {tileIndex} is outside the file. " +
+                $"Position: {position}, " +
+                $"SegmentSize: {TileSegmentSize}, " +
+                $"FileLength: {FileLength}, " +
+                $"TileCount: {TileCount}"
+            );
+        }
+
+        _file.Seek(position);
     }
 
     public void Dispose()
@@ -194,8 +246,22 @@ public class TileFile : IDisposable
     public async Task CreateTiles(Image sourceImage)
     {
         IsProcessingTiles = true;
+
         List<(Tile Tile, TileGenerationParams Parameters)> tiles = PrepareTiles(sourceImage);
         await ProcessTiles(tiles);
+
+        _file.Flush();
+
+        ulong expectedSize = _headerSize + TileCount * TileSegmentSize;
+        ulong actualSize = FileLength;
+
+        if (actualSize != expectedSize)
+        {
+            throw new System.IO.IOException(
+                $"Tile file size mismatch. Expected {expectedSize} bytes, got {actualSize} bytes."
+            );
+        }
+
         IsProcessingTiles = false;
     }
 

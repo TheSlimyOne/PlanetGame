@@ -5,7 +5,6 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Godot;
 using PlanetGame.Data;
-using PlanetGame.Planet.Rendering.Generation.TileGeneration;
 using PlanetGame.Planet.Rendering.VirtualTexturing;
 
 public static class SaveManager
@@ -20,6 +19,8 @@ public static class SaveManager
         public TessellationData TessellationData;
         public WorldData WorldData;
         public DirectoryData DirectoryData;
+        public PlanetGame.Data.RenderData RenderData;
+        public AtmosphereData AtmosphereData;
     }
 
     public enum SaveDataIdentifier
@@ -96,7 +97,8 @@ public static class SaveManager
     public static TessellationData TessellationData;
     public static WorldData WorldData;
     public static DirectoryData DirectoryData;
-
+    public static PlanetGame.Data.RenderData RenderData;
+    public static AtmosphereData AtmosphereData;
 
 
     #endregion
@@ -139,6 +141,8 @@ public static class SaveManager
         TessellationData = save.TessellationData;
         WorldData = save.WorldData;
         DirectoryData = save.DirectoryData;
+        RenderData = save.RenderData;
+        AtmosphereData = save.AtmosphereData;
     }
 
     public static void SaveCurrentData(string saveName)
@@ -148,7 +152,9 @@ public static class SaveManager
             VirtualTextureData = VirtualTextureData,
             TessellationData = TessellationData,
             WorldData = WorldData,
-            DirectoryData = DirectoryData
+            DirectoryData = DirectoryData,
+            RenderData = RenderData,
+            AtmosphereData = AtmosphereData
         };
 
         WriteSaves();
@@ -207,7 +213,7 @@ public static class SaveManager
         };
     }
 
-    public static async Task WriteNewSave(string saveName, Image albedo, Image heightmap, int[] lodToMipMap, Action<int, string, int> onProgress)
+    public static async Task WriteNewSave(string saveName, Image albedo, Image heightmap, uint[] lodToMipMap, Action<int, string, int> onProgress)
     {
         Vector2I size = new(16384, 8192);
 
@@ -233,9 +239,7 @@ public static class SaveManager
         );
 
         TessellationData = new TessellationData(
-            radius: 100,
             resolution: 5,
-            heightScale: 0.025f,
             subFactor: 4,
             maximumLod: 12,
             minimumLod: 0,
@@ -243,6 +247,20 @@ public static class SaveManager
             cullingDepth: 1,
             cullingMargin: new Vector4(0.09f, 0.09f, 0.3f, 15)
         );
+
+        WorldData = new WorldData(
+            radius: 100,
+            heightScale: 0.025f
+        );
+
+        RenderData = new PlanetGame.Data.RenderData()
+        {
+            IsCulling = false,
+            IsMorphing = false,
+            IsCube = false  
+        };
+
+        AtmosphereData = new AtmosphereData(WorldData.Radius + 10);
 
         _currentSave = saveName;
 
@@ -283,7 +301,7 @@ public static class SaveManager
         {
             heightmapTileFile.OnTileGeneratedProgress -= onProgress;
         }
-        
+
         GD.Print("Finished Creating Tiles");
 
     }
@@ -292,22 +310,6 @@ public static class SaveManager
     {
         string tilePrefix = TileCache.GetTileCacheTypeName(tileCacheType).ToLower();
         return $"{tilePrefix}_tiles.bin";
-    }
-
-    #endregion
-
-    #region Transform Saving
-
-    public static void StoreCurrentTransform(string saveName, Transform3D translation, Transform3D rotation, Transform3D scale)
-    {
-        if (_currentSave != saveName)
-            CurrentSave = saveName;
-
-        WorldData.PlanetPosition = translation.Origin;
-        WorldData.PlanetRotation = rotation.Basis.GetEuler();
-        WorldData.PlanetScale = scale.Basis.Scale;
-
-        SaveCurrentData(saveName);
     }
 
     #endregion
@@ -331,7 +333,7 @@ public static class SaveManager
     public static bool IsValidDirectory(string saveName, SaveDataIdentifier directory)
     {
         return DirectoryExist(GetDirectoryPath(saveName, directory));
-}
+    }
 
     public static void EnsureDirectoryExists(string saveName, SaveDataIdentifier directory)
     {

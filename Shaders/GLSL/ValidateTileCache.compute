@@ -6,37 +6,33 @@ layout (local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
 
 layout(set = 0, binding = 0, rgba32f) restrict uniform image2DArray IndirectionTable;
 
-layout(set = 0, binding = 1, rgba32f) restrict uniform image2D residencyTable;
+layout(set = 0, binding = 1, rgba32f) restrict uniform image2D ResidencyTable;
 
-layout (std430, binding = 2) buffer restrict virtual_texture_data  {
-    int low_resolution_mip_count;
-    int high_resolution_mip_count;
-
+layout(std430, binding = 2) readonly buffer VirtualTextureData {
+    uint low_resolution_mip_count;
+    uint high_resolution_mip_count;
     uint grid_size;
-    uint tile_offset;
-    uint total_texture_slots;
+    uint total_fallback_tiles;
 
-    uint request_buffer_size;
-    int _padding0;
-    int _padding1;
+    uint lod_to_mip_map[32];
 };
 
 #[include] res://Shaders/GLSL/ShaderIncludes/VirtualTextureFunctions.inc
 
 void main() {
-    ivec2 texture_size = imageSize(residencyTable);
+    ivec2 texture_size = imageSize(ResidencyTable);
     ivec2 residency_index = ivec2(gl_GlobalInvocationID.xy);
     if (residency_index.x >= texture_size.x || residency_index.y >= texture_size.y) return;
 
-    uvec4 tile_data = floatBitsToUint(imageLoad(residencyTable, residency_index));
+    uvec4 tile_data = floatBitsToUint(imageLoad(ResidencyTable, residency_index));
     if (tile_data.w == 0) return;
 
-    int total_resolution_mip_count = low_resolution_mip_count + high_resolution_mip_count;
+    int total_resolution_mip_count = int(low_resolution_mip_count + high_resolution_mip_count);
 
     ivec3 indirection_index = ivec3(tile_data.xyz);
     uvec4 indirection_data = floatBitsToUint(imageLoad(IndirectionTable, indirection_index));
 
-    int mip_index = indirection_index.z % int(total_resolution_mip_count);
+    int mip_index = indirection_index.z % total_resolution_mip_count;
     int mip_size = int(grid_size) >> mip_index;
 
     set_indirection_entry(IndirectionTable, indirection_index, mip_size, uvec4(indirection_data.xy, 255u, indirection_data.w));

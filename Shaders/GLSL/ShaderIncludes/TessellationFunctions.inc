@@ -22,8 +22,8 @@ struct LodContext {
     float subdivision_factor;
     float radius;
     float fovy;
-    int minimum_lod;
-    int maximum_lod;
+    uint minimum_lod;
+    uint maximum_lod;
     float height_offset;
 };
 
@@ -38,7 +38,7 @@ vec3 face_normal(uint normal_id) {
     return vec3( 0, 0,-1);
 }
 
-vec2 get_cube_uv(int normal_id, vec3 point) {
+vec2 get_plane_uv(uint normal_id, vec3 point) {
 	vec2 uv = vec2(0);
 	point = (point + 1.0) / 2.0;
 	uv.x = normal_id == 0 || normal_id == 1 ? point.z : point.x;

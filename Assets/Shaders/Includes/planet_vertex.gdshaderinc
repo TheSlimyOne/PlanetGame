@@ -11,7 +11,7 @@ uniform mat4 planet_transform_matrix;
 
 uniform float current_lod;
 
-uniform sampler2DArray height_map_tile_cache : repeat_disable, source_color, filter_linear;
+uniform sampler2DArray heightmap_tile_cache : repeat_disable, source_color, filter_linear;
 uniform sampler2DArray terrain_indirection_table : repeat_disable, source_color, filter_nearest;
 
 uniform bool is_cube;
@@ -97,14 +97,14 @@ void vertex() {
 	local_position = local_point;
 	
 	lod = get_lod_of_key(key.xy);
-	int mip_index = lod_to_mip_map[lod] + high_resolution_mip_count;
+	int mip_index = lod_to_mip_map[lod];
 	int total_resolution_mip_count = low_resolution_mip_count + high_resolution_mip_count;
 	float lod_scale = pow(2.0, float(int(current_lod)));
 	
 	vec3 world_position = get_world_space_point(local_point, planet_transform_matrix);
 	
 	vec3 tile_uv = get_tile_uv(terrain_indirection_table, plane_vertex_uv, int(key.z), low_resolution_mip_count, high_resolution_mip_count);
-	elevation = get_tile(height_map_tile_cache, tile_uv).r;
+	elevation = get_tile(heightmap_tile_cache, tile_uv).r;
 	
 	NORMAL = (vec4(local_point, 1) * get_rotation_from_matrix(planet_transform_matrix)).xyz;
 	VERTEX = world_position + NORMAL * height_scale * elevation;

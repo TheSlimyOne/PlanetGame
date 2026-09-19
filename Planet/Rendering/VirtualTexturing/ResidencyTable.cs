@@ -117,18 +117,16 @@ namespace PlanetGame.Planet.Rendering.VirtualTexturing
             for (int i = 0; i < fallBackTiles.Length; i++)
             {
                 string[] tileData = fallBackTiles[i].Split('_');
-                int realMipIndex = int.Parse(tileData[0]);
+                uint mipIndex = uint.Parse(tileData[0]);
+                uint normalId = uint.Parse(tileData[1]);
+                uint tileX = uint.Parse(tileData[2]);
+                uint tileY = uint.Parse(tileData[3]);
 
-                uint mipIndex = VirtualTextureData.GetMipIndex(realMipIndex);
-                int normalId = int.Parse(tileData[1]);
-                int tileX = int.Parse(tileData[2]);
-                int tileY = int.Parse(tileData[3]);
-
-                int tileLayer = (int)totalMipLayers * normalId + (int)mipIndex;
+                uint tileLayer = totalMipLayers * normalId + mipIndex;
            
                 Vector2I slotIndex = new(i % size, i / size);
                 Vector3I indirectionIndex = new(
-                    tileX, tileY, tileLayer
+                    (int)tileX, (int)tileY, (int)tileLayer
                 );
 
                 Color data = new(
