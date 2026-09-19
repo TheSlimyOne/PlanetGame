@@ -116,7 +116,6 @@ namespace PlanetGame.Planet.Rendering.VirtualTexturing
                         renderingDevice.TextureGetData(ConsolidatedIndirectionTable.GetRdRid(), layer)
                     );
                 }
-                GD.Print("DONE");
             }
 
 
