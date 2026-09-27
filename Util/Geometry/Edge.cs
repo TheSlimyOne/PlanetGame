@@ -15,12 +15,12 @@ namespace PlanetGame.Util.Geometry
             PointB = pointB;
         }
 
-        public Vector3[] GetPoints()
+        public readonly Vector3[] GetPoints()
         {
             return [PointA, PointB];
         }
 
-        public Vector3 GetOtherPoint(Vector3 point)
+        public readonly Vector3 GetOtherPoint(Vector3 point)
         {
             Vector3[] points = GetPoints();
             if (!points.Contains(point))
@@ -29,7 +29,7 @@ namespace PlanetGame.Util.Geometry
             return points.First(p => p != point);
         }
 
-        public override bool Equals(object obj)
+        public override readonly bool Equals(object obj)
         {
             if (obj is Edge other)
                 return (PointA.Equals(other.PointA) && PointB.Equals(other.PointB)) ||
@@ -37,14 +37,14 @@ namespace PlanetGame.Util.Geometry
             return false;
         }
 
-        public override int GetHashCode()
+        public override readonly int GetHashCode()
         {
             int hash1 = PointA.GetHashCode();
             int hash2 = PointB.GetHashCode();
             return hash1 ^ hash2;
         }
 
-        public override string ToString()
+        public override readonly string ToString()
         {
             return $"Edge({PointA}, {PointB})";
         }

@@ -19,17 +19,38 @@ namespace PlanetGame.Rendering.Surface
 
         public int MaxLod { get; private set; }
         public int MinLod { get; private set; }
-        public int CulledCount { get; private set; }
-        public int TotalCount { get; private set; }
+        private int _culledCount;
+        private int _totalCount;
+
+        public int CulledCount
+        {
+            get => _culledCount;
+            private set
+            {
+                _culledCount = value;
+                CulledMax = Math.Max(CulledMax, value);
+            }
+        }
+
+        public int TotalCount
+        {
+            get => _totalCount;
+            private set
+            {
+                _totalCount = value;
+                TotalMax = Math.Max(TotalMax, value);
+            }
+        }
+
+        public int TotalMax { get; private set; }
+        public int CulledMax { get; private set; }
+        
         public int RenderedCount { get; private set; }
         public int StableCount { get; private set; }
         public int[] LodCounts { get; private set; } = [];
         public bool Ready { get; private set; } = true;
         public bool Paused = false;
         public bool IsStable { get; private set; } = false;
-
-        private int _totalMax;
-        private int _culledMax;
 
         public MultiMeshRD TriangleMultiMesh { get; private set; }
         private Rid _planetInstance;
@@ -41,8 +62,6 @@ namespace PlanetGame.Rendering.Surface
             PrepareTessellationPass = new(TriangleMultiMesh, sharedUniforms);
 
             LodCounts = new int[TessellationData.MaximumLod + 1];
-
-            BindTessellationDebugSettings();
         }
 
         public void CreateUniforms()
@@ -95,13 +114,11 @@ namespace PlanetGame.Rendering.Surface
             Ready = false;
             ExecuteTessellationPass.ResetGlobalKeyData();
 
-            ExecuteTessellationPass.Invoke(
-                Utilities.ToViewPushConstants(
-                    camera.GetCullingViewProjectionMatrix(TessellationData.CullingMargin, TessellationData.CullingDepth),
-                    camera.GlobalPosition,
-                    Mathf.Tan(camera.GetCameraFov(true) / 2)
-                )
-            );
+            ExecuteTessellationPass.Invoke([
+                camera.GetCullingViewProjectionMatrix(TessellationData.CullingMargin, TessellationData.CullingDepth),
+                camera.GlobalPosition,
+                Mathf.Tan(camera.GetCameraFov(true) / 2)
+            ]);
 
             PrepareTessellationPass.Invoke();
 
@@ -130,49 +147,6 @@ namespace PlanetGame.Rendering.Surface
                 0b1u
             );
         }
-        private void BindTessellationDebugSettings()
-        {
-            DebugMenuController.Instance.AddSection("Tessellation", 0, false, null, 200);
-            DebugMenuController.Instance.AddLabel("Current Keys", "Tessellation", () => {
-                return $"{CulledCount}/{TotalCount}";
-            });
-            DebugMenuController.Instance.AddLabel("Max Keys", "Tessellation", () => {
-                _culledMax = Math.Max(_culledMax, CulledCount);
-		        _totalMax = Math.Max(_totalMax, TotalCount);
-                return $"{_culledMax}/{_totalMax}";
-            });
-            DebugMenuController.Instance.AddLabel("Current Lod", "Tessellation", () => $"{MaxLod}");
-            DebugMenuController.Instance.AddLabel("Culling Percentage", "Tessellation", () =>
-            {
-                if (TotalCount == 0)
-                    return $"Undefined";
 
-                return $"{1 - (float)CulledCount / TotalCount:P1}";
-            });
-
-            DebugMenuController.Instance.AddButton("Enable Tessellation", "Tessellation", () => !Paused, () => Paused = !Paused);
-
-            DebugMenuController.Instance.AddSlider("Resolution", "Tessellation", () => TessellationData.Resolution, value =>
-            {
-                TessellationData.Resolution = value;
-                TriangleMultiMesh.SetMesh(Key.GetTriangleMesh((int)TessellationData.Resolution));
-            }, 2u, 17u, 1u);
-
-
-            DebugMenuController.Instance.AddDistribution("Lods", "Tessellation",
-                LodCounts.Select((_, lod) => new DistributionComponent.DistributionBinding<int>(
-                    $"LOD {lod}",
-                    () => LodCounts[lod]
-                )).ToArray()
-            );
-
-            // DebugMenuController.Instance.AddDistribution("Lods", "Tessellation",
-            
-            //     new(
-            //         
-            //     )
-            // )
-
-        }
     }
 }

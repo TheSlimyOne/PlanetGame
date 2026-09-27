@@ -5,16 +5,17 @@ using PlanetGame.Planet.Rendering.VirtualTexturing;
 using PlanetGame.Util;
 using System.Collections.Generic;
 using PlanetGame.Planet.Rendering;
+using PlanetGame.Data;
 
 namespace PlanetGame.Shaders.Dispatchers
 {
     public partial class ResolveTileRequestDispatcher : Dispatcher<ResolveTileRequestDispatcher.BufferNames>
     {
-        private static ShaderProgramPaths _shaderPath = new() { Compute = ShaderPaths.RESOLVE_TILE_REQUEST_PASS };
+        private static VirtualTextureData VirtualTextureData => SaveManager.VirtualTextureData;
+        private static ShaderProgramPaths _shaderPath = new() { Compute = ShaderPaths.RESOLVE_TILE_REQUEST_COMPUTE };
         public const uint REQUEST_AMOUNT = 256;
         public enum BufferNames
         {
-            FEEDBACK_TEXTURE,
             INDIRECTION_TABLE,
             STATE_TABLE,
             RESIDENCY_TABLE,
@@ -25,16 +26,14 @@ namespace PlanetGame.Shaders.Dispatchers
             REQUEST_BUFFER
         }
 
-        private Vector2I _viewSize;
         private SparseVirtualTexture _sparseVirtualTexture { get; set; }
         private readonly Dictionary<PlanetRenderer.BufferNames, ShaderUniform> _sharedShaderUniforms;
 
 
-        public ResolveTileRequestDispatcher(SparseVirtualTexture sparseVirtualTexture, Dictionary<PlanetRenderer.BufferNames, ShaderUniform> shaderedShaderUniforms, Vector2I viewSize) : base(_shaderPath)
+        public ResolveTileRequestDispatcher(SparseVirtualTexture sparseVirtualTexture, Dictionary<PlanetRenderer.BufferNames, ShaderUniform> sharedShaderUniforms) : base(_shaderPath)
         {
-            _sharedShaderUniforms = shaderedShaderUniforms;
+            _sharedShaderUniforms = sharedShaderUniforms;
             _sparseVirtualTexture = sparseVirtualTexture;
-            _viewSize = viewSize;
             SetupShader();
         }
 
@@ -42,37 +41,33 @@ namespace PlanetGame.Shaders.Dispatchers
         {
             _shaderUniforms = [];
 
-            _shaderUniforms[BufferNames.FEEDBACK_TEXTURE] = new Texture2DUniform(this, (int)BufferNames.FEEDBACK_TEXTURE,
-                _sparseVirtualTexture.SvtFeedbackRenderPass.Feedback, RenderingDevice.UniformType.Image, perserved: true
-
-            );
-            _shaderUniforms[BufferNames.INDIRECTION_TABLE] = new Texture2DUniform(this, (int)BufferNames.INDIRECTION_TABLE,
-                _sparseVirtualTexture.IndirectionTable.GetRdRid(), RenderingDevice.UniformType.Image, perserved: true
+            _shaderUniforms[BufferNames.INDIRECTION_TABLE] = new Texture2DUniform(this, RenderingDevice, RenderingDevice.UniformType.Image,
+                _sparseVirtualTexture.IndirectionTable.GetRdRid(), perserved: true
             );
 
-            _shaderUniforms[BufferNames.STATE_TABLE] = new Texture2DUniform(this, (int)BufferNames.STATE_TABLE,
-                _sparseVirtualTexture.StateTable.GetRdRid(), RenderingDevice.UniformType.Image, perserved: true
+            _shaderUniforms[BufferNames.STATE_TABLE] = new Texture2DUniform(this, RenderingDevice, RenderingDevice.UniformType.Image,
+                _sparseVirtualTexture.StateTable.GetRdRid(), perserved: true
             );
 
-            _shaderUniforms[BufferNames.RESIDENCY_TABLE] = new Texture2DUniform(this, (int)BufferNames.RESIDENCY_TABLE,
-                _sparseVirtualTexture.ResidencyTable.GetRdRid(), RenderingDevice.UniformType.Image, perserved: true
+            _shaderUniforms[BufferNames.RESIDENCY_TABLE] = new Texture2DUniform(this, RenderingDevice, RenderingDevice.UniformType.Image,
+                _sparseVirtualTexture.ResidencyTable.GetRdRid(), perserved: true
             );
 
             _shaderUniforms[BufferNames.VIRTUAL_TEXTURE_DATA] = _sharedShaderUniforms[PlanetRenderer.BufferNames.VIRTUAL_TEXTURE_DATA];
 
-            _shaderUniforms[BufferNames.TILE_REQUEST_DATA] = new StorageBufferUniform(this, RenderingDevice, (int)BufferNames.TILE_REQUEST_DATA,
+            _shaderUniforms[BufferNames.TILE_REQUEST_DATA] = new StorageBufferUniform(this, RenderingDevice,
                 GetTileRequestData()
             );
 
-            _shaderUniforms[BufferNames.TILE_SLOT_COUNTER] = new StorageBufferUniform(this, RenderingDevice, (int)BufferNames.TILE_SLOT_COUNTER,
+            _shaderUniforms[BufferNames.TILE_SLOT_COUNTER] = new StorageBufferUniform(this, RenderingDevice,
                 [.. Utilities.ToBytes<uint>(1)]
             );
 
-            _shaderUniforms[BufferNames.REQUEST_BUFFER_COUNTER] = new StorageBufferUniform(this, RenderingDevice, (int)BufferNames.REQUEST_BUFFER_COUNTER,
+            _shaderUniforms[BufferNames.REQUEST_BUFFER_COUNTER] = new StorageBufferUniform(this, RenderingDevice,
                 [.. Utilities.ToBytes<uint>(1)]
             );
 
-            _shaderUniforms[BufferNames.REQUEST_BUFFER] = new StorageBufferUniform(this, RenderingDevice, (int)BufferNames.REQUEST_BUFFER,
+            _shaderUniforms[BufferNames.REQUEST_BUFFER] = new StorageBufferUniform(this, RenderingDevice,
                 [.. Utilities.ToBytes<Vector4I>(REQUEST_AMOUNT)]
             );
 
@@ -80,11 +75,11 @@ namespace PlanetGame.Shaders.Dispatchers
         }
 
 #nullable enable
-        public override void Invoke(byte[]? pushConstants = null)
+        protected override void InvokeInternal(object[]? pushConstants = null)
         {
-            uint x = (uint)((_viewSize.X + 31) / 32);
-            uint y = (uint)((_viewSize.Y + 31) / 32);
-            uint z = 1;
+            uint x = (VirtualTextureData.BaseGridSize + 31) / 32;
+            uint y = (VirtualTextureData.BaseGridSize + 31) / 32;
+            uint z = VirtualTextureData.TotalMipLayers;
 
             long computeList = RenderingDevice.ComputeListBegin();
             RenderingDevice.ComputeListBindComputePipeline(computeList, _pipeline);
@@ -93,7 +88,7 @@ namespace PlanetGame.Shaders.Dispatchers
             RenderingDevice.ComputeListDispatch(computeList, x, y, z);
             RenderingDevice.ComputeListEnd();
         }
-
+#nullable disable
 
         public override void UpdateUniforms()
         {

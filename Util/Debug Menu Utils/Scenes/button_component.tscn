@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://b357dwcf50ngv"]
 
-[ext_resource type="Script" path="res://Util/Debug Menu Utils/ButtonComponent.cs" id="1_2ktfe"]
+[ext_resource type="Script" uid="uid://64vdocbf5ge7" path="res://Util/Debug Menu Utils/ButtonComponent.cs" id="1_2ktfe"]
 
 [node name="ButtonComponent" type="PanelContainer" unique_id=596398719]
 script = ExtResource("1_2ktfe")
@@ -20,6 +20,7 @@ text = "Button"
 [node name="Spacer" type="Control" parent="ButtonMargin/ButtonContent" unique_id=1174833691]
 layout_mode = 2
 size_flags_horizontal = 3
+mouse_filter = 2
 
 [node name="Button" type="Button" parent="ButtonMargin/ButtonContent" unique_id=962630138]
 unique_name_in_owner = true

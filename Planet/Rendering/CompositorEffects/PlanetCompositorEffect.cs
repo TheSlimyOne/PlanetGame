@@ -13,9 +13,12 @@ public partial class PlanetCompositorEffect : CompositorEffect
     public bool Ready { get; private set; } = true;
     public bool Paused = false;
 
-    public PlanetCompositorEffect(SparseVirtualTexture sparseVirtualTexture, MultiMeshRD triangleMultiMesh, Dictionary<PlanetRenderer.BufferNames, ShaderUniform> shaderedShaderUniforms)
+    private readonly Dictionary<PlanetRenderer.BufferNames, ShaderUniform> _sharedShaderUniforms;
+
+    public PlanetCompositorEffect(SparseVirtualTexture sparseVirtualTexture, MultiMeshRD triangleMultiMesh, Dictionary<PlanetRenderer.BufferNames, ShaderUniform> sharedShaderUniforms)
     {
-        PlanetRenderPass = new(sparseVirtualTexture, triangleMultiMesh, shaderedShaderUniforms);
+        _sharedShaderUniforms = sharedShaderUniforms;
+        PlanetRenderPass = new(sparseVirtualTexture, triangleMultiMesh, _sharedShaderUniforms);
         EffectCallbackType = EffectCallbackTypeEnum.PostSky;
     }
 
@@ -23,6 +26,7 @@ public partial class PlanetCompositorEffect : CompositorEffect
     {
         RenderSceneBuffersRD renderSceneBuffers = renderData.GetRenderSceneBuffers() as RenderSceneBuffersRD;
         RenderSceneData sceneData = renderData.GetRenderSceneData();
+        Vector2I size = renderSceneBuffers.GetInternalSize();
 
         
         Rid color = renderSceneBuffers.GetColorTexture();
@@ -30,18 +34,21 @@ public partial class PlanetCompositorEffect : CompositorEffect
 
         PlanetRenderPass.SetFramebuffer([
             (color, "color"),
-            (depth, "depth")
-        ]);
+            (depth, "depth"),
+        ], size);
+
+        PlanetRenderPass.UpdateUniforms();
 
         Transform3D cameraTransform = sceneData.GetCamTransform();
         Projection cameraProjection = sceneData.GetCamProjection();
         Projection viewProjectionMatrix = CustomCamera.GetViewProjectionMatrix(cameraTransform, cameraProjection);
 
-        PlanetRenderPass.Invoke(Utilities.ToViewPushConstants(
+
+        PlanetRenderPass.Invoke([
             viewProjectionMatrix,
             cameraTransform.Origin,
             Mathf.Tan(Mathf.DegToRad(cameraProjection.GetFov()) / 2)
-        ));
+        ]);
     }
 
     public override void _Notification(int what)
@@ -58,10 +65,5 @@ public partial class PlanetCompositorEffect : CompositorEffect
     public void CleanupGPUResources()
     {
         PlanetRenderPass?.CleanupGPU();
-    }
-
-    public bool IsValidForProcessing()
-    {
-        return PlanetRenderPass?.IsValid() == true;
     }
 }

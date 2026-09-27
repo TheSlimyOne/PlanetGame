@@ -27,6 +27,7 @@ text = "Texture"
 [node name="Spacer" type="Control" parent="TextureMargin/TextureContent/Header" unique_id=385618471]
 layout_mode = 2
 size_flags_horizontal = 3
+mouse_filter = 2
 
 [node name="Button" type="Button" parent="TextureMargin/TextureContent/Header" unique_id=1782108720]
 unique_name_in_owner = true

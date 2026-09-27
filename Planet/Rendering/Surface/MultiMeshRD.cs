@@ -1,20 +1,21 @@
 using System;
 using System.Collections.Generic;
 using Godot;
+using PlanetGame.Shaders;
 using PlanetGame.Util;
 using Uniform;
 
-public class MultiMeshRD
+public class MultiMeshRD : IGPUResource
 {
 
     public Rid Rid { get; private set; }
     public Mesh Mesh { get; private set; }
-    public StorageBufferUniform CommandBufferUniform;
-    public StorageBufferUniform BufferUniform;
-    public StorageBufferUniform MeshDataUniform;
+    public StorageBufferUniform CommandBufferUniform { get; private set; }
+    public StorageBufferUniform BufferUniform { get; private set; }
+    public StorageBufferUniform MeshDataUniform { get; private set; }
 
     public event Action BuffersChanged;
-    
+
     public Rid CommandBuffer => RenderingServer.MultimeshGetCommandBufferRdRid(Rid);
     public Rid Buffer => RenderingServer.MultimeshGetBufferRdRid(Rid);
 
@@ -23,6 +24,12 @@ public class MultiMeshRD
     public MultiMeshRD(int instanceCount, Mesh mesh, int visibleInstances)
     {
         Rid = RenderingServer.MultimeshCreate();
+
+        RenderingDevice renderingDevice = RenderingServer.GetRenderingDevice();
+        CommandBufferUniform = new(this, renderingDevice, perserved: true);
+        BufferUniform = new(this, renderingDevice, perserved: true);
+        MeshDataUniform = new(this, renderingDevice, data: [.. Utilities.CollectionToBytes([0, 0, 0, 0])], perserved: true);
+
         RenderingServer.MultimeshAllocateData(Rid, instanceCount, RenderingServer.MultimeshTransformFormat.Transform3D, colorFormat: true, customDataFormat: true, useIndirect: true);
         RenderingServer.MultimeshSetVisibleInstances(Rid, visibleInstances);
         SetMesh(mesh);
@@ -44,8 +51,9 @@ public class MultiMeshRD
         return instance;
     }
 
-    public void SetExtraVisibilityMargin(float extraVisibilityMargin) {
-        foreach(Rid instance in Instances)
+    public void SetExtraVisibilityMargin(float extraVisibilityMargin)
+    {
+        foreach (Rid instance in Instances)
         {
             RenderingServer.InstanceSetExtraVisibilityMargin(instance, extraVisibilityMargin);
         }
@@ -55,26 +63,14 @@ public class MultiMeshRD
     {
         Mesh = mesh;
         RenderingServer.MultimeshSetMesh(Rid, Mesh.GetRid());
-
         RenderingDevice renderingDevice = RenderingServer.GetRenderingDevice();
-
-        if (CommandBufferUniform == null)
-            CommandBufferUniform = new(null, renderingDevice, -1, CommandBuffer, perserve: true);
-        else
-            CommandBufferUniform.SetRid(CommandBuffer);
-
-        if (BufferUniform == null)
-            BufferUniform = new(null, renderingDevice, -1, Buffer, perserve: true);
-        else
-            BufferUniform.SetRid(Buffer);
 
         (Vector3[] vertices, int[] indices, Vector3[] _, Vector2[] __) = GetMeshData();
         byte[] meshData = [.. Utilities.ToBytes([(uint)vertices.Length, (uint)indices.Length])];
 
-        if (MeshDataUniform == null)
-            MeshDataUniform = new(null, renderingDevice, -1, meshData, perserve: true);
-        else
-            MeshDataUniform.UpdateUniform(meshData);
+        CommandBufferUniform.SetRid(CommandBuffer);
+        BufferUniform.SetRid(Buffer);
+        MeshDataUniform.UpdateUniform(meshData);
 
         BuffersChanged?.Invoke();
     }
@@ -86,7 +82,7 @@ public class MultiMeshRD
         int[] indices = arrays[(int)Mesh.ArrayType.Index].AsInt32Array();
         Vector3[] normals = arrays[(int)Mesh.ArrayType.Normal].AsVector3Array();
         Vector2[] uvs = arrays[(int)Mesh.ArrayType.TexUV].AsVector2Array();
-        
+
         return (vertices, indices, normals, uvs);
     }
 

@@ -61,7 +61,7 @@ public partial class CameraController : Node
 				viewport.DebugDraw = Viewport.DebugDrawEnum.Overdraw;
 			else if (viewport.DebugDraw == Viewport.DebugDrawEnum.Overdraw)
 				viewport.DebugDraw = Viewport.DebugDrawEnum.Unshaded;
-			else if (viewport.DebugDraw == Viewport.DebugDrawEnum.Unshaded)
+			else if (viewport.DebugDraw == Viewport.DebugDrawEnum.Unshaded){}
 				viewport.DebugDraw = Viewport.DebugDrawEnum.Wireframe;
 		}
 	}

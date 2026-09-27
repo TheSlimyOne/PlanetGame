@@ -8,7 +8,7 @@ namespace PlanetGame.Shaders.Dispatchers
 {
     public partial class PrepareTessellationPassDispatcher : Dispatcher<PrepareTessellationPassDispatcher.BufferNames>
     {
-        private static ShaderProgramPaths _shaderPath = new() { Compute = ShaderPaths.PREPARE_TESSELLATION_PASS };
+        private static ShaderProgramPaths _shaderPath = new() { Compute = ShaderPaths.PREPARE_TESSELLATION_COMPUTE };
 
         public enum BufferNames
         {
@@ -34,7 +34,7 @@ namespace PlanetGame.Shaders.Dispatchers
 
         public override void CreateUniforms()
         {
-            _shaderUniforms = new Dictionary<Enum, ShaderUniform>();
+            _shaderUniforms = [];
 
             _shaderUniforms[BufferNames.ATOMIC_COUNTER] = _sharedBufferRids[PlanetRenderer.BufferNames.EXEC_ATOMIC_COUNTER];
 
@@ -52,7 +52,7 @@ namespace PlanetGame.Shaders.Dispatchers
         }
 
 #nullable enable
-        public override void Invoke(byte[]? pushConstants = null)
+        protected override void InvokeInternal(object[]? pushConstants = null)
         {
             long computeList = RenderingDevice.ComputeListBegin();
             RenderingDevice.ComputeListBindComputePipeline(computeList, _pipeline);
@@ -61,6 +61,7 @@ namespace PlanetGame.Shaders.Dispatchers
             RenderingDevice.ComputeListDispatch(computeList, 1, 1, 1);
             RenderingDevice.ComputeListEnd();
         }
+#nullable disable
 
         public override void CleanupGPU()
         {

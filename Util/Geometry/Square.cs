@@ -11,12 +11,12 @@ namespace PlanetGame.Util.Geometry
         public readonly Vector3 PointC = pointC;
         public readonly Vector3 PointD = pointD;
 
-        public Vector3[] GetPoints()
+        public readonly Vector3[] GetPoints()
         {
             return [PointA, PointB, PointC, PointD];
         }
 
-        public Vector3[] GetOtherPoints(Edge edge)
+        public readonly Vector3[] GetOtherPoints(Edge edge)
         {
             Edge[] edges = GetEdges();
             if (!edges.Contains(edge))
@@ -25,7 +25,7 @@ namespace PlanetGame.Util.Geometry
             return [.. GetPoints().Where(p => p != edge.PointA && p != edge.PointB)];
         }
 
-        public Edge[] GetEdges()
+        public readonly Edge[] GetEdges()
         {
             return [
                 new(PointA, PointB),
@@ -35,7 +35,7 @@ namespace PlanetGame.Util.Geometry
             ];
         }
 
-        public override bool Equals(object obj)
+        public override readonly bool Equals(object obj)
         {
             if (obj is Square other)
             {
@@ -46,7 +46,7 @@ namespace PlanetGame.Util.Geometry
             return false;
         }
 
-        public override int GetHashCode()
+        public override readonly int GetHashCode()
         {
             int hash1 = PointA.GetHashCode();
             int hash2 = PointB.GetHashCode();
@@ -55,7 +55,7 @@ namespace PlanetGame.Util.Geometry
             return hash1 ^ hash2 ^ hash3 ^ hash4;
         }
 
-        public override string ToString()
+        public override readonly string ToString()
         {
             Vector3 position = (PointA + PointB + PointC + PointD) / 4;
             position = position.Floor();
@@ -63,12 +63,12 @@ namespace PlanetGame.Util.Geometry
             // return $"Square({PointA}, {PointB}, {PointC}, {PointD})";
         }
 
-        public Edge[] GetOtherEdges(Edge edge)
+        public readonly Edge[] GetOtherEdges(Edge edge)
         {
             return [.. GetEdges().Where(e => !e.Equals(edge))];
         }
 
-        public Vector3 GetCentroid()
+        public readonly Vector3 GetCentroid()
         {
             return (PointA + PointB + PointC + PointD) / 4;
         }

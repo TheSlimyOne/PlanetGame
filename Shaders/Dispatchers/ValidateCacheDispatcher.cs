@@ -6,7 +6,7 @@ namespace PlanetGame.Shaders.Dispatchers
 {
     public class ValidateCacheDispatcher : Dispatcher<ValidateCacheDispatcher.BufferNames>
     {
-        private static ShaderProgramPaths _shaderPath = new() { Compute = ShaderPaths.VALIDATE_TILE_CACHE };
+        private static ShaderProgramPaths _shaderPath = new() { Compute = ShaderPaths.VALIDATE_TILE_CACHE_COMPUTE };
         private readonly SparseVirtualTexture _sparseVirtualTexture;
 
         public enum BufferNames
@@ -36,8 +36,8 @@ namespace PlanetGame.Shaders.Dispatchers
             CreateUniformSet();
         }
 
-        #nullable enable
-        public override void Invoke(byte[]? pushConstants = null)
+#nullable enable
+        protected override void InvokeInternal(object[]? pushConstants = null)
         {
             uint size = _sparseVirtualTexture.ResidencyTable.Size;
 
@@ -51,6 +51,7 @@ namespace PlanetGame.Shaders.Dispatchers
             RenderingDevice.ComputeListDispatch(computeList, x, y, 1);
             RenderingDevice.ComputeListEnd();
         }
+#nullable disable
 
         public override void CleanupGPU()
         {

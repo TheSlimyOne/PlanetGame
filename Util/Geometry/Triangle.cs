@@ -20,12 +20,12 @@ namespace PlanetGame.Util.Geometry
             PointC = pointC;
         }
 
-        public Vector3[] GetPoints()
+        public readonly Vector3[] GetPoints()
         {
             return  [PointA, PointB, PointC];
         }
 
-        public Edge[] GetEdges()
+        public readonly Edge[] GetEdges()
         {
             return [
                 new(PointA, PointB),
@@ -34,7 +34,7 @@ namespace PlanetGame.Util.Geometry
             ];
         }
 
-        public override bool Equals(object obj)
+        public override readonly bool Equals(object obj)
         {
             if (obj is Triangle other)
             {
@@ -45,7 +45,7 @@ namespace PlanetGame.Util.Geometry
             return false;
         }
 
-        public override int GetHashCode()
+        public override readonly int GetHashCode()
         {
             int hash1 = PointA.GetHashCode();
             int hash2 = PointB.GetHashCode();
@@ -53,12 +53,12 @@ namespace PlanetGame.Util.Geometry
             return hash1 ^ hash2 ^ hash3;
         }
 
-        public override string ToString()
+        public override readonly string ToString()
         {
             return $"triangle({PointA}, {PointB}, {PointC})";
         }
 
-        public Vector3 GetCentroid()
+        public readonly Vector3 GetCentroid()
         {
             return (PointA + PointB + PointC) / 3;
         }

@@ -65,7 +65,7 @@ vec2 map_edge_uv(vec2 uv, int edge, EdgeMapping mapping) {
 }
 
 bool try_adjacent_edge(
-	sampler2DArray indirection_table,
+	image2DArray indirection_table,
 	vec2 original_uv,
 	uint original_normal_id,
 	int edge,
@@ -81,7 +81,7 @@ bool try_adjacent_edge(
 	ivec2 adjacent_indirection_position = ivec2(floor(adjacent_uv * grid_size));
 
 	uvec4 adjacent_indirection_data = floatBitsToUint(
-		texelFetch(indirection_table, ivec3(adjacent_indirection_position, mapping.normal_id), 0)
+		imageLoad(indirection_table, ivec3(adjacent_indirection_position, int(mapping.normal_id)))
 	);
 
 	int adjacent_mip_index = int(adjacent_indirection_data.g);
@@ -106,7 +106,7 @@ bool try_adjacent_edge(
 }
 
 void try_adjacent_edges(
-	sampler2DArray indirection_table,
+	image2DArray indirection_table,
 	vec2 original_uv,
 	uint original_normal_id,
 	float grid_size,
@@ -148,7 +148,7 @@ ivec3 get_indirection_index(vec2 uv, uint normal_id, uint low_resolution_mip_cou
 	return ivec3(ivec2(floor(uv * grid_size)), normal_id);
 }
 
-vec3 get_tile_uv(sampler2DArray indirection_table, vec2 uv, uint normal_id, uint low_resolution_mip_count, uint high_resolution_mip_count) {
+vec3 get_tile_uv(image2DArray indirection_table, vec2 uv, uint normal_id, uint low_resolution_mip_count, uint high_resolution_mip_count) {
 	int total_resolution_mip_count = int(low_resolution_mip_count + high_resolution_mip_count);
 	int grid_size = 1 << (total_resolution_mip_count - 1);
 
@@ -159,7 +159,7 @@ vec3 get_tile_uv(sampler2DArray indirection_table, vec2 uv, uint normal_id, uint
 		high_resolution_mip_count
 	);
 
-	uvec4 indirection_data = floatBitsToUint(texelFetch(indirection_table, indirection_index, 0));
+	uvec4 indirection_data = floatBitsToUint(imageLoad(indirection_table, indirection_index));
 
 	uint tile_index = indirection_data.r;
 	int mip_index = int(indirection_data.g);

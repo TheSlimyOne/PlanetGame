@@ -6,9 +6,9 @@ using PlanetGame.Data;
 
 namespace PlanetGame.Shaders.Dispatchers
 {
-	public class FlattenIndirectionTableDispatcher : Dispatcher<FlattenIndirectionTableDispatcher.BufferNames>
+	public class ConsolidateIndirectionTableDispatcher : Dispatcher<ConsolidateIndirectionTableDispatcher.BufferNames>
 	{
-		private static ShaderProgramPaths _shaderPath = new() { Compute = ShaderPaths.FLATTEN_INDIRECTION_TABLE };
+		private static ShaderProgramPaths _shaderPath = new() { Compute = ShaderPaths.CONSOLIDATE_INDIRECTION_TABLE_COMPUTE };
     	private static VirtualTextureData VirtualTextureData => SaveManager.VirtualTextureData;
 		
 		public enum BufferNames
@@ -20,7 +20,7 @@ namespace PlanetGame.Shaders.Dispatchers
 
 		private readonly SparseVirtualTexture _sparseVirtualTexture;
 
-		public FlattenIndirectionTableDispatcher(SparseVirtualTexture sparseVirtualTexture) : base(_shaderPath)
+		public ConsolidateIndirectionTableDispatcher(SparseVirtualTexture sparseVirtualTexture) : base(_shaderPath)
 		{
 			_sparseVirtualTexture = sparseVirtualTexture;
 			SetupShader();
@@ -30,12 +30,12 @@ namespace PlanetGame.Shaders.Dispatchers
 		{
 			_shaderUniforms = new System.Collections.Generic.Dictionary<Enum, ShaderUniform>()
 			{
-				[BufferNames.INDIRECTION_TABLE] = new Texture2DUniform(this, (int)BufferNames.INDIRECTION_TABLE,
-					_sparseVirtualTexture.IndirectionTable.GetRdRid(), RenderingDevice.UniformType.Image, perserved: true
+				[BufferNames.INDIRECTION_TABLE] = new Texture2DUniform(this, RenderingDevice, RenderingDevice.UniformType.Image,
+					_sparseVirtualTexture.IndirectionTable.GetRdRid(),  perserved: true
 				),
 
-				[BufferNames.CONSOLIDATED_INDIRECTION_TABLE] = new Texture2DUniform(this, (int)BufferNames.CONSOLIDATED_INDIRECTION_TABLE,
-					_sparseVirtualTexture.ConsolidatedIndirectionTable.GetRdRid(), RenderingDevice.UniformType.Image, perserved: true
+				[BufferNames.CONSOLIDATED_INDIRECTION_TABLE] = new Texture2DUniform(this, RenderingDevice, RenderingDevice.UniformType.Image,
+					_sparseVirtualTexture.ConsolidatedIndirectionTable.GetRdRid(), perserved: true
 				),
 
                 [BufferNames.VIRTUAL_TEXTURE_DATA] = _sparseVirtualTexture.ResolveTileRequest[ResolveTileRequestDispatcher.BufferNames.VIRTUAL_TEXTURE_DATA]
@@ -44,7 +44,7 @@ namespace PlanetGame.Shaders.Dispatchers
 		}
 
 #nullable enable
-		public override void Invoke(byte[]? pushConstants = null)
+		protected override void InvokeInternal(object[]? pushConstants = null)
 		{
 			uint gridSize = VirtualTextureData.BaseGridSize;
 			uint groupCount = (gridSize + 7) / 8;
@@ -56,6 +56,7 @@ namespace PlanetGame.Shaders.Dispatchers
 			RenderingDevice.ComputeListDispatch(computeList, groupCount, groupCount, 6);
 			RenderingDevice.ComputeListEnd();
 		}
+#nullable disable
 
 		public override void CleanupGPU()
 		{

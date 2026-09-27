@@ -60,7 +60,7 @@ public partial class PlanetController : Node
 
         SetupCameras();
 
-        PlanetRenderer = new(WorldEnvironment, MainCamera);
+        PlanetRenderer = new(WorldEnvironment, MainLightSource, MainCamera);
         PlanetQuery = new(MainCamera, PlanetRenderer);
         PlanetCollisionController = new(PlanetQuery);
 
@@ -127,7 +127,7 @@ public partial class PlanetController : Node
 
         PlanetRenderer.UpdateHeightOffset(PlanetQuery, MainCamera.GlobalPosition, MainCamera.DistanceFromTarget, delta);
 
-            PlanetRenderer?.Invoke();
+        PlanetRenderer?.Invoke();
     }
 
     public override void _PhysicsProcess(double delta)
@@ -178,7 +178,8 @@ public partial class PlanetController : Node
         MainCamera.MinDistance = WorldData.Radius + 0.999f;
         MainCamera.MaxDistance = WorldData.Radius * 10.0f;
 
-        MainCamera.Far = WorldData.Radius * 2; //MainCamera.DistanceFromTarget + Radius;
+        // MainCamera.Far = Mathf.Clamp(MainCamera.MaxDistance * 2, MainCamera.MinDistance, 32768); 
+        MainCamera.Far = WorldData.Radius * 4;
     }
 
     private Vector3 _direction = Vector3.Zero;

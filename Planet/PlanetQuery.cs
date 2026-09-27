@@ -4,20 +4,13 @@ using PlanetGame.Data;
 using PlanetGame.Planet.Rendering;
 using PlanetGame.Planet.Rendering.VirtualTexturing;
 
-public class PlanetQuery
+public class PlanetQuery(CustomCamera queryCamera, PlanetRenderer planetRenderer)
 {
     private static TessellationData TessellationData => SaveManager.TessellationData;
     private static VirtualTextureData VirtualTextureData => SaveManager.VirtualTextureData;
     private static WorldData WorldData => SaveManager.WorldData;
-    private PlanetRenderer _planetRenderer;
-    private CustomCamera _queryCamera;
-
-
-    public PlanetQuery(CustomCamera queryCamera, PlanetRenderer planetRenderer)
-    {
-        _queryCamera = queryCamera;
-        _planetRenderer = planetRenderer;
-    }
+    private PlanetRenderer _planetRenderer = planetRenderer;
+    private CustomCamera _queryCamera = queryCamera;
 
     public struct PlanetSurfacePoint(Vector3 localSpherePoint, Vector3 localCubePoint, uint normalId, Vector2 uv, uint mipIndex)
     {
@@ -27,28 +20,37 @@ public class PlanetQuery
         public Vector2 UV = uv;
         public uint MipIndex = mipIndex;
 
-        public bool Equals(PlanetSurfacePoint other)
+        public readonly bool Equals(PlanetSurfacePoint other)
         {
             return UV == other.UV &&
                 NormalId == other.NormalId &&
                 MipIndex == other.MipIndex;
         }
 
-        public override bool Equals(object obj)
+        public override readonly bool Equals(object obj)
         {
             return obj is PlanetSurfacePoint other && Equals(other);
         }
 
-        public override int GetHashCode()
+        public override readonly int GetHashCode()
         {
             return HashCode.Combine(UV, NormalId, MipIndex);
         }
 
-        public override string ToString()
+        public override readonly string ToString()
         {
             return $"{MipIndex}, {UV}";
         }
 
+        public static bool operator ==(PlanetSurfacePoint left, PlanetSurfacePoint right)
+        {
+            return left.Equals(right);
+        }
+
+        public static bool operator !=(PlanetSurfacePoint left, PlanetSurfacePoint right)
+        {
+            return !(left == right);
+        }
     }
 
     public static Tile.TileID GetTileIdFromSurfacePoint(PlanetSurfacePoint surfacePoint)
@@ -87,7 +89,7 @@ public class PlanetQuery
         else
         {
             int lod = Mathf.CeilToInt(GetLodOfPoint(WorldData.LocalToPlanet(localSpherePoint), false));
-            mip = (uint)VirtualTextureData.LodToMipMap[lod];
+            mip = VirtualTextureData.LodToMipMap[lod];
         }
 
         surfacePoint = new PlanetSurfacePoint(
@@ -127,7 +129,7 @@ public class PlanetQuery
 
     public Vector3 GetPlanetScreenPosition(Vector2 mousePosition)
     {
-        Vector3 localPickedPosition = _planetRenderer.SparseVirtualTexture.GetLocalMousePosition(
+        Vector3 localPickedPosition = _planetRenderer.PlanetCompositorEffect.PlanetRenderPass.GetLocalMousePosition(
             mousePosition,
             _queryCamera.GetViewport().GetVisibleRect().Size
         );

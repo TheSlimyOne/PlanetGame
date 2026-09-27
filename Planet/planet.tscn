@@ -13,8 +13,7 @@ panorama = ExtResource("3_ldv5r")
 sky_material = SubResource("PanoramaSkyMaterial_eodwd")
 
 [sub_resource type="Environment" id="Environment_qqt2a"]
-background_mode = 2
-background_color = Color(1, 1, 1, 1)
+background_mode = 1
 sky = SubResource("Sky_emtpu")
 tonemap_mode = 2
 glow_enabled = true

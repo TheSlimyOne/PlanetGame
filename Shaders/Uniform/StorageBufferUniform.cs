@@ -5,63 +5,44 @@ using PlanetGame.Util;
 
 namespace Uniform
 {
-	public partial class StorageBufferUniform : ShaderUniform
+	public class StorageBufferUniform : ShaderUniform
 	{
 		public RenderingDevice.StorageBufferUsage StorageBufferUsage { get; private set; }
 
-		public StorageBufferUniform(IGPUResource owner, RenderingDevice renderingDevice, int binding, byte[] data, RenderingDevice.StorageBufferUsage storageBufferUsage = 0, bool perserve = false) : base(renderingDevice, binding, owner, perserve)
+		public void SetRid(Rid rid, bool perserved = true, RenderingDevice.StorageBufferUsage storageBufferUsage = 0, bool freePreviousRid = false)
 		{
-			Rid = renderingDevice.StorageBufferCreate((uint)data.Length, data, usage: storageBufferUsage);
-			StorageBufferUsage = storageBufferUsage;
+			if (Rid != rid && freePreviousRid && !Perserved && Rid.IsValid)
+				RenderingDevice.FreeRid(Rid);
 
-			Uniform = new()
-			{
-				UniformType = RenderingDevice.UniformType.StorageBuffer,
-				Binding = binding
-			};
-			Uniform.AddId(Rid);
-		}
-
-		public StorageBufferUniform(IGPUResource owner, RenderingDevice renderingDevice, int binding, Rid rid, RenderingDevice.StorageBufferUsage storageBufferUsage = 0, bool perserve = false) : base(renderingDevice, binding, owner, perserve)
-		{
 			Rid = rid;
 			StorageBufferUsage = storageBufferUsage;
+			Perserved = perserved;
+		}
 
-			Uniform = new()
+		public StorageBufferUniform(IGPUResource owner, RenderingDevice renderingDevice, byte[] data, RenderingDevice.StorageBufferUsage storageBufferUsage = 0, bool perserved = false) : base(renderingDevice, owner, perserved)
+		{
+			Rid = renderingDevice.StorageBufferCreate((uint)data.Length, data, usage: storageBufferUsage);
+			UniformType = RenderingDevice.UniformType.StorageBuffer;
+			StorageBufferUsage = storageBufferUsage;
+		}
+
+		public StorageBufferUniform(IGPUResource owner, RenderingDevice renderingDevice, RenderingDevice.StorageBufferUsage storageBufferUsage = 0, bool perserved = false) : base(renderingDevice, owner, perserved)
+		{
+			Rid = new();
+			UniformType = RenderingDevice.UniformType.StorageBuffer;
+			StorageBufferUsage = storageBufferUsage;
+		}
+
+		public override RDUniform CreateRDUniform(int binding)
+		{
+			RDUniform uniform = new()
 			{
-				UniformType = RenderingDevice.UniformType.StorageBuffer,
+				UniformType = UniformType,
 				Binding = binding
 			};
-			Uniform.AddId(Rid);
-		}
-
-		private StorageBufferUniform(IGPUResource owner, StorageBufferUniform storageBufferUniform, int binding) : base(storageBufferUniform.RenderingDevice, binding, owner, storageBufferUniform.Perserved)
-		{
-			Rid = storageBufferUniform.Rid;
-			StorageBufferUsage = storageBufferUniform.StorageBufferUsage;
-
-			Uniform = new()
-			{
-				UniformType = RenderingDevice.UniformType.StorageBuffer,
-				Binding = binding
-			};
-
-			foreach (Rid rid in storageBufferUniform.Uniform.GetIds())
-				Uniform.AddId(rid);
-		}
-
-		public void ResizeBuffer(uint size)
-		{
-			RenderingDevice.FreeRid(Rid);
-			SetRid(RenderingDevice.StorageBufferCreate(size, new byte[size], usage: StorageBufferUsage));
-		}
-
-		public override StorageBufferUniform RebindUniform(IGPUResource owner, RenderingDevice rd, int binding)
-		{
-			if (rd == RenderingDevice)
-				return new StorageBufferUniform(owner, this, binding);
-			else
-				return new StorageBufferUniform(owner, rd, binding, GetByteData()[0], storageBufferUsage: StorageBufferUsage);
+			
+			uniform.AddId(Rid);
+			return uniform;
 		}
 
 		public T[] GetData<T>(uint offsetBytes = 0, uint sizeBytes = 0) where T : unmanaged => Utilities.FromBytes<T>(RenderingDevice.BufferGetData(Rid, offsetBytes, sizeBytes)).ToArray();
@@ -79,13 +60,5 @@ namespace Uniform
 		}
 
 		public override List<byte[]> GetByteData() => [RenderingDevice.BufferGetData(Rid)];
-
-		public void SetRid(Rid rid)
-        {
-            Rid = rid;
-
-            Uniform.ClearIds();
-            Uniform.AddId(Rid);
-        }
 	}
 }

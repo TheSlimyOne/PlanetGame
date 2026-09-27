@@ -5,6 +5,10 @@ namespace PlanetGame.Data
     public class AtmosphereData(float radius) : ISavable
     {
         public float Radius = radius;
+        public float DensityFalloff;
+        public uint LightSamplingCount;
+        public uint OpticalDepthSamplingCount;
+
 
         public override string ToString()
         {
@@ -27,6 +31,9 @@ namespace PlanetGame.Data
         {
             return [
                 .. Utilities.ToBytesSingle(Radius),
+                .. Utilities.ToBytesSingle(DensityFalloff),
+                .. Utilities.ToBytesSingle(LightSamplingCount),
+                .. Utilities.ToBytesSingle(OpticalDepthSamplingCount),
             ];
         }
     }

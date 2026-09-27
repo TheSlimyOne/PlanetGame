@@ -10,12 +10,12 @@ namespace PlanetGame.Util.Geometry
         public readonly int IndexC = indexC;
         public readonly int IndexD = indexD;
 
-        public int[] GetPoints()
+        public readonly int[] GetPoints()
         {
             return [IndexA, IndexB, IndexC, IndexD];
         }
 
-        public int[] GetOtherPoints(IndexedEdge edge)
+        public readonly int[] GetOtherPoints(IndexedEdge edge)
         {
             IndexedEdge[] edges = GetEdges();
             if (!edges.Contains(edge))
@@ -24,7 +24,7 @@ namespace PlanetGame.Util.Geometry
             return [.. GetPoints().Where(p => p != edge.IndexA && p != edge.IndexB)];
         }
 
-        public IndexedEdge[] GetEdges()
+        public readonly IndexedEdge[] GetEdges()
         {
             return [
                 new(IndexA, IndexB),
@@ -34,7 +34,7 @@ namespace PlanetGame.Util.Geometry
             ];
         }
 
-        public override bool Equals(object obj)
+        public override readonly bool Equals(object obj)
         {
             if (obj is IndexedSquare other)
             {
@@ -45,7 +45,7 @@ namespace PlanetGame.Util.Geometry
             return false;
         }
 
-        public override int GetHashCode()
+        public override readonly int GetHashCode()
         {
             int hash1 = IndexA.GetHashCode();
             int hash2 = IndexB.GetHashCode();
@@ -54,12 +54,12 @@ namespace PlanetGame.Util.Geometry
             return hash1 ^ hash2 ^ hash3 ^ hash4;
         }
 
-        public override string ToString()
+        public override readonly string ToString()
         {
             return $"Square({IndexA}, {IndexB}, {IndexC}, {IndexD})";
         }
 
-        public IndexedEdge[] GetOtherEdges(IndexedEdge edge)
+        public readonly IndexedEdge[] GetOtherEdges(IndexedEdge edge)
         {
             return [.. GetEdges().Where(e => !e.Equals(edge))];
         }

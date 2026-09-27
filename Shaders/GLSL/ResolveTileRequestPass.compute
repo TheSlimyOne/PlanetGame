@@ -1,18 +1,17 @@
 #[compute]
 #version 450
 #extension GL_EXT_shader_atomic_float2 : require
+#extension GL_EXT_shader_image_load_formatted : enable
 
 layout(local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
 
-layout(set = 0, binding = 0, rgba32f) restrict uniform image2D FeedbackTexture;
+layout(set = 0, set = 0, binding = 0) restrict uniform image2DArray IndirectionTable;
 
-layout(set = 0, binding = 1, rgba32f) restrict uniform image2DArray IndirectionTable;
+layout(set = 0, set = 0, binding = 1, r32ui) restrict uniform uimage2DArray StateTable;
 
-layout(set = 0, binding = 2, r32ui) restrict uniform uimage2DArray StateTable;
+layout(set = 0, set = 0, binding = 2, rgba32f) restrict uniform image2D ResidencyTable;
 
-layout(set = 0, binding = 3, rgba32f) restrict uniform image2D ResidencyTable;
-
-layout(std430, binding = 4) readonly buffer VirtualTextureData {
+layout(std430, set = 0, binding = 3) readonly buffer VirtualTextureData {
     uint low_resolution_mip_count;
     uint high_resolution_mip_count;
     uint grid_size;
@@ -21,54 +20,57 @@ layout(std430, binding = 4) readonly buffer VirtualTextureData {
     uint lod_to_mip_map[32];
 };
 
-layout(std430, binding = 5) buffer restrict TileRequestData {
+layout(std430, set = 0, binding = 4) buffer restrict TileRequestData {
     uint total_texture_slots;
     uint sqrt_total_texture_slots;
     uint request_buffer_size;
     uint _padding0;
 };
 
-layout(std430, binding = 6) restrict buffer TileSlotCounter {
+layout(std430, set = 0, binding = 5) restrict buffer TileSlotCounter {
     uint tile_slot_counter;
 };
 
-layout(std430, set = 0, binding = 7) restrict buffer RequestBufferCounter {
+layout(std430, set = 0, binding = 6) restrict buffer RequestBufferCounter {
     uint request_buffer_counter;
 };
 
-layout(std430, binding = 8) buffer restrict TileIDs {
+layout(std430, set = 0, binding = 7) buffer restrict TileIDs {
     uvec4 requested_tile_ids[];
 };
 
 #[include] res://Shaders/GLSL/ShaderIncludes/VirtualTextureFunctions.inc
 
 void main() {
-    const uint PROCESSING = 0xFFFFFFFF;
-    const uint NOT_PROCESSING = 0x00000000;
-
-    ivec2 size = imageSize(FeedbackTexture);
-
-    ivec2 invocation_id = ivec2(gl_GlobalInvocationID.xy);
+    const uint REQUESTED_MASK = 0x80000000u;
+    const uint PIXEL_COUNT_MASK = 0x7FFFFFFFu;
     
-    if (invocation_id.x >= size.x || invocation_id.y >= size.y) return;
+    ivec3 size = imageSize(StateTable);
+
+    ivec3 invocation_id = ivec3(gl_GlobalInvocationID.xyz);
     
-    ivec4 feedback = floatBitsToInt(imageLoad(FeedbackTexture, invocation_id).rgba);
-    ivec3 indirection_index = feedback.xyz;
-    bool is_requesting = feedback.w == 1;
+    if (invocation_id.x >= size.x || invocation_id.y >= size.y || invocation_id.z >= size.z)
+        return;
+    
+    ivec3 indirection_index = invocation_id;
 
     int total_resolution_mip_count = int(low_resolution_mip_count + high_resolution_mip_count);
     int mip_index = indirection_index.z % total_resolution_mip_count;
 
-    // Ignore entries not being requested or the request is out of bounds
-    if (!is_requesting || mip_index >= 6 || mip_index < 0)
+    int mip_size = int(grid_size) >> mip_index;
+
+    if ((invocation_id.x % mip_size) != 0 || (invocation_id.y % mip_size) != 0)
         return;
 
-    uint results = imageAtomicCompSwap(StateTable, indirection_index, NOT_PROCESSING, PROCESSING);
-    if (results == PROCESSING) return;
+    uint state = imageLoad(StateTable, indirection_index).r;
+    bool is_requesting = (state & REQUESTED_MASK) != 0u;
+    uint pixel_count = state & PIXEL_COUNT_MASK;
+
+   if (pixel_count <= 1000)
+        return;
 
     uvec4 indirection_data = floatBitsToUint(imageLoad(IndirectionTable, indirection_index));
 
-    // The tile is already loaded in the tile cache
     if (indirection_data.w != 0)
         return;
 
@@ -85,8 +87,6 @@ void main() {
         slot % sqrt_total_texture_slots,
         slot / sqrt_total_texture_slots
     );
-
-    int mip_size = int(grid_size) >> mip_index;
 
     uvec3 request_coords = uvec3(
         indirection_index.x / mip_size,

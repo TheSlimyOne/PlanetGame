@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Godot;
 using PlanetGame.Data;
@@ -7,7 +8,6 @@ using PlanetGame.Planet.Rendering.Drawing;
 using PlanetGame.Planet.Rendering.VirtualTexturing;
 using PlanetGame.Rendering.Surface;
 using PlanetGame.Shaders;
-using PlanetGame.Shaders.Dispatchers;
 using PlanetGame.Util;
 using PlanetGame.Util.DebugUIComponents;
 using Shaders;
@@ -15,7 +15,7 @@ using Uniform;
 
 namespace PlanetGame.Planet.Rendering
 {
-    public class PlanetRenderer
+    public class PlanetRenderer : IGPUResource
     {
         public TerrainTessellator TerrainTessellator { get; private set; }
         public SparseVirtualTexture SparseVirtualTexture { get; private set; }
@@ -46,11 +46,12 @@ namespace PlanetGame.Planet.Rendering
             VIRTUAL_TEXTURE_DATA,
             RENDER_DATA,
             WORLD_DATA,
+            LINEAR_DEPTH_TEXTURE
         }
 
         private readonly Dictionary<BufferNames, ShaderUniform> _sharedShaderUniforms;
 
-        public PlanetRenderer(WorldEnvironment worldEnvironment, CustomCamera viewCamera)
+        public PlanetRenderer(WorldEnvironment worldEnvironment, DirectionalLight3D sun, CustomCamera viewCamera)
         {
             _viewCamera = viewCamera;
             SurfaceShader = new()
@@ -68,7 +69,7 @@ namespace PlanetGame.Planet.Rendering
 
             // Creating Compositor Effects
             PlanetCompositorEffect = new(SparseVirtualTexture, TerrainTessellator.TriangleMultiMesh, _sharedShaderUniforms);
-            AtmosphereEffect = new(_sharedShaderUniforms);
+            AtmosphereEffect = new(sun, _sharedShaderUniforms);
 
             CreateSharedBuffers();
 
@@ -159,82 +160,78 @@ namespace PlanetGame.Planet.Rendering
         private void CreateSharedBuffers()
         {
             CreateExecutionBuffers();
-            CreateDrawBuffers();
             CreateDataBuffers();
+            CreateRenderingTextures();
         }
 
         private void CreateExecutionBuffers()
         {
             _sharedShaderUniforms[BufferNames.EXEC_DISPATCH_BUFFER] = new StorageBufferUniform(
-                null,
+                this,
                 _renderingDevice,
-                -1,
                 [.. Utilities.ToBytes<uint>([GetStartingPrimitiveCount() / 64 + 1, 1, 1])],
                 RenderingDevice.StorageBufferUsage.Indirect,
-                perserve: true
+                perserved: true
             );
 
             _sharedShaderUniforms[BufferNames.EXEC_ATOMIC_COUNTER] = new StorageBufferUniform(
-                null,
+                this,
                 _renderingDevice,
-                -1,
                 GetExecAtomicCounterData(),
-                perserve: true
+                perserved: true
             );
 
             _sharedShaderUniforms[BufferNames.EXEC_KEY_INDICES] = new StorageBufferUniform(
-                null,
+                this,
                 _renderingDevice,
-                -1,
                 [.. Utilities.ToBytes<uint>([0, 1, 2, TessellationData.MaximumKeys])],
-                perserve: true
+                perserved: true
+            );
+
+            _sharedShaderUniforms[BufferNames.DRAW_DISPATCH_BUFFER] = new StorageBufferUniform(
+                this,
+                _renderingDevice,
+                [.. Utilities.ToBytes<uint>(5)],
+                RenderingDevice.StorageBufferUsage.Indirect,
+                perserved: true
             );
         }
 
-        private void CreateDrawBuffers()
+        private void CreateRenderingTextures()
         {
-            _sharedShaderUniforms[BufferNames.DRAW_DISPATCH_BUFFER] = new StorageBufferUniform(
-                null,
-                _renderingDevice,
-                -1,
-                [.. Utilities.ToBytes<uint>(5)],
-                RenderingDevice.StorageBufferUsage.Indirect,
-                perserve: true
-            );
+            _sharedShaderUniforms[BufferNames.LINEAR_DEPTH_TEXTURE] = new Texture2DUniform(
+                this, _renderingDevice, RenderingDevice.UniformType.Image, perserved: true);
+
         }
 
         private void CreateDataBuffers()
         {
             _sharedShaderUniforms[BufferNames.TESSELLATION_DATA] = new StorageBufferUniform(
-                null,
+                this,
                 _renderingDevice,
-                -1,
                 TessellationData.ToBytes(),
-                perserve: true
+                perserved: true
             );
 
             _sharedShaderUniforms[BufferNames.VIRTUAL_TEXTURE_DATA] = new StorageBufferUniform(
-                null,
+                this,
                 _renderingDevice,
-                -1,
                 VirtualTextureData.ToBytes(),
-                perserve: true
+                perserved: true
             );
 
             _sharedShaderUniforms[BufferNames.RENDER_DATA] = new StorageBufferUniform(
-                null,
+                this,
                 _renderingDevice,
-                -1,
                 RenderData.ToBytes(),
-                perserve: true
+                perserved: true
             );
 
             _sharedShaderUniforms[BufferNames.WORLD_DATA] = new StorageBufferUniform(
-                null,
+                this,
                 _renderingDevice,
-                -1,
                 WorldData.ToBytes(),
-                perserve: true
+                perserved: true
             );
         }
 
@@ -268,7 +265,7 @@ namespace PlanetGame.Planet.Rendering
 
             bindableShaderMaterial.FrameDependentBind("mouse_position", () =>
             {
-                Vector3 localPickedPosition = SparseVirtualTexture.GetLocalMousePosition(
+                Vector3 localPickedPosition = PlanetCompositorEffect.PlanetRenderPass.GetLocalMousePosition(
                     _viewCamera.GetViewport().GetMousePosition(),
                     _viewCamera.GetViewport().GetVisibleRect().Size
                 );
@@ -292,6 +289,8 @@ namespace PlanetGame.Planet.Rendering
         {
             BindPlanetDebugSettings();
             BindRenderingDebugSettings();
+            BindTessellationDebugSettings();
+            BindSparseVirtualTextureDebugSettings();
         }
 
         private void BindPlanetDebugSettings()
@@ -349,12 +348,78 @@ namespace PlanetGame.Planet.Rendering
         {
             DebugMenuController.Instance.AddButton(name, "Rendering", () => SurfaceShader.GetParameter<bool>(parameter), () => SurfaceShader.SetParameter(parameter, !SurfaceShader.GetParameter<bool>(parameter)));
         }
+
+
+        private void BindTessellationDebugSettings()
+        {
+            DebugMenuController.Instance.AddSection("Tessellation", 0, false, null, 200);
+            DebugMenuController.Instance.AddLabel("Current Keys", "Tessellation", () => {
+                return $"{TerrainTessellator.CulledCount}/{TerrainTessellator.TotalCount}";
+            });
+            DebugMenuController.Instance.AddLabel("Max Keys", "Tessellation", () => {
+                return $"{TerrainTessellator.CulledMax}/{TerrainTessellator.TotalMax}";
+            });
+            DebugMenuController.Instance.AddLabel("Current Lod", "Tessellation", () => $"{TerrainTessellator.MaxLod}");
+            DebugMenuController.Instance.AddLabel("Culling Percentage", "Tessellation", () =>
+            {
+                if (TerrainTessellator.TotalCount == 0)
+                    return $"Undefined";
+
+                return $"{1 - (float)TerrainTessellator.CulledCount / TerrainTessellator.TotalCount:P1}";
+            });
+
+            DebugMenuController.Instance.AddButton("Enable Tessellation", "Tessellation", () => !TerrainTessellator.Paused, () => TerrainTessellator.Paused = !TerrainTessellator.Paused);
+
+            DebugMenuController.Instance.AddSlider("Resolution", "Tessellation", () => (TessellationData.Resolution - 1u) / 2u, value =>
+            {
+                TessellationData.Resolution = 2u * value + 1u;
+                TerrainTessellator.TriangleMultiMesh.SetMesh(PlanetGame.Rendering.Surface.Key.GetTriangleMesh((int)TessellationData.Resolution));
+                PlanetCompositorEffect.PlanetRenderPass.UpdateGeometry();
+                PlanetCompositorEffect.PlanetRenderPass.UpdatePipeline();
+            }, 1u, 8u, 1u);
+
+
+            DebugMenuController.Instance.AddDistribution("Lods", "Tessellation",
+                TerrainTessellator.LodCounts.Select((_, lod) => new DistributionComponent.DistributionBinding<int>(
+                    $"LOD {lod}",
+                    () => TerrainTessellator.LodCounts[lod]
+                )).ToArray()
+            );
+        }
+
+        private void BindSparseVirtualTextureDebugSettings()
+        {
+            DebugMenuController.Instance.AddSection("Virtual Texturing", 0, false, null, 300);
+
+            DebugMenuController.Instance.AddButton("Enable Virtual Texturing", "Virtual Texturing", () => !SparseVirtualTexture.Paused, () => SparseVirtualTexture.Paused = !SparseVirtualTexture.Paused);
+
+            DebugMenuController.Instance.AddActionButton("Wipe Virtual Texture", "Virtual Texturing", SparseVirtualTexture.ClearVirtualTexture);
+
+            DebugMenuController.Instance.AddTexture("State Table", "Virtual Texturing", SparseVirtualTexture.StateTable.CreateVisualization(), false);
+
+            DebugMenuController.Instance.AddTexture("Indirection Table", "Virtual Texturing", SparseVirtualTexture.IndirectionTable.CreateVisualization(), false);
+
+            DebugMenuController.Instance.AddTexture("Residency Table", "Virtual Texturing", SparseVirtualTexture.ResidencyTable.CreateVisualization(), false);
+
+            DebugMenuController.Instance.AddTexture("Albedo Tile Cache", "Virtual Texturing", SparseVirtualTexture.GetTileCache(TileCache.TileCacheType.ALBEDO).CreateVisualization("Albedo"), false);
+
+            DebugMenuController.Instance.AddTexture("Heightmap Tile Cache", "Virtual Texturing", SparseVirtualTexture.GetTileCache(TileCache.TileCacheType.HEIGHTMAP).CreateVisualization("Heightmap"), false);
+
+            DebugMenuController.Instance.AddTexture("Flatten Indirection Table", "Virtual Texturing", SparseVirtualTexture.ConsolidatedIndirectionTable.CreateVisualization(), false);
+
+            DebugMenuController.Instance.AddTexture("Picking", "Rendering", () => PlanetCompositorEffect.PlanetRenderPass.Picking, false);
+            DebugMenuController.Instance.AddTexture("Linear Depth", "Rendering", () => PlanetCompositorEffect.PlanetRenderPass.LinearDepth, false);
+        }
+
 #endregion
 
         public void CleanupGPU()
         {
             TerrainTessellator.CleanupGPUResources();
             SparseVirtualTexture.CleanupGPUResources();
+
+            // TODO free shared buffers
+            // what I need to do is make CleanupGPU a gpu resource function so I can just call that and clear the SharedUniforms dictionary
         }
     }
 }

@@ -368,14 +368,6 @@ namespace PlanetGame.Util.DebugUIComponents
 
     	#region Textures
 
-    	public void AddTexture(string name, string section, TextureRect textureRect, int order = 0)
-    	{
-    		TextureComponent textureComponent = TextureScene.Instantiate<TextureComponent>();
-
-    		textureComponent.Initialize(name, textureRect);
-    		GetContainer(section).AddContent(textureComponent, order);
-    	}
-
     	public void AddTexture(string name, string section, TextureRect textureRect, bool isVisible, int order = 0)
     	{
     		TextureComponent textureComponent = TextureScene.Instantiate<TextureComponent>();
@@ -383,6 +375,14 @@ namespace PlanetGame.Util.DebugUIComponents
     		textureComponent.Initialize(name, textureRect, isVisible);
     		GetContainer(section).AddContent(textureComponent, order);
     	}
+
+		public void AddTexture(string name, string section, Func<Rid> getRid, bool isVisible, int order = 0)
+		{
+			TextureComponent textureComponent = TextureScene.Instantiate<TextureComponent>();
+
+			textureComponent.Initialize(name, getRid, isVisible);
+			GetContainer(section).AddContent(textureComponent, order);
+		}
 
     	public void AddTextureTemplate(string name, string section, int order = 0)
     	{

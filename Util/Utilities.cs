@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
@@ -15,7 +16,7 @@ namespace PlanetGame.Util
         {
             return new byte[SizeOf<T>() * amount];
         }
-        
+
         public static Span<byte> ToBytes<T>(Span<T> data) where T : unmanaged
         {
             return MemoryMarshal.Cast<T, byte>(data);
@@ -24,6 +25,46 @@ namespace PlanetGame.Util
         public static Span<byte> ToBytesSingle<T>(T data) where T : unmanaged
         {
             return ToBytes<T>(new T[] { data });
+        }
+
+        public static Span<byte> CollectionToBytes(params object[] data)
+        {
+            List<byte> bytes = [];
+
+            foreach (object value in data)
+            {
+                switch (value)
+                {
+                    case Vector4 vector4:
+                        bytes.AddRange(ToBytesSingle(vector4));
+                        break;
+
+                    case Vector3 vector3:
+                        bytes.AddRange(ToBytesSingle(vector3));
+                        break;
+
+                    case Projection projection:
+                        bytes.AddRange(ToBytesSingle(projection));
+                        break;
+
+                    case float floatValue:
+                        bytes.AddRange(ToBytesSingle(floatValue));
+                        break;
+
+                    case uint uintValue:
+                        bytes.AddRange(ToBytesSingle(uintValue));
+                        break;
+
+                    case int intValue:
+                        bytes.AddRange(ToBytesSingle(intValue));
+                        break;
+
+                    default:
+                        throw new NotSupportedException($"Unsupported type: {value.GetType()}");
+                }
+            }
+
+            return bytes.ToArray();
         }
 
         public static uint ToBitFlags(ReadOnlySpan<bool> values)
@@ -123,17 +164,6 @@ namespace PlanetGame.Util
                 new Vector4(transformation[0].Z, transformation[1].Z, transformation[2].Z, transformation[3].Z),
                 new Vector4(0, 0, 0, 1)
             );
-        }
-
-        public static byte[] ToViewPushConstants(Projection viewProjectionMatrix, Vector3 cameraPosition, float fovy)
-        {
-            byte[] data =
-            [
-                .. ToBytesSingle(viewProjectionMatrix),
-                .. ToBytesSingle(VectorUtils.ToVector4(cameraPosition, fovy))
-            ];
-
-            return data;
         }
 
         public static MeshInstance3D DrawLineDebug(Node node, Vector3 from, Vector3 to, Color color)

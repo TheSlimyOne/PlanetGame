@@ -8,12 +8,12 @@ namespace PlanetGame.Util.Geometry
         public readonly int IndexA = indexA;
         public readonly int IndexB = indexB;
 
-        public int[] GetPoints()
+        public readonly int[] GetPoints()
         {
             return [IndexA, IndexB];
         }
 
-        public int GetOtherPoint(int index)
+        public readonly int GetOtherPoint(int index)
         {
             int[] points = GetPoints();
             if (!points.Contains(index))
@@ -22,7 +22,7 @@ namespace PlanetGame.Util.Geometry
             return points.First(p => p != index);
         }
 
-        public override bool Equals(object obj)
+        public override readonly bool Equals(object obj)
         {
             if (obj is Edge other)
                 return (IndexA.Equals(other.PointA) && IndexB.Equals(other.PointB)) ||
@@ -30,14 +30,14 @@ namespace PlanetGame.Util.Geometry
             return false;
         }
 
-        public override int GetHashCode()
+        public override readonly int GetHashCode()
         {
             int hash1 = IndexA.GetHashCode();
             int hash2 = IndexB.GetHashCode();
             return hash1 ^ hash2;
         }
 
-        public override string ToString()
+        public override readonly string ToString()
         {
             return $"Edge({IndexA}, {IndexB})";
         }

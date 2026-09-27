@@ -19,8 +19,7 @@ namespace PlanetGame.Planet.Rendering.VirtualTexturing
 
         public ResolveTileRequestDispatcher ResolveTileRequest { get; private set; }
         public ValidateCacheDispatcher ValidateTileCache { get; private set; }
-        public SvtFeedbackRenderPass SvtFeedbackRenderPass { get; private set; }
-        public FlattenIndirectionTableDispatcher FlattenIndirectionTableDispatcher { get; private set; }
+        public ConsolidateIndirectionTableDispatcher FlattenIndirectionTableDispatcher { get; private set; }
 
         public IndirectionTable IndirectionTable { get; private set; }
         public ConsolidatedIndirectionTable ConsolidatedIndirectionTable { get; private set; }
@@ -44,12 +43,9 @@ namespace PlanetGame.Planet.Rendering.VirtualTexturing
             ResidencyTable = new();
             StateTable = new();
 
-            SvtFeedbackRenderPass = new(this, sharedUniforms, triangleMultiMesh, viewSize);
-            ResolveTileRequest = new(this, sharedUniforms, viewSize);
+            ResolveTileRequest = new(this, sharedUniforms);
             ValidateTileCache = new(this);
             FlattenIndirectionTableDispatcher = new(this);
-
-            BindDebugSettings();
         }
 
         public TileCache GetTileCache(TileCache.TileCacheType type)
@@ -62,7 +58,6 @@ namespace PlanetGame.Planet.Rendering.VirtualTexturing
 
         public void CreateUniforms()
         {
-            SvtFeedbackRenderPass.CreateUniforms();
             ResolveTileRequest.CreateUniforms();
             ValidateTileCache.CreateUniforms();
             FlattenIndirectionTableDispatcher.CreateUniforms();
@@ -70,7 +65,7 @@ namespace PlanetGame.Planet.Rendering.VirtualTexturing
 
         public bool IsValidForProcessing()
         {
-            return ResolveTileRequest?.IsValid() == true && ValidateTileCache?.IsValid() == true && SvtFeedbackRenderPass?.IsValid() == true;
+            return ResolveTileRequest?.IsValid() == true && ValidateTileCache?.IsValid() == true;
         }
 
         private const int SIMULATED_DISK_LATENCY_MS = 20;
@@ -85,6 +80,7 @@ namespace PlanetGame.Planet.Rendering.VirtualTexturing
                 // await Parallel.ForEachAsync(data, new ParallelOptions { MaxDegreeOfParallelism = 4 }, async (tileData, _) =>
                 foreach (var tileData in data)
                 {
+                    // GD.Print(tileData);
                     // await Task.Delay(SIMULATED_DISK_LATENCY_MS, _);
 
                     uint xIndex = tileData.tileX;
@@ -148,30 +144,27 @@ namespace PlanetGame.Planet.Rendering.VirtualTexturing
                 return;
 
             Ready = false;
-            StateTable.ClearStorageTexture();
-
-
-            SvtFeedbackRenderPass.Invoke(
-                Utilities.ToViewPushConstants(
-                    camera.GetViewProjectionMatrix(),
-                    camera.GlobalPosition,
-                    Mathf.Tan(camera.GetCameraFov(true) / 2)
-                )
-            );
+            // SvtFeedbackRenderPass.Invoke(
+            //     Utilities.ToViewPushConstants(
+            //         camera.GetViewProjectionMatrix(),
+            //         camera.GlobalPosition,
+            //         Mathf.Tan(camera.GetCameraFov(true) / 2)
+            //     )
+            // );
 
             ResolveTileRequest.UpdateUniforms();
             ResolveTileRequest.Invoke();
             ResolveTileRequest.GetTextureIds(Callable.From<byte[]>(RequestTileSlot));
-        }
 
-        public Vector3 GetLocalMousePosition(Vector2 mousePosition, Vector2 screenSize)
-        {
-            return SvtFeedbackRenderPass.GetLocalMousePosition(mousePosition, screenSize);
+            StateTable.ClearStorageTexture();
         }
 
         public uint SampleConsolidatedIndirectionTexture(uint normalId, Vector2 uv)
         {
             Image image = _consolidatedIndirectionTexture[normalId];
+
+            if (image == null)
+                return 0;
 
             int x = Mathf.Clamp((int)(uv.X * image.GetWidth()), 0, image.GetWidth() - 1);
             int y = Mathf.Clamp((int)(uv.Y * image.GetHeight()), 0, image.GetHeight() - 1);
@@ -204,36 +197,11 @@ namespace PlanetGame.Planet.Rendering.VirtualTexturing
 
             ResolveTileRequest?.CleanupGPU();
             ValidateTileCache?.CleanupGPU();
-            SvtFeedbackRenderPass?.CleanupGPU();
             FlattenIndirectionTableDispatcher?.CleanupGPU();
 
             ResolveTileRequest = default;
             ValidateTileCache = default;
-            SvtFeedbackRenderPass = default;
             FlattenIndirectionTableDispatcher = default;
-        }
-
-        private void BindDebugSettings()
-        {
-            DebugMenuController.Instance.AddSection("Virtual Texturing", 0, false, null, 300);
-
-            DebugMenuController.Instance.AddButton("Enable Virtual Texturing", "Virtual Texturing", () => !Paused, () => Paused = !Paused);
-
-            DebugMenuController.Instance.AddActionButton("Wipe Virtual Texture", "Virtual Texturing", ClearVirtualTexture);
-
-            DebugMenuController.Instance.AddTexture("State Table", "Virtual Texturing", StateTable.CreateVisualization(), false);
-
-            DebugMenuController.Instance.AddTexture("Indirection Table", "Virtual Texturing", IndirectionTable.CreateVisualization(), false);
-
-            DebugMenuController.Instance.AddTexture("Residency Table", "Virtual Texturing", ResidencyTable.CreateVisualization(), false);
-
-            DebugMenuController.Instance.AddTexture("Albedo Tile Cache", "Virtual Texturing", GetTileCache(TileCache.TileCacheType.ALBEDO).CreateVisualization("Albedo"), false);
-
-            DebugMenuController.Instance.AddTexture("Heightmap Tile Cache", "Virtual Texturing", GetTileCache(TileCache.TileCacheType.HEIGHTMAP).CreateVisualization("Heightmap"), false);
-
-            DebugMenuController.Instance.AddTexture("Flatten Indirection Table", "Virtual Texturing", ConsolidatedIndirectionTable.CreateVisualization(), false);
-
-            DebugMenuController.Instance.AddTexture("Picking Texture", "Virtual Texturing", new TextureRect { Texture = new Texture2Drd() { TextureRdRid = SvtFeedbackRenderPass.Picking } }, false);
         }
     }
 }

@@ -1,11 +1,15 @@
 #[fragment]
 #version 450
+#extension GL_EXT_shader_image_load_formatted : enable
 
 layout(location = 0) flat in uvec4 key;
 layout(location = 4) in vec2 plane_vertex_uv;
 layout(location = 5) flat in int lod;
+layout(location = 7) in vec3 world_position;
 
 layout(location = 0) out vec4 frag;
+layout(location = 1) out vec4 picking_texture;
+layout(location = 2) out float linear_depth;
 
 layout(set = 0, binding = 1, std430) readonly buffer VirtualTextureData {
     uint low_resolution_mip_count;
@@ -16,8 +20,22 @@ layout(set = 0, binding = 1, std430) readonly buffer VirtualTextureData {
     uint lod_to_mip_map[32];
 };
 
+layout(std430, binding = 4) readonly buffer WorldData {
+    float radius;
+    float height_scale;
+    vec2 padding;
+    mat4 planet_transform_matrix;
+};
+
 layout(set = 0, binding = 5) uniform sampler2DArray albedo_tile_cache;
-layout(set = 0, binding = 7) uniform sampler2DArray terrain_indirection_table;
+layout(set = 0, binding = 7) restrict uniform image2DArray consolidated_indirection_table;
+layout(set = 0, binding = 8, r32ui) restrict uniform uimage2DArray state_table;
+
+layout(push_constant, std430) uniform PushConstants {
+    mat4 view_projection_matrix;
+    vec4 camera_position_fovy;
+} push_constants;
+
 
 #[include] res://Shaders/GLSL/ShaderIncludes/TessellationFunctions.inc
 #[include] res://Shaders/GLSL/ShaderIncludes/Functions.inc
@@ -26,13 +44,40 @@ void main()
 {
     uint normal_id = key.z;
 
-    vec3 tile_uv = get_tile_uv(
-        terrain_indirection_table,
-        plane_vertex_uv,
-        normal_id,
-        low_resolution_mip_count,
-        high_resolution_mip_count
-    );
+    vec3 tile_uv = get_tile_uv(consolidated_indirection_table, plane_vertex_uv, normal_id, low_resolution_mip_count, high_resolution_mip_count);
 
     frag = vec4(pow(get_tile(albedo_tile_cache, tile_uv).xyz, vec3(2.2)), 1.0);
+
+    vec3 picking_position = (vec4(world_position, 1.0) * inverse(planet_transform_matrix)).xyz;
+    picking_texture = vec4(picking_position, 1.0);
+
+    linear_depth = distance(push_constants.camera_position_fovy.xyz, world_position);
+
+    vec2 adjusted_uv = clamp(plane_vertex_uv, vec2(0.0), vec2(1.0 - EPS));
+
+    int mip_index = int(lod_to_mip_map[lod]);
+
+    int total_resolution_mip_count = int(low_resolution_mip_count + high_resolution_mip_count);
+
+    int full_grid_size = 1 << (total_resolution_mip_count - 1);
+    int mip_grid_size = 1 << mip_index;
+
+    vec2 tile_coordinate = floor(adjusted_uv * mip_grid_size);
+    vec2 grid_uv = tile_coordinate / mip_grid_size;
+
+    int layer = total_resolution_mip_count * int(normal_id) + mip_index;
+
+    ivec3 indirection_index = ivec3(
+        grid_uv * full_grid_size,
+        layer
+    );
+
+    const uint REQUESTED_MASK = 0x80000000u;
+
+    imageAtomicOr(state_table, indirection_index, REQUESTED_MASK);
+    imageAtomicAdd(state_table, indirection_index, 1u);
+
+    // const uint PROCESSING = 0xFFFFFFFF;
+    // const uint NOT_PROCESSING = 0x00000000;
+    // uint results = imageAtomicCompSwap(state_table, indirection_index, NOT_PROCESSING, PROCESSING);
 }

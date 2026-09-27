@@ -7,12 +7,12 @@ namespace PlanetGame.Util.Geometry
         public readonly int IndexB = pointB;
         public readonly int IndexC = pointC;
 
-        public int[] GetPoints()
+        public readonly int[] GetPoints()
         {
             return [IndexA, IndexB, IndexC];
         }
 
-        public IndexedEdge[] GetEdges()
+        public readonly IndexedEdge[] GetEdges()
         {
             return [
                 new(IndexA, IndexB),
@@ -21,7 +21,7 @@ namespace PlanetGame.Util.Geometry
             ];
         }
 
-        public override bool Equals(object obj)
+        public override readonly bool Equals(object obj)
         {
             if (obj is IndexedTriangle other)
             {
@@ -32,7 +32,7 @@ namespace PlanetGame.Util.Geometry
             return false;
         }
 
-        public override int GetHashCode()
+        public override readonly int GetHashCode()
         {
             int hash1 = IndexA.GetHashCode();
             int hash2 = IndexB.GetHashCode();
@@ -40,7 +40,7 @@ namespace PlanetGame.Util.Geometry
             return hash1 ^ hash2 ^ hash3;
         }
 
-        public override string ToString()
+        public override readonly string ToString()
         {
             return $"triangle({IndexA}, {IndexB}, {IndexC})";
         }

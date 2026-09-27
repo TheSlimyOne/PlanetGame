@@ -10,7 +10,7 @@ namespace PlanetGame.Shaders.Dispatchers
 {
 	public class ExecuteTessellationPassDispatcher : Dispatcher<ExecuteTessellationPassDispatcher.BufferNames>
 	{
-		private static ShaderProgramPaths _shaderPath = new() { Compute = ShaderPaths.EXECUTE_TESSELLATION_PASS };
+		private static ShaderProgramPaths _shaderPath = new() { Compute = ShaderPaths.EXECUTE_TESSELLATION_COMPUTE };
 		private static TessellationData TessellationData => SaveManager.TessellationData;
 		
 		public enum BufferNames
@@ -30,10 +30,10 @@ namespace PlanetGame.Shaders.Dispatchers
 		private MultiMeshRD _triangleMultiMesh;
 		private readonly Dictionary<PlanetRenderer.BufferNames, ShaderUniform> _sharedShaderUniforms;
 
-		public ExecuteTessellationPassDispatcher(MultiMeshRD triangleMultiMesh, Dictionary<PlanetRenderer.BufferNames, ShaderUniform> shaderedShaderUniforms) : base(_shaderPath)
+		public ExecuteTessellationPassDispatcher(MultiMeshRD triangleMultiMesh, Dictionary<PlanetRenderer.BufferNames, ShaderUniform> sharedShaderUniforms) : base(_shaderPath)
 		{
 			_triangleMultiMesh = triangleMultiMesh;
-			_sharedShaderUniforms = shaderedShaderUniforms;
+			_sharedShaderUniforms = sharedShaderUniforms;
 			SetupShader();
 
 			_triangleMultiMesh.BuffersChanged += CreateUniformSet;
@@ -47,15 +47,15 @@ namespace PlanetGame.Shaders.Dispatchers
 
 			_shaderUniforms[BufferNames.KEY_INDICES] = _sharedShaderUniforms[PlanetRenderer.BufferNames.EXEC_KEY_INDICES];
 
-			_shaderUniforms[BufferNames.READ_LIST] = new StorageBufferUniform(this, RenderingDevice, (int)BufferNames.READ_LIST,
+			_shaderUniforms[BufferNames.READ_LIST] = new StorageBufferUniform(this, RenderingDevice,
 				CreateReadList()
 			);
 
-			_shaderUniforms[BufferNames.WRITE_FULL_LIST] = new StorageBufferUniform(this, RenderingDevice, (int)BufferNames.WRITE_FULL_LIST,
+			_shaderUniforms[BufferNames.WRITE_FULL_LIST] = new StorageBufferUniform(this, RenderingDevice,
 				[.. Utilities.ToBytes<Key>(TessellationData.MaximumKeys)]
 			);
 
-			_shaderUniforms[BufferNames.WRITE_CULL_LIST] = new StorageBufferUniform(this, RenderingDevice, (int)BufferNames.WRITE_CULL_LIST,
+			_shaderUniforms[BufferNames.WRITE_CULL_LIST] = new StorageBufferUniform(this, RenderingDevice,
 				[.. Utilities.ToBytes<Key>(TessellationData.MaximumKeys)]
 			);
 
@@ -67,7 +67,7 @@ namespace PlanetGame.Shaders.Dispatchers
 
 			_shaderUniforms[BufferNames.MULTIMESH_BUFFER] = _triangleMultiMesh.BufferUniform;
 
-			_shaderUniforms[BufferNames.GLOBAL_KEYS_DATA] = new StorageBufferUniform(this, RenderingDevice, (int)BufferNames.GLOBAL_KEYS_DATA,
+			_shaderUniforms[BufferNames.GLOBAL_KEYS_DATA] = new StorageBufferUniform(this, RenderingDevice,
 				GetInitialGlobalKeyData()
 			);
 		
@@ -75,19 +75,21 @@ namespace PlanetGame.Shaders.Dispatchers
 		}
 
 #nullable enable
-		public override void Invoke(byte[]? pushConstants = null)
+		protected override void InvokeInternal(object[]? pushConstants = null)
 		{
+			if (pushConstants == null)
+				throw new("Push constants are required");
+			Span<byte> pushConstantBytes = Utilities.CollectionToBytes(pushConstants);
+
 			long computeList = RenderingDevice.ComputeListBegin();
 			RenderingDevice.ComputeListBindComputePipeline(computeList, _pipeline);
 			RenderingDevice.ComputeListBindUniformSet(computeList, _uniformSet, 0);
-			
-			if (pushConstants != null)
-				RenderingDevice.ComputeListSetPushConstant(computeList, pushConstants, (uint)pushConstants.Length);
-
+			RenderingDevice.ComputeListSetPushConstant(computeList, pushConstantBytes, (uint)pushConstantBytes.Length);
 			RenderingDevice.ComputeListAddBarrier(computeList);
 			RenderingDevice.ComputeListDispatchIndirect(computeList, _sharedShaderUniforms[PlanetRenderer.BufferNames.EXEC_DISPATCH_BUFFER].Rid, 0);
 			RenderingDevice.ComputeListEnd();
 		}
+#nullable disable
 
 		public override void UpdateUniforms()
 		{

@@ -1,5 +1,6 @@
 #[vertex] 
 #version 450 
+#extension GL_EXT_shader_image_load_formatted : enable
 
 struct InstanceData
 {
@@ -43,7 +44,7 @@ layout(std430, binding = 4) readonly buffer WorldData {
 
 layout(set = 0, binding = 5) uniform sampler2DArray albedo_tile_cache;
 layout(set = 0, binding = 6) uniform sampler2DArray heightmap_tile_cache;
-layout(set = 0, binding = 7) uniform sampler2DArray terrain_indirection_table;
+layout(set = 0, binding = 7) restrict uniform image2DArray consolidated_indirection_table;
 
 layout(push_constant, std430) uniform PushConstants {
     mat4 view_projection_matrix;
@@ -133,13 +134,7 @@ void main()
 
 	lod = get_lod_of_key(key.xy);
 
-	vec3 tile_cache_uv = get_tile_uv(
-		terrain_indirection_table,
-		plane_vertex_uv,
-		key.z,
-		low_resolution_mip_count,
-		high_resolution_mip_count
-	);
+	vec3 tile_cache_uv = get_tile_uv(consolidated_indirection_table, plane_vertex_uv, key.z, low_resolution_mip_count, high_resolution_mip_count);
 	elevation = get_tile(heightmap_tile_cache, tile_cache_uv).r;
 	
 	normal = (vec4(local_point, 1) * get_rotation_from_matrix(planet_transform_matrix)).xyz; 

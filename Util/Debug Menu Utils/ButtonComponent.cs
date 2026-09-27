@@ -3,103 +3,102 @@ using Godot;
 
 namespace PlanetGame.Util.DebugUIComponents
 {
-    public partial class ButtonComponent : PanelContainer, IDebugComponent
-    {
-    	public enum ButtonType
-    	{
-    		Toggle,
-    		Action
-    	}
+	public partial class ButtonComponent : PanelContainer, IDebugComponent
+	{
+		public enum ButtonType
+		{
+			Toggle,
+			Action
+		}
 
-    	public string TechnicalName { get; set; }
-    	public bool IsTemplate { get; set; } = true;
+		public string TechnicalName { get; set; }
+		public bool IsTemplate { get; set; } = true;
 
-    	private Label _label;
-    	private Button _button;
+		private Label _label;
+		private Button _button;
 
-    	private Func<bool> _getState;
-    	private Action _action;
-    	private ButtonType _buttonType;
+		private Func<bool> _getState;
+		private Action _action;
+		private ButtonType _buttonType;
 
-    	public void Initialize(string name, Func<bool> getState, Action action, ButtonType buttonType, bool isTemplate = false)
-    	{
-    		GetNodes();
+		public void Initialize(string name, Func<bool> getState, Action action, ButtonType buttonType, bool isTemplate = false)
+		{
+			GetNodes();
 
-    		TechnicalName = name.ToCamelCase();
-    		IsTemplate = isTemplate;
-    		_buttonType = buttonType;
+			TechnicalName = name.ToCamelCase();
+			IsTemplate = isTemplate;
+			_buttonType = buttonType;
 
-    		Name = $"{TechnicalName}ButtonComponent";
-    		_label.Text = name;
+			Name = $"{TechnicalName}ButtonComponent";
+			_label.Text = name;
 
-    		_getState = getState;
-    		_action = action;
+			_getState = getState;
+			_action = action;
 
-    		_button.ToggleMode = _buttonType == ButtonType.Toggle;
+			MouseFilter = MouseFilterEnum.Stop;
+			MouseDefaultCursorShape = CursorShape.PointingHand;
+			_button.MouseFilter = MouseFilterEnum.Ignore;
+			_button.ToggleMode = _buttonType == ButtonType.Toggle;
 
-    		if (_buttonType == ButtonType.Toggle)
-    		{
-    			bool state = false;
-    			if (_getState != null) state = _getState();
+			if (_buttonType == ButtonType.Toggle)
+			{
+				bool state = false;
+				if (_getState != null) state = _getState();
 
-    			_button.ButtonPressed = state;
-    			_button.Text = state ? "ON" : "OFF";
-    		}
-    		else
-    		{
-    			_button.ButtonPressed = false;
-    			_button.Text = "EXECUTE";
-    		}
-    	}
+				_button.ButtonPressed = state;
+				_button.Text = state ? "ON" : "OFF";
+			}
+			else
+			{
+				_button.ButtonPressed = false;
+				_button.Text = "EXECUTE";
+			}
+		}
 
-    	public override void _EnterTree()
-    	{
-    		GetNodes();
+		public override void _GuiInput(InputEvent @event)
+		{
+			if (@event is not InputEventMouseButton mouseEvent)
+				return;
 
-    		if (IsTemplate)
-    		{
-    			_button.Pressed += OnTemplatePressed;
-    			return;
-    		}
+			if (mouseEvent.ButtonIndex != MouseButton.Left || !mouseEvent.Pressed)
+				return;
 
-    		if (_action != null) _button.Pressed += OnPressed;
-    	}
+			Activate();
+			AcceptEvent();
+		}
 
-    	public override void _ExitTree()
-    	{
-    		if (_button == null) return;
+		private void Activate()
+		{
+			if (IsTemplate)
+			{
+				if (_buttonType != ButtonType.Toggle)
+					return;
 
-    		if (IsTemplate)
-    		{
-    			_button.Pressed -= OnTemplatePressed;
-    			return;
-    		}
+				_button.ButtonPressed = !_button.ButtonPressed;
+				_button.Text = _button.ButtonPressed ? "ON" : "OFF";
+				return;
+			}
 
-    		if (_action != null) _button.Pressed -= OnPressed;
-    	}
+			_action?.Invoke();
 
-    	private void GetNodes()
-    	{
-    		_label ??= GetNode<Label>("%Label");
-    		_button ??= GetNode<Button>("%Button");
-    	}
+			if (_buttonType != ButtonType.Toggle || _getState == null)
+				return;
 
-    	private void OnPressed()
-    	{
-    		if (_action != null) _action();
-    		if (_buttonType != ButtonType.Toggle || _getState == null) return;
+			bool state = _getState();
 
-    		bool state = _getState();
+			_button.ButtonPressed = state;
+			_button.Text = state ? "ON" : "OFF";
+		}
 
-    		_button.ButtonPressed = state;
-    		_button.Text = state ? "ON" : "OFF";
-    	}
+		public override void _EnterTree()
+		{
+			GetNodes();
+		}
 
-    	private void OnTemplatePressed()
-    	{
-    		if (_buttonType != ButtonType.Toggle) return;
-
-    		_button.Text = _button.ButtonPressed ? "ON" : "OFF";
-    	}
-    }
+		private void GetNodes()
+		{
+			_label ??= GetNode<Label>("%Label");
+			_button ??= GetNode<Button>("%Button");
+		}
+	}
 }
