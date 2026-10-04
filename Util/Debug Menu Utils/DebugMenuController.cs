@@ -10,6 +10,7 @@ namespace PlanetGame.Util.DebugUIComponents
 
     	private static readonly PackedScene SectionScene = ScenePaths.GetPackedScene(ScenePaths.DEBUG_SECTION);
 		private static readonly PackedScene ButtonScene = ScenePaths.GetPackedScene(ScenePaths.DEBUG_BUTTON);
+		private static readonly PackedScene SetValueScene = ScenePaths.GetPackedScene(ScenePaths.DEBUG_SET_VALUE);
 		private static readonly PackedScene SliderScene = ScenePaths.GetPackedScene(ScenePaths.DEBUG_SLIDER);
 		private static readonly PackedScene TextureScene = ScenePaths.GetPackedScene(ScenePaths.DEBUG_TEXTURE);
 		private static readonly PackedScene DistributionScene = ScenePaths.GetPackedScene(ScenePaths.DEBUG_DISTRIBUTION);
@@ -170,6 +171,7 @@ namespace PlanetGame.Util.DebugUIComponents
     		foreach (Node child in _sectionContent.GetChildren())
     		{
     			if (child is SectionComponent) continue;
+				if (child is LabelComponent label && label.TechnicalName.Equals("FPS", StringComparison.OrdinalIgnoreCase)) continue;
 
     			child.QueueFree();
     		}
@@ -365,6 +367,73 @@ namespace PlanetGame.Util.DebugUIComponents
     	}
 
     	#endregion
+
+		  #region Set Values
+
+        public void AddSetValue(string name, string section, Func<int> getState, Action<int> action, int step = 1, Func<int, int> subtractFunction = null, Func<int, int> addFunction = null, int order = 0)
+        {
+            SetValueComponent setValueComponent = SetValueScene.Instantiate<SetValueComponent>();
+            setValueComponent.Initialize(name, getState, action, step, subtractFunction, addFunction);
+            GetContainer(section).AddContent(setValueComponent, order);
+        }
+
+        public void AddSetValue(string name, string section, SetValueComponent.SetValueBinding<int>[] bindings, int order = 0)
+        {
+            SetValueComponent setValueComponent = SetValueScene.Instantiate<SetValueComponent>();
+            setValueComponent.Initialize(name, bindings);
+            GetContainer(section).AddContent(setValueComponent, order);
+        }
+
+        public void AddSetValue(string name, string section, Func<uint> getState, Action<uint> action, uint step = 1, Func<uint, uint> subtractFunction = null, Func<uint, uint> addFunction = null, int order = 0)
+        {
+            SetValueComponent setValueComponent = SetValueScene.Instantiate<SetValueComponent>();
+            setValueComponent.Initialize(name, getState, action, step, subtractFunction, addFunction);
+            GetContainer(section).AddContent(setValueComponent, order);
+        }
+
+        public void AddSetValue(string name, string section, SetValueComponent.SetValueBinding<uint>[] bindings, int order = 0)
+        {
+            SetValueComponent setValueComponent = SetValueScene.Instantiate<SetValueComponent>();
+            setValueComponent.Initialize(name, bindings);
+            GetContainer(section).AddContent(setValueComponent, order);
+        }
+
+        public void AddSetValue(string name, string section, Func<float> getState, Action<float> action, float step = 1.0f, Func<float, float> subtractFunction = null, Func<float, float> addFunction = null, int order = 0)
+        {
+            SetValueComponent setValueComponent = SetValueScene.Instantiate<SetValueComponent>();
+            setValueComponent.Initialize(name, getState, action, step, subtractFunction, addFunction);
+            GetContainer(section).AddContent(setValueComponent, order);
+        }
+
+        public void AddSetValue(string name, string section, SetValueComponent.SetValueBinding<float>[] bindings, int order = 0)
+        {
+            SetValueComponent setValueComponent = SetValueScene.Instantiate<SetValueComponent>();
+            setValueComponent.Initialize(name, bindings);
+            GetContainer(section).AddContent(setValueComponent, order);
+        }
+
+        public void AddSetValueTemplate(string name, string section, int step = 1, int order = 0)
+        {
+            SetValueComponent setValueComponent = SetValueScene.Instantiate<SetValueComponent>();
+            setValueComponent.InitializeTemplate(name, step);
+            GetContainer(section).AddContent(setValueComponent, order);
+        }
+
+        public void AddSetValueTemplate(string name, string section, uint step = 1, int order = 0)
+        {
+            SetValueComponent setValueComponent = SetValueScene.Instantiate<SetValueComponent>();
+            setValueComponent.InitializeTemplate(name, step);
+            GetContainer(section).AddContent(setValueComponent, order);
+        }
+
+        public void AddSetValueTemplate(string name, string section, float step = 1.0f, int order = 0)
+        {
+            SetValueComponent setValueComponent = SetValueScene.Instantiate<SetValueComponent>();
+            setValueComponent.InitializeTemplate(name, step);
+            GetContainer(section).AddContent(setValueComponent, order);
+        }
+
+        #endregion
 
     	#region Textures
 

@@ -1,0 +1,47 @@
+[gd_scene format=3 uid="uid://gr7jvdycf1i6"]
+
+[ext_resource type="Script" uid="uid://c81h0hxksilmg" path="res://Util/Debug Menu Utils/SetValueComponent.cs" id="1_elv2j"]
+
+[node name="SetValueComponent" type="PanelContainer" unique_id=344758243]
+script = ExtResource("1_elv2j")
+
+[node name="SetValueMargin" type="MarginContainer" parent="." unique_id=1408995033]
+layout_mode = 2
+
+[node name="SetValueContent" type="HBoxContainer" parent="SetValueMargin" unique_id=1306243851]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Label" type="Label" parent="SetValueMargin/SetValueContent" unique_id=1076489786]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Slider"
+
+[node name="Spacer" type="Control" parent="SetValueMargin/SetValueContent" unique_id=873927965]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="SetValueRows" type="VBoxContainer" parent="SetValueMargin/SetValueContent" unique_id=387227897]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="SetValueRowTemplate" type="HBoxContainer" parent="SetValueMargin/SetValueContent/SetValueRows" unique_id=1427916088]
+layout_mode = 2
+
+[node name="SubtractButton" type="Button" parent="SetValueMargin/SetValueContent/SetValueRows/SetValueRowTemplate" unique_id=123386760]
+custom_minimum_size = Vector2(32, 32)
+layout_mode = 2
+focus_mode = 0
+text = "-"
+
+[node name="ValueLabel" type="LineEdit" parent="SetValueMargin/SetValueContent/SetValueRows/SetValueRowTemplate" unique_id=2119200141]
+custom_minimum_size = Vector2(45, 0)
+layout_mode = 2
+focus_mode = 1
+text = "0"
+
+[node name="AddButton" type="Button" parent="SetValueMargin/SetValueContent/SetValueRows/SetValueRowTemplate" unique_id=1602575815]
+custom_minimum_size = Vector2(32, 32)
+layout_mode = 2
+focus_mode = 0
+text = "+"

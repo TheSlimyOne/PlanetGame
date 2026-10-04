@@ -7,7 +7,7 @@ namespace Uniform
 {
 	public partial class PlaceholderUniform : ShaderUniform
 	{
-		public PlaceholderUniform() : base(null, null) {}
+        public PlaceholderUniform() : base("Placeholder", null, null) {}
 		public override void UpdateUniform(byte[] data) => throw new NotImplementedException("PlaceholderUniforms cannot be updated.");
 		public override List<byte[]> GetByteData() => throw new NotImplementedException("PlaceholderUniforms does not contain data.");
 

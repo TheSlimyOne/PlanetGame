@@ -10,6 +10,8 @@ namespace PlanetGame
         public const string DEBUG_TEXTURE = "res://Util/Debug Menu Utils/Scenes/texture_component.tscn";
         public const string DEBUG_DISTRIBUTION = "res://Util/Debug Menu Utils/Scenes/distribution_component.tscn";
         public const string DEBUG_LABEL = "res://Util/Debug Menu Utils/Scenes/label_component.tscn";
+        public const string DEBUG_SET_VALUE = "res://Util/Debug Menu Utils/Scenes/set_value_component.tscn";
+        
 
         public const string PLANET_DRAWING_CONTROLLER = "res://Planet/Rendering/Drawing/UI/planet_drawing_controller.tscn";
         public const string BRUSH_OPTIONS = "res://Planet/Rendering/Drawing/UI/brush_options.tscn";

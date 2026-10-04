@@ -8,10 +8,11 @@ using PlanetGame.Util.DebugUIComponents;
 using System;
 using PlanetGame.Data;
 using static PlanetGame.Planet.Rendering.PlanetRenderer;
+using PlanetGame.Shaders;
 
 namespace PlanetGame.Planet.Rendering.VirtualTexturing
 {
-    public class SparseVirtualTexture
+    public class SparseVirtualTexture : IGPUResource
     {
         private static VirtualTextureData VirtualTextureData => SaveManager.VirtualTextureData;
         private static TessellationData TessellationData => SaveManager.TessellationData;
@@ -32,20 +33,20 @@ namespace PlanetGame.Planet.Rendering.VirtualTexturing
 
         private readonly Image[] _consolidatedIndirectionTexture = new Image[6];
 
-        public SparseVirtualTexture(MultiMeshRD triangleMultiMesh, Vector2I viewSize, Dictionary<BufferNames, ShaderUniform> sharedUniforms)
+        public SparseVirtualTexture(Dictionary<BufferNames, ShaderUniform> sharedUniforms)
         {
-            _tileCaches[TileCache.TileCacheType.ALBEDO] = new(DirectoryData.TileAlbedo, Colors.Magenta, Image.Format.Rgba8);
-        
-            _tileCaches[TileCache.TileCacheType.HEIGHTMAP] = new(DirectoryData.TileHeightmap, Colors.Black, Image.Format.R8);
+            _tileCaches[TileCache.TileCacheType.ALBEDO] = new("albedo", this, DirectoryData.TileAlbedo, Colors.Magenta, Image.Format.Rgba8);
 
-            IndirectionTable = new();
-            ConsolidatedIndirectionTable = new();
-            ResidencyTable = new();
-            StateTable = new();
+            _tileCaches[TileCache.TileCacheType.HEIGHTMAP] = new("heightmap", this, DirectoryData.TileHeightmap, Colors.Black, Image.Format.R8);
+
+            IndirectionTable = new("Indirection Table", this);
+            ConsolidatedIndirectionTable = new("Consolidated Indirection Table", this);
+            ResidencyTable = new("Residency Table", this);
+            StateTable = new("State Table", this);
 
             ResolveTileRequest = new(this, sharedUniforms);
-            ValidateTileCache = new(this);
-            FlattenIndirectionTableDispatcher = new(this);
+            ValidateTileCache = new(this, sharedUniforms);
+            FlattenIndirectionTableDispatcher = new(this, sharedUniforms);
         }
 
         public TileCache GetTileCache(TileCache.TileCacheType type)
@@ -108,8 +109,8 @@ namespace PlanetGame.Planet.Rendering.VirtualTexturing
                         gridSize,
                         gridSize,
                         false,
-                        FormatConverter.MatchDataFormat(ConsolidatedIndirectionTable.Format),
-                        renderingDevice.TextureGetData(ConsolidatedIndirectionTable.GetRdRid(), layer)
+                        FormatConverter.MatchDataFormat(ConsolidatedIndirectionTable.TextureFormat.Format),
+                        renderingDevice.TextureGetData(ConsolidatedIndirectionTable.Rid, layer)
                     );
                 }
             }
@@ -176,25 +177,6 @@ namespace PlanetGame.Planet.Rendering.VirtualTexturing
 
         public void CleanupGPUResources()
         {
-            IndirectionTable?.DeleteVisualization();
-            IndirectionTable = default;
-
-            ConsolidatedIndirectionTable?.DeleteVisualization();
-            ConsolidatedIndirectionTable = default;
-
-            foreach (TileCache cache in _tileCaches.Values)
-            {
-                cache.DeleteVisualization();
-            }
-
-            _tileCaches.Clear();
-
-            ResidencyTable?.DeleteVisualization();
-            ResidencyTable = default;
-
-            StateTable?.DeleteVisualization();
-            StateTable = default;
-
             ResolveTileRequest?.CleanupGPU();
             ValidateTileCache?.CleanupGPU();
             FlattenIndirectionTableDispatcher?.CleanupGPU();
@@ -202,6 +184,21 @@ namespace PlanetGame.Planet.Rendering.VirtualTexturing
             ResolveTileRequest = default;
             ValidateTileCache = default;
             FlattenIndirectionTableDispatcher = default;
+
+            IndirectionTable?.FreeRid();
+            ConsolidatedIndirectionTable?.FreeRid();
+            ResidencyTable?.FreeRid();
+            StateTable?.FreeRid();
+
+            IndirectionTable = default;
+            ConsolidatedIndirectionTable = default;
+            ResidencyTable = default;
+            StateTable = default;
+
+            foreach (TileCache cache in _tileCaches.Values)
+                cache.FreeRid();
+
+            _tileCaches.Clear();
         }
     }
 }

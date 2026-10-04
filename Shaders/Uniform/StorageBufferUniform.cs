@@ -19,14 +19,14 @@ namespace Uniform
 			Perserved = perserved;
 		}
 
-		public StorageBufferUniform(IGPUResource owner, RenderingDevice renderingDevice, byte[] data, RenderingDevice.StorageBufferUsage storageBufferUsage = 0, bool perserved = false) : base(renderingDevice, owner, perserved)
+		public StorageBufferUniform(string name, IGPUResource owner, RenderingDevice renderingDevice, byte[] data, RenderingDevice.StorageBufferUsage storageBufferUsage = 0, bool perserved = false) : base(name, renderingDevice, owner, perserved)
 		{
 			Rid = renderingDevice.StorageBufferCreate((uint)data.Length, data, usage: storageBufferUsage);
 			UniformType = RenderingDevice.UniformType.StorageBuffer;
 			StorageBufferUsage = storageBufferUsage;
 		}
 
-		public StorageBufferUniform(IGPUResource owner, RenderingDevice renderingDevice, RenderingDevice.StorageBufferUsage storageBufferUsage = 0, bool perserved = false) : base(renderingDevice, owner, perserved)
+		public StorageBufferUniform(string name, IGPUResource owner, RenderingDevice renderingDevice, RenderingDevice.StorageBufferUsage storageBufferUsage = 0, bool perserved = false) : base(name, renderingDevice, owner, perserved)
 		{
 			Rid = new();
 			UniformType = RenderingDevice.UniformType.StorageBuffer;

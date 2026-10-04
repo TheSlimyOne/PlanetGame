@@ -40,46 +40,40 @@ namespace PlanetGame.Planet.Rendering.VirtualTexturing
             protected set => _storageTexture = value;
         }
 
-        public readonly Image.Format CacheFormat;
         public readonly Image Placeholder;
 
-        public TileCache(string dataSourcePath, Color placeholderColor, Image.Format format)
+        public TileCache(string name, Shaders.IGPUResource owner, string dataSourcePath, Color placeholderColor, Image.Format format) : base(name, owner, RenderingDevice.UniformType.SamplerWithTexture, perserved: false)
         {
             DataSource = new(dataSourcePath);
-
-            // Look into this
-            CacheFormat = format;
-            Format = FormatConverter.MatchDataFormat(CacheFormat);
-
-            int tileSize = (int)DataSource.TileSize;
-            Placeholder = Image.CreateEmpty(tileSize, tileSize, false, CacheFormat);
-            Placeholder.Fill(placeholderColor);
-
-            Cache = new()
+            
+            Size = DataSource.TileSize;
+            
+            TextureFormat = new RDTextureFormat()
             {
-                TextureRdRid = RenderingServer.GetRenderingDevice().TextureCreate(
-                    new RDTextureFormat()
-                    {
-                        Width = (uint)tileSize,
-                        Height = (uint)tileSize,
-                        ArrayLayers = DEFAULT_TILE_SLOTS_COUNT,
-                        Format = Format,
-                        TextureType = RenderingDevice.TextureType.Type2DArray,
-                        UsageBits = RenderingDevice.TextureUsageBits.StorageBit | RenderingDevice.TextureUsageBits.CanCopyFromBit | RenderingDevice.TextureUsageBits.CanUpdateBit | RenderingDevice.TextureUsageBits.SamplingBit | RenderingDevice.TextureUsageBits.CanCopyToBit
-                    },
-                    new RDTextureView()
-                )
+                Width = Size,
+                Height = Size,
+                ArrayLayers = DEFAULT_TILE_SLOTS_COUNT,
+                Format = FormatConverter.MatchDataFormat(format),
+                TextureType = RenderingDevice.TextureType.Type2DArray,
+                UsageBits = RenderingDevice.TextureUsageBits.StorageBit | RenderingDevice.TextureUsageBits.CanCopyFromBit | RenderingDevice.TextureUsageBits.CanUpdateBit | RenderingDevice.TextureUsageBits.SamplingBit | RenderingDevice.TextureUsageBits.CanCopyToBit
             };
+
+            Rid = RenderingServer.GetRenderingDevice().TextureCreate(
+                TextureFormat,
+                new RDTextureView()
+            );
+
+            Cache = new() { TextureRdRid = Rid };
+
+            Placeholder = Image.CreateEmpty((int)Size, (int)Size, false, format);
+            Placeholder.Fill(placeholderColor);
 
             ClearStorageTexture();
             SetFallbackSlots();
         }
 
-        //TODO not a fan of this one
-        public override void ClearStorageTexture()
-        {
-            RenderingServer.GetRenderingDevice().TextureClear(GetRdRid(), new Color("00000000"), 0, 1, 0, DEFAULT_TILE_SLOTS_COUNT);
-        }
+        public override void ClearStorageTexture() => ClearTexture(new Color("00000000"), 0, 1, 0, DEFAULT_TILE_SLOTS_COUNT);
+
 
         public bool InsertTile(Tile tile, uint slot)
         {
@@ -89,7 +83,7 @@ namespace PlanetGame.Planet.Rendering.VirtualTexturing
             RenderingServer.CallOnRenderThread(Callable.From(() =>
             {
                 RenderingServer.GetRenderingDevice().TextureUpdate(
-                    GetRdRid(), slot, imageData
+                    Rid, slot, imageData
                 );
             }));
 
@@ -159,12 +153,6 @@ namespace PlanetGame.Planet.Rendering.VirtualTexturing
             return texture;
         }
 
-        public override void CleanupGPU()
-        {
-            if (GetRdRid().IsValid)
-                RenderingServer.GetRenderingDevice().FreeRid(GetRdRid());
-        }
-
         public override void SetFallbackSlots()
         {
             string[] fallBackTiles = VirtualTextureData.FallBackTiles;
@@ -176,13 +164,5 @@ namespace PlanetGame.Planet.Rendering.VirtualTexturing
                 InsertTile(tile, slot);
             }
         }
-
-        public override Color GetPixel(int x, int y, int z)
-        {
-            throw new NotImplementedException();
-        }
-
-
-        public override Rid GetRdRid() => Cache.TextureRdRid;
     }
 }

@@ -47,8 +47,9 @@ layout(set = 0, binding = 6) uniform sampler2DArray heightmap_tile_cache;
 layout(set = 0, binding = 7) restrict uniform image2DArray consolidated_indirection_table;
 
 layout(push_constant, std430) uniform PushConstants {
-    mat4 view_projection_matrix;
+    mat4 rotated_projection_matrix;
     vec4 camera_position_fovy;
+	vec4 sun_direction;
 } push_constants;
 
 layout(location = 0) in vec3 vertex_pos; 
@@ -64,9 +65,8 @@ layout(location = 6) out vec3 normal;
 layout(location = 7) out vec3 world_position;
 layout(location = 8) flat out uint instance_id;
 
-
+#[include] res://Shaders/GLSL/ShaderIncludes/Constants.inc
 #[include] res://Shaders/GLSL/ShaderIncludes/TessellationFunctions.inc
-
 #[include] res://Shaders/GLSL/ShaderIncludes/Functions.inc
 
 void main() 
@@ -74,6 +74,7 @@ void main()
 	instance_id = gl_InstanceIndex;
 	bool is_morphing = (debug_flags & 2u) != 0u;
 	bool is_cube = (debug_flags & 4u) != 0u;
+	bool is_floating_origin = (debug_flags & 8u) != 0u;
 
 	InstanceData instance = instances[gl_InstanceIndex];
 	key = floatBitsToUint(instance.custom);
@@ -139,11 +140,9 @@ void main()
 	
 	normal = (vec4(local_point, 1) * get_rotation_from_matrix(planet_transform_matrix)).xyz; 
 
-	world_position = vec3(
-		get_world_space_point(local_point, planet_transform_matrix) +
-		normal * height_scale * elevation
-	);
+	world_position = get_world_space_point(local_point, planet_transform_matrix) + normal * height_scale * elevation;
 
-	gl_Position = push_constants.view_projection_matrix * vec4(world_position, 1.0);
-	// gl_Position.y = -gl_Position.y;    
+	// world_position -= push_constants.camera_position_fovy.xyz;
+
+	gl_Position = push_constants.rotated_projection_matrix * vec4(world_position, 1.0);
 }

@@ -3,6 +3,8 @@ using Uniform;
 using Godot;
 using PlanetGame.Planet.Rendering.VirtualTexturing;
 using PlanetGame.Data;
+using System.Collections.Generic;
+using PlanetGame.Planet.Rendering;
 
 namespace PlanetGame.Shaders.Dispatchers
 {
@@ -10,6 +12,8 @@ namespace PlanetGame.Shaders.Dispatchers
 	{
 		private static ShaderProgramPaths _shaderPath = new() { Compute = ShaderPaths.CONSOLIDATE_INDIRECTION_TABLE_COMPUTE };
     	private static VirtualTextureData VirtualTextureData => SaveManager.VirtualTextureData;
+		private readonly Dictionary<PlanetRenderer.BufferNames, ShaderUniform> _sharedShaderUniforms;
+
 		
 		public enum BufferNames
 		{
@@ -20,26 +24,23 @@ namespace PlanetGame.Shaders.Dispatchers
 
 		private readonly SparseVirtualTexture _sparseVirtualTexture;
 
-		public ConsolidateIndirectionTableDispatcher(SparseVirtualTexture sparseVirtualTexture) : base(_shaderPath)
+		public ConsolidateIndirectionTableDispatcher(SparseVirtualTexture sparseVirtualTexture, Dictionary<PlanetRenderer.BufferNames, ShaderUniform> sharedShaderUniforms) : base(_shaderPath)
 		{
+			_sharedShaderUniforms = sharedShaderUniforms;
 			_sparseVirtualTexture = sparseVirtualTexture;
 			SetupShader();
 		}
 
 		public override void CreateUniforms()
 		{
-			_shaderUniforms = new System.Collections.Generic.Dictionary<Enum, ShaderUniform>()
-			{
-				[BufferNames.INDIRECTION_TABLE] = new Texture2DUniform(this, RenderingDevice, RenderingDevice.UniformType.Image,
-					_sparseVirtualTexture.IndirectionTable.GetRdRid(),  perserved: true
-				),
+			_shaderUniforms = [];
+			
+			_shaderUniforms[BufferNames.INDIRECTION_TABLE] = _sparseVirtualTexture.IndirectionTable;
 
-				[BufferNames.CONSOLIDATED_INDIRECTION_TABLE] = new Texture2DUniform(this, RenderingDevice, RenderingDevice.UniformType.Image,
-					_sparseVirtualTexture.ConsolidatedIndirectionTable.GetRdRid(), perserved: true
-				),
+			_shaderUniforms[BufferNames.CONSOLIDATED_INDIRECTION_TABLE] = _sparseVirtualTexture.ConsolidatedIndirectionTable;
 
-                [BufferNames.VIRTUAL_TEXTURE_DATA] = _sparseVirtualTexture.ResolveTileRequest[ResolveTileRequestDispatcher.BufferNames.VIRTUAL_TEXTURE_DATA]
-			};
+			_shaderUniforms[BufferNames.VIRTUAL_TEXTURE_DATA] = _sharedShaderUniforms[PlanetRenderer.BufferNames.VIRTUAL_TEXTURE_DATA];
+		
 			CreateUniformSet();
 		}
 
@@ -57,10 +58,5 @@ namespace PlanetGame.Shaders.Dispatchers
 			RenderingDevice.ComputeListEnd();
 		}
 #nullable disable
-
-		public override void CleanupGPU()
-		{
-			base.CleanupGPU();
-		}
     }
 }

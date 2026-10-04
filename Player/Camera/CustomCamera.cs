@@ -40,8 +40,8 @@ public partial class CustomCamera : Camera3D
 	{
 		DebugMenuController.Instance.AddSection("Camera", 0, false, null, 250);
 		DebugMenuController.Instance.AddButton("Frustums", "Camera", () => FrustumVisable, () => FrustumVisable = !FrustumVisable);
-		DebugMenuController.Instance.AddLabel("Distance", "Camera", () => $"{DistanceFromTarget}");
-		DebugMenuController.Instance.AddLabel("Camera Mode", "Camera", () => $"{GetViewport().DebugDraw}");
+		// DebugMenuController.Instance.AddLabel("Distance", "Camera", () => $"{DistanceFromTarget}");
+		// DebugMenuController.Instance.AddLabel("Camera Mode", "Camera", () => $"{GetViewport().DebugDraw}");
 		DebugMenuController.Instance.AddSlider("Culling Margin", "Camera",
 		[
 			new SliderComponent.SliderBinding<float>(
@@ -114,14 +114,14 @@ public partial class CustomCamera : Camera3D
 
 	}
 
-    public override void _Process(double delta)
-    {
-        _cullingMarginFrustumInstance.Visible = FrustumVisable;
+	public override void _Process(double delta)
+	{
+		_cullingMarginFrustumInstance.Visible = FrustumVisable;
 		_frustumInstance.Visible = FrustumVisable;
 
 		if (FrustumVisable)
 			SetFrustumMeshInstance(TessellationData.CullingMargin, TessellationData.CullingDepth);
-    }
+	}
 
 
 	public override void _PhysicsProcess(double delta)
@@ -172,7 +172,7 @@ public partial class CustomCamera : Camera3D
 
 	public override void _Input(InputEvent @event)
 	{
-		if (Input.IsActionJustReleased("cam_exit") && GetCurrent() == this)
+		if (Input.IsActionJustReleasedByEvent("cam_exit", @event) && GetCurrent() == this)
 		{
 			if (Locked)
 				UnlockMouse();
@@ -258,14 +258,14 @@ public partial class CustomCamera : Camera3D
 	{
 		Transform3D viewMatrix = transform.AffineInverse();
 
-        Projection viewMatrix4 = new(
-            new Vector4(viewMatrix[0].X, viewMatrix[0].Y, viewMatrix[0].Z, 0),
-            new Vector4(viewMatrix[1].X, viewMatrix[1].Y, viewMatrix[1].Z, 0),
-            new Vector4(viewMatrix[2].X, viewMatrix[2].Y, viewMatrix[2].Z, 0),
-            new Vector4(viewMatrix[3].X, viewMatrix[3].Y, viewMatrix[3].Z, 1)
-        );
+		Projection viewMatrix4 = new(
+			new Vector4(viewMatrix[0].X, viewMatrix[0].Y, viewMatrix[0].Z, 0),
+			new Vector4(viewMatrix[1].X, viewMatrix[1].Y, viewMatrix[1].Z, 0),
+			new Vector4(viewMatrix[2].X, viewMatrix[2].Y, viewMatrix[2].Z, 0),
+			new Vector4(viewMatrix[3].X, viewMatrix[3].Y, viewMatrix[3].Z, 1)
+		);
 
-        return cameraProjection * viewMatrix4;
+		return cameraProjection * viewMatrix4;
 	}
 
 	public Camera3D GetCurrent()

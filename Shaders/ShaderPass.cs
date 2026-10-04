@@ -29,7 +29,10 @@ namespace PlanetGame.Shaders
         public ShaderUniform GetUniform(Enum @enum) => _shaderUniforms[@enum];
         public T GetUniform<T>(Enum @enum) where T : ShaderUniform => (T)_shaderUniforms[@enum];
 
-        public virtual void UpdateUniforms() { }
+        public virtual void UpdateUniforms()
+        {
+            throw new NotImplementedException();
+        }
 
 #nullable enable
         public void Invoke(object[]? pushConstants = null)
@@ -59,23 +62,28 @@ namespace PlanetGame.Shaders
             {
                 TEnum @enum = (TEnum)Enum.ToObject(typeof(TEnum), bindingIndex);
                 ShaderUniform shaderUniform = _shaderUniforms[@enum];
+
                 RDUniform uniform = shaderUniform.CreateRDUniform(bindingIndex);
                 bindings.Add(uniform);
             }
 
-            // if (RenderingDevice.UniformSetIsValid(_uniformSet))
-            // {                
-            //     RenderingDevice.FreeRid(_uniformSet);
-            // }
+            if (RenderingDevice.UniformSetIsValid(_uniformSet))
+            {
+                RenderingDevice.FreeRid(_uniformSet);
+            }
+
             _uniformSet = RenderingDevice.UniformSetCreate(bindings, _shader, 0);
         }
 
         public abstract bool IsValid();
-      
+
         public virtual void CleanupGPU()
         {
             if (RenderingDevice == null)
                 return;
+
+            // if (IGPUResource.Verbose)
+            // GD.Print($"Cleaning up shader pass: {this}");
 
             if (RenderingDevice.UniformSetIsValid(_uniformSet))
                 RenderingDevice.FreeRid(_uniformSet);
@@ -93,32 +101,40 @@ namespace PlanetGame.Shaders
                     Enum uniformName = kvp.Key;
                     ShaderUniform shaderUniform = kvp.Value;
 
-                    if (IGPUResource.Verbose)
-                        GD.Print("========================");
+                    string ownerName = shaderUniform.Owner is IGPUResource gpuOwner
+                        ? $"{gpuOwner.GetType().Name} ID: {gpuOwner.GetID()}"
+                        : shaderUniform.Owner?.GetType().Name ?? "NULL";
 
                     if (IGPUResource.Verbose)
-                        GD.Print($"Clearing {uniformName} in {GetType().Name} ID: {GetID()} Owner: {shaderUniform.Owner}");
+                    {
+                        GD.Print();
+                        GD.Print($"Clearing {uniformName}");
+                        GD.Print($"RID: {shaderUniform.Rid}");
+                        GD.Print($"Container: {GetType().Name} ID: {GetID()}");
+                        GD.Print($"Owner: {ownerName}");
+                        GD.Print($"Preserved: {shaderUniform.Perserved}");
+                    }
 
                     if (shaderUniform.Owner == this)
                     {
                         if (IGPUResource.Verbose)
-                            GD.Print(shaderUniform.Rid);
+                            GD.Print(shaderUniform.Perserved ? "RID preserved" : "Freeing RID");
 
                         shaderUniform.FreeRid();
                     }
                     else if (IGPUResource.Verbose)
                     {
-                        GD.Print($"{GetType().Name} does not own this uniform. Not free rid");
+                        GD.Print($"{GetType().Name} does not own this uniform container. Not calling FreeRid()");
                     }
-
-                    if (IGPUResource.Verbose)
-                        GD.Print("========================");
                 }
             }
 
             _shaderUniforms = null;
             RenderingDevice = null;
         }
+
+        public override string ToString() =>
+            $"{GetType().Name} (Shader RID: {_shader}, Pipeline RID: {_pipeline}, Uniform Set RID: {_uniformSet})";
 
         public int GetID() => GetHashCode();
 

@@ -13,41 +13,37 @@ namespace PlanetGame.Planet.Rendering.VirtualTexturing
             protected set => _storageTexture = value;
         }
 
-        public ConsolidatedIndirectionTable()
+        public ConsolidatedIndirectionTable(string name, Shaders.IGPUResource owner) : base(name, owner, RenderingDevice.UniformType.Image, false)
         {
-            uint gridSize = VirtualTextureData.BaseGridSize;
+            Size = VirtualTextureData.BaseGridSize;
 
-            Format = RenderingDevice.DataFormat.R32G32B32A32Sfloat;
-
-            Table = new()
+            TextureFormat = new RDTextureFormat()
             {
-                TextureRdRid = RenderingServer.GetRenderingDevice().TextureCreate(
-                    new RDTextureFormat()
-                    {
-                        Width = gridSize,
-                        Height = gridSize,
-                        ArrayLayers = 6,
-                        Format = Format,
-                        TextureType = RenderingDevice.TextureType.Type2DArray,
-                        UsageBits = RenderingDevice.TextureUsageBits.StorageBit | 
-                                    RenderingDevice.TextureUsageBits.CanCopyFromBit | 
-                                    RenderingDevice.TextureUsageBits.CanUpdateBit | 
-                                    RenderingDevice.TextureUsageBits.SamplingBit | 
-                                    RenderingDevice.TextureUsageBits.CanCopyToBit
-                    },
-                    new RDTextureView()
-                )
+                Width = Size,
+                Height = Size,
+                ArrayLayers = 6,
+                Format = RenderingDevice.DataFormat.R32G32B32A32Sfloat,
+                TextureType = RenderingDevice.TextureType.Type2DArray,
+                UsageBits = RenderingDevice.TextureUsageBits.StorageBit | 
+                            RenderingDevice.TextureUsageBits.CanCopyFromBit | 
+                            RenderingDevice.TextureUsageBits.CanUpdateBit | 
+                            RenderingDevice.TextureUsageBits.SamplingBit | 
+                            RenderingDevice.TextureUsageBits.CanCopyToBit
             };
+
+            Rid = RenderingServer.GetRenderingDevice().TextureCreate(
+                TextureFormat,
+                new RDTextureView()
+            );
+
+            Table = new() { TextureRdRid = Rid };
 
             ClearStorageTexture();
             SetFallbackSlots();
         }
 
-        //TODO not a fan of this one
-        public override void ClearStorageTexture()
-        {
-            RenderingServer.GetRenderingDevice().TextureClear(GetRdRid(), new Color("00000000"), 0, 1, 0, 6);
-        }
+        public override void ClearStorageTexture() => ClearTexture(new Color("00000000"), 0, 1, 0, 6);
+        
 
         public override TextureRect CreateVisualization(string name = "")
         {
@@ -127,28 +123,25 @@ namespace PlanetGame.Planet.Rendering.VirtualTexturing
             return texture;
         }
 
-        public override void CleanupGPU()
-        {
-            if (GetRdRid().IsValid)
-                RenderingServer.GetRenderingDevice().FreeRid(GetRdRid());
-        }
+        // public override void CleanupGPU()
+        // {
+        //     if (GetRdRid().IsValid)
+        //         RenderingServer.GetRenderingDevice().FreeRid(GetRdRid());
+        // }
 
         public override void SetFallbackSlots()
         {
-            uint totalMipLayers = VirtualTextureData.TotalMipLayersPerFace;
             string[] fallBackTiles = VirtualTextureData.FallBackTiles;
         
             uint gridSize = VirtualTextureData.BaseGridSize;
-            int size = (int)Mathf.Sqrt(TileCache.DEFAULT_TILE_SLOTS_COUNT);
             
             Image[] images = new Image[6];
             
             for (uint i = 0; i < fallBackTiles.Length; i++)
             {
                 string[] tileData = fallBackTiles[i].Split('_');
-                int realMipIndex = int.Parse(tileData[0]);
 
-                int mipIndex = realMipIndex + (int)VirtualTextureData.HighResolutionMipCount;
+                int mipIndex = int.Parse(tileData[0]);
                 int normalId = int.Parse(tileData[1]);
                 int tileX = int.Parse(tileData[2]);
                 int tileY = int.Parse(tileData[3]);
@@ -156,7 +149,7 @@ namespace PlanetGame.Planet.Rendering.VirtualTexturing
                 int mipSize = (int)gridSize >> mipIndex;
 
                 if(images[normalId] == null)
-                    images[normalId] = Image.CreateEmpty((int)gridSize, (int)gridSize, false, FormatConverter.MatchDataFormat(Format));
+                    images[normalId] = Image.CreateEmpty((int)gridSize, (int)gridSize, false, FormatConverter.MatchDataFormat(TextureFormat.Format));
 
                 Color data = new(
                     BitConverter.UInt32BitsToSingle(i),
@@ -172,14 +165,7 @@ namespace PlanetGame.Planet.Rendering.VirtualTexturing
                     
             for(uint i = 0; i < images.Length; i++)
                 if (images[i] != null)
-                    RenderingServer.GetRenderingDevice().TextureUpdate(GetRdRid(), i, images[i].GetData());
+                    RenderingServer.GetRenderingDevice().TextureUpdate(Rid, i, images[i].GetData());
         }
-
-        public override Color GetPixel(int x, int y, int z)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override Rid GetRdRid() => Table.TextureRdRid;
     }
 }

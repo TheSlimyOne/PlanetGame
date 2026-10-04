@@ -29,6 +29,7 @@ layout(set = 0, binding = 6) uniform sampler2DArray heightmap_tile_cache;
 
 layout(set = 0, binding = 7) restrict uniform image2DArray ConsolidatedIndirectionTable;
 
+#[include] res://Shaders/GLSL/ShaderIncludes/Constants.inc
 #[include] res://Shaders/GLSL/ShaderIncludes/TessellationFunctions.inc
 #[include] res://Shaders/GLSL/ShaderIncludes/Functions.inc
 

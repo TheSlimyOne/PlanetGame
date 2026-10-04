@@ -162,7 +162,6 @@ public class PlanetQuery(CustomCamera queryCamera, PlanetRenderer planetRenderer
         if (!TryGetSurfacePoint(point, out PlanetSurfacePoint surfacePoint))
             return float.NaN;
 
-
         uint normalId = surfacePoint.NormalId;
         uint mip = _planetRenderer.SparseVirtualTexture.SampleConsolidatedIndirectionTexture(normalId, surfacePoint.UV);
         float mipGridSize = VirtualTextureData.GetMipSize(mip);

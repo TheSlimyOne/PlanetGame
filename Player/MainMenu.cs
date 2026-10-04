@@ -34,28 +34,38 @@ public partial class MainMenu : MarginContainer
 	public override void _ExitTree()
 	{
 		if (Instance == this)
-			Instance = null;
+			Instance = null;		
 	}
 
 	public override void _Ready()
 	{
-		LoadSave.Disabled = true;
-		LoadOptions.Selected = -1;
+		LoadSave.Disabled = LoadOptions.Selected == -1;
+		GD.Print(SelectedSave);
+		// LoadOptions.Selected = -1;
 
 		DemoPlanet.Planet.Mesh = new BoxMesh() { SubdivideWidth = 16, SubdivideHeight = 16, SubdivideDepth = 16 };
 		ShaderMaterial shader = new() { Shader = GD.Load<Shader>(ShaderPaths.GD_DEMO_SHADER_PATH) };
 		DemoPlanet.Planet.Mesh.SurfaceSetMaterial(0, shader);
 	}
 
-	// public override void _EnterTree()
-	// {
-	// 	TileGenerator.OnTileGeneratedProgress += OnTileProgress;
-	// }
+    public override void _Process(double delta)
+    {
+		// ulong total = RenderingServer.GetRenderingDevice().GetMemoryUsage(RenderingDevice.MemoryType.Total);
+        // ulong buffers = RenderingServer.GetRenderingDevice().GetMemoryUsage(RenderingDevice.MemoryType.Buffers);
+        // ulong textures = RenderingServer.GetRenderingDevice().GetMemoryUsage(RenderingDevice.MemoryType.Textures);
+        // GD.Print($"Total: {total / 1024f / 1024f:F6} MB, Buffers: {buffers / 1024f / 1024f:F6} MB, Textures: {textures / 1024f / 1024f:F6} MB");
+    }
 
-	// public override void _ExitTree()
-	// {
-	// 	TileGenerator.OnTileGeneratedProgress -= OnTileProgress;
-	// }
+
+    // public override void _EnterTree()
+    // {
+    // 	TileGenerator.OnTileGeneratedProgress += OnTileProgress;
+    // }
+
+    // public override void _ExitTree()
+    // {
+    // 	TileGenerator.OnTileGeneratedProgress -= OnTileProgress;
+    // }
 
 	private void OnTileProgress(int current, string outputText, int maxValue)
 	{

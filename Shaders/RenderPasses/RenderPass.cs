@@ -23,6 +23,9 @@ namespace PlanetGame.Shaders.RenderPasses
             public Rid IndexArray;
             public Rid IndexBuffer;
             public long VertexFormat;
+
+            public override readonly string ToString() =>
+                $"{nameof(RenderGeometry)} {{ VertexArray = {VertexArray}, VertexBuffer = {VertexBuffer}, NormalBuffer = {NormalBuffer}, IndexArray = {IndexArray}, IndexBuffer = {IndexBuffer}, VertexFormat = {VertexFormat} }}";
         }
         
         public void SetupShader(Mesh mesh)

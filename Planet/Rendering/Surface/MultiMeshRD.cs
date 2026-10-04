@@ -26,9 +26,9 @@ public class MultiMeshRD : IGPUResource
         Rid = RenderingServer.MultimeshCreate();
 
         RenderingDevice renderingDevice = RenderingServer.GetRenderingDevice();
-        CommandBufferUniform = new(this, renderingDevice, perserved: true);
-        BufferUniform = new(this, renderingDevice, perserved: true);
-        MeshDataUniform = new(this, renderingDevice, data: [.. Utilities.CollectionToBytes([0, 0, 0, 0])], perserved: true);
+        CommandBufferUniform = new("Multimesh Command Buffer", this, renderingDevice, perserved: true);
+        BufferUniform = new("Multimesh Buffer", this, renderingDevice, perserved: true);
+        MeshDataUniform = new("Mesh Data", this, renderingDevice, data: [.. Utilities.CollectionToBytes([0, 0, 0, 0])], perserved: true);
 
         RenderingServer.MultimeshAllocateData(Rid, instanceCount, RenderingServer.MultimeshTransformFormat.Transform3D, colorFormat: true, customDataFormat: true, useIndirect: true);
         RenderingServer.MultimeshSetVisibleInstances(Rid, visibleInstances);

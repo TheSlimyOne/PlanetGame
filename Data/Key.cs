@@ -1,6 +1,6 @@
 using Godot;
 using System;
-namespace PlanetGame.Rendering.Surface
+namespace PlanetGame.Data
 {
 
     public readonly struct TriangleData(Vector3 origin, Vector3 xNeighbor, Vector3 yNeighbor, Vector3 v0, Vector3 v1, Vector3 v2)

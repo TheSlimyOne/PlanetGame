@@ -3,7 +3,6 @@ using Godot;
 using System.Collections.Generic;
 using Uniform;
 using PlanetGame.Planet.Rendering;
-using PlanetGame.Planet.Rendering.VirtualTexturing;
 using PlanetGame.Util;
 using PlanetGame.Data;
 
@@ -11,13 +10,14 @@ namespace PlanetGame.Shaders.RenderPasses
 {
     public partial class AtmospherePass : RenderPass<AtmospherePass.BufferNames>
     {
-        public static AtmosphereData AtmosphereData => SaveManager.AtmosphereData;
         private static ShaderProgramPaths _shaderPath = new() { Vertex = ShaderPaths.ATMOSPHERE_VERTEX, Fragment = ShaderPaths.ATMOSPHERE_FRAGMENT };
-
+        public static AtmosphereData AtmosphereData => SaveManager.AtmosphereData;
         public bool IsWireframe;
 
         private readonly Dictionary<PlanetRenderer.BufferNames, ShaderUniform> _sharedShaderUniforms;
-        private Mesh _atmosphereMesh = new SphereMesh() { Radius = AtmosphereData.Radius, Height = 2 * AtmosphereData.Radius };
+        // private Mesh _atmosphereMesh = new SphereMesh() { Radius = 0.5f, Height = 1, RadialSegments = 16, Rings = 8 };
+        // private Mesh _atmosphereMesh = Data.Key.GetTriangleMesh(5); //new BoxMesh() { Size = new Vector3(100, 100, 100) };
+        private Mesh _atmosphereMesh = new BoxMesh() { Size = Vector3.One };
 
         public enum BufferNames
         {
@@ -36,7 +36,7 @@ namespace PlanetGame.Shaders.RenderPasses
         {
             _shaderUniforms = [];
 
-            _shaderUniforms[BufferNames.ATMOSPHERE_DATA] = new StorageBufferUniform(this, RenderingDevice,
+            _shaderUniforms[BufferNames.ATMOSPHERE_DATA] = new StorageBufferUniform(BufferNames.ATMOSPHERE_DATA.ToString(), this, RenderingDevice,
                 AtmosphereData.ToBytes()
             );
 
@@ -54,11 +54,11 @@ namespace PlanetGame.Shaders.RenderPasses
 
             long drawList = RenderingDevice.DrawListBegin(
                 framebuffer: _framebuffer,
-                drawFlags: RenderingDevice.DrawFlags.ClearColorAll | RenderingDevice.DrawFlags.ClearDepth,
-                clearColorValues:
-                [
-                    new Color(0, 0, 0, 0),
-                ],
+                // drawFlags: RenderingDevice.DrawFlags.ClearColorAll | RenderingDevice.DrawFlags.ClearDepth,
+                // clearColorValues:
+                // [
+                //     new Color(0, 0, 0, 0)
+                // ],
                 clearDepthValue: 0.0f,
                 clearStencilValue: 0
             );
@@ -68,10 +68,15 @@ namespace PlanetGame.Shaders.RenderPasses
             RenderingDevice.DrawListBindIndexArray(drawList, _geometry.IndexArray);
             RenderingDevice.DrawListSetPushConstant(drawList, pushConstantBytes, (uint)pushConstantBytes.Length);
             RenderingDevice.DrawListBindUniformSet(drawList, _uniformSet, 0);
-            RenderingDevice.DrawListDrawIndirect(drawList, true, _sharedShaderUniforms[PlanetRenderer.BufferNames.DRAW_DISPATCH_BUFFER].Rid);
+            RenderingDevice.DrawListDraw(drawList, true, 1);
             RenderingDevice.DrawListEnd();
         }
 #nullable disable
+
+        public override void UpdateUniforms()
+        {
+            GetUniform<StorageBufferUniform>(BufferNames.ATMOSPHERE_DATA).UpdateUniform(AtmosphereData.ToBytes());
+        }
 
         public void UpdatePipeline()
         {
@@ -87,7 +92,7 @@ namespace PlanetGame.Shaders.RenderPasses
                 RenderingDevice.RenderPrimitive.Triangles,
                 new()
                 {
-                    CullMode = RenderingDevice.PolygonCullMode.Back,
+                    CullMode = RenderingDevice.PolygonCullMode.Disabled,
                     Wireframe = IsWireframe,
                     LineWidth = 1.0f
                 },
@@ -95,7 +100,7 @@ namespace PlanetGame.Shaders.RenderPasses
                 new RDPipelineDepthStencilState()
                 {
                     EnableDepthTest = true,
-                    EnableDepthWrite = true,
+                    EnableDepthWrite = false,
                     DepthCompareOperator = RenderingDevice.CompareOperator.GreaterOrEqual
                 },
                 new()
@@ -104,15 +109,11 @@ namespace PlanetGame.Shaders.RenderPasses
                     [
                         new RDPipelineColorBlendStateAttachment
                         {
-                            EnableBlend = false
-                        },
-                        new RDPipelineColorBlendStateAttachment
-                        {
-                            EnableBlend = false
-                        },
-                        new RDPipelineColorBlendStateAttachment
-                        {
-                            EnableBlend = false
+                            EnableBlend = true,
+                            SrcColorBlendFactor = RenderingDevice.BlendFactor.SrcAlpha,
+                            DstColorBlendFactor = RenderingDevice.BlendFactor.OneMinusSrcAlpha,
+                            SrcAlphaBlendFactor = RenderingDevice.BlendFactor.SrcAlpha,
+                            DstAlphaBlendFactor = RenderingDevice.BlendFactor.OneMinusSrcAlpha
                         }
                     ]
                 }
@@ -126,7 +127,7 @@ namespace PlanetGame.Shaders.RenderPasses
 
         protected override void SetFramebufferProperties()
         {
-            RDTextureFormat textureFormat = new()
+            RDTextureFormat colorFormat = new()
             {
                 Format = RenderingDevice.DataFormat.R32G32B32A32Sfloat,
                 TextureType = RenderingDevice.TextureType.Type2D,
@@ -149,7 +150,7 @@ namespace PlanetGame.Shaders.RenderPasses
 
             RDAttachmentFormat colorAttachmentFormat = new()
             {
-                Format = textureFormat.Format,
+                Format = colorFormat.Format,
                 Samples = RenderingDevice.TextureSamples.Samples1,
                 UsageFlags = (uint)(
                     RenderingDevice.TextureUsageBits.ColorAttachmentBit |
@@ -180,6 +181,6 @@ namespace PlanetGame.Shaders.RenderPasses
         public override bool IsValid() => 
             RenderingDevice != null && 
             RenderingDevice.UniformSetIsValid(_uniformSet) && 
-            _shader.IsValid && RenderingDevice.RenderPipelineIsValid(_pipeline);   
+            _shader.IsValid && RenderingDevice.RenderPipelineIsValid(_pipeline);
     }
 }

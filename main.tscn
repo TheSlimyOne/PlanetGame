@@ -6,14 +6,8 @@
 
 [sub_resource type="SphereMesh" id="SphereMesh_kln2b"]
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_qdvrb"]
-
-[sub_resource type="Sky" id="Sky_jxero"]
-sky_material = SubResource("ShaderMaterial_qdvrb")
-
 [sub_resource type="Environment" id="Environment_idj7w"]
-background_mode = 1
-sky = SubResource("Sky_jxero")
+background_mode = 2
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_kln2b"]
 content_margin_left = 4.0

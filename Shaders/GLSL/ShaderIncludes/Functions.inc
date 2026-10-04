@@ -185,3 +185,21 @@ vec4 get_tile(sampler2DArray tile_cache, vec3 tile_uv) {
 //return texture2D_linear(tile_cache, tile_uv);
 	return textureLod(tile_cache, tile_uv, 0.0);
 }
+
+mat4 get_rotation_from_matrix(mat4 transform_matrix) {
+    return mat4(
+        vec4(transform_matrix[0].xyz / length(transform_matrix[0].xyz), 0),
+        vec4(transform_matrix[1].xyz / length(transform_matrix[1].xyz), 0),
+        vec4(transform_matrix[2].xyz / length(transform_matrix[2].xyz), 0),
+        vec4(0, 0, 0, 1)
+    );
+}
+
+mat4 get_translation_rotation_from_matrix(mat4 transform_matrix) {
+    return mat4(
+        vec4(transform_matrix[0].xyz / length(transform_matrix[0].xyz), transform_matrix[0].w),
+        vec4(transform_matrix[1].xyz / length(transform_matrix[1].xyz), transform_matrix[1].w),
+        vec4(transform_matrix[2].xyz / length(transform_matrix[2].xyz), transform_matrix[2].w),
+        vec4(0, 0, 0, 1)
+    );
+}

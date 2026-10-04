@@ -1,10 +1,3 @@
-// ---------- Common constants ----------
-const float PI   = 3.141592653;
-const float SQRT2 = 1.414213562;
-const float EPS  = 1e-7;
-const float QUANTIZE_FACTOR = 12.0;
-// --------------------
-
 // ---------- Common structs ----------
 struct Triangle {
     vec3 origin; // (0.3, 0.3)
@@ -344,15 +337,6 @@ bool point_in_frustum(vec3 point, mat4 view_projection_matrix) {
         clip.x >= -w && clip.x <= w &&
         clip.y >= -w && clip.y <= w &&
         clip.z >= -w && clip.z <= w;
-}
-
-mat4 get_rotation_from_matrix(mat4 transform_matrix) {
-    return mat4(
-        vec4(transform_matrix[0].xyz / length(transform_matrix[0].xyz), 0),
-        vec4(transform_matrix[1].xyz / length(transform_matrix[1].xyz), 0),
-        vec4(transform_matrix[2].xyz / length(transform_matrix[2].xyz), 0),
-        vec4(0, 0, 0, 1)
-    );
 }
 
 vec2 morph_vertex(vec2 vertex, float morph_k, int resolution) {

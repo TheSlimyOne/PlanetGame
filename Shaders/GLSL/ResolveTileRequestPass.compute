@@ -39,6 +39,7 @@ layout(std430, set = 0, binding = 7) buffer restrict TileIDs {
     uvec4 requested_tile_ids[];
 };
 
+#[include] res://Shaders/GLSL/ShaderIncludes/Constants.inc
 #[include] res://Shaders/GLSL/ShaderIncludes/VirtualTextureFunctions.inc
 
 void main() {

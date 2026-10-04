@@ -5,6 +5,7 @@
 layout(location = 0) flat in uvec4 key;
 layout(location = 4) in vec2 plane_vertex_uv;
 layout(location = 5) flat in int lod;
+layout(location = 6) in vec3 normal;
 layout(location = 7) in vec3 world_position;
 
 layout(location = 0) out vec4 frag;
@@ -25,7 +26,7 @@ layout(std430, binding = 4) readonly buffer WorldData {
     float height_scale;
     vec2 padding;
     mat4 planet_transform_matrix;
-};
+} world_data;
 
 layout(set = 0, binding = 5) uniform sampler2DArray albedo_tile_cache;
 layout(set = 0, binding = 7) restrict uniform image2DArray consolidated_indirection_table;
@@ -34,9 +35,10 @@ layout(set = 0, binding = 8, r32ui) restrict uniform uimage2DArray state_table;
 layout(push_constant, std430) uniform PushConstants {
     mat4 view_projection_matrix;
     vec4 camera_position_fovy;
+    vec4 sun_direction;
 } push_constants;
 
-
+#[include] res://Shaders/GLSL/ShaderIncludes/Constants.inc
 #[include] res://Shaders/GLSL/ShaderIncludes/TessellationFunctions.inc
 #[include] res://Shaders/GLSL/ShaderIncludes/Functions.inc
 
@@ -46,9 +48,23 @@ void main()
 
     vec3 tile_uv = get_tile_uv(consolidated_indirection_table, plane_vertex_uv, normal_id, low_resolution_mip_count, high_resolution_mip_count);
 
-    frag = vec4(pow(get_tile(albedo_tile_cache, tile_uv).xyz, vec3(2.2)), 1.0);
+    
+    vec3 sun_direction = (
+        vec4(normalize(push_constants.sun_direction.xyz), 1.0)
+        * get_rotation_from_matrix(world_data.planet_transform_matrix)
+    ).xyz;
 
-    vec3 picking_position = (vec4(world_position, 1.0) * inverse(planet_transform_matrix)).xyz;
+    float diffuse = max(dot(normal, sun_direction), 0.0);
+    vec3 albedo = pow(get_tile(albedo_tile_cache, tile_uv).xyz, vec3(2.2));
+    vec3 ambient = albedo * 0.05;
+    vec3 lighting = albedo * diffuse;
+    vec3 final_color = ambient + lighting;
+
+    frag = vec4(final_color, 1);
+
+
+
+    vec3 picking_position = (vec4(world_position, 1.0) * inverse(world_data.planet_transform_matrix)).xyz;
     picking_texture = vec4(picking_position, 1.0);
 
     linear_depth = distance(push_constants.camera_position_fovy.xyz, world_position);

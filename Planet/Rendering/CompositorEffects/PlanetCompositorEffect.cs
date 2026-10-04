@@ -13,17 +13,21 @@ public partial class PlanetCompositorEffect : CompositorEffect
     public bool Ready { get; private set; } = true;
     public bool Paused = false;
 
-    private readonly Dictionary<PlanetRenderer.BufferNames, ShaderUniform> _sharedShaderUniforms;
+    public DirectionalLight3D Sun;
 
-    public PlanetCompositorEffect(SparseVirtualTexture sparseVirtualTexture, MultiMeshRD triangleMultiMesh, Dictionary<PlanetRenderer.BufferNames, ShaderUniform> sharedShaderUniforms)
+
+    public PlanetCompositorEffect(DirectionalLight3D sun, SparseVirtualTexture sparseVirtualTexture, MultiMeshRD triangleMultiMesh, Dictionary<PlanetRenderer.BufferNames, ShaderUniform> sharedShaderUniforms)
     {
-        _sharedShaderUniforms = sharedShaderUniforms;
-        PlanetRenderPass = new(sparseVirtualTexture, triangleMultiMesh, _sharedShaderUniforms);
+        Sun = sun;
+        PlanetRenderPass = new(sparseVirtualTexture, triangleMultiMesh, sharedShaderUniforms);
         EffectCallbackType = EffectCallbackTypeEnum.PostSky;
     }
 
     public override void _RenderCallback(int effectCallbackType, RenderData renderData)
     {
+        if (PlanetController.Quiting)
+            return;
+            
         RenderSceneBuffersRD renderSceneBuffers = renderData.GetRenderSceneBuffers() as RenderSceneBuffersRD;
         RenderSceneData sceneData = renderData.GetRenderSceneData();
         Vector2I size = renderSceneBuffers.GetInternalSize();
@@ -35,6 +39,7 @@ public partial class PlanetCompositorEffect : CompositorEffect
         PlanetRenderPass.SetFramebuffer([
             (color, "color"),
             (depth, "depth"),
+            
         ], size);
 
         PlanetRenderPass.UpdateUniforms();
@@ -44,10 +49,14 @@ public partial class PlanetCompositorEffect : CompositorEffect
         Projection viewProjectionMatrix = CustomCamera.GetViewProjectionMatrix(cameraTransform, cameraProjection);
 
 
+        Transform3D rotationOnlyView = new(cameraTransform.Basis.Inverse(), Vector3.Zero);
+
         PlanetRenderPass.Invoke([
+            // cameraProjection * new Projection(rotationOnlyView),
             viewProjectionMatrix,
             cameraTransform.Origin,
-            Mathf.Tan(Mathf.DegToRad(cameraProjection.GetFov()) / 2)
+            Mathf.Tan(Mathf.DegToRad(cameraProjection.GetFov()) / 2),
+            VectorUtils.ToVector4(Sun.Basis.Z.Normalized(), 0)
         ]);
     }
 

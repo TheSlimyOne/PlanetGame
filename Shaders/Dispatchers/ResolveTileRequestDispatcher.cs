@@ -41,33 +41,27 @@ namespace PlanetGame.Shaders.Dispatchers
         {
             _shaderUniforms = [];
 
-            _shaderUniforms[BufferNames.INDIRECTION_TABLE] = new Texture2DUniform(this, RenderingDevice, RenderingDevice.UniformType.Image,
-                _sparseVirtualTexture.IndirectionTable.GetRdRid(), perserved: true
-            );
+            _shaderUniforms[BufferNames.INDIRECTION_TABLE] = _sparseVirtualTexture.IndirectionTable;
 
-            _shaderUniforms[BufferNames.STATE_TABLE] = new Texture2DUniform(this, RenderingDevice, RenderingDevice.UniformType.Image,
-                _sparseVirtualTexture.StateTable.GetRdRid(), perserved: true
-            );
+            _shaderUniforms[BufferNames.STATE_TABLE] = _sparseVirtualTexture.StateTable;
 
-            _shaderUniforms[BufferNames.RESIDENCY_TABLE] = new Texture2DUniform(this, RenderingDevice, RenderingDevice.UniformType.Image,
-                _sparseVirtualTexture.ResidencyTable.GetRdRid(), perserved: true
-            );
+            _shaderUniforms[BufferNames.RESIDENCY_TABLE] = _sparseVirtualTexture.ResidencyTable;
 
             _shaderUniforms[BufferNames.VIRTUAL_TEXTURE_DATA] = _sharedShaderUniforms[PlanetRenderer.BufferNames.VIRTUAL_TEXTURE_DATA];
 
-            _shaderUniforms[BufferNames.TILE_REQUEST_DATA] = new StorageBufferUniform(this, RenderingDevice,
+            _shaderUniforms[BufferNames.TILE_REQUEST_DATA] = new StorageBufferUniform(BufferNames.TILE_REQUEST_DATA.ToString(), this, RenderingDevice,
                 GetTileRequestData()
             );
 
-            _shaderUniforms[BufferNames.TILE_SLOT_COUNTER] = new StorageBufferUniform(this, RenderingDevice,
+            _shaderUniforms[BufferNames.TILE_SLOT_COUNTER] = new StorageBufferUniform(BufferNames.TILE_SLOT_COUNTER.ToString(), this, RenderingDevice,
                 [.. Utilities.ToBytes<uint>(1)]
             );
 
-            _shaderUniforms[BufferNames.REQUEST_BUFFER_COUNTER] = new StorageBufferUniform(this, RenderingDevice,
+            _shaderUniforms[BufferNames.REQUEST_BUFFER_COUNTER] = new StorageBufferUniform(BufferNames.REQUEST_BUFFER_COUNTER.ToString(), this, RenderingDevice,
                 [.. Utilities.ToBytes<uint>(1)]
             );
 
-            _shaderUniforms[BufferNames.REQUEST_BUFFER] = new StorageBufferUniform(this, RenderingDevice,
+            _shaderUniforms[BufferNames.REQUEST_BUFFER] = new StorageBufferUniform(BufferNames.REQUEST_BUFFER.ToString(), this, RenderingDevice,
                 [.. Utilities.ToBytes<Vector4I>(REQUEST_AMOUNT)]
             );
 
@@ -139,11 +133,6 @@ namespace PlanetGame.Shaders.Dispatchers
                 REQUEST_AMOUNT,
                 0u
             ])];
-        }
-
-        public override void CleanupGPU()
-        {
-            base.CleanupGPU();
         }
     }
 }

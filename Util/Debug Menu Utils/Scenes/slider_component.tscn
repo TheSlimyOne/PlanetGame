@@ -50,4 +50,5 @@ text = "+"
 [node name="ValueLabel" type="LineEdit" parent="SliderMargin/SliderContent/SliderRows/SliderRowTemplate" unique_id=2119200141]
 custom_minimum_size = Vector2(45, 0)
 layout_mode = 2
+focus_mode = 1
 text = "0"

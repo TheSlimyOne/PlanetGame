@@ -34,7 +34,7 @@ vec3 to_checkers(vec2 uv, float size) {
 	vec3 color = mod(grid.x + grid.y, 2.0) == 0.0
 	? vec3(1.0, 0.0, 0.0)
 	: vec3(0.0, 1.0, 0.0);
-    return color;
+	return color;
 }
 
 vec3 to_cells(vec2 uv, float size) {
@@ -102,7 +102,7 @@ void fragment() {
 	vec2 adjusted_uv = clamp(plane_vertex_uv, vec2(0.0), vec2(1.0 - EPS));
 
 	int grid_size = 1 << (total_resolution_mip_count - 1);
-    int mip_grid_size = 1 << mip_index;
+	int mip_grid_size = 1 << mip_index;
 
 	vec2 tile_coordinate = adjusted_uv * float(mip_grid_size);
 	vec2 tile_local_uv = fract(tile_coordinate);

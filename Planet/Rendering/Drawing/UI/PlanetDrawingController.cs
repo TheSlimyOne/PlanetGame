@@ -134,6 +134,9 @@ public partial class PlanetDrawingController : Control
 
     public override void _UnhandledInput(InputEvent @event)
     {
+        if (true)
+            return;
+
         if (!IsValid() || @event is not InputEventMouseButton mouseButton)
             return;
 

@@ -14,15 +14,18 @@ namespace Uniform
         public IGPUResource Owner { get; protected set; }
         public bool Perserved { get; protected set; }
 
+        public string Name { get; private set; }
+
         //TODO need to implement
         public static List<ShaderUniform> Uniforms = [];
-        protected ShaderUniform(RenderingDevice renderingDevice, IGPUResource owner, bool perserved = false)
+        protected ShaderUniform(string name, RenderingDevice renderingDevice, IGPUResource owner, bool perserved = false)
         {
             RenderingDevice = renderingDevice;
             UsingMainRenderingDevice = RenderingDevice == RenderingServer.GetRenderingDevice();
 
             Owner = owner;
             Perserved = perserved;
+            Name = name;
 
             Uniforms.Add(this);
         }
@@ -39,10 +42,17 @@ namespace Uniform
 
         public abstract List<byte[]> GetByteData();
 
-        public virtual void FreeRid()
+        public void FreeRid()
+        {
+            // GD.Print($"Freeing uniform: {this}");
+            FreeRidInternal();
+        }
+
+        protected virtual void FreeRidInternal()
         {
             if (RenderingDevice == null) return;
-            RenderingDevice.FreeRid(Rid);
+            if (Rid.IsValid)
+                RenderingDevice.FreeRid(Rid);
             Rid = new();
         }
 
@@ -53,7 +63,7 @@ namespace Uniform
 
         public override string ToString()
         {
-            return $"Rid: {Rid}, Type: {GetType()}, UsingMainRenderingDevice: {UsingMainRenderingDevice}, Owner: ({Owner.GetType()}, {Owner.GetID()}), Perserved: {Perserved}";
+            return $"Name: {Name}, Rid: {Rid}, Type: {GetType().Name}, UsingMainRenderingDevice: {UsingMainRenderingDevice}, Owner: ({Owner.GetType().Name}, {Owner.GetID()}), Perserved: {Perserved}";
         }
 
         public int GetID() => Rid.GetHashCode() + Owner.GetHashCode();

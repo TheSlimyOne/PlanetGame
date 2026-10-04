@@ -9,12 +9,14 @@ namespace PlanetGame.Data
         public bool IsCulling = false;
         public bool IsMorphing = false;
         public bool IsCube = false;
+        public bool IsFloatingOrigin = true;
         public override string ToString()
         {
             return $"""
             Culling: {IsCulling}
             Morphing: {IsMorphing}
             Cube: {IsCube}
+            Test: {IsFloatingOrigin}
             """;
         }
 
@@ -36,6 +38,7 @@ namespace PlanetGame.Data
                     IsCulling,
                     IsMorphing,
                     IsCube,
+                    IsFloatingOrigin
             ]))];
         }
     }

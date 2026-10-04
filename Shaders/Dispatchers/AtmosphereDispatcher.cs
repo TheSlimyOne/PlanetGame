@@ -14,7 +14,6 @@ namespace PlanetGame.Shaders.RenderPasses
         private static ShaderProgramPaths _shaderPath = new() { Compute = ShaderPaths.ATMOSPHERE_COMPUTE };
         private static Data.RenderData RenderData => SaveManager.RenderData;
         private static AtmosphereData AtmosphereData => SaveManager.AtmosphereData;
-        private static WorldData WorldData => SaveManager.WorldData;
 
         private readonly Dictionary<PlanetRenderer.BufferNames, ShaderUniform> _sharedShaderUniforms;
 
@@ -37,23 +36,24 @@ namespace PlanetGame.Shaders.RenderPasses
         {
             _shaderUniforms = [];
 
-            _shaderUniforms[BufferNames.COLOR_TEXTURE] = new Texture2DUniform(this, RenderingDevice,
+            _shaderUniforms[BufferNames.COLOR_TEXTURE] = new Texture2DUniform(BufferNames.COLOR_TEXTURE.ToString(), null, RenderingDevice,
                 RenderingDevice.UniformType.Image,
                 perserved: true
             );
 
-            _shaderUniforms[BufferNames.DEPTH_TEXTURE] = new Texture2DUniform(this, RenderingDevice,
+            _shaderUniforms[BufferNames.DEPTH_TEXTURE] = new Texture2DUniform(BufferNames.DEPTH_TEXTURE.ToString(), null, RenderingDevice,
                 RenderingDevice.UniformType.SamplerWithTexture,
                 perserved: true
             );
 
             _shaderUniforms[BufferNames.LINEAR_DEPTH_TEXTURE] = _sharedShaderUniforms[PlanetRenderer.BufferNames.LINEAR_DEPTH_TEXTURE];
             
-            _shaderUniforms[BufferNames.ATMOSPHERE_DATA] = new StorageBufferUniform(this, RenderingDevice,
+            _shaderUniforms[BufferNames.ATMOSPHERE_DATA] = new StorageBufferUniform(BufferNames.ATMOSPHERE_DATA.ToString(), this, RenderingDevice,
 				AtmosphereData.ToBytes()
 			);
 
             _shaderUniforms[BufferNames.WORLD_DATA] = _sharedShaderUniforms[PlanetRenderer.BufferNames.WORLD_DATA];
+
         }
 
 #nullable enable
@@ -81,27 +81,32 @@ namespace PlanetGame.Shaders.RenderPasses
 
         public override void UpdateUniforms()
         {
-            _shaderUniforms[BufferNames.ATMOSPHERE_DATA].UpdateUniform(
-				AtmosphereData.ToBytes()
-			);
-
-            CreateUniformSet();
+            GetUniform<StorageBufferUniform>(BufferNames.ATMOSPHERE_DATA).UpdateUniform(AtmosphereData.ToBytes());
         }
 
-        public void SetSceneUniforms(Rid color, Rid depth)
+        public void UpdateUniforms(Rid color, Rid depth)
         {
             Texture2DUniform colorUniform = GetUniform<Texture2DUniform>(BufferNames.COLOR_TEXTURE);
-            Texture2DUniform depthUniform = GetUniform<Texture2DUniform>(BufferNames.DEPTH_TEXTURE);
+            Texture2DUniform depthUniform = GetUniform<Texture2DUniform>(BufferNames.DEPTH_TEXTURE);            
+            bool changed = false;
 
             if (color != colorUniform.Rid)
             {
                 colorUniform.SetRid(color);
+                changed = true;
             }
 
             if (depth != depthUniform.Rid)
             {
                 depthUniform.SetRid(depth);
+                changed = true;
             }
+
+            UpdateUniforms();
+            
+            if (changed)
+                CreateUniformSet();
+
         }
     }
 }

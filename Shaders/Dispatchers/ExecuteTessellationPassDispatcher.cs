@@ -47,15 +47,15 @@ namespace PlanetGame.Shaders.Dispatchers
 
 			_shaderUniforms[BufferNames.KEY_INDICES] = _sharedShaderUniforms[PlanetRenderer.BufferNames.EXEC_KEY_INDICES];
 
-			_shaderUniforms[BufferNames.READ_LIST] = new StorageBufferUniform(this, RenderingDevice,
+			_shaderUniforms[BufferNames.READ_LIST] = new StorageBufferUniform(BufferNames.READ_LIST.ToString(), this, RenderingDevice,
 				CreateReadList()
 			);
 
-			_shaderUniforms[BufferNames.WRITE_FULL_LIST] = new StorageBufferUniform(this, RenderingDevice,
+			_shaderUniforms[BufferNames.WRITE_FULL_LIST] = new StorageBufferUniform(BufferNames.WRITE_FULL_LIST.ToString(), this, RenderingDevice,
 				[.. Utilities.ToBytes<Key>(TessellationData.MaximumKeys)]
 			);
 
-			_shaderUniforms[BufferNames.WRITE_CULL_LIST] = new StorageBufferUniform(this, RenderingDevice,
+			_shaderUniforms[BufferNames.WRITE_CULL_LIST] = new StorageBufferUniform(BufferNames.WRITE_CULL_LIST.ToString(), this, RenderingDevice,
 				[.. Utilities.ToBytes<Key>(TessellationData.MaximumKeys)]
 			);
 
@@ -67,7 +67,7 @@ namespace PlanetGame.Shaders.Dispatchers
 
 			_shaderUniforms[BufferNames.MULTIMESH_BUFFER] = _triangleMultiMesh.BufferUniform;
 
-			_shaderUniforms[BufferNames.GLOBAL_KEYS_DATA] = new StorageBufferUniform(this, RenderingDevice,
+			_shaderUniforms[BufferNames.GLOBAL_KEYS_DATA] = new StorageBufferUniform(BufferNames.GLOBAL_KEYS_DATA.ToString(), this, RenderingDevice,
 				GetInitialGlobalKeyData()
 			);
 		

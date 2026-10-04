@@ -14,37 +14,33 @@ namespace PlanetGame.Planet.Rendering.VirtualTexturing
             protected set => _storageTexture = value;
         }
 
-        public uint Size { get; }
         
-        public ResidencyTable()
+        public ResidencyTable(string name, Shaders.IGPUResource owner) : base(name, owner, RenderingDevice.UniformType.Image, perserved: false)
         {
             Size = (uint)Mathf.Ceil(Mathf.Sqrt(TileCache.DEFAULT_TILE_SLOTS_COUNT));
-
-            Format = RenderingDevice.DataFormat.R32G32B32A32Sfloat;
-
-            Table = new()
+            
+            TextureFormat =  new RDTextureFormat()
             {
-                TextureRdRid = RenderingServer.GetRenderingDevice().TextureCreate(
-                    new RDTextureFormat()
-                    {
-                        Width = Size,
-                        Height = Size,
-                        Format = Format,
-                        TextureType = RenderingDevice.TextureType.Type2D,
-                        UsageBits = RenderingDevice.TextureUsageBits.StorageBit | RenderingDevice.TextureUsageBits.CanCopyFromBit | RenderingDevice.TextureUsageBits.CanUpdateBit | RenderingDevice.TextureUsageBits.SamplingBit | RenderingDevice.TextureUsageBits.CanCopyToBit
-                    },
-                    new RDTextureView()
-                )
+                Width = Size,
+                Height = Size,
+                Format = RenderingDevice.DataFormat.R32G32B32A32Sfloat,
+                TextureType = RenderingDevice.TextureType.Type2D,
+                UsageBits = RenderingDevice.TextureUsageBits.StorageBit | RenderingDevice.TextureUsageBits.CanCopyFromBit | RenderingDevice.TextureUsageBits.CanUpdateBit | RenderingDevice.TextureUsageBits.SamplingBit | RenderingDevice.TextureUsageBits.CanCopyToBit
             };
+
+            Rid = RenderingServer.GetRenderingDevice().TextureCreate(
+                TextureFormat,
+                new RDTextureView()
+            );
+
+            Table = new() { TextureRdRid = Rid };
+            
             ClearStorageTexture();
             SetFallbackSlots();
         }
 
         //TODO not a fan of this one
-        public override void ClearStorageTexture()
-        {
-            RenderingServer.GetRenderingDevice().TextureClear(GetRdRid(), new Color("00000000"), 0, 1, 0, 1);
-        }
+        public override void ClearStorageTexture() => ClearTexture(new Color("00000000"));
 
         public override TextureRect CreateVisualization(string name = "")
         {
@@ -100,19 +96,13 @@ namespace PlanetGame.Planet.Rendering.VirtualTexturing
             return texture;
         }
 
-        public override void CleanupGPU()
-        {
-            if (GetRdRid().IsValid)
-                RenderingServer.GetRenderingDevice().FreeRid(GetRdRid());
-        }
-
         public override void SetFallbackSlots()
         {
             uint totalMipLayers = VirtualTextureData.TotalMipLayersPerFace;
             string[] fallBackTiles = VirtualTextureData.FallBackTiles;
             int size = (int)Mathf.Ceil(Mathf.Sqrt(TileCache.DEFAULT_TILE_SLOTS_COUNT));
 
-            Image image = Image.CreateEmpty(size, size, false, FormatConverter.MatchDataFormat(Format));
+            Image image = Image.CreateEmpty(size, size, false, FormatConverter.MatchDataFormat(TextureFormat.Format));
 
             for (int i = 0; i < fallBackTiles.Length; i++)
             {
@@ -139,15 +129,7 @@ namespace PlanetGame.Planet.Rendering.VirtualTexturing
                 image.SetPixelv(slotIndex, data);
             }
 
-            RenderingServer.GetRenderingDevice().TextureUpdate(GetRdRid(), 0, image.GetData());
+            RenderingServer.GetRenderingDevice().TextureUpdate(Rid, 0, image.GetData());
         }
-
-        public override Rid GetRdRid() => Table.TextureRdRid;
-
-        public override Color GetPixel(int x, int y, int z)
-        {
-            throw new NotImplementedException();
-        }
-
     }
 }

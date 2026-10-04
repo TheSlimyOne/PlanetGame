@@ -15,7 +15,7 @@ namespace Uniform
 
 		public void SetRid(Rid rid, RDTextureFormat textureFormat = null, bool perserved = true, bool freePreviousRid = false)
 		{
-			if (Rid != rid && freePreviousRid && !Perserved && Rid.IsValid)
+			if (Rid != rid && freePreviousRid && !Perserved && Rid.IsValid && RenderingDevice.TextureIsValid(Rid))
 				RenderingDevice.FreeRid(Rid);
 
 			Rid = rid;
@@ -23,7 +23,7 @@ namespace Uniform
 			Perserved = perserved;
 		}
 
-		public Texture2DUniform(IGPUResource owner, RenderingDevice renderingDevice, RenderingDevice.UniformType uniformType, RDSamplerState samplerState = null, bool perserved = false) : base(renderingDevice, owner, perserved)
+		public Texture2DUniform(string name, IGPUResource owner, RenderingDevice renderingDevice, RenderingDevice.UniformType uniformType, RDSamplerState samplerState = null, bool perserved = false) : base(name, renderingDevice, owner, perserved)
 		{
 			Rid = new();
 			UniformType = uniformType;
@@ -36,7 +36,7 @@ namespace Uniform
 			}
 		}
 
-		public Texture2DUniform(IGPUResource owner, RenderingDevice renderingDevice, RenderingDevice.UniformType uniformType, Rid rid, RDSamplerState samplerState = null, bool perserved = false) : base(renderingDevice, owner, perserved)
+		public Texture2DUniform(string name, IGPUResource owner, RenderingDevice renderingDevice, RenderingDevice.UniformType uniformType, Rid rid, RDSamplerState samplerState = null, bool perserved = false) : base(name, renderingDevice, owner, perserved)
 		{
 			Rid = rid;
 			UniformType = uniformType;
@@ -90,9 +90,9 @@ namespace Uniform
 
 		public Vector2I GetSize() => new((int)TextureFormat.Width, (int)TextureFormat.Height);
 
-		public void ClearTexture(Color color) => RenderingDevice.TextureClear(Rid, color, 0, 1, 0, 1);
+		public virtual void ClearTexture(Color color) => RenderingDevice.TextureClear(Rid, color, 0, 1, 0, 1);
 
-		public void ClearTexture(Color color, uint baseMipmap = 0, uint mipmapCount = 1, uint baseLayer = 0, uint layerCount = 1) => RenderingDevice.TextureClear(Rid, color, baseMipmap, mipmapCount, baseLayer, layerCount);
+		public virtual void ClearTexture(Color color, uint baseMipmap = 0, uint mipmapCount = 1, uint baseLayer = 0, uint layerCount = 1) => RenderingDevice.TextureClear(Rid, color, baseMipmap, mipmapCount, baseLayer, layerCount);
 
 		public override void UpdateUniform(byte[] data) => RenderingDevice.TextureUpdate(Rid, 0, data);
 
@@ -136,7 +136,7 @@ namespace Uniform
 			return uniform;
         }
 
-		public override void FreeRid()
+		protected override void FreeRidInternal()
 		{
 			if (RenderingDevice == null)
 				return;
@@ -144,8 +144,10 @@ namespace Uniform
 			if (SamplerRid.IsValid)
 				RenderingDevice.FreeRid(SamplerRid);
 
-			base.FreeRid();
+			if(Rid.IsValid && RenderingDevice.TextureIsValid(Rid))
+				RenderingDevice.FreeRid(Rid);
 
+			Rid = new();
 			SamplerRid = new();
 			SamplerState = default;
 			TextureFormat = default;

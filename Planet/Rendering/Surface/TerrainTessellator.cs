@@ -1,11 +1,8 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Godot;
 using PlanetGame.Data;
 using PlanetGame.Shaders.Dispatchers;
-using PlanetGame.Util;
-using PlanetGame.Util.DebugUIComponents;
 using Uniform;
 using static PlanetGame.Planet.Rendering.PlanetRenderer;
 
@@ -135,17 +132,17 @@ namespace PlanetGame.Rendering.Surface
         {
             TriangleMultiMesh = new(
                 (int)TessellationData.MaximumKeys,
-                Key.GetTriangleMesh((int)TessellationData.Resolution),
+                Data.Key.GetTriangleMesh((int)TessellationData.Resolution),
                 -1
             );
 
-            _planetInstance = TriangleMultiMesh.CreateMultimeshInstance(
-                Transform3D.Identity,
-                shader,
-                scenario,
-                float.MaxValue,
-                0b1u
-            );
+            // _planetInstance = TriangleMultiMesh.CreateMultimeshInstance(
+            //     Transform3D.Identity,
+            //     shader,
+            //     scenario,
+            //     float.MaxValue,
+            //     0b1u
+            // );
         }
 
     }

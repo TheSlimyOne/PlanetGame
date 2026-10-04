@@ -38,7 +38,7 @@ public partial class PlanetController : Node
 
     PlanetRenderer PlanetRenderer;
 
-    private bool Quiting = false;
+    public static bool Quiting { get; private set; } = false;
 
 
     //TODO really look into cleaning the gpu idk why these come here null
@@ -47,7 +47,7 @@ public partial class PlanetController : Node
         if (what == NotificationWMCloseRequest || what == NotificationPredelete)
         {
             Quiting = true;
-            PlanetRenderer.CleanupGPU();
+            // PlanetRenderer?.CleanupGPU();
         }
     }
 
@@ -56,6 +56,7 @@ public partial class PlanetController : Node
 
     public override void _Ready()
     {
+        Quiting = false;
         _lastViewportSize = GetViewport().GetVisibleRect().Size;
 
         SetupCameras();
@@ -83,14 +84,16 @@ public partial class PlanetController : Node
         DebugMenuController.Instance.AddActionButton("Quit", null, () =>
         {
             Quiting = true;
-
             DebugMenuController.Instance.Clear();
             PlanetRenderer.CleanupGPU();
             GetTree().ChangeSceneToFile("res://main.tscn");
+
+            GD.Print("Quiting");
+
         }, 1000);
     }
 
-#region Process
+    #region Process
     private bool _isResizing;
     private Vector2 _lastViewportSize;
     private int _stableResizeFrames;
@@ -125,7 +128,7 @@ public partial class PlanetController : Node
 
         WorldData.OrientatePlanet();
 
-        PlanetRenderer.UpdateHeightOffset(PlanetQuery, MainCamera.GlobalPosition, MainCamera.DistanceFromTarget, delta);
+        PlanetRenderer?.UpdateHeightOffset(PlanetQuery, MainCamera.GlobalPosition, MainCamera.DistanceFromTarget, delta);
 
         PlanetRenderer?.Invoke();
     }
@@ -155,7 +158,7 @@ public partial class PlanetController : Node
             );
         }
     }
-#endregion
+    #endregion
 
     public void SetupCameras()
     {
@@ -177,9 +180,7 @@ public partial class PlanetController : Node
     {
         MainCamera.MinDistance = WorldData.Radius + 0.999f;
         MainCamera.MaxDistance = WorldData.Radius * 10.0f;
-
-        // MainCamera.Far = Mathf.Clamp(MainCamera.MaxDistance * 2, MainCamera.MinDistance, 32768); 
-        MainCamera.Far = WorldData.Radius * 4;
+        MainCamera.Far = MainCamera.DistanceFromTarget + WorldData.Radius;
     }
 
     private Vector3 _direction = Vector3.Zero;
@@ -281,6 +282,9 @@ public partial class PlanetController : Node
 
             if (mouseEvent.ButtonIndex == MouseButton.Left && mouseEvent.Pressed)
             {
+                Vector3 point = PlanetQuery.GetPlanetMousePosition();
+                Vector3 localPoint = PlanetQuery.GetPlanetMousePosition(true);
+                GD.PrintS(point, localPoint);
                 // Vector3 planetMousePoint = GetPlanetMousePosition();
                 // if (TryGetPlanetSurfacePoint(PlanetToLocal(planetMousePoint), out PlanetSurfacePoint surfacePoint, true))
                 //     PlanetRenderer.Draw(surfacePoint);

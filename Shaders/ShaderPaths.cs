@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Text;
 using Godot;
 
@@ -36,33 +38,41 @@ namespace PlanetGame.Shaders
 
         private static StringBuilder LoadShaderWithIncludes(string shaderPath, string tag)
         {
+            StringBuilder stringBuilder = new();
+            LoadShaderWithIncludes(shaderPath, tag, stringBuilder, []);
+            return stringBuilder;
+        }
+
+        private static void LoadShaderWithIncludes(string shaderPath, string tag, StringBuilder stringBuilder, HashSet<string> includeStack)
+        {
+            if (!includeStack.Add(shaderPath))
+                throw new InvalidOperationException($"Circular shader include detected: {shaderPath}");
+
             string shaderSrc = FileAccess.GetFileAsString(shaderPath);
             string[] lines = shaderSrc.Split('\n');
-            StringBuilder stringBuilder = new();
 
-            for (int i = 0; i < lines.Length; i++)
+            foreach (string line in lines)
             {
-                if (lines[i].Contains(tag))
-                {
+                if (line.Contains(tag))
                     continue;
-                }
-                else if (lines[i].TrimStart().Contains("#[include]"))
+
+                string trimmedLine = line.TrimStart();
+
+                if (trimmedLine.StartsWith("#[include]"))
                 {
-                    string path = lines[i][11..].TrimEnd();
-                    // TODO error handle this file open
-                    string includeSrc = FileAccess.GetFileAsString(path);
+                    string path = trimmedLine["#[include]".Length..].Trim();
 
                     stringBuilder.AppendLine("// --- begin include: " + path + " ---");
-                    stringBuilder.AppendLine(includeSrc);
+                    LoadShaderWithIncludes(path, tag, stringBuilder, includeStack);
                     stringBuilder.AppendLine("// --- end include: " + path + " ---");
                 }
                 else
                 {
-                    stringBuilder.AppendLine(lines[i]);
+                    stringBuilder.AppendLine(line);
                 }
             }
 
-            return stringBuilder;
+            includeStack.Remove(shaderPath);
         }
 
         public static Rid CompileShaderWithIncludes(ShaderProgramPaths shaderProgramPaths, RenderingDevice renderingDevice)

@@ -77,17 +77,13 @@ namespace PlanetGame.Shaders.RenderPasses
 
             _shaderUniforms[BufferNames.WORLD_DATA] = _sharedShaderUniforms[PlanetRenderer.BufferNames.WORLD_DATA];
 
-            _shaderUniforms[BufferNames.ALBEDO] = new Texture2DUniform(this, RenderingDevice, RenderingDevice.UniformType.SamplerWithTexture,
-                _sparseVirtualTexture.GetTileCache(TileCache.TileCacheType.ALBEDO).GetRdRid(), perserved: true);
+            _shaderUniforms[BufferNames.ALBEDO] = _sparseVirtualTexture.GetTileCache(TileCache.TileCacheType.ALBEDO);
 
-            _shaderUniforms[BufferNames.HEIGHTMAP] = new Texture2DUniform(this, RenderingDevice, RenderingDevice.UniformType.SamplerWithTexture,
-                _sparseVirtualTexture.GetTileCache(TileCache.TileCacheType.HEIGHTMAP).GetRdRid(), perserved: true);
+            _shaderUniforms[BufferNames.HEIGHTMAP] = _sparseVirtualTexture.GetTileCache(TileCache.TileCacheType.HEIGHTMAP);
 
-            _shaderUniforms[BufferNames.CONSOLIDATED_INDIRECTION_TABLE] = new Texture2DUniform(this, RenderingDevice, RenderingDevice.UniformType.Image,
-                _sparseVirtualTexture.ConsolidatedIndirectionTable.GetRdRid(), perserved: true);
+            _shaderUniforms[BufferNames.CONSOLIDATED_INDIRECTION_TABLE] = _sparseVirtualTexture.ConsolidatedIndirectionTable;
 
-            _shaderUniforms[BufferNames.STATE_TABLE] = new Texture2DUniform(this, RenderingDevice, RenderingDevice.UniformType.Image,
-                _sparseVirtualTexture.StateTable.GetRdRid(), perserved: true);
+            _shaderUniforms[BufferNames.STATE_TABLE] = _sparseVirtualTexture.StateTable;
 
             CreateUniformSet();
         }
@@ -101,15 +97,15 @@ namespace PlanetGame.Shaders.RenderPasses
 
             long drawList = RenderingDevice.DrawListBegin(
                 framebuffer: _framebuffer,
-                drawFlags: RenderingDevice.DrawFlags.ClearColorAll | RenderingDevice.DrawFlags.ClearDepth,
+                drawFlags: RenderingDevice.DrawFlags.ClearColor1 | RenderingDevice.DrawFlags.ClearColor2,
                 clearColorValues:
                 [
                     new Color(0, 0, 0, 0),
                     new Color(0, 0, 0, 0),
                     new Color(-1, 0, 0, 0),
-                ],
-                clearDepthValue: 0.0f,
-                clearStencilValue: 0
+                ]
+                // clearDepthValue: 0.0f,
+                // clearStencilValue: 0
             );
 
             RenderingDevice.DrawListBindRenderPipeline(drawList, _pipeline);
@@ -244,7 +240,7 @@ namespace PlanetGame.Shaders.RenderPasses
 
         protected override void SetFramebufferProperties()
         {
-            RDTextureFormat textureFormat = new()
+            RDTextureFormat colorFormat = new()
             {
                 Format = RenderingDevice.DataFormat.R32G32B32A32Sfloat,
                 TextureType = RenderingDevice.TextureType.Type2D,
@@ -288,7 +284,7 @@ namespace PlanetGame.Shaders.RenderPasses
 
             RDAttachmentFormat colorAttachmentFormat = new()
             {
-                Format = textureFormat.Format,
+                Format = colorFormat.Format,
                 Samples = RenderingDevice.TextureSamples.Samples1,
                 UsageFlags = (uint)(
                     RenderingDevice.TextureUsageBits.ColorAttachmentBit |

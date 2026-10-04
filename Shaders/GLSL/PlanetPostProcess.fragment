@@ -47,6 +47,7 @@ layout(push_constant, std430) uniform PushConstants {
     vec4 camera_position_fovy;
 } push_constants;
 
+#[include] res://Shaders/GLSL/ShaderIncludes/Constants.inc
 #[include] res://Shaders/GLSL/ShaderIncludes/TessellationFunctions.inc
 #[include] res://Shaders/GLSL/ShaderIncludes/Functions.inc
 
