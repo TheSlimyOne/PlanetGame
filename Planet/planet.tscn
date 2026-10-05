@@ -13,7 +13,7 @@ panorama = ExtResource("3_ldv5r")
 sky_material = SubResource("PanoramaSkyMaterial_eodwd")
 
 [sub_resource type="Environment" id="Environment_qqt2a"]
-background_mode = 2
+background_mode = 1
 sky = SubResource("Sky_emtpu")
 tonemap_mode = 2
 glow_enabled = true
@@ -37,8 +37,8 @@ environment = SubResource("Environment_qqt2a")
 [node name="SurfaceAttachment" type="Node3D" parent="." unique_id=1972403850]
 
 [node name="MainLightSource" type="DirectionalLight3D" parent="SurfaceAttachment" unique_id=1376334723]
-directional_shadow_max_distance = 2000.0
 sky_mode = 1
+directional_shadow_max_distance = 2000.0
 
 [node name="DebugMesh" type="MultiMeshInstance3D" parent="SurfaceAttachment" unique_id=948609030]
 multimesh = SubResource("MultiMesh_ldv5r")

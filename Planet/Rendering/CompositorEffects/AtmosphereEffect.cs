@@ -53,6 +53,12 @@ public partial class AtmosphereEffect : CompositorEffect
             AtmosphereDispatcher.UpdateUniforms();
         }, 1, 64, 1);
 
+        DebugMenuController.Instance.AddSlider("Scattering Strength", "Atmosphere", () => AtmosphereData.ScatteringStrength, value =>
+        {
+            AtmosphereData.ScatteringStrength = value;
+            AtmosphereDispatcher.UpdateUniforms();
+        }, 1f, 25f, 0.025f);
+
         // DebugMenuController.Instance.AddLabel("Camera Right", null, () => { return });
 
     }
