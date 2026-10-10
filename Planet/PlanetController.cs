@@ -14,7 +14,6 @@ public partial class PlanetController : Node
 
 
     [ExportGroup("Controllers")]
-    [Export] public CameraController CameraController { get; private set; }
     [Export] public Node3D SurfaceAttachment { get; private set; }
     public PlanetDrawingController PlanetDrawingController { get; private set; }
     public Node3D CollisionTestSpheres = new();
@@ -46,13 +45,11 @@ public partial class PlanetController : Node
     {
         if (what == NotificationWMCloseRequest || what == NotificationPredelete)
         {
-            Quiting = true;
-            // PlanetRenderer?.CleanupGPU();
+            CleanUpGPU();
         }
     }
 
     private Rid _terrainInstance;
-
 
     public override void _Ready()
     {
@@ -80,17 +77,15 @@ public partial class PlanetController : Node
         // {
         //     SaveManager.OverrideSave(SaveManager.CurrentSave, SaveManager.CurrentWorldSave);
         // }, 999);
+    }
+    
+    private void CleanUpGPU()
+    {
+        if(Quiting) return;
 
-        DebugMenuController.Instance.AddActionButton("Quit", null, () =>
-        {
-            Quiting = true;
-            DebugMenuController.Instance.Clear();
-            PlanetRenderer.CleanupGPU();
-            GetTree().ChangeSceneToFile("res://main.tscn");
-
-            GD.Print("Quiting");
-
-        }, 1000);
+        Quiting = true;
+        DebugMenuController.Instance?.Clear();
+        PlanetRenderer?.CleanupGPU();
     }
 
     #region Process
@@ -162,10 +157,9 @@ public partial class PlanetController : Node
 
     public void SetupCameras()
     {
-        MainCamera = (OrbitalCamera3D)CameraController.GetCamera("Main");
+        MainCamera = GetNode<OrbitalCamera3D>("%Main");
         MainCamera.GlobalPosition = Vector3.Back * MainCamera.DistanceFromTarget;
 
-        CameraController.SetCurrent("Main");
         MainCamera.DistanceFromTarget = WorldData.Radius;
 
         UpdateCamera();

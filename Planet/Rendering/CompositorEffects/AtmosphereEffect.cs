@@ -68,7 +68,7 @@ public partial class AtmosphereEffect : CompositorEffect
         if (PlanetController.Quiting)
             return;
 
-        RenderSceneBuffersRD renderSceneBuffers = renderData.GetRenderSceneBuffers() as RenderSceneBuffersRD;
+        using RenderSceneBuffersRD renderSceneBuffers = renderData.GetRenderSceneBuffers() as RenderSceneBuffersRD;
         RenderSceneData sceneData = renderData.GetRenderSceneData();
 
         Vector2I size = renderSceneBuffers.GetInternalSize();
@@ -80,11 +80,8 @@ public partial class AtmosphereEffect : CompositorEffect
         //     (color, "color"),
         //     (depth, "depth"),
         // ], size);
-
-        AtmosphereDispatcher.UpdateUniforms(color, depth);
-
-
-
+        AtmosphereDispatcher.UpdateUniforms();
+        AtmosphereDispatcher.UpdateFramebufferSet(color, depth);
 
         Transform3D cameraTransform = sceneData.GetCamTransform();
         Projection cameraProjection = sceneData.GetCamProjection();

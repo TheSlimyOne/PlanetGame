@@ -4,14 +4,22 @@ using Godot;
 using PlanetGame.Planet.Rendering.VirtualTexturing;
 using System.Collections.Generic;
 using PlanetGame.Planet.Rendering;
+
+using static PlanetGame.Shaders.Dispatchers.ValidateCacheDispatcher.BufferNames;
+using static PlanetGame.Shaders.Dispatchers.ValidateCacheDispatcher.BufferSets;
+
 namespace PlanetGame.Shaders.Dispatchers
 {
-    public class ValidateCacheDispatcher : Dispatcher<ValidateCacheDispatcher.BufferNames>
+    public class ValidateCacheDispatcher : Dispatcher<ValidateCacheDispatcher.BufferNames, ValidateCacheDispatcher.BufferSets>
     {
         private static ShaderProgramPaths _shaderPath = new() { Compute = ShaderPaths.VALIDATE_TILE_CACHE_COMPUTE };
         private readonly SparseVirtualTexture _sparseVirtualTexture;
         private readonly Dictionary<PlanetRenderer.BufferNames, ShaderUniform> _sharedShaderUniforms;
 
+        public enum BufferSets
+        {
+            DEFAULT
+        }
         public enum BufferNames
         {
             INDIRECTION_TABLE,
@@ -27,17 +35,14 @@ namespace PlanetGame.Shaders.Dispatchers
         }
 
         public override void CreateUniforms()
-        {
-            _shaderUniforms = [];
-        
-            _shaderUniforms[BufferNames.INDIRECTION_TABLE] = _sparseVirtualTexture.IndirectionTable;
+        {        
+            this[0, INDIRECTION_TABLE, DEFAULT] = _sparseVirtualTexture.IndirectionTable;
 
-            _shaderUniforms[BufferNames.RESIDENCY_TABLE] = _sparseVirtualTexture.ResidencyTable;
+            this[1, RESIDENCY_TABLE, DEFAULT] = _sparseVirtualTexture.ResidencyTable;
 
-            _shaderUniforms[BufferNames.VIRTUAL_TEXTURE_DATA] = _sharedShaderUniforms[PlanetRenderer.BufferNames.VIRTUAL_TEXTURE_DATA];
+            this[2, VIRTUAL_TEXTURE_DATA, DEFAULT] = _sharedShaderUniforms[PlanetRenderer.BufferNames.VIRTUAL_TEXTURE_DATA];
             
-
-            CreateUniformSet();
+            CreateUniformSets();
         }
 
 #nullable enable
@@ -50,7 +55,7 @@ namespace PlanetGame.Shaders.Dispatchers
 
             long computeList = RenderingDevice.ComputeListBegin();
             RenderingDevice.ComputeListBindComputePipeline(computeList, _pipeline);
-            RenderingDevice.ComputeListBindUniformSet(computeList, _uniformSet, 0);
+            ComputeListBindUniformSets(computeList);
             RenderingDevice.ComputeListAddBarrier(computeList);
             RenderingDevice.ComputeListDispatch(computeList, x, y, 1);
             RenderingDevice.ComputeListEnd();

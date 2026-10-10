@@ -7,13 +7,20 @@ using System.Collections.Generic;
 using PlanetGame.Planet.Rendering;
 using PlanetGame.Data;
 
+using static PlanetGame.Shaders.Dispatchers.ResolveTileRequestDispatcher.BufferNames;
+using static PlanetGame.Shaders.Dispatchers.ResolveTileRequestDispatcher.BufferSets;
+
 namespace PlanetGame.Shaders.Dispatchers
 {
-    public partial class ResolveTileRequestDispatcher : Dispatcher<ResolveTileRequestDispatcher.BufferNames>
+    public partial class ResolveTileRequestDispatcher : Dispatcher<ResolveTileRequestDispatcher.BufferNames, ResolveTileRequestDispatcher.BufferSets>
     {
         private static VirtualTextureData VirtualTextureData => SaveManager.VirtualTextureData;
         private static ShaderProgramPaths _shaderPath = new() { Compute = ShaderPaths.RESOLVE_TILE_REQUEST_COMPUTE };
         public const uint REQUEST_AMOUNT = 256;
+        public enum BufferSets
+        {
+            DEFAULT
+        }
         public enum BufferNames
         {
             INDIRECTION_TABLE,
@@ -39,33 +46,31 @@ namespace PlanetGame.Shaders.Dispatchers
 
         public override void CreateUniforms()
         {
-            _shaderUniforms = [];
+            this[0, INDIRECTION_TABLE, DEFAULT] = _sparseVirtualTexture.IndirectionTable;
 
-            _shaderUniforms[BufferNames.INDIRECTION_TABLE] = _sparseVirtualTexture.IndirectionTable;
+            this[1, STATE_TABLE, DEFAULT] = _sparseVirtualTexture.StateTable;
 
-            _shaderUniforms[BufferNames.STATE_TABLE] = _sparseVirtualTexture.StateTable;
+            this[2, RESIDENCY_TABLE, DEFAULT] = _sparseVirtualTexture.ResidencyTable;
 
-            _shaderUniforms[BufferNames.RESIDENCY_TABLE] = _sparseVirtualTexture.ResidencyTable;
+            this[3, VIRTUAL_TEXTURE_DATA, DEFAULT] = _sharedShaderUniforms[PlanetRenderer.BufferNames.VIRTUAL_TEXTURE_DATA];
 
-            _shaderUniforms[BufferNames.VIRTUAL_TEXTURE_DATA] = _sharedShaderUniforms[PlanetRenderer.BufferNames.VIRTUAL_TEXTURE_DATA];
-
-            _shaderUniforms[BufferNames.TILE_REQUEST_DATA] = new StorageBufferUniform(BufferNames.TILE_REQUEST_DATA.ToString(), this, RenderingDevice,
+            this[4, TILE_REQUEST_DATA, DEFAULT] = new StorageBufferUniform(TILE_REQUEST_DATA.ToString(), this, RenderingDevice,
                 GetTileRequestData()
             );
 
-            _shaderUniforms[BufferNames.TILE_SLOT_COUNTER] = new StorageBufferUniform(BufferNames.TILE_SLOT_COUNTER.ToString(), this, RenderingDevice,
+            this[5, TILE_SLOT_COUNTER, DEFAULT] = new StorageBufferUniform(TILE_SLOT_COUNTER.ToString(), this, RenderingDevice,
                 [.. Utilities.ToBytes<uint>(1)]
             );
 
-            _shaderUniforms[BufferNames.REQUEST_BUFFER_COUNTER] = new StorageBufferUniform(BufferNames.REQUEST_BUFFER_COUNTER.ToString(), this, RenderingDevice,
+            this[6, REQUEST_BUFFER_COUNTER, DEFAULT] = new StorageBufferUniform(REQUEST_BUFFER_COUNTER.ToString(), this, RenderingDevice,
                 [.. Utilities.ToBytes<uint>(1)]
             );
 
-            _shaderUniforms[BufferNames.REQUEST_BUFFER] = new StorageBufferUniform(BufferNames.REQUEST_BUFFER.ToString(), this, RenderingDevice,
+            this[7, REQUEST_BUFFER, DEFAULT] = new StorageBufferUniform(REQUEST_BUFFER.ToString(), this, RenderingDevice,
                 [.. Utilities.ToBytes<Vector4I>(REQUEST_AMOUNT)]
             );
 
-            CreateUniformSet();
+            CreateUniformSets();
         }
 
 #nullable enable
@@ -77,7 +82,7 @@ namespace PlanetGame.Shaders.Dispatchers
 
             long computeList = RenderingDevice.ComputeListBegin();
             RenderingDevice.ComputeListBindComputePipeline(computeList, _pipeline);
-            RenderingDevice.ComputeListBindUniformSet(computeList, _uniformSet, 0);
+            ComputeListBindUniformSets(computeList);
             RenderingDevice.ComputeListAddBarrier(computeList);
             RenderingDevice.ComputeListDispatch(computeList, x, y, z);
             RenderingDevice.ComputeListEnd();
@@ -87,7 +92,7 @@ namespace PlanetGame.Shaders.Dispatchers
         public override void UpdateUniforms()
         {
             // Updates the counter for the request buffer
-            GetUniform<StorageBufferUniform>(BufferNames.REQUEST_BUFFER_COUNTER).UpdateUniform(
+            GetUniform<StorageBufferUniform>(REQUEST_BUFFER_COUNTER).UpdateUniform(
                 [.. Utilities.ToBytesSingle(0)]
             );
         }
@@ -105,7 +110,7 @@ namespace PlanetGame.Shaders.Dispatchers
         public void GetTextureIds(Callable callback)
         {
 
-            uint amount = GetUniform<StorageBufferUniform>(BufferNames.REQUEST_BUFFER_COUNTER).GetData<uint>()[0];
+            uint amount = GetUniform<StorageBufferUniform>(REQUEST_BUFFER_COUNTER).GetData<uint>()[0];
 
             amount = Math.Min(amount, REQUEST_AMOUNT);
 
@@ -115,12 +120,12 @@ namespace PlanetGame.Shaders.Dispatchers
                 return;
             }
 
-            GetUniform<StorageBufferUniform>(BufferNames.REQUEST_BUFFER).GetDataAsync(callback, sizeBytes: amount * Utilities.SizeOf<Vector4I>());
+            GetUniform<StorageBufferUniform>(REQUEST_BUFFER).GetDataAsync(callback, sizeBytes: amount * Utilities.SizeOf<Vector4I>());
         }
 
         public void ResetTileSlotCounter()
         {
-            GetUniform<StorageBufferUniform>(BufferNames.TILE_SLOT_COUNTER).UpdateUniform(
+            GetUniform<StorageBufferUniform>(TILE_SLOT_COUNTER).UpdateUniform(
                 [.. Utilities.ToBytesSingle(0)]
             );
         }

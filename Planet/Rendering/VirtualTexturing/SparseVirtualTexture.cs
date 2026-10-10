@@ -71,6 +71,7 @@ namespace PlanetGame.Planet.Rendering.VirtualTexturing
 
         private const int SIMULATED_DISK_LATENCY_MS = 20;
 
+        // Somehow enforce this function to be finished when quitting
         public async void RequestTileSlot(byte[] bytes)
         {
             (uint tileX, uint tileY, uint tileZ, uint slot)[] data =

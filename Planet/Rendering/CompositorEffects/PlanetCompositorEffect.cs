@@ -28,7 +28,7 @@ public partial class PlanetCompositorEffect : CompositorEffect
         if (PlanetController.Quiting)
             return;
             
-        RenderSceneBuffersRD renderSceneBuffers = renderData.GetRenderSceneBuffers() as RenderSceneBuffersRD;
+        using RenderSceneBuffersRD renderSceneBuffers = renderData.GetRenderSceneBuffers() as RenderSceneBuffersRD;
         RenderSceneData sceneData = renderData.GetRenderSceneData();
         Vector2I size = renderSceneBuffers.GetInternalSize();
 

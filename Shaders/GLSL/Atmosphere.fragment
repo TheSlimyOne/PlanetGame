@@ -1,14 +1,14 @@
 #[fragment]
 #version 450
 
-layout(std430, binding = 0) readonly buffer AtmosphereData {
+layout(set = 0, binding = 0, std430) readonly buffer AtmosphereData {
     float radius;
     float density_falloff;
     uint light_sampling_count;
     uint optical_depth_sampling_count;
 } atmosphere_data;
 
-layout(std430, binding = 1) readonly buffer WorldData {
+layout(set = 0, binding = 1, std430) readonly buffer WorldData {
     float radius;
     float height_scale;
     vec2 padding;

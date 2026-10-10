@@ -83,7 +83,7 @@ namespace PlanetGame.Data
         /// </summary>
         /// <remarks>
         /// <code>
-        /// layout(std430, binding = X) readonly buffer VirtualTextureData {
+        /// layout(set = X, binding = X, std430) readonly buffer VirtualTextureData {
         ///     uint low_resolution_mip_count;
         ///     uint high_resolution_mip_count;
         ///     uint grid_size;

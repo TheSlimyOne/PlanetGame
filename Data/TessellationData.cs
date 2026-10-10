@@ -35,7 +35,7 @@ namespace PlanetGame.Data
         /// </summary>
         /// <remarks>
         /// <code>
-        /// layout(std430, binding = X) readonly buffer TessellationData {
+        /// layout(set = X, binding = X, std430) readonly buffer TessellationData {
         ///     uint resolution;
         ///     float sub_factor;
         ///     uint maximum_lod;

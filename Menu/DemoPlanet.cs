@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Godot;
+using PlanetGame.Shaders;
 using static SaveManager;
 
 public partial class DemoPlanet : SubViewport
@@ -9,7 +10,9 @@ public partial class DemoPlanet : SubViewport
 	
 	public override void _Ready()
 	{
-		
+		Planet.Mesh = new BoxMesh() { SubdivideWidth = 16, SubdivideHeight = 16, SubdivideDepth = 16 };
+		ShaderMaterial shader = new() { Shader = GD.Load<Shader>(ShaderPaths.GD_DEMO_SHADER_PATH) };
+		Planet.Mesh.SurfaceSetMaterial(0, shader);
 	}
 
 	public void SetThumbnails(Dictionary<SaveDataIdentifier, Texture2D> images)

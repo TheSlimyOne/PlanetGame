@@ -3,12 +3,13 @@ using System.Collections.Generic;
 using Godot;
 using Godot.Collections;
 using PlanetGame.Util;
-using Uniform;
 
 namespace PlanetGame.Shaders.RenderPasses
 {
-    public abstract class RenderPass<TEnum>(RenderingDevice renderingDevice, ShaderProgramPaths shaderPath) 
-        : ShaderPass<TEnum>(renderingDevice, shaderPath) where TEnum : Enum
+    public abstract class RenderPass<BufferId, SetId>(RenderingDevice renderingDevice, ShaderProgramPaths shaderPath) 
+        : ShaderPass<BufferId, SetId>(renderingDevice, shaderPath)
+        where BufferId : struct, Enum
+        where SetId : struct, Enum
     {
         protected Rid _framebuffer;
         protected readonly System.Collections.Generic.Dictionary<string, Rid> _framebufferAttachments = [];
@@ -36,6 +37,15 @@ namespace PlanetGame.Shaders.RenderPasses
             CreatePipeline();
         }
 
+        public void DrawListBindUniformSets(long drawList)
+        {
+            foreach (SetId setId in Enum.GetValues<SetId>())
+            {
+                uint set = Convert.ToUInt32(setId);
+                RenderingDevice.DrawListBindUniformSet(drawList, _uniformSets[set], set);
+            }
+        }
+
         protected void CreateFramebufferFormat(Array<RDAttachmentFormat> attachmentFormats)
         {
             _framebufferFormat = RenderingDevice.FramebufferFormatCreate(attachmentFormats);
@@ -61,14 +71,15 @@ namespace PlanetGame.Shaders.RenderPasses
 
         protected virtual void CreateGeometry(Mesh mesh)
         {
+            // FreeGeometry();
             RenderGeometry geometry = new();
             Godot.Collections.Array arrays = mesh.SurfaceGetArrays(0);
             Vector3[] vertices = arrays[(int)Mesh.ArrayType.Vertex].AsVector3Array();
             Vector3[] normals = arrays[(int)Mesh.ArrayType.Normal].AsVector3Array();
             int[] indices = arrays[(int)Mesh.ArrayType.Index].AsInt32Array();
 
-            byte[] vertexData = [.. Utilities.ToBytes<Vector3>(vertices)];
-            byte[] normalData = [.. Utilities.ToBytes<Vector3>(normals)];
+            byte[] vertexData = [.. Utilities.ToBytes(vertices)];
+            byte[] normalData = [.. Utilities.ToBytes(normals)];
 
             geometry.VertexFormat = CreateVertexFormat();
 
@@ -88,7 +99,7 @@ namespace PlanetGame.Shaders.RenderPasses
                 [geometry.VertexBuffer, geometry.NormalBuffer]
             );
 
-            byte[] indexData = [.. Utilities.ToBytes<int>(indices)];
+            byte[] indexData = [.. Utilities.ToBytes(indices)];
             geometry.IndexBuffer = RenderingDevice.IndexBufferCreate((uint)indices.Length, RenderingDevice.IndexBufferFormat.Uint32, indexData);
             geometry.IndexArray = RenderingDevice.IndexArrayCreate(geometry.IndexBuffer, 0, (uint)indices.Length);
             _geometry = geometry;
@@ -129,16 +140,8 @@ namespace PlanetGame.Shaders.RenderPasses
             ]);
         }
 
-        public override void CleanupGPU()
+        protected void FreeGeometry()
         {
-            if (RenderingDevice == null)
-                return;
-
-            if (RenderingDevice.FramebufferIsValid(_framebuffer))
-                RenderingDevice.FreeRid(_framebuffer);
-
-            _framebufferAttachments.Clear();
-
             if (_geometry.VertexArray.IsValid)
                 RenderingDevice.FreeRid(_geometry.VertexArray);
 
@@ -155,14 +158,27 @@ namespace PlanetGame.Shaders.RenderPasses
                 RenderingDevice.FreeRid(_geometry.IndexBuffer);
 
             _geometry = default;
+        }
+
+        protected override void CleanupGPUInternal()
+        {
+            if (RenderingDevice == null)
+                return;
+
+            if (RenderingDevice.FramebufferIsValid(_framebuffer))
+                RenderingDevice.FreeRid(_framebuffer);
+
+            _framebufferAttachments.Clear();
+
+            FreeGeometry();
 
             _framebuffer = default;
             _framebufferFormat = 0;
 
-            base.CleanupGPU();
+            base.CleanupGPUInternal();
         }
 
-        public override bool IsValid() => RenderingDevice != null &&  RenderingDevice.UniformSetIsValid(_uniformSet) &&  _shader.IsValid && RenderingDevice.RenderPipelineIsValid(_pipeline);
+        public override bool IsValid() => RenderingDevice != null && UniformSetsIsValid() && _shader.IsValid && RenderingDevice.RenderPipelineIsValid(_pipeline);
     }
 }
 

@@ -6,9 +6,12 @@ using PlanetGame.Planet.Rendering;
 using PlanetGame.Planet.Rendering.VirtualTexturing;
 using PlanetGame.Util;
 
+using static PlanetGame.Shaders.RenderPasses.PlanetRenderPass.BufferNames;
+using static PlanetGame.Shaders.RenderPasses.PlanetRenderPass.BufferSets;
+
 namespace PlanetGame.Shaders.RenderPasses
 {
-    public partial class PlanetRenderPass : RenderPass<PlanetRenderPass.BufferNames>
+    public partial class PlanetRenderPass : RenderPass<PlanetRenderPass.BufferNames, PlanetRenderPass.BufferSets>
     {
         private static ShaderProgramPaths _shaderPath = new() { Vertex = ShaderPaths.PLANET_VERTEX, Fragment = ShaderPaths.PLANET_FRAGMENT };
 
@@ -26,10 +29,17 @@ namespace PlanetGame.Shaders.RenderPasses
             return Image.CreateFromData((int)format.Width, (int)format.Height, false, Image.Format.Rgbaf, data);
         }
 
-        private readonly Dictionary<PlanetRenderer.BufferNames, ShaderUniform> _sharedShaderUniforms;
-        private readonly SparseVirtualTexture _sparseVirtualTexture;
         private MultiMeshRD _triangleMultiMesh;
+        private readonly Dictionary<PlanetRenderer.BufferNames, ShaderUniform> _sharedShaderUniforms;
+        private Action _onMeshChange;
+        private readonly SparseVirtualTexture _sparseVirtualTexture;
 
+
+        public enum BufferSets
+        {
+            DEFAULT,
+            MESH,
+        }
         public enum BufferNames
         {
             MULTIMESH_BUFFER,
@@ -60,32 +70,32 @@ namespace PlanetGame.Shaders.RenderPasses
             _framebufferAttachments["picking"] = CreatePickingTexture(Vector2I.One);
             _framebufferAttachments["linear_depth"] = CreateLinearDepthTexture(Vector2I.One);
 
-            _triangleMultiMesh.BuffersChanged += CreateUniformSet;
+            _onMeshChange = () => CreateUniformSet(MESH);
+            _triangleMultiMesh.BuffersChanged += _onMeshChange;
         }
 
         public override void CreateUniforms()
         {
-            _shaderUniforms = [];
 
-            _shaderUniforms[BufferNames.MULTIMESH_BUFFER] = _triangleMultiMesh.BufferUniform;
+            this[0, VIRTUAL_TEXTURE_DATA, DEFAULT] = _sharedShaderUniforms[PlanetRenderer.BufferNames.VIRTUAL_TEXTURE_DATA];
 
-            _shaderUniforms[BufferNames.VIRTUAL_TEXTURE_DATA] = _sharedShaderUniforms[PlanetRenderer.BufferNames.VIRTUAL_TEXTURE_DATA];
+            this[1, RENDER_DATA, DEFAULT] = _sharedShaderUniforms[PlanetRenderer.BufferNames.RENDER_DATA];
 
-            _shaderUniforms[BufferNames.RENDER_DATA] = _sharedShaderUniforms[PlanetRenderer.BufferNames.RENDER_DATA];
+            this[2, TESSELLATION_DATA, DEFAULT] = _sharedShaderUniforms[PlanetRenderer.BufferNames.TESSELLATION_DATA];
 
-            _shaderUniforms[BufferNames.TESSELLATION_DATA] = _sharedShaderUniforms[PlanetRenderer.BufferNames.TESSELLATION_DATA];
+            this[3, WORLD_DATA, DEFAULT] = _sharedShaderUniforms[PlanetRenderer.BufferNames.WORLD_DATA];
 
-            _shaderUniforms[BufferNames.WORLD_DATA] = _sharedShaderUniforms[PlanetRenderer.BufferNames.WORLD_DATA];
+            this[4, ALBEDO, DEFAULT] = _sparseVirtualTexture.GetTileCache(TileCache.TileCacheType.ALBEDO);
 
-            _shaderUniforms[BufferNames.ALBEDO] = _sparseVirtualTexture.GetTileCache(TileCache.TileCacheType.ALBEDO);
+            this[5, HEIGHTMAP, DEFAULT] = _sparseVirtualTexture.GetTileCache(TileCache.TileCacheType.HEIGHTMAP);
 
-            _shaderUniforms[BufferNames.HEIGHTMAP] = _sparseVirtualTexture.GetTileCache(TileCache.TileCacheType.HEIGHTMAP);
+            this[6, CONSOLIDATED_INDIRECTION_TABLE, DEFAULT] = _sparseVirtualTexture.ConsolidatedIndirectionTable;
 
-            _shaderUniforms[BufferNames.CONSOLIDATED_INDIRECTION_TABLE] = _sparseVirtualTexture.ConsolidatedIndirectionTable;
+            this[7, STATE_TABLE, DEFAULT] = _sparseVirtualTexture.StateTable;
 
-            _shaderUniforms[BufferNames.STATE_TABLE] = _sparseVirtualTexture.StateTable;
+            this[0, MULTIMESH_BUFFER, MESH] = _triangleMultiMesh.BufferUniform;
 
-            CreateUniformSet();
+            CreateUniformSets();
         }
 
 #nullable enable
@@ -112,7 +122,7 @@ namespace PlanetGame.Shaders.RenderPasses
             RenderingDevice.DrawListBindVertexArray(drawList, _geometry.VertexArray);
             RenderingDevice.DrawListBindIndexArray(drawList, _geometry.IndexArray);
             RenderingDevice.DrawListSetPushConstant(drawList, pushConstantBytes, (uint)pushConstantBytes.Length);
-            RenderingDevice.DrawListBindUniformSet(drawList, _uniformSet, 0);
+            DrawListBindUniformSets(drawList);
             RenderingDevice.DrawListDrawIndirect(drawList, true, _sharedShaderUniforms[PlanetRenderer.BufferNames.DRAW_DISPATCH_BUFFER].Rid);
             RenderingDevice.DrawListEnd();
 
@@ -169,6 +179,7 @@ namespace PlanetGame.Shaders.RenderPasses
 
         protected override void CreatePipeline()
         {
+            FreePipeline();
             _pipeline = RenderingDevice.RenderPipelineCreate(
                 _shader,
                 _framebufferFormat,
@@ -336,20 +347,20 @@ namespace PlanetGame.Shaders.RenderPasses
             ((Texture2DUniform)_sharedShaderUniforms[PlanetRenderer.BufferNames.LINEAR_DEPTH_TEXTURE]).SetRid(LinearDepth);
         }
 
-        public override void CleanupGPU()
+        protected override void CleanupGPUInternal()
         {
-            _triangleMultiMesh.BuffersChanged -= CreateUniformSet;
+            _triangleMultiMesh.BuffersChanged -= _onMeshChange;
 
             if (RenderingDevice == null)
                 return;
-
+            
             if (Picking.IsValid)
                 RenderingDevice.FreeRid(Picking);
 
             if (LinearDepth.IsValid)
                 RenderingDevice.FreeRid(LinearDepth);
-
-            base.CleanupGPU();
+                
+            base.CleanupGPUInternal();
         }
 
         public Vector3 GetLocalMousePosition(Vector2 mousePosition, Vector2 screenSize)

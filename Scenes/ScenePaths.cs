@@ -12,9 +12,14 @@ namespace PlanetGame
         public const string DEBUG_LABEL = "res://Util/Debug Menu Utils/Scenes/label_component.tscn";
         public const string DEBUG_SET_VALUE = "res://Util/Debug Menu Utils/Scenes/set_value_component.tscn";
         
+        public const string RETICLE = "res://Planet/Rendering/Drawing/UI/reticle.tscn";
+
+        public const string MAIN = "res://Scenes/main.tscn";
 
         public const string PLANET_DRAWING_CONTROLLER = "res://Planet/Rendering/Drawing/UI/planet_drawing_controller.tscn";
         public const string BRUSH_OPTIONS = "res://Planet/Rendering/Drawing/UI/brush_options.tscn";
+
+        public const string GAME = "res://Scenes/game.tscn";
 
         public static PackedScene GetPackedScene(string scenePath)
         {

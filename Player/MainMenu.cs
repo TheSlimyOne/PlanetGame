@@ -1,4 +1,5 @@
 using Godot;
+using PlanetGame;
 using PlanetGame.Shaders;
 // using static SaveManager;
 
@@ -40,21 +41,8 @@ public partial class MainMenu : MarginContainer
 	public override void _Ready()
 	{
 		LoadSave.Disabled = LoadOptions.Selected == -1;
-		GD.Print(SelectedSave);
 		// LoadOptions.Selected = -1;
-
-		DemoPlanet.Planet.Mesh = new BoxMesh() { SubdivideWidth = 16, SubdivideHeight = 16, SubdivideDepth = 16 };
-		ShaderMaterial shader = new() { Shader = GD.Load<Shader>(ShaderPaths.GD_DEMO_SHADER_PATH) };
-		DemoPlanet.Planet.Mesh.SurfaceSetMaterial(0, shader);
 	}
-
-    public override void _Process(double delta)
-    {
-		// ulong total = RenderingServer.GetRenderingDevice().GetMemoryUsage(RenderingDevice.MemoryType.Total);
-        // ulong buffers = RenderingServer.GetRenderingDevice().GetMemoryUsage(RenderingDevice.MemoryType.Buffers);
-        // ulong textures = RenderingServer.GetRenderingDevice().GetMemoryUsage(RenderingDevice.MemoryType.Textures);
-        // GD.Print($"Total: {total / 1024f / 1024f:F6} MB, Buffers: {buffers / 1024f / 1024f:F6} MB, Textures: {textures / 1024f / 1024f:F6} MB");
-    }
 
 
     // public override void _EnterTree()
@@ -156,22 +144,10 @@ public partial class MainMenu : MarginContainer
 		}));
 	}
 
-	public void GenerateTiles()
-	{
-		// string testDir = "user://Tests//Tile Border Test";
-
-		// using DirAccess dir = DirAccess.Open(testDir);
-		// dir.GetFiles().Where(f => f.EndsWith(".png")).ToList().ForEach(f => dir.Remove(f));
-		// Image image = Image.LoadFromFile("res://Assets/Images/test-image small.png");
-
-
-		// TileManager.GenerateTilesAsync(image, 3, testDir, 0);
-	}
-
 	public void OnLoad()
 	{
 		SaveManager.CurrentSave = SelectedSave;
-		GetTree().ChangeSceneToFile("res://Planet/planet.tscn");
+		GetTree().ChangeSceneToFile(ScenePaths.GAME);
 	}
 	public void OnRenerateTiles()
 	{
@@ -195,20 +171,6 @@ public partial class MainMenu : MarginContainer
 			0, 1, 2, 3, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5
 		], OnTileProgress);
 		SaveManager.CurrentSave = saveName;
-	}
-
-	public void GenerateDebugTiles()
-	{
-		// PackedScene generatorScene = ResourceLoader.Load<PackedScene>("res://Player/UI/DebugTileGenerator.tscn");
-		// DebugTileGenerator instance = generatorScene.Instantiate<DebugTileGenerator>();
-		// Image background = Image.CreateEmpty(256, 256, false, Image.Format.Rgbaf);
-		// int padding = 10;
-		// background.Fill(Colors.Orange);
-		// background.FillRect(new Rect2I(padding, padding, 255 - 2 * padding, 255 - 2 * padding), Colors.Black);
-
-		// instance.SetBackground(background);
-		// instance.GenerateDebugTilesAsync(GetTree(), 5);
-		Image test1 = Image.LoadFromFile("user://Albedo.png");
 	}
 
 	public void OnQuit()

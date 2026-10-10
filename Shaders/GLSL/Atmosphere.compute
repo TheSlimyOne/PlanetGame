@@ -3,11 +3,7 @@
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
-layout(set = 0, binding = 0, rgba16f) uniform image2D color_texture;
-layout(set = 0, binding = 1) uniform sampler2D depth_texture;
-layout(set = 0, binding = 2, r32f) readonly uniform image2D linear_depth_texture;
-
-layout(set = 0, binding = 3, std430) buffer restrict readonly AtmosphereData {
+layout(set = 0, binding = 0, std430) buffer restrict readonly AtmosphereData {
     float scale;
     float density_falloff;
     uint light_sampling_count;
@@ -15,12 +11,16 @@ layout(set = 0, binding = 3, std430) buffer restrict readonly AtmosphereData {
     vec4 scattering_coefficients;
 } atmosphere_data;
 
-layout(set = 0, binding = 4, std430) buffer restrict readonly WorldData {
+layout(set = 0, binding = 1, std430) buffer restrict readonly WorldData {
     float radius;
     float height_scale;
     vec2 padding;
     mat4 planet_transform_matrix;
 } world_data;
+
+layout(set = 1, binding = 0, rgba16f) uniform image2D color_texture;
+layout(set = 1, binding = 1) uniform sampler2D depth_texture;
+layout(set = 1, binding = 2, r32f) readonly uniform image2D linear_depth_texture;
 
 layout(push_constant, std430) uniform PushConstants {
     vec4 camera_position;

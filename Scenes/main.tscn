@@ -52,14 +52,6 @@ layout_mode = 2
 [node name="VBoxContainer" type="VBoxContainer" parent="CenterContainer" unique_id=1161922362]
 layout_mode = 2
 
-[node name="Button" type="Button" parent="CenterContainer/VBoxContainer" unique_id=1451153398]
-layout_mode = 2
-text = "Generate Tiles"
-
-[node name="Button2" type="Button" parent="CenterContainer/VBoxContainer" unique_id=1011551450]
-layout_mode = 2
-text = "Generate Debug Tiles"
-
 [node name="ScrollContainer" type="ScrollContainer" parent="CenterContainer/VBoxContainer" unique_id=901680090]
 custom_minimum_size = Vector2(640, 480)
 layout_mode = 2
@@ -207,8 +199,6 @@ filters = PackedStringArray("*.png,*.jpg")
 use_native_dialog = true
 script = ExtResource("3_kln2b")
 
-[connection signal="pressed" from="CenterContainer/VBoxContainer/Button" to="." method="GenerateTiles"]
-[connection signal="pressed" from="CenterContainer/VBoxContainer/Button2" to="." method="GenerateDebugTiles"]
 [connection signal="item_selected" from="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/Load Section/Load Group/obtLoadOptions" to="." method="OnSaveSelection"]
 [connection signal="pressed" from="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/Load Section/Load Group/obtLoadOptions" to="." method="OnOpenSavesList"]
 [connection signal="pressed" from="CenterContainer/VBoxContainer/ScrollContainer/MarginContainer/SectionSpliter/HBoxContainer/Load Section/btnRegenerate" to="." method="OnLoad"]

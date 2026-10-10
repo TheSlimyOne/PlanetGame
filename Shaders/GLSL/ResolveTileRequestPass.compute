@@ -5,13 +5,13 @@
 
 layout(local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
 
-layout(set = 0, set = 0, binding = 0) restrict uniform image2DArray IndirectionTable;
+layout(set = 0, binding = 0) restrict uniform image2DArray IndirectionTable;
 
-layout(set = 0, set = 0, binding = 1, r32ui) restrict uniform uimage2DArray StateTable;
+layout(set = 0, binding = 1, r32ui) restrict uniform uimage2DArray StateTable;
 
-layout(set = 0, set = 0, binding = 2, rgba32f) restrict uniform image2D ResidencyTable;
+layout(set = 0, binding = 2, rgba32f) restrict uniform image2D ResidencyTable;
 
-layout(std430, set = 0, binding = 3) readonly buffer VirtualTextureData {
+layout(set = 0, binding = 3, std430) readonly buffer VirtualTextureData {
     uint low_resolution_mip_count;
     uint high_resolution_mip_count;
     uint grid_size;
@@ -20,22 +20,22 @@ layout(std430, set = 0, binding = 3) readonly buffer VirtualTextureData {
     uint lod_to_mip_map[32];
 };
 
-layout(std430, set = 0, binding = 4) buffer restrict TileRequestData {
+layout(set = 0, binding = 4, std430) buffer restrict TileRequestData {
     uint total_texture_slots;
     uint sqrt_total_texture_slots;
     uint request_buffer_size;
     uint _padding0;
 };
 
-layout(std430, set = 0, binding = 5) restrict buffer TileSlotCounter {
+layout(set = 0, binding = 5, std430) restrict buffer TileSlotCounter {
     uint tile_slot_counter;
 };
 
-layout(std430, set = 0, binding = 6) restrict buffer RequestBufferCounter {
+layout(set = 0, binding = 6, std430) restrict buffer RequestBufferCounter {
     uint request_buffer_counter;
 };
 
-layout(std430, set = 0, binding = 7) buffer restrict TileIDs {
+layout(set = 0, binding = 7, std430) buffer restrict TileIDs {
     uvec4 requested_tile_ids[];
 };
 

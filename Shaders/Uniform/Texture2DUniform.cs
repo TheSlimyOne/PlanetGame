@@ -151,6 +151,7 @@ namespace Uniform
 			SamplerRid = new();
 			SamplerState = default;
 			TextureFormat = default;
+			base.FreeRidInternal();
 		}
 	}
 }

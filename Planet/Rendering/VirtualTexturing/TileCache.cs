@@ -74,6 +74,11 @@ namespace PlanetGame.Planet.Rendering.VirtualTexturing
 
         public override void ClearStorageTexture() => ClearTexture(new Color("00000000"), 0, 1, 0, DEFAULT_TILE_SLOTS_COUNT);
 
+        protected override void FreeRidInternal()
+        {
+            DataSource?.Dispose();
+            base.FreeRidInternal();
+        }
 
         public bool InsertTile(Tile tile, uint slot)
         {

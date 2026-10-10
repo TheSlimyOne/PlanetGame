@@ -123,12 +123,6 @@ namespace PlanetGame.Planet.Rendering.VirtualTexturing
             return texture;
         }
 
-        // public override void CleanupGPU()
-        // {
-        //     if (GetRdRid().IsValid)
-        //         RenderingServer.GetRenderingDevice().FreeRid(GetRdRid());
-        // }
-
         public override void SetFallbackSlots()
         {
             string[] fallBackTiles = VirtualTextureData.FallBackTiles;

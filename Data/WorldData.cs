@@ -95,7 +95,7 @@ namespace PlanetGame.Data
         /// </summary>
         /// <remarks>
         /// <code>
-        /// layout(std430, binding = X) readonly buffer WorldData {
+        /// layout(set = X, binding = X, std430) readonly buffer WorldData {
         ///     float radius;
         ///     float height_scale;
         ///     vec2 padding;

@@ -2,17 +2,25 @@ using System;
 using Uniform;
 using PlanetGame.Util;
 using System.Collections.Generic;
-using PlanetGame.Rendering.Surface;
 using PlanetGame.Data;
 using PlanetGame.Planet.Rendering;
 
+using static PlanetGame.Shaders.Dispatchers.ExecuteTessellationPassDispatcher.BufferNames;
+using static PlanetGame.Shaders.Dispatchers.ExecuteTessellationPassDispatcher.BufferSets;
+
 namespace PlanetGame.Shaders.Dispatchers
 {
-	public class ExecuteTessellationPassDispatcher : Dispatcher<ExecuteTessellationPassDispatcher.BufferNames>
+	public class ExecuteTessellationPassDispatcher : Dispatcher<ExecuteTessellationPassDispatcher.BufferNames, ExecuteTessellationPassDispatcher.BufferSets>
 	{
 		private static ShaderProgramPaths _shaderPath = new() { Compute = ShaderPaths.EXECUTE_TESSELLATION_COMPUTE };
 		private static TessellationData TessellationData => SaveManager.TessellationData;
 		
+		public enum BufferSets
+		{
+			DEFAULT = 0,
+			MESH = 1,
+		}
+
 		public enum BufferNames
 		{
 			ATOMIC_COUNTER,
@@ -29,6 +37,7 @@ namespace PlanetGame.Shaders.Dispatchers
 
 		private MultiMeshRD _triangleMultiMesh;
 		private readonly Dictionary<PlanetRenderer.BufferNames, ShaderUniform> _sharedShaderUniforms;
+		private Action _onMeshChange;
 
 		public ExecuteTessellationPassDispatcher(MultiMeshRD triangleMultiMesh, Dictionary<PlanetRenderer.BufferNames, ShaderUniform> sharedShaderUniforms) : base(_shaderPath)
 		{
@@ -36,42 +45,41 @@ namespace PlanetGame.Shaders.Dispatchers
 			_sharedShaderUniforms = sharedShaderUniforms;
 			SetupShader();
 
-			_triangleMultiMesh.BuffersChanged += CreateUniformSet;
+			_onMeshChange = () => CreateUniformSet(MESH);
+            _triangleMultiMesh.BuffersChanged += _onMeshChange;
 		}
 
 		public override void CreateUniforms()
-		{
-			_shaderUniforms = [];
-			
-			_shaderUniforms[BufferNames.ATOMIC_COUNTER] = _sharedShaderUniforms[PlanetRenderer.BufferNames.EXEC_ATOMIC_COUNTER];
+		{			
+			this[0, ATOMIC_COUNTER, DEFAULT] = _sharedShaderUniforms[PlanetRenderer.BufferNames.EXEC_ATOMIC_COUNTER];
 
-			_shaderUniforms[BufferNames.KEY_INDICES] = _sharedShaderUniforms[PlanetRenderer.BufferNames.EXEC_KEY_INDICES];
+			this[1, KEY_INDICES, DEFAULT] = _sharedShaderUniforms[PlanetRenderer.BufferNames.EXEC_KEY_INDICES];
 
-			_shaderUniforms[BufferNames.READ_LIST] = new StorageBufferUniform(BufferNames.READ_LIST.ToString(), this, RenderingDevice,
+			this[2, READ_LIST, DEFAULT] = new StorageBufferUniform(READ_LIST.ToString(), this, RenderingDevice,
 				CreateReadList()
 			);
 
-			_shaderUniforms[BufferNames.WRITE_FULL_LIST] = new StorageBufferUniform(BufferNames.WRITE_FULL_LIST.ToString(), this, RenderingDevice,
+			this[3, WRITE_FULL_LIST, DEFAULT] = new StorageBufferUniform(WRITE_FULL_LIST.ToString(), this, RenderingDevice,
 				[.. Utilities.ToBytes<Key>(TessellationData.MaximumKeys)]
 			);
 
-			_shaderUniforms[BufferNames.WRITE_CULL_LIST] = new StorageBufferUniform(BufferNames.WRITE_CULL_LIST.ToString(), this, RenderingDevice,
+			this[4, WRITE_CULL_LIST, DEFAULT] = new StorageBufferUniform(WRITE_CULL_LIST.ToString(), this, RenderingDevice,
 				[.. Utilities.ToBytes<Key>(TessellationData.MaximumKeys)]
 			);
 
-			_shaderUniforms[BufferNames.TESSELLATION_DATA] = _sharedShaderUniforms[PlanetRenderer.BufferNames.TESSELLATION_DATA];
+			this[5, TESSELLATION_DATA, DEFAULT] = _sharedShaderUniforms[PlanetRenderer.BufferNames.TESSELLATION_DATA];
 
-			_shaderUniforms[BufferNames.WORLD_DATA] = _sharedShaderUniforms[PlanetRenderer.BufferNames.WORLD_DATA];
+			this[6, WORLD_DATA, DEFAULT] = _sharedShaderUniforms[PlanetRenderer.BufferNames.WORLD_DATA];
 			
-			_shaderUniforms[BufferNames.RENDER_DATA] = _sharedShaderUniforms[PlanetRenderer.BufferNames.RENDER_DATA];
+			this[7, RENDER_DATA, DEFAULT] = _sharedShaderUniforms[PlanetRenderer.BufferNames.RENDER_DATA];
 
-			_shaderUniforms[BufferNames.MULTIMESH_BUFFER] = _triangleMultiMesh.BufferUniform;
-
-			_shaderUniforms[BufferNames.GLOBAL_KEYS_DATA] = new StorageBufferUniform(BufferNames.GLOBAL_KEYS_DATA.ToString(), this, RenderingDevice,
+			this[8, GLOBAL_KEYS_DATA, DEFAULT] = new StorageBufferUniform(GLOBAL_KEYS_DATA.ToString(), this, RenderingDevice,
 				GetInitialGlobalKeyData()
 			);
+
+			this[0, MULTIMESH_BUFFER, MESH] = _triangleMultiMesh.BufferUniform;
 		
-			CreateUniformSet();
+			CreateUniformSets();
 		}
 
 #nullable enable
@@ -83,7 +91,7 @@ namespace PlanetGame.Shaders.Dispatchers
 
 			long computeList = RenderingDevice.ComputeListBegin();
 			RenderingDevice.ComputeListBindComputePipeline(computeList, _pipeline);
-			RenderingDevice.ComputeListBindUniformSet(computeList, _uniformSet, 0);
+            ComputeListBindUniformSets(computeList);
 			RenderingDevice.ComputeListSetPushConstant(computeList, pushConstantBytes, (uint)pushConstantBytes.Length);
 			RenderingDevice.ComputeListAddBarrier(computeList);
 			RenderingDevice.ComputeListDispatchIndirect(computeList, _sharedShaderUniforms[PlanetRenderer.BufferNames.EXEC_DISPATCH_BUFFER].Rid, 0);
@@ -93,9 +101,7 @@ namespace PlanetGame.Shaders.Dispatchers
 
 		public override void UpdateUniforms()
 		{
-			_shaderUniforms[BufferNames.READ_LIST].UpdateUniform(
-				_shaderUniforms[BufferNames.WRITE_FULL_LIST].GetByteData()[0]
-			);
+			this[READ_LIST].UpdateUniform(this[WRITE_FULL_LIST].GetByteData()[0]);
 		}
 		
 		private static byte[] GetInitialGlobalKeyData()
@@ -110,20 +116,20 @@ namespace PlanetGame.Shaders.Dispatchers
 
 		public void ResetGlobalKeyData()
 		{
-			GetUniform<StorageBufferUniform>(BufferNames.GLOBAL_KEYS_DATA).UpdateUniform(GetInitialGlobalKeyData());
+			GetUniform<StorageBufferUniform>(GLOBAL_KEYS_DATA).UpdateUniform(GetInitialGlobalKeyData());
 		}
 
 		public (int fullPrimCount, int culledPrimCount, int renderedPrimCount) GetPrimitiveCounts()
 		{
-			uint[] indices = GetUniform<StorageBufferUniform>(BufferNames.KEY_INDICES).GetData<uint>();
-			uint[] primCounts = GetUniform<StorageBufferUniform>(BufferNames.ATOMIC_COUNTER).GetData<uint>();
+			uint[] indices = GetUniform<StorageBufferUniform>(KEY_INDICES).GetData<uint>();
+			uint[] primCounts = GetUniform<StorageBufferUniform>(ATOMIC_COUNTER).GetData<uint>();
 
 			return ((int)primCounts[indices[0]], (int)primCounts[indices[0] + 3], (int)primCounts[indices[0] + 6]);
 		}
 
 		public (int MaxLod, int MinLod, int StableCount, int[] LodCount) GetGlobalKeyData()
 		{
-			uint[] data = GetUniform<StorageBufferUniform>(BufferNames.GLOBAL_KEYS_DATA).GetData<uint>();
+			uint[] data = GetUniform<StorageBufferUniform>(GLOBAL_KEYS_DATA).GetData<uint>();
 
 			int[] lodCount = new int[TessellationData.MaximumLod + 1];
 
@@ -148,13 +154,14 @@ namespace PlanetGame.Shaders.Dispatchers
 				Array.Copy(faceData, 0, readList, i * faceData.Length, faceData.Length);
 			}
 
-			return [.. Utilities.ToBytes<Key>(readList)];
+			return [.. Utilities.ToBytes(readList)];
 		}
 
-        public override void CleanupGPU()
+        protected override void CleanupGPUInternal()
         {
-			_triangleMultiMesh.BuffersChanged -= CreateUniformSet;
-            base.CleanupGPU();
+            _triangleMultiMesh.BuffersChanged -= _onMeshChange;
+			base.CleanupGPUInternal();
+
         }
     }
 }

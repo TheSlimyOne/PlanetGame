@@ -52,9 +52,9 @@ namespace PlanetGame.Rendering.Surface
         public MultiMeshRD TriangleMultiMesh { get; private set; }
         private Rid _planetInstance;
 
-        public TerrainTessellator(Rid shader, Rid scenario, Dictionary<BufferNames, ShaderUniform> sharedUniforms)
+        public TerrainTessellator(Dictionary<BufferNames, ShaderUniform> sharedUniforms)
         {
-            SetupMultimesh(shader, scenario);
+            CreateMultimesh();
             ExecuteTessellationPass = new(TriangleMultiMesh, sharedUniforms);
             PrepareTessellationPass = new(TriangleMultiMesh, sharedUniforms);
 
@@ -128,21 +128,24 @@ namespace PlanetGame.Rendering.Surface
             Ready = true;
         }
 
-        public void SetupMultimesh(Rid shader, Rid scenario)
+        public void CreateMultimesh()
         {
             TriangleMultiMesh = new(
                 (int)TessellationData.MaximumKeys,
                 Data.Key.GetTriangleMesh((int)TessellationData.Resolution),
                 -1
             );
+        }
 
-            // _planetInstance = TriangleMultiMesh.CreateMultimeshInstance(
-            //     Transform3D.Identity,
-            //     shader,
-            //     scenario,
-            //     float.MaxValue,
-            //     0b1u
-            // );
+        public void CreateMultimeshInstance(Rid shader, Rid scenario)
+        {
+            _planetInstance = TriangleMultiMesh.CreateMultimeshInstance(
+                Transform3D.Identity,
+                shader,
+                scenario,
+                float.MaxValue,
+                0b1u
+            );
         }
 
     }

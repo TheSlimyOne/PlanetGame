@@ -14,7 +14,14 @@ public partial class PlanetDrawingController : Control
     private PlanetRenderer _planetRenderer;
     private PlanetQuery _planetQuery;
 
+
     public Brush CurrentBrush;
+
+    public override void _Ready()
+    {
+       
+    }
+
 
     private readonly BrushOptions _brushOptions = ScenePaths.InstantiateScene<BrushOptions>(ScenePaths.BRUSH_OPTIONS);
 
@@ -31,10 +38,6 @@ public partial class PlanetDrawingController : Control
         ConnectSignals();
 
         CurrentBrush = new BasicBrush();
-
-        _planetRenderer.SurfaceShader.FrameDependentBind("brush_size", () => CurrentBrush.Size);
-        _planetRenderer.SurfaceShader.FrameDependentBind("brush_opacity", () => CurrentBrush.Opacity);
-        _planetRenderer.SurfaceShader.FrameDependentBind("brush_hardness", () => CurrentBrush.Hardness);
     }
 
     public override void _ExitTree()

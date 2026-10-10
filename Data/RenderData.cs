@@ -25,7 +25,7 @@ namespace PlanetGame.Data
         /// </summary>
         /// <remarks>
         /// <code>
-        /// layout(std430, binding = X) readonly buffer RenderData {
+        /// layout(set = X, binding = X, std430) readonly buffer RenderData {
         ///     uint debug_flags;
         /// };
         /// </code>

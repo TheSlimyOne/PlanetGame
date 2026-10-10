@@ -6,16 +6,25 @@ using PlanetGame.Util;
 using PlanetGame.Data;
 using Uniform;
 using PlanetGame.Shaders.Dispatchers;
+using static PlanetGame.Shaders.RenderPasses.AtmosphereDispatcher.BufferNames;
+using static PlanetGame.Shaders.RenderPasses.AtmosphereDispatcher.BufferSets;
+
 
 namespace PlanetGame.Shaders.RenderPasses
 {
-    public partial class AtmosphereDispatcher : Dispatcher<AtmosphereDispatcher.BufferNames>
+    public partial class AtmosphereDispatcher : Dispatcher<AtmosphereDispatcher.BufferNames, AtmosphereDispatcher.BufferSets>
     {
         private static ShaderProgramPaths _shaderPath = new() { Compute = ShaderPaths.ATMOSPHERE_COMPUTE };
         private static Data.RenderData RenderData => SaveManager.RenderData;
         private static AtmosphereData AtmosphereData => SaveManager.AtmosphereData;
 
         private readonly Dictionary<PlanetRenderer.BufferNames, ShaderUniform> _sharedShaderUniforms;
+
+        public enum BufferSets
+        {
+            DEFAULT,
+            FRAMEBUFFER
+        }
 
         public enum BufferNames
         {
@@ -34,26 +43,25 @@ namespace PlanetGame.Shaders.RenderPasses
 
         public override void CreateUniforms()
         {
-            _shaderUniforms = [];
+            this[0, ATMOSPHERE_DATA, DEFAULT] = new StorageBufferUniform(ATMOSPHERE_DATA.ToString(), this, RenderingDevice,
+				AtmosphereData.ToBytes()
+			);
 
-            _shaderUniforms[BufferNames.COLOR_TEXTURE] = new Texture2DUniform(BufferNames.COLOR_TEXTURE.ToString(), null, RenderingDevice,
+            this[1, WORLD_DATA, DEFAULT] = _sharedShaderUniforms[PlanetRenderer.BufferNames.WORLD_DATA];
+
+            this[0, COLOR_TEXTURE, FRAMEBUFFER] = new Texture2DUniform(COLOR_TEXTURE.ToString(), null, RenderingDevice,
                 RenderingDevice.UniformType.Image,
                 perserved: true
             );
 
-            _shaderUniforms[BufferNames.DEPTH_TEXTURE] = new Texture2DUniform(BufferNames.DEPTH_TEXTURE.ToString(), null, RenderingDevice,
+            this[1, DEPTH_TEXTURE, FRAMEBUFFER] = new Texture2DUniform(DEPTH_TEXTURE.ToString(), null, RenderingDevice,
                 RenderingDevice.UniformType.SamplerWithTexture,
                 perserved: true
             );
 
-            _shaderUniforms[BufferNames.LINEAR_DEPTH_TEXTURE] = _sharedShaderUniforms[PlanetRenderer.BufferNames.LINEAR_DEPTH_TEXTURE];
-            
-            _shaderUniforms[BufferNames.ATMOSPHERE_DATA] = new StorageBufferUniform(BufferNames.ATMOSPHERE_DATA.ToString(), this, RenderingDevice,
-				AtmosphereData.ToBytes()
-			);
-
-            _shaderUniforms[BufferNames.WORLD_DATA] = _sharedShaderUniforms[PlanetRenderer.BufferNames.WORLD_DATA];
-
+            this[2, LINEAR_DEPTH_TEXTURE, FRAMEBUFFER] = _sharedShaderUniforms[PlanetRenderer.BufferNames.LINEAR_DEPTH_TEXTURE];
+               
+            CreateUniformSet(DEFAULT);
         }
 
 #nullable enable
@@ -63,7 +71,7 @@ namespace PlanetGame.Shaders.RenderPasses
 				throw new("Push constants are required");
             Span<byte> pushConstantBytes = Utilities.CollectionToBytes(pushConstants);
 
-            Rid color = GetUniform<Texture2DUniform>(BufferNames.COLOR_TEXTURE).Rid;
+            Rid color = GetUniform<Texture2DUniform>(COLOR_TEXTURE).Rid;
             RDTextureFormat format = RenderingDevice.TextureGetFormat(color);
 
             uint groupX = (format.Width + 7) / 8;
@@ -71,7 +79,7 @@ namespace PlanetGame.Shaders.RenderPasses
 
 			long computeList = RenderingDevice.ComputeListBegin();
 			RenderingDevice.ComputeListBindComputePipeline(computeList, _pipeline);
-			RenderingDevice.ComputeListBindUniformSet(computeList, _uniformSet, 0);
+            ComputeListBindUniformSets(computeList);
             RenderingDevice.ComputeListSetPushConstant(computeList, pushConstantBytes, (uint)pushConstantBytes.Length);
 			RenderingDevice.ComputeListAddBarrier(computeList);
 			RenderingDevice.ComputeListDispatch(computeList, groupX, groupY, 1);
@@ -81,13 +89,13 @@ namespace PlanetGame.Shaders.RenderPasses
 
         public override void UpdateUniforms()
         {
-            GetUniform<StorageBufferUniform>(BufferNames.ATMOSPHERE_DATA).UpdateUniform(AtmosphereData.ToBytes());
+            GetUniform<StorageBufferUniform>(ATMOSPHERE_DATA).UpdateUniform(AtmosphereData.ToBytes());
         }
 
-        public void UpdateUniforms(Rid color, Rid depth)
+        public void UpdateFramebufferSet(Rid color, Rid depth)
         {
-            Texture2DUniform colorUniform = GetUniform<Texture2DUniform>(BufferNames.COLOR_TEXTURE);
-            Texture2DUniform depthUniform = GetUniform<Texture2DUniform>(BufferNames.DEPTH_TEXTURE);            
+            Texture2DUniform colorUniform = GetUniform<Texture2DUniform>(COLOR_TEXTURE);
+            Texture2DUniform depthUniform = GetUniform<Texture2DUniform>(DEPTH_TEXTURE);            
             bool changed = false;
 
             if (color != colorUniform.Rid)
@@ -102,10 +110,9 @@ namespace PlanetGame.Shaders.RenderPasses
                 changed = true;
             }
 
-            UpdateUniforms();
             
             if (changed)
-                CreateUniformSet();
+                CreateUniformSet(FRAMEBUFFER);
 
         }
     }

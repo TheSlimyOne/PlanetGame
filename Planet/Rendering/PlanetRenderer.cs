@@ -19,11 +19,10 @@ namespace PlanetGame.Planet.Rendering
     {
         public TerrainTessellator TerrainTessellator { get; private set; }
         public SparseVirtualTexture SparseVirtualTexture { get; private set; }
-        
+
         public PlanetCompositorEffect PlanetCompositorEffect { get; private set; }
         public AtmosphereEffect AtmosphereEffect { get; private set; }
 
-        public BindableShaderMaterial SurfaceShader { get; set; }
         private static TessellationData TessellationData => SaveManager.TessellationData;
         private static VirtualTextureData VirtualTextureData => SaveManager.VirtualTextureData;
         private static WorldData WorldData => SaveManager.WorldData;
@@ -31,7 +30,7 @@ namespace PlanetGame.Planet.Rendering
 
         private readonly RenderingDevice _renderingDevice = RenderingServer.GetRenderingDevice();
         private CustomCamera _viewCamera;
-        
+
         public const uint STARTING_LOD = 2;
         public static uint GetStartingPrimitiveCount() => (uint)(6 * Mathf.Pow(4, STARTING_LOD + 1));
 
@@ -51,15 +50,12 @@ namespace PlanetGame.Planet.Rendering
 
         private readonly Dictionary<BufferNames, ShaderUniform> _sharedShaderUniforms;
 
-        private WorldEnvironment _worldEnvironment; 
+        private WorldEnvironment _worldEnvironment;
 
         public PlanetRenderer(WorldEnvironment worldEnvironment, DirectionalLight3D sun, CustomCamera viewCamera)
         {
             _viewCamera = viewCamera;
-            SurfaceShader = new()
-            {
-                Shader = GD.Load<Shader>(ShaderPaths.GD_PLANET_TESSELLATION_PATH)
-            };
+
 
             _sharedShaderUniforms = [];
 
@@ -68,7 +64,7 @@ namespace PlanetGame.Planet.Rendering
             Vector2I viewSize = new(1024, 512);
 
             // Creating Rendering Systems
-            TerrainTessellator = new(SurfaceShader.GetRid(), _viewCamera.GetWorld3D().Scenario, _sharedShaderUniforms);
+            TerrainTessellator = new(_sharedShaderUniforms);
             SparseVirtualTexture = new(_sharedShaderUniforms);
 
             // Creating Compositor Effects
@@ -90,7 +86,6 @@ namespace PlanetGame.Planet.Rendering
                 ]
             };
 
-            BindShaderParameters(SurfaceShader);
             BindDebugSettings();
         }
 
@@ -100,13 +95,6 @@ namespace PlanetGame.Planet.Rendering
 
             TerrainTessellator.Invoke(_viewCamera);
             SparseVirtualTexture.Invoke(_viewCamera);
-
-            SurfaceShader.SetParameter("camera_position", _viewCamera.GlobalPosition);
-            SurfaceShader.SetParameter("fovy", Mathf.Tan(_viewCamera.GetCameraFov(true) / 2));
-            SurfaceShader.SetParameter("planet_transform_matrix", Utilities.ToProjection(WorldData.GetPlanetTransform()));
-
-
-            SurfaceShader?.UpdateFrameDependentParameters();
         }
 
         private double _heightUpdateTimer;
@@ -211,11 +199,12 @@ namespace PlanetGame.Planet.Rendering
         private void CreateRenderingTextures()
         {
             _sharedShaderUniforms[BufferNames.LINEAR_DEPTH_TEXTURE] = new Texture2DUniform(
-                BufferNames.LINEAR_DEPTH_TEXTURE.ToString(), 
-                this, 
-                _renderingDevice, 
-                RenderingDevice.UniformType.Image, 
-                perserved: true);
+                BufferNames.LINEAR_DEPTH_TEXTURE.ToString(),
+                this,
+                _renderingDevice,
+                RenderingDevice.UniformType.Image,
+                perserved: true
+            );
         }
 
         private void CreateDataBuffers()
@@ -258,49 +247,10 @@ namespace PlanetGame.Planet.Rendering
             uint[] primCounts = new uint[3 * 3];
             primCounts[0] = GetStartingPrimitiveCount();
 
-            return [.. Utilities.ToBytes<uint>(primCounts)];
+            return [.. Utilities.ToBytes(primCounts)];
         }
 
 #endregion
-        public void BindShaderParameters(BindableShaderMaterial bindableShaderMaterial)
-        {
-            bindableShaderMaterial.FrameDependentBind("radius", () => WorldData.Radius);
-            bindableShaderMaterial.FrameDependentBind("height_scale", () => WorldData.Radius * WorldData.HeightScale);
-            bindableShaderMaterial.FrameDependentBind("resolution", () => TessellationData.Resolution);
-            bindableShaderMaterial.FrameDependentBind("maximum_lod", () => TessellationData.MaximumLod);
-            bindableShaderMaterial.FrameDependentBind("minimum_lod", () => TessellationData.MinimumLod);
-
-            bindableShaderMaterial.FrameDependentBind("is_cube", () => RenderData.IsCube);
-            bindableShaderMaterial.FrameDependentBind("is_morphing", () => RenderData.IsMorphing);
-
-            bindableShaderMaterial.FrameDependentBind("sub_factor", () => TessellationData.SubFactor);
-            bindableShaderMaterial.FrameDependentBind("current_lod", () => TerrainTessellator.MaxLod);
-
-            bindableShaderMaterial.FrameDependentBind(
-                "lod_to_mip_map",
-                () => Array.ConvertAll(VirtualTextureData.LodToMipMap, x => (int)x)
-            );
-
-            bindableShaderMaterial.FrameDependentBind("mouse_position", () =>
-            {
-                Vector3 localPickedPosition = PlanetCompositorEffect.PlanetRenderPass.GetLocalMousePosition(
-                    _viewCamera.GetViewport().GetMousePosition(),
-                    _viewCamera.GetViewport().GetVisibleRect().Size
-                );
-
-                return localPickedPosition.Normalized();
-            });
-
-            bindableShaderMaterial.Bind("heightmap_tile_cache", () => SparseVirtualTexture.GetTileCache(TileCache.TileCacheType.HEIGHTMAP).Cache);
-            bindableShaderMaterial.Bind("albedo_tile_cache", () => SparseVirtualTexture.GetTileCache(TileCache.TileCacheType.ALBEDO).Cache);
-            bindableShaderMaterial.Bind("terrain_indirection_table", () => SparseVirtualTexture.ConsolidatedIndirectionTable.Table);
-
-            bindableShaderMaterial.Bind("low_resolution_mip_count", () => VirtualTextureData.LowResolutionMipCount);
-            bindableShaderMaterial.Bind("high_resolution_mip_count", () => VirtualTextureData.HighResolutionMipCount);
-            bindableShaderMaterial.Bind("total_tile_slots", () => TileCache.DEFAULT_TILE_SLOTS_COUNT);
-
-            bindableShaderMaterial.UpdateAllParameters();
-        }
 
 #region Debug Settings
         private void BindDebugSettings()
@@ -315,12 +265,12 @@ namespace PlanetGame.Planet.Rendering
         {
             DebugMenuController.Instance.AddSection("Planet", 0, false, null, 100);
 
-            DebugMenuController.Instance.AddSetValue("Radius", "Planet",  () => WorldData.Radius, value =>
+            DebugMenuController.Instance.AddSetValue("Radius", "Planet", () => WorldData.Radius, value =>
             {
                 WorldData.Radius = value;
             },
             1.0f);
-            
+
             DebugMenuController.Instance.AddSlider("Height Scale", "Planet", () => WorldData.HeightScale, value => WorldData.HeightScale = value, 0.0f, 0.25f, 0.005f);
         }
 
@@ -333,14 +283,13 @@ namespace PlanetGame.Planet.Rendering
                 PlanetCompositorEffect.PlanetRenderPass.UpdatePipeline();
 
             });
-            
+
             DebugMenuController.Instance.AddSection("Visiblity", 0, false, "Rendering", 400);
-            
+
             DebugMenuController.Instance.AddButton("Instance Visiblity", "Visiblity", () => TerrainTessellator.PlanetInstanceVisible, () =>
             {
                 TerrainTessellator.PlanetInstanceVisible = !TerrainTessellator.PlanetInstanceVisible;
             });
-
 
             DebugMenuController.Instance.AddButton("Compositor Visiblity", "Visiblity", () => PlanetCompositorEffect.Enabled, () =>
             {
@@ -357,26 +306,17 @@ namespace PlanetGame.Planet.Rendering
             DebugMenuController.Instance.AddButton("Render Floating Origin", "Rendering", () => RenderData.IsFloatingOrigin, () => RenderData.IsFloatingOrigin = !RenderData.IsFloatingOrigin);
 
             // DebugMenuController.Instance.AddTexture("Output Color", "Rendering", new TextureRect() { Texture = new Texture2Drd() { TextureRdRid = PlanetCompositorEffect.PlanetRenderPass.Depth } });
-
-            AddShaderToggle("Render Keys", "show_keys");
-            AddShaderToggle("Render Indirection Age", "show_indirection_age");
-            AddShaderToggle("Render Cached Tiles", "show_in_cache");
-
         }
-
-        private void AddShaderToggle(string name, string parameter)
-        {
-            DebugMenuController.Instance.AddButton(name, "Rendering", () => SurfaceShader.GetParameter<bool>(parameter), () => SurfaceShader.SetParameter(parameter, !SurfaceShader.GetParameter<bool>(parameter)));
-        }
-
 
         private void BindTessellationDebugSettings()
         {
             DebugMenuController.Instance.AddSection("Tessellation", 0, false, null, 200);
-            DebugMenuController.Instance.AddLabel("Current Keys", "Tessellation", () => {
+            DebugMenuController.Instance.AddLabel("Current Keys", "Tessellation", () =>
+            {
                 return $"{TerrainTessellator.CulledCount}/{TerrainTessellator.TotalCount}";
             });
-            DebugMenuController.Instance.AddLabel("Max Keys", "Tessellation", () => {
+            DebugMenuController.Instance.AddLabel("Max Keys", "Tessellation", () =>
+            {
                 return $"{TerrainTessellator.CulledMax}/{TerrainTessellator.TotalMax}";
             });
             DebugMenuController.Instance.AddLabel("Current Lod", "Tessellation", () => $"{TerrainTessellator.MaxLod}");
@@ -433,18 +373,16 @@ namespace PlanetGame.Planet.Rendering
         }
 
 #endregion
-
         public void CleanupGPU()
         {
-            _worldEnvironment.Compositor = new();
+            if (GodotObject.IsInstanceValid(_worldEnvironment))
+                _worldEnvironment.Compositor = null;
 
             TerrainTessellator.CleanupGPUResources();
             SparseVirtualTexture.CleanupGPUResources();
 
             PlanetCompositorEffect.CleanupGPUResources();
             AtmosphereEffect.CleanupGPUResources();
-            // TODO free shared buffers
-            // what I need to do is make CleanupGPU a gpu resource function so I can just call that and clear the SharedUniforms dictionary
 
             foreach ((BufferNames bufferNames, ShaderUniform uniform) in _sharedShaderUniforms)
             {

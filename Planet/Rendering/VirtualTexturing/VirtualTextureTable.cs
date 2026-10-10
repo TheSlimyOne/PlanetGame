@@ -24,6 +24,7 @@ namespace PlanetGame.Planet.Rendering.VirtualTexturing
                 texture2DArrayRD.TextureRdRid = default;
             
             _storageTexture = default;
+            base.FreeRidInternal();
         }
     }
 }

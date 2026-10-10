@@ -50,9 +50,12 @@ namespace Uniform
 
         protected virtual void FreeRidInternal()
         {
-            if (RenderingDevice == null) return;
+            if (RenderingDevice == null) 
+                return;
+
             if (Rid.IsValid)
                 RenderingDevice.FreeRid(Rid);
+
             Rid = new();
         }
 
@@ -67,7 +70,5 @@ namespace Uniform
         }
 
         public int GetID() => Rid.GetHashCode() + Owner.GetHashCode();
-        
-
     }
 }

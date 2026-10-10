@@ -65,7 +65,7 @@ public class MultiMeshRD : IGPUResource
         RenderingServer.MultimeshSetMesh(Rid, Mesh.GetRid());
         RenderingDevice renderingDevice = RenderingServer.GetRenderingDevice();
 
-        (Vector3[] vertices, int[] indices, Vector3[] _, Vector2[] __) = GetMeshData();
+        (Vector3[] vertices, int[] indices, Vector3[] _, Vector2[] __) = GetMeshData(mesh);
         byte[] meshData = [.. Utilities.ToBytes([(uint)vertices.Length, (uint)indices.Length])];
 
         CommandBufferUniform.SetRid(CommandBuffer);
@@ -75,9 +75,9 @@ public class MultiMeshRD : IGPUResource
         BuffersChanged?.Invoke();
     }
 
-    public (Vector3[] vertices, int[] indices, Vector3[] normals, Vector2[] uvs) GetMeshData()
+    public static (Vector3[] vertices, int[] indices, Vector3[] normals, Vector2[] uvs) GetMeshData(Mesh mesh)
     {
-        Godot.Collections.Array arrays = Mesh.SurfaceGetArrays(0);
+        Godot.Collections.Array arrays = mesh.SurfaceGetArrays(0);
         Vector3[] vertices = arrays[(int)Mesh.ArrayType.Vertex].AsVector3Array();
         int[] indices = arrays[(int)Mesh.ArrayType.Index].AsInt32Array();
         Vector3[] normals = arrays[(int)Mesh.ArrayType.Normal].AsVector3Array();
@@ -92,6 +92,8 @@ public class MultiMeshRD : IGPUResource
             RenderingServer.FreeRid(instance);
 
         Instances.Clear();
+
+        MeshDataUniform?.FreeRid();
 
         RenderingServer.FreeRid(Rid);
         Rid = default;

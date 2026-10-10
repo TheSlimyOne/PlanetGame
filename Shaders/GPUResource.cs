@@ -8,5 +8,6 @@ namespace PlanetGame.Shaders
         }
 
         public const bool Verbose = false;
+        // public const bool Verbose = true;
     }
 }

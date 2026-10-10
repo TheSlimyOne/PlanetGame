@@ -5,10 +5,13 @@ using Uniform;
 using PlanetGame.Planet.Rendering;
 using PlanetGame.Util;
 using PlanetGame.Data;
+using static PlanetGame.Shaders.RenderPasses.AtmospherePass.BufferNames;
+using static PlanetGame.Shaders.RenderPasses.AtmospherePass.BufferSets;
+
 
 namespace PlanetGame.Shaders.RenderPasses
 {
-    public partial class AtmospherePass : RenderPass<AtmospherePass.BufferNames>
+    public partial class AtmospherePass : RenderPass<AtmospherePass.BufferNames, AtmospherePass.BufferSets>
     {
         private static ShaderProgramPaths _shaderPath = new() { Vertex = ShaderPaths.ATMOSPHERE_VERTEX, Fragment = ShaderPaths.ATMOSPHERE_FRAGMENT };
         public static AtmosphereData AtmosphereData => SaveManager.AtmosphereData;
@@ -19,9 +22,13 @@ namespace PlanetGame.Shaders.RenderPasses
         // private Mesh _atmosphereMesh = Data.Key.GetTriangleMesh(5); //new BoxMesh() { Size = new Vector3(100, 100, 100) };
         private Mesh _atmosphereMesh = new BoxMesh() { Size = Vector3.One };
 
+        public enum BufferSets
+        {
+            DEFAULT = 0,
+        }
+
         public enum BufferNames
         {
-
             ATMOSPHERE_DATA,
             WORLD_DATA,
         }
@@ -34,15 +41,14 @@ namespace PlanetGame.Shaders.RenderPasses
 
         public override void CreateUniforms()
         {
-            _shaderUniforms = [];
 
-            _shaderUniforms[BufferNames.ATMOSPHERE_DATA] = new StorageBufferUniform(BufferNames.ATMOSPHERE_DATA.ToString(), this, RenderingDevice,
+            this[0, ATMOSPHERE_DATA, DEFAULT] = new StorageBufferUniform(ATMOSPHERE_DATA.ToString(), this, RenderingDevice,
                 AtmosphereData.ToBytes()
             );
 
-            _shaderUniforms[BufferNames.WORLD_DATA] = _sharedShaderUniforms[PlanetRenderer.BufferNames.WORLD_DATA];
+            this[1, WORLD_DATA, DEFAULT] = _sharedShaderUniforms[PlanetRenderer.BufferNames.WORLD_DATA];
 
-            CreateUniformSet();
+            CreateUniformSets();
         }
 
 #nullable enable
@@ -67,7 +73,7 @@ namespace PlanetGame.Shaders.RenderPasses
             RenderingDevice.DrawListBindVertexArray(drawList, _geometry.VertexArray);
             RenderingDevice.DrawListBindIndexArray(drawList, _geometry.IndexArray);
             RenderingDevice.DrawListSetPushConstant(drawList, pushConstantBytes, (uint)pushConstantBytes.Length);
-            RenderingDevice.DrawListBindUniformSet(drawList, _uniformSet, 0);
+            DrawListBindUniformSets(drawList);
             RenderingDevice.DrawListDraw(drawList, true, 1);
             RenderingDevice.DrawListEnd();
         }
@@ -75,7 +81,7 @@ namespace PlanetGame.Shaders.RenderPasses
 
         public override void UpdateUniforms()
         {
-            GetUniform<StorageBufferUniform>(BufferNames.ATMOSPHERE_DATA).UpdateUniform(AtmosphereData.ToBytes());
+            GetUniform<StorageBufferUniform>(ATMOSPHERE_DATA).UpdateUniform(AtmosphereData.ToBytes());
         }
 
         public void UpdatePipeline()
@@ -85,6 +91,7 @@ namespace PlanetGame.Shaders.RenderPasses
 
         protected override void CreatePipeline()
         {
+            // FreePipeline();
             _pipeline = RenderingDevice.RenderPipelineCreate(
                 _shader,
                 _framebufferFormat,
@@ -172,15 +179,10 @@ namespace PlanetGame.Shaders.RenderPasses
             ]);
         }
 
-        public override void CleanupGPU()
+        protected override void CleanupGPUInternal()
         {
             _atmosphereMesh = default;
-            base.CleanupGPU();
+            base.CleanupGPUInternal();
         }
-
-        public override bool IsValid() => 
-            RenderingDevice != null && 
-            RenderingDevice.UniformSetIsValid(_uniformSet) && 
-            _shader.IsValid && RenderingDevice.RenderPipelineIsValid(_pipeline);
     }
 }

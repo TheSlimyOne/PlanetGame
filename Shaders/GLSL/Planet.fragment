@@ -12,7 +12,7 @@ layout(location = 0) out vec4 frag;
 layout(location = 1) out vec4 picking_texture;
 layout(location = 2) out float linear_depth;
 
-layout(set = 0, binding = 1, std430) readonly buffer VirtualTextureData {
+layout(set = 0, binding = 0, std430) readonly buffer VirtualTextureData {
     uint low_resolution_mip_count;
     uint high_resolution_mip_count;
     uint grid_size;
@@ -21,16 +21,16 @@ layout(set = 0, binding = 1, std430) readonly buffer VirtualTextureData {
     uint lod_to_mip_map[32];
 };
 
-layout(std430, binding = 4) readonly buffer WorldData {
+layout(set = 0, binding = 3, std430) readonly buffer WorldData {
     float radius;
     float height_scale;
     vec2 padding;
     mat4 planet_transform_matrix;
 } world_data;
 
-layout(set = 0, binding = 5) uniform sampler2DArray albedo_tile_cache;
-layout(set = 0, binding = 7) restrict uniform image2DArray consolidated_indirection_table;
-layout(set = 0, binding = 8, r32ui) restrict uniform uimage2DArray state_table;
+layout(set = 0, binding = 4) uniform sampler2DArray albedo_tile_cache;
+layout(set = 0, binding = 6) restrict uniform image2DArray consolidated_indirection_table;
+layout(set = 0, binding = 7, r32ui) restrict uniform uimage2DArray state_table;
 
 layout(push_constant, std430) uniform PushConstants {
     mat4 view_projection_matrix;

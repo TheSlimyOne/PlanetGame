@@ -38,6 +38,11 @@ public partial class CustomCamera : Camera3D
 
 	public override void _Ready()
 	{
+		BindDebugSettings();
+	}
+
+	public void BindDebugSettings()
+	{
 		DebugMenuController.Instance.AddSection("Camera", 0, false, null, 250);
 		DebugMenuController.Instance.AddButton("Frustums", "Camera", () => FrustumVisable, () => FrustumVisable = !FrustumVisable);
 		// DebugMenuController.Instance.AddLabel("Distance", "Camera", () => $"{DistanceFromTarget}");
@@ -172,7 +177,7 @@ public partial class CustomCamera : Camera3D
 
 	public override void _Input(InputEvent @event)
 	{
-		if (Input.IsActionJustReleasedByEvent("cam_exit", @event) && GetCurrent() == this)
+		if (Input.IsActionJustReleasedByEvent("cam_exit", @event))
 		{
 			if (Locked)
 				UnlockMouse();

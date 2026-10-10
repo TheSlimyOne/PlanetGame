@@ -3,12 +3,20 @@ using Godot;
 using Uniform;
 using System.Collections.Generic;
 using PlanetGame.Planet.Rendering;
+using static PlanetGame.Shaders.Dispatchers.PrepareTessellationPassDispatcher.BufferNames;
+using static PlanetGame.Shaders.Dispatchers.PrepareTessellationPassDispatcher.BufferSets;
 
 namespace PlanetGame.Shaders.Dispatchers
 {
-    public partial class PrepareTessellationPassDispatcher : Dispatcher<PrepareTessellationPassDispatcher.BufferNames>
+    public partial class PrepareTessellationPassDispatcher : Dispatcher<PrepareTessellationPassDispatcher.BufferNames, PrepareTessellationPassDispatcher.BufferSets>
     {
         private static ShaderProgramPaths _shaderPath = new() { Compute = ShaderPaths.PREPARE_TESSELLATION_COMPUTE };
+
+        public enum BufferSets
+        {
+            DEFAULT = 0,
+            MESH = 1
+        }
 
         public enum BufferNames
         {
@@ -20,8 +28,10 @@ namespace PlanetGame.Shaders.Dispatchers
             MESH_DATA
         }
 
+
         private MultiMeshRD _triangleMultiMesh;
         private readonly Dictionary<PlanetRenderer.BufferNames, ShaderUniform> _sharedBufferRids;
+        private Action _onMeshChange;
 
         public PrepareTessellationPassDispatcher(MultiMeshRD triangleMultiMesh, Dictionary<PlanetRenderer.BufferNames, ShaderUniform> sharedBufferRids) : base(_shaderPath)
         {
@@ -29,26 +39,26 @@ namespace PlanetGame.Shaders.Dispatchers
             _sharedBufferRids = sharedBufferRids;
             SetupShader();
 
-            _triangleMultiMesh.BuffersChanged += CreateUniformSet;
+            _onMeshChange = () => CreateUniformSet(MESH);
+            _triangleMultiMesh.BuffersChanged += _onMeshChange;
         }
 
         public override void CreateUniforms()
         {
-            _shaderUniforms = [];
 
-            _shaderUniforms[BufferNames.ATOMIC_COUNTER] = _sharedBufferRids[PlanetRenderer.BufferNames.EXEC_ATOMIC_COUNTER];
+            this[0, ATOMIC_COUNTER, DEFAULT] = _sharedBufferRids[PlanetRenderer.BufferNames.EXEC_ATOMIC_COUNTER];
 
-            _shaderUniforms[BufferNames.INDICES] = _sharedBufferRids[PlanetRenderer.BufferNames.EXEC_KEY_INDICES];
+            this[1, INDICES, DEFAULT] = _sharedBufferRids[PlanetRenderer.BufferNames.EXEC_KEY_INDICES];
 
-            _shaderUniforms[BufferNames.EXEC_DISPATCH_BUFFER] = _sharedBufferRids[PlanetRenderer.BufferNames.EXEC_DISPATCH_BUFFER];
+            this[2, EXEC_DISPATCH_BUFFER, DEFAULT] = _sharedBufferRids[PlanetRenderer.BufferNames.EXEC_DISPATCH_BUFFER];
 
-            _shaderUniforms[BufferNames.DRAW_DISPATCH_BUFFER] = _sharedBufferRids[PlanetRenderer.BufferNames.DRAW_DISPATCH_BUFFER];
+            this[3, DRAW_DISPATCH_BUFFER, DEFAULT] = _sharedBufferRids[PlanetRenderer.BufferNames.DRAW_DISPATCH_BUFFER];
 
-            _shaderUniforms[BufferNames.MULTIMESH_COMMAND_BUFFER] = _triangleMultiMesh.CommandBufferUniform;
+            this[0, MULTIMESH_COMMAND_BUFFER, MESH] = _triangleMultiMesh.CommandBufferUniform;
 
-            _shaderUniforms[BufferNames.MESH_DATA] = _triangleMultiMesh.MeshDataUniform;
+            this[1, MESH_DATA, MESH] = _triangleMultiMesh.MeshDataUniform;
 
-            CreateUniformSet();
+            CreateUniformSets();
         }
 
 #nullable enable
@@ -56,18 +66,17 @@ namespace PlanetGame.Shaders.Dispatchers
         {
             long computeList = RenderingDevice.ComputeListBegin();
             RenderingDevice.ComputeListBindComputePipeline(computeList, _pipeline);
-            RenderingDevice.ComputeListBindUniformSet(computeList, _uniformSet, 0);
+            ComputeListBindUniformSets(computeList);
             RenderingDevice.ComputeListAddBarrier(computeList);
             RenderingDevice.ComputeListDispatch(computeList, 1, 1, 1);
             RenderingDevice.ComputeListEnd();
         }
 #nullable disable
 
-        public override void CleanupGPU()
+        protected override void CleanupGPUInternal()
         {
-            _triangleMultiMesh.BuffersChanged -= CreateUniformSet;
-            base.CleanupGPU();
+            _triangleMultiMesh.BuffersChanged -= _onMeshChange;
+            base.CleanupGPUInternal();
         }
-
     }
 }

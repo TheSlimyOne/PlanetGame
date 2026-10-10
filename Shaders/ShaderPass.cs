@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using Godot;
-using Godot.Collections;
 using PlanetGame.Shaders.Dispatchers;
 using Uniform;
 
@@ -9,30 +8,44 @@ namespace PlanetGame.Shaders
 {
     // public interface IDispatchable : IGPUResource { }
 
-    public abstract class ShaderPass<TEnum>(RenderingDevice renderingDevice, ShaderProgramPaths shaderPath) : IGPUResource where TEnum : Enum
+    public abstract class ShaderPass<BufferId, SetId>(RenderingDevice renderingDevice, ShaderProgramPaths shaderPath)
+        : IGPUResource
+        where BufferId : struct, Enum
+        where SetId : struct, Enum
     {
         public RenderingDevice RenderingDevice { get; private set; } = renderingDevice;
         protected ShaderProgramPaths _shaderProgramPaths = shaderPath;
-        protected Rid _uniformSet;
+        protected Dictionary<uint, Rid> _uniformSets = [];
         protected Rid _shader;
         protected Rid _pipeline;
 
-        protected System.Collections.Generic.Dictionary<Enum, ShaderUniform> _shaderUniforms;
+        private Dictionary<BufferId, ShaderUniform> _shaderUniforms = [];
+        private Dictionary<BufferId, (int binding, uint set)> _setMappings = [];
 
         protected ShaderPass(ShaderProgramPaths shaderPath) : this(RenderingServer.GetRenderingDevice(), shaderPath) { }
 
-        public ShaderUniform this[Enum @enum]
+        public ShaderUniform this[BufferId bufferId]
         {
-            get => GetUniform(@enum);
+            get => GetUniform(bufferId);
         }
 
-        public ShaderUniform GetUniform(Enum @enum) => _shaderUniforms[@enum];
-        public T GetUniform<T>(Enum @enum) where T : ShaderUniform => (T)_shaderUniforms[@enum];
-
-        public virtual void UpdateUniforms()
+        public ShaderUniform this[int binding, BufferId bufferId, SetId setId]
         {
-            throw new NotImplementedException();
+            set
+            {
+                _shaderUniforms[bufferId] = value;
+                _setMappings[bufferId] = (binding, Convert.ToUInt32(setId));
+            }
         }
+
+        public ShaderUniform GetUniform(BufferId bufferId)
+        {
+            return _shaderUniforms[bufferId];
+        }
+        public T GetUniform<T>(BufferId bufferId) where T : ShaderUniform => (T)_shaderUniforms[bufferId];
+
+        public virtual void UpdateUniforms() => throw new NotImplementedException();
+
 
 #nullable enable
         public void Invoke(object[]? pushConstants = null)
@@ -55,50 +68,81 @@ namespace PlanetGame.Shaders
 
         protected virtual void CreatePipeline() => _pipeline = RenderingDevice.ComputePipelineCreate(_shader);
 
-        protected void CreateUniformSet()
+        protected void CreateUniformSet(SetId setId)
         {
-            Array<RDUniform> bindings = [];
-            for (int bindingIndex = 0; bindingIndex < _shaderUniforms.Count; bindingIndex++)
-            {
-                TEnum @enum = (TEnum)Enum.ToObject(typeof(TEnum), bindingIndex);
-                ShaderUniform shaderUniform = _shaderUniforms[@enum];
+            Godot.Collections.Array<RDUniform> bindings = [];
 
-                RDUniform uniform = shaderUniform.CreateRDUniform(bindingIndex);
-                bindings.Add(uniform);
+            uint set = Convert.ToUInt32(setId);
+            foreach (BufferId bufferId in Enum.GetValues<BufferId>())
+            {
+                if (!_setMappings.TryGetValue(bufferId, out var mapping) || mapping.set != set)
+                    continue;
+
+                ShaderUniform shaderUniform = _shaderUniforms[bufferId];
+
+                bindings.Add(shaderUniform.CreateRDUniform(mapping.binding));
             }
 
-            if (RenderingDevice.UniformSetIsValid(_uniformSet))
-            {
-                RenderingDevice.FreeRid(_uniformSet);
-            }
+            if (_uniformSets.TryGetValue(set, out Rid uniformSet) && RenderingDevice.UniformSetIsValid(uniformSet))
+                RenderingDevice.FreeRid(uniformSet);
 
-            _uniformSet = RenderingDevice.UniformSetCreate(bindings, _shader, 0);
+            _uniformSets[set] = RenderingDevice.UniformSetCreate(bindings, _shader, set);
+        }
+
+        protected void CreateUniformSets()
+        {
+            foreach (SetId setId in Enum.GetValues<SetId>())
+            {
+                CreateUniformSet(setId);
+            }
+        }
+
+        protected void FreePipeline()
+        {
+            if (RenderingDevice == null || !_pipeline.IsValid)
+                return;
+
+            if (RenderingDevice.ComputePipelineIsValid(_pipeline) || RenderingDevice.RenderPipelineIsValid(_pipeline))
+                RenderingDevice.FreeRid(_pipeline);
+
+            _pipeline = default;
         }
 
         public abstract bool IsValid();
 
-        public virtual void CleanupGPU()
+        public bool UniformSetsIsValid()
+        {
+            foreach (SetId setId in Enum.GetValues<SetId>())
+            {
+                uint set = Convert.ToUInt32(setId);
+                if (!RenderingDevice.UniformSetIsValid(_uniformSets[set]))
+                    return false;
+            }
+            return true;
+        }
+
+        protected virtual void CleanupGPUInternal()
         {
             if (RenderingDevice == null)
                 return;
 
-            // if (IGPUResource.Verbose)
-            // GD.Print($"Cleaning up shader pass: {this}");
+            foreach ((uint _, Rid uniformSet) in _uniformSets)
+            {
+                if (RenderingDevice.UniformSetIsValid(uniformSet))
+                    RenderingDevice.FreeRid(uniformSet);
+            }
+            _uniformSets.Clear();
 
-            if (RenderingDevice.UniformSetIsValid(_uniformSet))
-                RenderingDevice.FreeRid(_uniformSet);
-
-            if (RenderingDevice.ComputePipelineIsValid(_pipeline))
-                RenderingDevice.FreeRid(_pipeline);
+            FreePipeline();
 
             if (_shader.IsValid)
                 RenderingDevice.FreeRid(_shader);
 
             if (_shaderUniforms != null)
             {
-                foreach (KeyValuePair<Enum, ShaderUniform> kvp in _shaderUniforms)
+                foreach (KeyValuePair<BufferId, ShaderUniform> kvp in _shaderUniforms)
                 {
-                    Enum uniformName = kvp.Key;
+                    BufferId uniformName = kvp.Key;
                     ShaderUniform shaderUniform = kvp.Value;
 
                     string ownerName = shaderUniform.Owner is IGPUResource gpuOwner
@@ -127,14 +171,20 @@ namespace PlanetGame.Shaders
                         GD.Print($"{GetType().Name} does not own this uniform container. Not calling FreeRid()");
                     }
                 }
+
+                _shaderUniforms.Clear();
             }
 
             _shaderUniforms = null;
             RenderingDevice = null;
         }
+        public void CleanupGPU()
+        {
+           CleanupGPUInternal();
+        }
 
         public override string ToString() =>
-            $"{GetType().Name} (Shader RID: {_shader}, Pipeline RID: {_pipeline}, Uniform Set RID: {_uniformSet})";
+            $"{GetType().Name} (Shader RID: {_shader}, Pipeline RID: {_pipeline}, Uniform Set RID: {_uniformSets})";
 
         public int GetID() => GetHashCode();
 
@@ -142,11 +192,11 @@ namespace PlanetGame.Shaders
         {
             HashCode hash = new();
 
-            foreach (TEnum value in Enum.GetValues(typeof(TEnum)))
+            foreach (BufferId value in Enum.GetValues(typeof(BufferId)))
             {
                 // Combine the enum value and ordinal position into the hash
                 hash.Add(value.GetHashCode());
-                hash.Add(Enum.GetNames(typeof(TEnum))[value.GetHashCode()]);
+                hash.Add(Enum.GetNames<BufferId>()[value.GetHashCode()]);
             }
 
             return hash.ToHashCode();

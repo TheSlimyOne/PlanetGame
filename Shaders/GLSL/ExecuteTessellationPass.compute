@@ -52,16 +52,16 @@ layout(set = 0, binding = 7, std430) buffer restrict readonly RenderData {
 
 };
 
-layout(set = 0, binding = 8, std430) buffer restrict OutputBuffer {
-    float data[];
-} output_buffer;
-
-layout(set = 0, binding = 9, std430) buffer restrict GlobalKeyData {
+layout(set = 0, binding = 8, std430) buffer restrict GlobalKeyData {
     uint max_lod;
     uint min_lod;
     uint stable_key_count;
     uint total_keys_per_lod[32];
 };
+
+layout(set = 1, binding = 0, std430) buffer restrict MultimeshBuffer {
+    float data[];
+} multimesh_buffer;
 
 layout(push_constant, std430) uniform PushConstants {
     mat4 view_projection_matrix;
@@ -72,32 +72,32 @@ layout(push_constant, std430) uniform PushConstants {
 #[include] res://Shaders/GLSL/ShaderIncludes/TessellationFunctions.inc
 
 void set_multimesh_data(uint index, uvec4 key) {
-    output_buffer.data[20 * index + 0] = 1.0;
-    output_buffer.data[20 * index + 1] = 0.0;
-    output_buffer.data[20 * index + 2] = 0.0;
-    output_buffer.data[20 * index + 3] = 0.0;
+    multimesh_buffer.data[20 * index + 0] = 1.0;
+    multimesh_buffer.data[20 * index + 1] = 0.0;
+    multimesh_buffer.data[20 * index + 2] = 0.0;
+    multimesh_buffer.data[20 * index + 3] = 0.0;
 
-    output_buffer.data[20 * index + 4] = 0.0;
-    output_buffer.data[20 * index + 5] = 1.0;
-    output_buffer.data[20 * index + 6] = 0.0;
-    output_buffer.data[20 * index + 7] = 0.0;
+    multimesh_buffer.data[20 * index + 4] = 0.0;
+    multimesh_buffer.data[20 * index + 5] = 1.0;
+    multimesh_buffer.data[20 * index + 6] = 0.0;
+    multimesh_buffer.data[20 * index + 7] = 0.0;
 
-    output_buffer.data[20 * index + 8] = 0.0;
-    output_buffer.data[20 * index + 9] = 0.0;
-    output_buffer.data[20 * index + 10] = 1.0;
-    output_buffer.data[20 * index + 11] = 0.0;
+    multimesh_buffer.data[20 * index + 8] = 0.0;
+    multimesh_buffer.data[20 * index + 9] = 0.0;
+    multimesh_buffer.data[20 * index + 10] = 1.0;
+    multimesh_buffer.data[20 * index + 11] = 0.0;
 
     // Not currently using
-    output_buffer.data[20 * index + 12] = 0.0;
-    output_buffer.data[20 * index + 13] = 0.0;
-    output_buffer.data[20 * index + 14] = 0.0;
-    output_buffer.data[20 * index + 15] = 0.0;
+    multimesh_buffer.data[20 * index + 12] = 0.0;
+    multimesh_buffer.data[20 * index + 13] = 0.0;
+    multimesh_buffer.data[20 * index + 14] = 0.0;
+    multimesh_buffer.data[20 * index + 15] = 0.0;
 
     // Setting the key data
-    output_buffer.data[20 * index + 16] = uintBitsToFloat(key.x);
-    output_buffer.data[20 * index + 17] = uintBitsToFloat(key.y);
-    output_buffer.data[20 * index + 18] = uintBitsToFloat(key.z);
-    output_buffer.data[20 * index + 19] = uintBitsToFloat(key.w);
+    multimesh_buffer.data[20 * index + 16] = uintBitsToFloat(key.x);
+    multimesh_buffer.data[20 * index + 17] = uintBitsToFloat(key.y);
+    multimesh_buffer.data[20 * index + 18] = uintBitsToFloat(key.z);
+    multimesh_buffer.data[20 * index + 19] = uintBitsToFloat(key.w);
 }
 float distance_from_cam(vec3 from, mat4 planet_transform_matrix) {
     return distance(polygon_space_to_world_space(from, planet_transform_matrix), push_constants.camera_position_fovy.xyz); 
