@@ -87,12 +87,11 @@ bool try_adjacent_edge(
 	int adjacent_mip_index = int(adjacent_indirection_data.g);
 	uint adjacent_valid_flag = adjacent_indirection_data.b;
 
-	bool use_adjacent =
-		adjacent_valid_flag == 255u &&
-		(
-			adjacent_mip_index > mip_index ||
-			(adjacent_mip_index == mip_index && mapping.normal_id < normal_id)
-		);
+	bool use_adjacent = adjacent_valid_flag == 255u &&
+	(
+		adjacent_mip_index > mip_index ||
+		(adjacent_mip_index == mip_index && mapping.normal_id < normal_id)
+	);
 
 	if (!use_adjacent)
 		return false;

@@ -25,8 +25,6 @@ public class TileFile : IDisposable
     public ulong FileLength => _file.GetLength();
     private ulong _headerSize;
 
-    public bool IsProcessingTiles { get; private set; } = false;
-
     public TileFile(string filePath)
     {
         FilePath = filePath;
@@ -158,11 +156,11 @@ public class TileFile : IDisposable
         );
     }
 
-    public Tile.TileID GetTileId(uint tileIndex)
+    public Tile GetTileId(uint tileIndex)
     {
         SeekTile(tileIndex);
 
-        return new Tile.TileID(_file.Get32());
+        return new Tile(_file.Get32());
     }
 
     public void WriteTile(Tile tile, Image image)
@@ -245,8 +243,6 @@ public class TileFile : IDisposable
 
     public async Task CreateTiles(Image sourceImage)
     {
-        IsProcessingTiles = true;
-
         List<(Tile Tile, TileGenerationParams Parameters)> tiles = PrepareTiles(sourceImage);
         await ProcessTiles(tiles);
 
@@ -261,8 +257,6 @@ public class TileFile : IDisposable
                 $"Tile file size mismatch. Expected {expectedSize} bytes, got {actualSize} bytes."
             );
         }
-
-        IsProcessingTiles = false;
     }
 
     private List<(Tile Tile, TileGenerationParams Parameters)> PrepareTiles(Image sourceImage)

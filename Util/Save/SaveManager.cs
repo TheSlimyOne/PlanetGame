@@ -238,20 +238,22 @@ public static class SaveManager
             ]
         );
 
-        TessellationData = new TessellationData(
-            resolution: 5,
-            subFactor: 4,
-            maximumLod: 12,
-            minimumLod: 0,
-            maximumKeys: 40000,
-            cullingDepth: 1,
-            cullingMargin: new Vector4(0.09f, 0.09f, 0.3f, 15)
-        );
+        TessellationData = new TessellationData()
+        {
+            Resolution = 7,
+            SubFactor = 4,
+            MaximumLod = 12,
+            MinimumLod = 0,
+            MaximumKeys = 40000,
+            CullingDepth = 1,
+            CullingMargin = new Vector4(0.09f, 0.09f, 0.3f, 15)
+        };
 
-        WorldData = new WorldData(
-            radius: 100,
-            heightScale: 0.025f
-        );
+        WorldData = new WorldData()
+        {
+            Radius = 4000,
+            HeightScale = 0.025f
+        };
 
         RenderData = new PlanetGame.Data.RenderData()
         {
@@ -260,7 +262,14 @@ public static class SaveManager
             IsCube = false  
         };
 
-        AtmosphereData = new AtmosphereData(WorldData.Radius + 10);
+        AtmosphereData = new AtmosphereData()
+        {
+            Scale = 1,
+            DensityFalloff = 30,
+            LightSamplingCount = 10,
+            OpticalDepthSamplingCount = 10,
+            ScatteringStrength = 1
+        };
 
         _currentSave = saveName;
 

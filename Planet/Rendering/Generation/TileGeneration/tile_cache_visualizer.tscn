@@ -32,7 +32,7 @@ alignment = 1
 
 [node name="SaveLabel" type="Label" parent="Container/MarginContainer/Container/Header/ItemCount" unique_id=1260430134]
 layout_mode = 2
-text = "Save"
+text = "SVT File"
 
 [node name="SaveOptions" type="OptionButton" parent="Container/MarginContainer/Container/Header/ItemCount" unique_id=866984655]
 unique_name_in_owner = true
@@ -41,11 +41,21 @@ layout_mode = 2
 size_flags_horizontal = 6
 toggle_mode = false
 
-[node name="NormalIdLabel" type="Label" parent="Container/MarginContainer/Container/Header/ItemCount" unique_id=509452675]
+[node name="TileTypeLabel" type="Label" parent="Container/MarginContainer/Container/Header/ItemCount" unique_id=509452675]
+layout_mode = 2
+text = "Tile Type"
+
+[node name="TileTypeOption" type="OptionButton" parent="Container/MarginContainer/Container/Header/ItemCount" unique_id=1059517406]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(180, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="NormalIdLabel" type="Label" parent="Container/MarginContainer/Container/Header/ItemCount" unique_id=35554681]
 layout_mode = 2
 text = "Normal Id"
 
-[node name="NormalIdOption" type="OptionButton" parent="Container/MarginContainer/Container/Header/ItemCount" unique_id=1059517406]
+[node name="NormalIdOption" type="OptionButton" parent="Container/MarginContainer/Container/Header/ItemCount" unique_id=2077609764]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(180, 0)
 layout_mode = 2

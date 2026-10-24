@@ -8,7 +8,6 @@ using PlanetGame.Util;
 using PlanetGame.Util.DebugUIComponents;
 using Uniform;
 
-[Tool]
 public partial class AtmosphereEffect : CompositorEffect
 {
     // public AtmospherePass AtmospherePass { get; private set; }

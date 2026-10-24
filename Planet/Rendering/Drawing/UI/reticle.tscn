@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://ca1481jvmov4"]
 
-[ext_resource type="Script" uid="uid://dbtj6j1h7x723" path="res://Planet/Rendering/Drawing/UI/Reticle.cs" id="1_a6483"]
+[ext_resource type="Script" uid="uid://dbtj6j1h7x723" path="res://Navigation/Reticle.cs" id="1_a6483"]
 
 [node name="Reticle" type="Control" unique_id=653132148]
 layout_mode = 3
@@ -21,4 +21,4 @@ script = ExtResource("1_a6483")
 InnerRadius = 150.0
 OuterRadius = 250.0
 SeparaterWidth = 8.18
-SlotCount = 4
+SlotCount = 6

@@ -1,87 +1,234 @@
 using System;
+using System.Collections.Generic;
 using Godot;
-using PlanetGame.Planet.Rendering.Drawing;
 
 namespace PlanetGame.Data
 {
-    public class Tile
+    public class Tile(uint value)
     {
         public const int TILE_SIZE = 256;
+        public const int ENCODING_BITS = 11;
+        private const uint ENCODING_MASK = (1u << ENCODING_BITS) - 1;
 
-        public readonly record struct TileID(uint Value)
+        public readonly uint Value = value;
+
+        public Tile(uint normalId, uint encoding) : this((normalId << ENCODING_BITS) | encoding) { }
+
+        public Tile(uint mipIndex, uint normalId, uint xIndex, uint yIndex) : this(normalId, GetTileEncoding(mipIndex, xIndex, yIndex)) { }
+
+        public Tile(string name) : this(GetValue(name)) { }
+
+        public static Tile GetTileByIndex(uint index, uint tileCount)
         {
-            public const int ENCODING_BITS = 11;
-            private const uint ENCODING_MASK = (1u << ENCODING_BITS) - 1;
+            uint normalId = index * 6 / tileCount;
+            uint normalizedIndex = index % (tileCount / 6);
 
-            public TileID(uint normalId, uint encoding) : this((normalId << ENCODING_BITS) | encoding) { }
-            public TileID(uint normalId, uint mipIndex, uint xIndex, uint yIndex) : this((normalId << ENCODING_BITS) | GetTileEncoding(mipIndex, xIndex, yIndex)) { }
+            int mipIndex = (int)(Mathf.Log(3 * normalizedIndex + 1) / Mathf.Log(4));
+            uint rangeStart = 1u << (mipIndex * 2);
+            uint previousCount = (rangeStart - 1) / 3;
 
-            public uint NormalId => Value >> ENCODING_BITS;
-            public uint Encoding => Value & ENCODING_MASK;
-            public uint Mip => (uint)(FindMSB(Encoding) / 2);
+            uint encoding = normalizedIndex - previousCount + rangeStart;
 
-            private static int FindMSB(uint n)
+            Tile tile = new(normalId, encoding);
+            return tile;
+        }
+
+        public uint NormalId => Value >> ENCODING_BITS;
+        public uint Encoding => Value & ENCODING_MASK;
+        public uint MipIndex => (uint)(FindMSB(Encoding) / 2);
+        public float Size => 2 * WorldData.Radius * Mathf.Pow(2, (int)MipIndex - ((int)VirtualTextureData.TotalMipLayersPerFace - 1));
+
+        private static int FindMSB(uint n)
+        {
+            int msb = 0;
+
+            while (n > 1)
             {
-                int msb = 0;
-
-                while (n > 1)
-                {
-                    n >>= 1;
-                    msb++;
-                }
-
-                return msb;
+                n >>= 1;
+                msb++;
             }
 
-            public Vector2I GetTileCoordinate()
+            return msb;
+        }
+
+        public static bool IsValidTileName(string name)
+        {
+            string[] tileData = name.Split('_');
+            if (tileData.Length != 4)
+                return false;
+
+            if (!uint.TryParse(tileData[0], out uint mipIndex)) return false;
+            if (!uint.TryParse(tileData[1], out uint normalId)) return false;
+            if (!uint.TryParse(tileData[2], out uint tileX)) return false;
+            if (!uint.TryParse(tileData[3], out uint tileY)) return false;
+
+            if (normalId >= 6) return false;
+
+            if (mipIndex >= VirtualTextureData.TotalMipLayersPerFace)
+                return false;
+
+            int mipSize = VirtualTextureData.GetMipSize(mipIndex);
+
+            if (tileX >= mipSize) return false;
+            if (tileY >= mipSize) return false;
+
+            return true;
+        }
+
+        public static (uint mipIndex, uint normalId, uint xIndex, uint yIndex) GetTileData(string name)
+        {
+            if (!IsValidTileName(name))
+                throw new Exception($"Tile name {name} is not valid");
+
+            string[] tileData = name.Split('_');
+
+            uint mipIndex = uint.Parse(tileData[0]);
+            uint normalId = uint.Parse(tileData[1]);
+            uint xIndex = uint.Parse(tileData[2]);
+            uint yIndex = uint.Parse(tileData[3]);
+
+            return (mipIndex, normalId, xIndex, yIndex);
+        }
+
+        public static uint GetTileEncoding(uint mipIndex, uint xIndex, uint yIndex)
+        {
+            if (mipIndex == 0)
+                return 1;
+
+            uint child = (xIndex % 2) | ((yIndex % 2) << 1);
+
+            int mipSize = VirtualTextureData.GetMipSize(mipIndex);
+            int baseValue = mipSize * mipSize;
+
+            uint offset = GetTileEncoding(mipIndex - 1, xIndex / 2, yIndex / 2);
+            uint parentBaseValue = (uint)VirtualTextureData.GetMipSize(mipIndex - 1);
+            parentBaseValue *= parentBaseValue;
+
+            return (uint)baseValue + (offset - parentBaseValue) * 4 + child;
+        }
+
+        public Vector2I GetTileCoordinate()
+        {
+            uint encoding = Encoding;
+            uint mipIndex = MipIndex;
+
+            if (mipIndex == 0)
+                return Vector2I.Zero;
+
+            uint child = encoding % 4;
+
+            uint parentEncoding = encoding >> 2;
+            Vector2I parent = new Tile(NormalId, parentEncoding).GetTileCoordinate();
+
+            int x = parent.X * 2 + (int)(child & 1u);
+            int y = parent.Y * 2 + (int)(child >> 1);
+
+            return new(x, y);
+        }
+
+        public string GetTileName()
+        {
+            Vector2I tileCoordinate = GetTileCoordinate();
+            return $"{MipIndex}_{NormalId}_{tileCoordinate.X}_{tileCoordinate.Y}";
+        }
+
+        public static Tile GetTile(PlanetQuery.PlanetSurfacePoint surfacePoint)
+        {
+            uint mipIndex = surfacePoint.MipIndex;
+            float mipGridSize = VirtualTextureData.GetMipSize(mipIndex);
+            Vector2I tileCoords = (Vector2I)(surfacePoint.UV * mipGridSize).Floor();
+
+            return new Tile(mipIndex, surfacePoint.NormalId, (uint)tileCoords.X, (uint)tileCoords.Y);
+        }
+
+        public Tile GetRootTile() => new(0, NormalId, 0, 0);
+
+        public Tile[] GetLineage()
+        {
+            if (MipIndex == 0)
+                return [this];
+
+            return [this, .. GetParentTile().GetLineage()];
+        }
+
+        public Tile GetParentTile()
+        {
+            if (MipIndex == 0)
+                throw new InvalidOperationException("Cannot get the parent of a root tile.");
+
+            return new Tile(NormalId, Encoding >> 2);
+        }
+
+        public Tile[] GetChildTiles()
+        {
+            if (((Encoding << 2) | 3u) >= (1u << ENCODING_BITS))
+                throw new InvalidOperationException($"Cannot subdivide tile {this}: maximum mip reached.");
+
+            return [
+                new Tile(NormalId, (Encoding << 2) | 0u),
+                new Tile(NormalId, (Encoding << 2) | 1u),
+                new Tile(NormalId, (Encoding << 2) | 2u),
+                new Tile(NormalId, (Encoding << 2) | 3u)
+            ];
+        }
+
+
+        public static void Traverse(Node node, Tile tile, Rect3 bounds, uint targetMip, HashSet<Tile> tiles)
+        {
+            bool intersects = tile.GetTileBounds3D().Intersects(bounds);
+
+            // GD.Print(new string(' ', (int)tile.MipIndex), $"{tile} of bounds {tile.GetTileBounds3D()} Intersects: {intersects} of bounds {bounds}");
+            if (!intersects)
+                return;
+
+            if (tile.MipIndex == targetMip)
             {
-                uint encoding = Encoding;
-                int depth = FindMSB(encoding) / 2;
-
-                uint rangeStart = 1u << (depth * 2);
-                uint local = encoding - rangeStart;
-
-                int x = (int)(local >> depth);
-                int y = (int)(local & ((1u << depth) - 1));
-
-                return new(x, y);
+                tiles.Add(tile);
+                return;
             }
 
-            public static uint GetTileEncoding(uint mipIndex, uint xIndex, uint yIndex)
+            if (tile.MipIndex > targetMip)
             {
-                uint rangeStart = 1u << ((int)mipIndex * 2);
-                uint local = (xIndex << (int)mipIndex) | yIndex;
-
-                return rangeStart + local;
+                Traverse(node, tile.GetParentTile(), bounds, targetMip, tiles);
             }
-
-            public string GetTileName()
+            else
             {
-                Vector2I tileCoordinate = GetTileCoordinate();
-                return $"{Mip}-{NormalId}-{tileCoordinate.X}-{tileCoordinate.Y}";
-            }
-
-            public override string ToString()
-            {
-                return $"Normal ID: {NormalId} Encoding: {Convert.ToString(Encoding, 2).PadZeros(ENCODING_BITS)}";
-                // return GetTileName();
+                foreach (Tile child in tile.GetChildTiles())
+                    Traverse(node, child, bounds, targetMip, tiles);
             }
         }
 
+        public Rect3 GetTileBounds3D()
+        {
+            Vector2 coordinates = GetTileCoordinate();
+
+            float mipGridSize = VirtualTextureData.GetMipSize(MipIndex);
+
+            Vector2 min = coordinates / mipGridSize;
+            Vector2 max = (coordinates + Vector2.One) / mipGridSize;
+
+            Vector3 a = WorldData.LocalToPlanet(VectorUtils.PointOnPlaneToPointOnCube(new Vector2(min.X, min.Y), (int)NormalId));
+            Vector3 b = WorldData.LocalToPlanet(VectorUtils.PointOnPlaneToPointOnCube(new Vector2(max.X, min.Y), (int)NormalId));
+            Vector3 c = WorldData.LocalToPlanet(VectorUtils.PointOnPlaneToPointOnCube(new Vector2(min.X, max.Y), (int)NormalId));
+            Vector3 d = WorldData.LocalToPlanet(VectorUtils.PointOnPlaneToPointOnCube(new Vector2(max.X, max.Y), (int)NormalId));
+
+            Vector3 minimum = a.Min(b).Min(c).Min(d);
+            Vector3 maximum = a.Max(b).Max(c).Max(d);
+
+            return new Rect3(minimum, maximum - minimum);
+        }
+
+        public bool IsRectInBounds(Rect3 bounds) => GetTileBounds3D().Intersects(bounds);
+
+        public bool IsRectOutBounds(Rect3 bounds) => !GetTileBounds3D().Intersects(bounds);
+
         private static VirtualTextureData VirtualTextureData => SaveManager.VirtualTextureData;
+        private static WorldData WorldData => SaveManager.WorldData;
 
         public bool IsResident;
-        // public uint? Slot { get; set; }
         public bool IsDirty { get; private set; } = false;
 
         public readonly TileMipType TileType;
-
-        private readonly TileID _id;
-
-        public uint NormalId => _id.NormalId;
-        public uint Encoding => _id.Encoding;
-        public uint MipIndex => _id.Mip;
-        public uint Value => _id.Value;
 
         public enum TileMipType
         {
@@ -89,26 +236,10 @@ namespace PlanetGame.Data
             Detail
         }
 
-        public Tile(uint normalId, uint encoding)
+        private static uint GetValue(string name)
         {
-            _id = new(normalId, encoding);
-        }
-
-        public Tile(uint fullEncoding)
-        {
-            _id = new(fullEncoding);
-        }
-
-        public Tile(uint mipIndex, uint normalId, uint xIndex, uint yIndex)
-        {
-            _id = new(normalId, TileID.GetTileEncoding(mipIndex, xIndex, yIndex));
-        }
-
-        public Tile(string name)
-        {
-            (uint mipIndex, uint normalId, uint xIndex, uint yIndex) = VirtualTextureData.GetTileName(name);
-
-            _id = new(normalId, TileID.GetTileEncoding(mipIndex, xIndex, yIndex));
+            (uint mipIndex, uint normalId, uint xIndex, uint yIndex) = GetTileData(name);
+            return (normalId << ENCODING_BITS) | GetTileEncoding(mipIndex, xIndex, yIndex);
         }
 
         public static string GetTileName(PlanetQuery.PlanetSurfacePoint surfacePoint)
@@ -120,27 +251,7 @@ namespace PlanetGame.Data
             return $"{mipIndex}_{surfacePoint.NormalId}_{tileCoordinates.X}_{tileCoordinates.Y}";
         }
 
-        // public Tile(string tileName, uint? slot, TileCache tileCache, TileMipType tileType)
-        // {
-        //     TileName = tileName;
-
-        //     TileCache = tileCache;
-
-        //     Slot = slot;
-        //     TileType = tileType;
-        // }
-
-        public override bool Equals(object obj)
-        {
-            return obj is Tile other && _id == other._id;
-        }
-
-        public override int GetHashCode()
-        {
-            return _id.GetHashCode();
-        }
-
-        public void Draw(DrawCommand.BrushStroke stroke, Tile tile, FileAccess file)
+        public void Draw(Planet.Rendering.Drawing.DrawCommand.BrushStroke stroke, Tile tile, FileAccess file)
         {
             // Image image = GetImage(file);
 
@@ -206,14 +317,6 @@ namespace PlanetGame.Data
             // SaveImage(image);
         }
 
-        public override string ToString()
-        {
-            Vector2 coordinate = GetTileCoordinate();
-            return $"{MipIndex}-{NormalId}-{coordinate.X}-{coordinate.Y}";
-        }
-
-        public Vector2I GetTileCoordinate() => _id.GetTileCoordinate();
-
         public uint GetTileIndex(uint tileCount)
         {
             uint pow4 = 1u << (int)(MipIndex * 2);
@@ -226,7 +329,7 @@ namespace PlanetGame.Data
         public static uint GetTileIndex(uint mipIndex, uint normalId, uint xIndex, uint yIndex, uint tileCount)
         {
             uint pow4 = 1u << ((int)mipIndex * 2);
-            uint encoding = TileID.GetTileEncoding(mipIndex, xIndex, yIndex);
+            uint encoding = GetTileEncoding(mipIndex, xIndex, yIndex);
 
             uint normalizedIndex = encoding - (2 * pow4 + 1) / 3;
             uint normalIdOffset = tileCount / 6 * normalId;
@@ -234,25 +337,8 @@ namespace PlanetGame.Data
             return normalizedIndex + normalIdOffset;
         }
 
-        public static Tile GetTileByIndex(uint index, uint tileCount)
-        {
-            uint normalId = index * 6 / tileCount;
-            uint normalizedIndex = index % (tileCount / 6);
-
-            int mipIndex = (int)(Mathf.Log(3 * normalizedIndex + 1) / Mathf.Log(4));
-            uint rangeStart = 1u << (mipIndex * 2);
-            uint previousCount = (rangeStart - 1) / 3;
-
-            uint encoding = index - previousCount + rangeStart;
-
-            Tile tile = new(normalId, encoding);
-            Vector2 a = tile.GetTileCoordinate();
-
-            uint encoding2 = TileID.GetTileEncoding((uint)tile.MipIndex, (uint)a.X, (uint)a.Y);
-            GD.PrintS(encoding, encoding2);
-            
-
-            return tile;
-        }
+        public override string ToString() => GetTileName();
+        public override int GetHashCode() => Value.GetHashCode();
+        public override bool Equals(object obj) => obj is Tile other && Value == other.Value;
     }
 }

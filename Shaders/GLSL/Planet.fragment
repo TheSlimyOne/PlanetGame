@@ -62,8 +62,6 @@ void main()
 
     frag = vec4(final_color, 1);
 
-
-
     vec3 picking_position = (vec4(world_position, 1.0) * inverse(world_data.planet_transform_matrix)).xyz;
     picking_texture = vec4(picking_position, 1.0);
 

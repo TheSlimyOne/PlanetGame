@@ -157,7 +157,7 @@ public partial class MainMenu : MarginContainer
 	public void OnStartNewGame()
 	{
 		string saveName = SaveName.Text;
-		if (NewSaveAlbedo == null || NewSaveHeightmap == null)
+		if (saveName == null || NewSaveAlbedo == null || NewSaveHeightmap == null)
 		{
 			saveName = "Earth";
 			NewSaveAlbedo = Image.LoadFromFile("user://Albedo.png");

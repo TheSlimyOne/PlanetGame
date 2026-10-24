@@ -268,5 +268,49 @@ namespace PlanetGame.Util
 
             return body;
         }
+
+        public static MeshInstance3D SpawnTestBox(Rect3 rect, Color color)
+        {
+            return new()
+            {
+                Mesh = new BoxMesh
+                {
+                    Size = rect.Size
+                },
+                Position = rect.Center,
+                MaterialOverride = new StandardMaterial3D
+                {
+                    AlbedoColor = color,
+                    Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
+                    ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
+                    CullMode = BaseMaterial3D.CullModeEnum.Disabled
+                }
+
+            };
+        }
+
+        public static string ToBase(uint value, uint numberBase)
+        {
+            if (numberBase < 2 || numberBase > 36)
+                throw new ArgumentOutOfRangeException(nameof(numberBase));
+
+            if (value == 0) return "0";
+
+            const string digits = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+            string result = "";
+
+            while (value > 0)
+            {
+                result = digits[(int)(value % numberBase)] + result;
+                value /= numberBase;
+            }
+
+            return result;
+        }
+
+        public static void PrintRectPolygon(Rect2 rect)
+        {
+            GD.PrintS($"polygon({rect.Position}, {rect.Position + Vector2.Down * rect.Size.Y}, {rect.End}, {rect.Position + Vector2.Right * rect.Size.X})");
+        }
     }
 }

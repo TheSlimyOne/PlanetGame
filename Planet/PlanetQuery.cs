@@ -12,8 +12,9 @@ public class PlanetQuery(CustomCamera queryCamera, PlanetRenderer planetRenderer
     private PlanetRenderer _planetRenderer = planetRenderer;
     private CustomCamera _queryCamera = queryCamera;
 
-    public struct PlanetSurfacePoint(Vector3 localSpherePoint, Vector3 localCubePoint, uint normalId, Vector2 uv, uint mipIndex)
+    public struct PlanetSurfacePoint(Vector3 point, Vector3 localSpherePoint, Vector3 localCubePoint, uint normalId, Vector2 uv, uint mipIndex)
     {
+        public Vector3 Point = point;
         public Vector3 LocalSpherePoint = localSpherePoint;
         public Vector3 LocalCubePoint = localCubePoint;
         public uint NormalId = normalId;
@@ -53,15 +54,6 @@ public class PlanetQuery(CustomCamera queryCamera, PlanetRenderer planetRenderer
         }
     }
 
-    public static Tile.TileID GetTileIdFromSurfacePoint(PlanetSurfacePoint surfacePoint)
-    {
-        uint mipIndex = surfacePoint.MipIndex;
-        float mipGridSize = VirtualTextureData.GetMipSize(mipIndex);
-        Vector2I tileCoords = (Vector2I)(surfacePoint.UV * mipGridSize).Floor();
-
-        return new Tile.TileID(surfacePoint.NormalId, mipIndex, (uint)tileCoords.X, (uint)tileCoords.Y);
-    }
-
     public bool TryGetMouseSurfacePoint(out PlanetSurfacePoint surfacePoint, bool isLocalSpace = false, uint? desiredMipIndex = null)
     {
         Vector3 planetMousePoint = GetPlanetMousePosition(true);
@@ -69,7 +61,7 @@ public class PlanetQuery(CustomCamera queryCamera, PlanetRenderer planetRenderer
     }
     public bool TryGetSurfacePoint(Vector3 point, out PlanetSurfacePoint surfacePoint, bool isLocalSpace = false, uint? desiredMipIndex = null)
     {
-        (Vector3 localSpherePoint, Vector3 localCubePoint) = GetLocalPointsOnPlanet(point, isLocalSpace);
+        (Vector3 localSpherePoint, Vector3 localCubePoint) = GetLocalPointOnPlanet(point, isLocalSpace);
 
         if (!localSpherePoint.IsFinite() || !localCubePoint.IsFinite())
         {
@@ -93,6 +85,7 @@ public class PlanetQuery(CustomCamera queryCamera, PlanetRenderer planetRenderer
         }
 
         surfacePoint = new PlanetSurfacePoint(
+            point,
             localSpherePoint,
             localCubePoint,
             normalId,
@@ -103,12 +96,10 @@ public class PlanetQuery(CustomCamera queryCamera, PlanetRenderer planetRenderer
         return true;
     }
 
-    public (Vector3 localSpherePoint, Vector3 localCubePoint) GetLocalPointsOnPlanet(Vector3 point, bool isLocalSpace)
+    public static (Vector3 localSpherePoint, Vector3 localCubePoint) GetLocalPointOnPlanet(Vector3 point, bool isLocalSpace)
     {
-        Vector3 localPoint = isLocalSpace
-            ? point
-            : WorldData.WorldToLocal(point);
-
+        Vector3 localPoint = isLocalSpace ? point : WorldData.WorldToLocal(point);
+        
         if (localPoint.IsZeroApprox() || !localPoint.IsFinite())
             return (Vector3.Inf, Vector3.Inf);
 
@@ -180,7 +171,4 @@ public class PlanetQuery(CustomCamera queryCamera, PlanetRenderer planetRenderer
 
         return elevation * WorldData.Radius * WorldData.HeightScale;
     }
-
-    
-
 }

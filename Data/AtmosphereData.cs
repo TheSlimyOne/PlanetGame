@@ -3,9 +3,9 @@ using PlanetGame.Util;
 
 namespace PlanetGame.Data
 {
-    public class AtmosphereData(float scale) : ISavable
+    public class AtmosphereData : ISavable
     {
-        public float Scale = scale;
+        public float Scale;
         public float DensityFalloff;
         public uint LightSamplingCount;
         public uint OpticalDepthSamplingCount;

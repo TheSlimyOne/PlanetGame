@@ -6,7 +6,7 @@ using PlanetGame.Planet.Rendering.Drawing;
 using PlanetGame.Planet.Rendering.Drawing.Brushes;
 using PlanetGame.Planet.Rendering.VirtualTexturing;
 
-public partial class PlanetDrawingController : Control
+public partial class PlanetSculptingController : Control
 {
     private static TessellationData TessellationData => SaveManager.TessellationData; 
     private static VirtualTextureData VirtualTextureData => SaveManager.VirtualTextureData;
@@ -19,11 +19,11 @@ public partial class PlanetDrawingController : Control
 
     public override void _Ready()
     {
-       
+    
     }
 
 
-    private readonly BrushOptions _brushOptions = ScenePaths.InstantiateScene<BrushOptions>(ScenePaths.BRUSH_OPTIONS);
+    private BrushOptions _brushOptions => GetNode<BrushOptions>("%BrushOptions"); //ScenePaths.InstantiateScene<BrushOptions>(ScenePaths.BRUSH_OPTIONS);
 
     public bool IsDrawing { get; private set; }
 
@@ -34,21 +34,18 @@ public partial class PlanetDrawingController : Control
         _planetRenderer = planetRenderer;
         _planetQuery = planetQuery;
 
-        SetupBrushOptions();
-        ConnectSignals();
-
         CurrentBrush = new BasicBrush();
     }
 
+
+    public override void _EnterTree()
+    {
+        ConnectSignals();
+    }
+// 
     public override void _ExitTree()
     {
         DisconnectSignals();
-    }
-
-    private void SetupBrushOptions()
-    {
-        AddChild(_brushOptions);
-        _brushOptions.Visible = false;
     }
 
     private void ConnectSignals()
@@ -123,7 +120,8 @@ public partial class PlanetDrawingController : Control
         if (_drawCommand == null)
             return;
 
-        _drawCommand.TryToAddStroke(surfacePoint);
+        
+        _drawCommand.TryToAddStroke(GetParent().GetChild(1), surfacePoint);
     }
 
     public override void _Process(double delta)
@@ -131,14 +129,14 @@ public partial class PlanetDrawingController : Control
         if (!IsValid() || !IsDrawing)
             return;
 
-        if (_planetQuery.TryGetMouseSurfacePoint(out PlanetQuery.PlanetSurfacePoint surfacePoint, true, desiredMipIndex: VirtualTextureData.TotalMipLayersPerFace - 1))
-            AddStrokePoint(surfacePoint);
+        // if (_planetQuery.TryGetMouseSurfacePoint(out PlanetQuery.PlanetSurfacePoint surfacePoint, true, desiredMipIndex: VirtualTextureData.TotalMipLayersPerFace - 1))
+        //     AddStrokePoint(surfacePoint);
     }
 
     public override void _UnhandledInput(InputEvent @event)
     {
-        if (true)
-            return;
+        // if (true)
+        //     return;
 
         if (!IsValid() || @event is not InputEventMouseButton mouseButton)
             return;

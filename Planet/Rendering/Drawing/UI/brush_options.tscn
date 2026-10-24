@@ -1,10 +1,13 @@
 [gd_scene format=3 uid="uid://dtnwl4hiawq1k"]
 
-[ext_resource type="Script" uid="uid://443r61q6pppa" path="res://Planet/Rendering/Drawing/UI/BrushOptions.cs" id="1_fv7xb"]
+[ext_resource type="Script" uid="uid://443r61q6pppa" path="res://Planet/Rendering/Drawing/BrushOptions.cs" id="1_fv7xb"]
 
 [node name="BrushOptions" type="PanelContainer" unique_id=1858348814]
-offset_right = 344.0
-offset_bottom = 436.0
+modulate = Color(1, 1, 1, 0.6509804)
+anchors_preset = 9
+anchor_bottom = 1.0
+offset_right = 290.61984
+grow_vertical = 2
 size_flags_horizontal = 0
 size_flags_vertical = 0
 script = ExtResource("1_fv7xb")
@@ -14,6 +17,8 @@ layout_mode = 2
 
 [node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer" unique_id=1460576130]
 layout_mode = 2
+size_flags_horizontal = 17
+size_flags_vertical = 17
 
 [node name="BaseBrushSettings" type="HBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=1731384488]
 layout_mode = 2
@@ -108,7 +113,6 @@ text = "100%"
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="BrushSelection" type="GridContainer" parent="MarginContainer/VBoxContainer" unique_id=412931388]
-unique_name_in_owner = true
+[node name="Spacer3" type="Control" parent="MarginContainer/VBoxContainer/BaseBrushSettings/Options" unique_id=1896441520]
+custom_minimum_size = Vector2(0, 9)
 layout_mode = 2
-columns = 5

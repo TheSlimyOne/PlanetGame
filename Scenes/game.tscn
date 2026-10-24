@@ -4,7 +4,6 @@
 [ext_resource type="Script" uid="uid://c5cuxjhp35ew3" path="res://Scenes/Game.cs" id="1_wowpa"]
 [ext_resource type="Script" uid="uid://b6v56lt0ryyap" path="res://Player/Camera/OrbitalCamera3D.cs" id="2_wowpa"]
 [ext_resource type="PackedScene" uid="uid://bfuimmw6gqopu" path="res://Assets/Models/Scenes/camera.blend" id="3_i6g32"]
-[ext_resource type="PackedScene" uid="uid://ca1481jvmov4" path="res://Planet/Rendering/Drawing/UI/reticle.tscn" id="5_wowpa"]
 
 [node name="Game" type="Control" unique_id=849044278]
 layout_mode = 3
@@ -15,22 +14,6 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("1_wowpa")
-
-[node name="Reticle" parent="." unique_id=653132148 instance=ExtResource("5_wowpa")]
-unique_name_in_owner = true
-z_index = 1
-layout_mode = 1
-anchors_preset = 15
-anchor_left = 0.0
-anchor_top = 0.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = 0.0
-offset_top = 0.0
-offset_right = 0.0
-offset_bottom = 0.0
-OuterRadius = 260.0
-SeparaterWidth = 11.455
 
 [node name="SubViewportContainer" type="SubViewportContainer" parent="." unique_id=334333132]
 layout_mode = 1

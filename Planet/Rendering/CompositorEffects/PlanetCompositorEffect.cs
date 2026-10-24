@@ -3,10 +3,8 @@ using Godot;
 using PlanetGame.Planet.Rendering;
 using PlanetGame.Planet.Rendering.VirtualTexturing;
 using PlanetGame.Shaders.RenderPasses;
-using PlanetGame.Util;
 using Uniform;
 
-[Tool]
 public partial class PlanetCompositorEffect : CompositorEffect
 {
     public PlanetRenderPass PlanetRenderPass { get; private set; }
@@ -49,7 +47,7 @@ public partial class PlanetCompositorEffect : CompositorEffect
         Projection viewProjectionMatrix = CustomCamera.GetViewProjectionMatrix(cameraTransform, cameraProjection);
 
 
-        Transform3D rotationOnlyView = new(cameraTransform.Basis.Inverse(), Vector3.Zero);
+        // Transform3D rotationOnlyView = new(cameraTransform.Basis.Inverse(), Vector3.Zero);
 
         PlanetRenderPass.Invoke([
             // cameraProjection * new Projection(rotationOnlyView),

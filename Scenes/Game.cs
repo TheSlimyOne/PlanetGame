@@ -55,80 +55,80 @@ public partial class Game : Control
 
 	public override void _Ready()
 	{
-		Reticle = GetNode<Reticle>("%Reticle");
-		Reticle.ReticleOptionSelected += SwitchStateFromReticle;
-		_transitions = [];
+		// Reticle = GetNode<Reticle>("%Reticle");
+		// Reticle.ReticleOptionSelected += SwitchStateFromReticle;
+		// _transitions = [];
 		
-		_transitions[State.OBSERVING] = [
-			new StateData(
-				"Sculpt Mode",
-				State.SCULPTING,
-				Image.CreateEmpty(128, 128, false, Image.Format.Rgb8)
-			),
-			new StateData(
-				"Main Menu",
-				State.MAIN_MENU,
-				Image.CreateEmpty(128, 128, false, Image.Format.Rgb8)
-			),
-			new StateData(
-				"Building",
-				State.BUILDING,
-				Image.CreateEmpty(128, 128, false, Image.Format.Rgb8)
-			),
-			new StateData(
-				"Debug Menu",
-				State.DEBUGGER,
-				Image.CreateEmpty(128, 128, false, Image.Format.Rgb8)
-			),
-		];
+		// _transitions[State.OBSERVING] = [
+		// 	new StateData(
+		// 		"Sculpt Mode",
+		// 		State.SCULPTING,
+		// 		Image.CreateEmpty(128, 128, false, Image.Format.Rgb8)
+		// 	),
+		// 	new StateData(
+		// 		"Main Menu",
+		// 		State.MAIN_MENU,
+		// 		Image.CreateEmpty(128, 128, false, Image.Format.Rgb8)
+		// 	),
+		// 	new StateData(
+		// 		"Building",
+		// 		State.BUILDING,
+		// 		Image.CreateEmpty(128, 128, false, Image.Format.Rgb8)
+		// 	),
+		// 	new StateData(
+		// 		"Debug Menu",
+		// 		State.DEBUGGER,
+		// 		Image.CreateEmpty(128, 128, false, Image.Format.Rgb8)
+		// 	),
+		// ];
 		
-		_transitions[State.SCULPTING] = [
-			new StateData(
-				"Observe Mode",
-				State.OBSERVING,
-				Image.CreateEmpty(128, 128, false, Image.Format.Rgb8)
-			),
-			new StateData(
-				"Main Menu",
-				State.MAIN_MENU,
-				Image.CreateEmpty(128, 128, false, Image.Format.Rgb8)
-			),
-		];
+		// _transitions[State.SCULPTING] = [
+		// 	new StateData(
+		// 		"Observe Mode",
+		// 		State.OBSERVING,
+		// 		Image.CreateEmpty(128, 128, false, Image.Format.Rgb8)
+		// 	),
+		// 	new StateData(
+		// 		"Main Menu",
+		// 		State.MAIN_MENU,
+		// 		Image.CreateEmpty(128, 128, false, Image.Format.Rgb8)
+		// 	),
+		// ];
 
-		_transitions[State.BUILDING] = [
-			new StateData(
-				"Observe Mode",
-				State.OBSERVING,
-				Image.CreateEmpty(128, 128, false, Image.Format.Rgb8)
-			),
-			new StateData(
-				"Main Menu",
-				State.MAIN_MENU,
-				Image.CreateEmpty(128, 128, false, Image.Format.Rgb8)
-			),
-		];
+		// _transitions[State.BUILDING] = [
+		// 	new StateData(
+		// 		"Observe Mode",
+		// 		State.OBSERVING,
+		// 		Image.CreateEmpty(128, 128, false, Image.Format.Rgb8)
+		// 	),
+		// 	new StateData(
+		// 		"Main Menu",
+		// 		State.MAIN_MENU,
+		// 		Image.CreateEmpty(128, 128, false, Image.Format.Rgb8)
+		// 	),
+		// ];
 
-		_transitions[State.MAIN_MENU] = [
-			new StateData(
-				"Play Game",
-				State.OBSERVING,
-				Image.CreateEmpty(128, 128, false, Image.Format.Rgb8)
-			),
-		];
+		// _transitions[State.MAIN_MENU] = [
+		// 	new StateData(
+		// 		"Play Game",
+		// 		State.OBSERVING,
+		// 		Image.CreateEmpty(128, 128, false, Image.Format.Rgb8)
+		// 	),
+		// ];
 
 
-		_transitions[State.DEBUGGER] = [
-			new StateData(
-				"Observe Mode",
-				State.OBSERVING,
-				Image.CreateEmpty(128, 128, false, Image.Format.Rgb8)
-			),
-			new StateData(
-				"Main Menu",
-				State.MAIN_MENU,
-				Image.CreateEmpty(128, 128, false, Image.Format.Rgb8)
-			),
-		];
+		// _transitions[State.DEBUGGER] = [
+		// 	new StateData(
+		// 		"Observe Mode",
+		// 		State.OBSERVING,
+		// 		Image.CreateEmpty(128, 128, false, Image.Format.Rgb8)
+		// 	),
+		// 	new StateData(
+		// 		"Main Menu",
+		// 		State.MAIN_MENU,
+		// 		Image.CreateEmpty(128, 128, false, Image.Format.Rgb8)
+		// 	),
+		// ];
 
 			// Title: [
 			// 	"A",

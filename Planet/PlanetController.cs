@@ -15,7 +15,7 @@ public partial class PlanetController : Node
 
     [ExportGroup("Controllers")]
     [Export] public Node3D SurfaceAttachment { get; private set; }
-    public PlanetDrawingController PlanetDrawingController { get; private set; }
+    public PlanetSculptingController PlanetSculptingController { get; private set; }
     public Node3D CollisionTestSpheres = new();
     public PlanetQuery PlanetQuery;
     public PlanetCollisionController PlanetCollisionController { get; private set; }
@@ -62,9 +62,9 @@ public partial class PlanetController : Node
         PlanetQuery = new(MainCamera, PlanetRenderer);
         PlanetCollisionController = new(PlanetQuery);
 
-        PlanetDrawingController = ScenePaths.InstantiateScene<PlanetDrawingController>(ScenePaths.PLANET_DRAWING_CONTROLLER);
-        PlanetDrawingController.Initialize(PlanetRenderer, PlanetQuery);
-        AddChild(PlanetDrawingController);
+        PlanetSculptingController = ScenePaths.InstantiateScene<PlanetSculptingController>(ScenePaths.PLANET_SCULPTING_CONTROLLER);
+        PlanetSculptingController.Initialize(PlanetRenderer, PlanetQuery);
+        AddChild(PlanetSculptingController);
 
         SurfaceAttachment.AddChild(PlanetCollisionController.CollisionBody);
         SurfaceAttachment.AddChild(CollisionTestSpheres);
@@ -78,10 +78,10 @@ public partial class PlanetController : Node
         //     SaveManager.OverrideSave(SaveManager.CurrentSave, SaveManager.CurrentWorldSave);
         // }, 999);
     }
-    
+
     private void CleanUpGPU()
     {
-        if(Quiting) return;
+        if (Quiting) return;
 
         Quiting = true;
         DebugMenuController.Instance?.Clear();
@@ -172,11 +172,15 @@ public partial class PlanetController : Node
 
     public void UpdateCamera()
     {
-        MainCamera.MinDistance = WorldData.Radius + 0.999f;
-        MainCamera.MaxDistance = WorldData.Radius * 10.0f;
-        MainCamera.Far = MainCamera.DistanceFromTarget + WorldData.Radius;
-    }
+        float radius = WorldData.Radius;
+        float altitude = MainCamera.DistanceFromTarget;
 
+        MainCamera.MinDistance = radius + 0.999f;
+        MainCamera.MaxDistance = radius * 10.0f;
+
+        MainCamera.Near = Mathf.Clamp(altitude * 0.0001f, 0.0001f, 10.0f);
+        MainCamera.Far = altitude + radius * 2.0f;
+    }
     private Vector3 _direction = Vector3.Zero;
 
     public bool HasMoved { get; private set; }
@@ -229,7 +233,6 @@ public partial class PlanetController : Node
         );
     }
 
-    private bool _leftMouseHeld = false;
 
     public override async void _UnhandledInput(InputEvent @event)
     {
@@ -271,14 +274,13 @@ public partial class PlanetController : Node
                 }
             }
 
-            _leftMouseHeld = mouseEvent.ButtonIndex == MouseButton.Left && mouseEvent.Pressed;
 
 
             if (mouseEvent.ButtonIndex == MouseButton.Left && mouseEvent.Pressed)
             {
                 Vector3 point = PlanetQuery.GetPlanetMousePosition();
                 Vector3 localPoint = PlanetQuery.GetPlanetMousePosition(true);
-                GD.PrintS(point, localPoint);
+                // GD.PrintS(point, localPoint);
                 // Vector3 planetMousePoint = GetPlanetMousePosition();
                 // if (TryGetPlanetSurfacePoint(PlanetToLocal(planetMousePoint), out PlanetSurfacePoint surfacePoint, true))
                 //     PlanetRenderer.Draw(surfacePoint);

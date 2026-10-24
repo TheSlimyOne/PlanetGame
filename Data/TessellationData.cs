@@ -17,19 +17,6 @@ namespace PlanetGame.Data
         [JsonIgnore]
         public float HeightOffset { get; set; } = 0;
 
-        public TessellationData() { }
-
-        public TessellationData(uint resolution, float subFactor, uint maximumLod, uint minimumLod, uint maximumKeys, float cullingDepth, Vector4 cullingMargin)
-        {
-            Resolution = resolution;
-            SubFactor = subFactor;
-            MaximumLod = maximumLod;
-            MinimumLod = minimumLod;
-            MaximumKeys = maximumKeys;
-            CullingDepth = cullingDepth;
-            CullingMargin = cullingMargin;
-        }
-
         /// <summary>
         /// Serializes this data to match the expected GPU buffer layout.
         /// </summary>

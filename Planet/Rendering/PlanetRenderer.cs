@@ -133,9 +133,20 @@ namespace PlanetGame.Planet.Rendering
 
         public async Task ProcessDrawCommand(DrawCommand drawCommand)
         {
-
             TileCache.TileCacheType type = drawCommand.Parameters.TargetTile;
-            TileManager.DrawCommandOnTile(drawCommand, SparseVirtualTexture.GetTileCache(type), Callable.From(SparseVirtualTexture.ClearVirtualTexture));
+
+            await Parallel.ForEachAsync(
+                drawCommand.TileNameToBrushStroke,
+                new ParallelOptions { MaxDegreeOfParallelism = 4 },
+                async (data, _) =>
+                {
+                    // Tile tile = tileCache.GetTile(data.Key);
+                    // tile.Draw(data.Value);
+
+                    // GD.Print(data);
+                }
+            );
+            SparseVirtualTexture.ClearVirtualTexture();
         }
 
 #region Buffer handling

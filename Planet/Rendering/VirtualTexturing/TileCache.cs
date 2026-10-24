@@ -70,6 +70,8 @@ namespace PlanetGame.Planet.Rendering.VirtualTexturing
 
             ClearStorageTexture();
             SetFallbackSlots();
+
+            SetSamplerState(new RDSamplerState() { MinFilter = RenderingDevice.SamplerFilter.Linear, MagFilter = RenderingDevice.SamplerFilter.Linear });
         }
 
         public override void ClearStorageTexture() => ClearTexture(new Color("00000000"), 0, 1, 0, DEFAULT_TILE_SLOTS_COUNT);

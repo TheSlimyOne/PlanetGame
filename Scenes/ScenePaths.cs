@@ -16,7 +16,7 @@ namespace PlanetGame
 
         public const string MAIN = "res://Scenes/main.tscn";
 
-        public const string PLANET_DRAWING_CONTROLLER = "res://Planet/Rendering/Drawing/UI/planet_drawing_controller.tscn";
+        public const string PLANET_SCULPTING_CONTROLLER = "res://Planet/Rendering/Drawing/UI/planet_sculpting_controller.tscn";
         public const string BRUSH_OPTIONS = "res://Planet/Rendering/Drawing/UI/brush_options.tscn";
 
         public const string GAME = "res://Scenes/game.tscn";

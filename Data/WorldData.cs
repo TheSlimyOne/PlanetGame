@@ -15,10 +15,8 @@ namespace PlanetGame.Data
         public float Radius;
         public float HeightScale;
 
-        public WorldData(float radius, float heightScale)
+        public WorldData()
         {
-            Radius = radius;
-            HeightScale = heightScale;
             OrientatePlanet();
         }
 

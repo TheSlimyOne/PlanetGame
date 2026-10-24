@@ -23,6 +23,18 @@ namespace Uniform
 			Perserved = perserved;
 		}
 
+		public void SetSamplerState(RDSamplerState samplerState, bool freePreviousRid = true)
+		{
+			if (UniformType != RenderingDevice.UniformType.SamplerWithTexture)
+				throw new ArgumentException($"This uniform does not support samplers '{UniformType}'");
+			
+			if (freePreviousRid && SamplerRid.IsValid)
+				RenderingDevice.FreeRid(SamplerRid);
+
+			SamplerState = samplerState;
+			SamplerRid = RenderingDevice.SamplerCreate(SamplerState);
+		}
+
 		public Texture2DUniform(string name, IGPUResource owner, RenderingDevice renderingDevice, RenderingDevice.UniformType uniformType, RDSamplerState samplerState = null, bool perserved = false) : base(name, renderingDevice, owner, perserved)
 		{
 			Rid = new();

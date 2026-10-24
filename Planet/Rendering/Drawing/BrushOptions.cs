@@ -58,9 +58,9 @@ public partial class BrushOptions : PanelContainer
 
 	private void SetupRanges()
 	{
-		SizeSlider.MinValue = WorldData.Radius * 0.0001f;
+		SizeSlider.MinValue = 0;
 		SizeSlider.MaxValue = WorldData.Radius;
-		SizeSlider.Step = 1f;
+		SizeSlider.Step = 0.0025;
 
 		HardnessSlider.MinValue = 0;
 		HardnessSlider.MaxValue = 100;
@@ -100,7 +100,7 @@ public partial class BrushOptions : PanelContainer
 		value = Mathf.Clamp(value, (float)SizeSlider.MinValue, (float)SizeSlider.MaxValue);
 
 		SizeSlider.SetValueNoSignal(value);
-		SizeInput.Text = $"{value:0.##}";
+		SizeInput.Text = $"{value:0.#####}";
 
 		if (emitSignal)
 			EmitSignal(SignalName.SizeChanged, value);

@@ -202,7 +202,7 @@ public static class VectorUtils
 
         const float EPS = 0.000001f;
 
-        return uv.Clamp(Vector2.Zero, Vector2.One - new Vector2(EPS, EPS));
+        return uv.Clamp(Vector2.Zero, Vector2.One - Vector2.One * EPS);
     }
 
     public static Vector2 PointOnSphereToUV(Vector3 point)

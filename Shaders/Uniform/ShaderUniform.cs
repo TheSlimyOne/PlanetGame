@@ -13,11 +13,9 @@ namespace Uniform
         public readonly bool UsingMainRenderingDevice;
         public IGPUResource Owner { get; protected set; }
         public bool Perserved { get; protected set; }
-
         public string Name { get; private set; }
+        private static List<ShaderUniform> _uniforms = [];
 
-        //TODO need to implement
-        public static List<ShaderUniform> Uniforms = [];
         protected ShaderUniform(string name, RenderingDevice renderingDevice, IGPUResource owner, bool perserved = false)
         {
             RenderingDevice = renderingDevice;
@@ -27,7 +25,7 @@ namespace Uniform
             Perserved = perserved;
             Name = name;
 
-            Uniforms.Add(this);
+            _uniforms.Add(this);
         }
 
         // This is supposed to simplify the process of sharing buffers between 2 or more compute shaders

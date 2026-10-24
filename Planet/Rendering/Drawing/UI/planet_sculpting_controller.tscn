@@ -1,0 +1,19 @@
+[gd_scene format=3 uid="uid://cyxfspkokpybd"]
+
+[ext_resource type="Script" uid="uid://bttb1a48ivyko" path="res://Planet/Rendering/Drawing/PlanetSculptingController.cs" id="1_6ewe1"]
+[ext_resource type="PackedScene" uid="uid://dtnwl4hiawq1k" path="res://Planet/Rendering/Drawing/UI/brush_options.tscn" id="2_j35e5"]
+
+[node name="PlanetSculptingController" type="Control" unique_id=364081334]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_6ewe1")
+
+[node name="BrushOptions" parent="." unique_id=1858348814 instance=ExtResource("2_j35e5")]
+unique_name_in_owner = true
+layout_mode = 1
+offset_right = 284.89996
